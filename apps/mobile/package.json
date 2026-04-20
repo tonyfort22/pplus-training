@@ -1,0 +1,19 @@
+{
+  "name": "@pplus/mobile",
+  "private": true,
+  "version": "0.1.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "lint": "echo 'No lint configured yet for @pplus/mobile'"
+  },
+  "dependencies": {
+    "expo": "~54.0.13",
+    "expo-status-bar": "~3.0.8",
+    "react": "19.1.0",
+    "react-native": "0.81.1"
+  }
+}

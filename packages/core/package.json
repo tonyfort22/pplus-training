@@ -1,0 +1,13 @@
+{
+  "name": "@pplus/core",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "lint": "echo 'No lint configured yet for @pplus/core'"
+  },
+  "dependencies": {
+    "@pplus/types": "workspace:*"
+  }
+}
