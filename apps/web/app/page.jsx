@@ -22,6 +22,13 @@ const priorities = [
   'Run fatigue analytics from completed session data only'
 ];
 
+const engineSteps = [
+  'Create workout session from planned workout snapshot',
+  'Complete a session set without mutating prescribed values',
+  'Default actual values from prescribed values when needed',
+  'Finish session and make it the trigger for analytics'
+];
+
 export default function HomePage() {
   return (
     <main style={styles.page}>
@@ -45,13 +52,24 @@ export default function HomePage() {
         ))}
       </section>
 
-      <section style={styles.panel}>
-        <h2 style={styles.panelTitle}>Current build priorities</h2>
-        <ul style={styles.list}>
-          {priorities.map((priority) => (
-            <li key={priority}>{priority}</li>
-          ))}
-        </ul>
+      <section style={styles.twoColumn}>
+        <section style={styles.panel}>
+          <h2 style={styles.panelTitle}>Current build priorities</h2>
+          <ul style={styles.list}>
+            {priorities.map((priority) => (
+              <li key={priority}>{priority}</li>
+            ))}
+          </ul>
+        </section>
+
+        <section style={styles.panel}>
+          <h2 style={styles.panelTitle}>Session engine milestones</h2>
+          <ol style={styles.list}>
+            {engineSteps.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ol>
+        </section>
       </section>
     </main>
   );
@@ -109,6 +127,11 @@ const styles = {
     color: '#cbd5e1',
     lineHeight: 1.5,
     margin: 0
+  },
+  twoColumn: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    gap: '16px'
   },
   panel: {
     background: '#0f172a',
