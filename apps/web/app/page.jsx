@@ -24,8 +24,8 @@ const priorities = [
 
 const engineSteps = [
   'Create workout session from planned workout snapshot',
-  'Complete a session set without mutating prescribed values',
-  'Default actual values from prescribed values when needed',
+  'Support actual load and rep edits on the session set',
+  'Start and adjust rest timer state when a set is completed',
   'Finish session and make it the trigger for analytics'
 ];
 

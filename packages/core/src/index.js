@@ -19,6 +19,13 @@ export function formatWorkoutTimer(totalSeconds) {
   return `${hh}:${mm}:${ss}`;
 }
 
+export function formatClock(totalSeconds) {
+  const safeSeconds = Math.max(0, Number(totalSeconds) || 0);
+  const minutes = Math.floor(safeSeconds / 60);
+  const seconds = safeSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
 export function createWorkoutSessionFromTemplate(workoutTemplate) {
   return {
     id: workoutTemplate.id,
@@ -28,6 +35,7 @@ export function createWorkoutSessionFromTemplate(workoutTemplate) {
     completedAt: null,
     elapsedSeconds: 0,
     notes: '',
+    activeRestTimer: null,
     exercises: (workoutTemplate.exercises || []).map((exercise) => ({
       id: exercise.id,
       name: exercise.name,
@@ -76,6 +84,27 @@ export function completeSessionSet(sessionSet) {
   return nextSet;
 }
 
+export function updateSessionSetActuals(session, exerciseId, setId, actuals) {
+  return {
+    ...session,
+    exercises: session.exercises.map((exercise) => {
+      if (exercise.id !== exerciseId) return exercise;
+
+      return {
+        ...exercise,
+        sets: exercise.sets.map((set) => {
+          if (set.id !== setId) return set;
+
+          return {
+            ...set,
+            ...actuals
+          };
+        })
+      };
+    })
+  };
+}
+
 export function getSessionProgress(session) {
   const exercises = session.exercises || [];
   const totalExercises = exercises.length;
@@ -118,6 +147,7 @@ export function updateExerciseStatuses(session) {
 export function completeWorkoutSessionSet(session, exerciseId, setId) {
   const updatedSession = {
     ...session,
+    activeRestTimer: null,
     exercises: session.exercises.map((exercise) => {
       if (exercise.id !== exerciseId) return exercise;
 
@@ -131,13 +161,62 @@ export function completeWorkoutSessionSet(session, exerciseId, setId) {
     })
   };
 
-  return updateExerciseStatuses(updatedSession);
+  const sessionWithStatuses = updateExerciseStatuses(updatedSession);
+  const completedSet = findSessionSet(sessionWithStatuses, exerciseId, setId);
+
+  if (!completedSet || !completedSet.isCompleted) return sessionWithStatuses;
+
+  return startRestTimer(sessionWithStatuses, {
+    exerciseId,
+    setId,
+    remainingSeconds: completedSet.actualRestSeconds ?? completedSet.prescribedRestSeconds ?? 0
+  });
+}
+
+export function startRestTimer(session, timerInput) {
+  return {
+    ...session,
+    activeRestTimer: {
+      exerciseId: timerInput.exerciseId,
+      setId: timerInput.setId,
+      remainingSeconds: timerInput.remainingSeconds,
+      startedAt: new Date().toISOString(),
+      mode: timerInput.mode || 'timer',
+      isRunning: true
+    }
+  };
+}
+
+export function adjustRestTimer(session, secondsDelta) {
+  if (!session.activeRestTimer) return session;
+
+  return {
+    ...session,
+    activeRestTimer: {
+      ...session.activeRestTimer,
+      remainingSeconds: Math.max(0, session.activeRestTimer.remainingSeconds + secondsDelta)
+    }
+  };
+}
+
+export function clearRestTimer(session) {
+  return {
+    ...session,
+    activeRestTimer: null
+  };
+}
+
+export function findSessionSet(session, exerciseId, setId) {
+  const exercise = session.exercises.find((item) => item.id === exerciseId);
+  if (!exercise) return null;
+  return exercise.sets.find((set) => set.id === setId) || null;
 }
 
 export function finishWorkoutSession(session) {
   return {
     ...session,
     status: 'completed',
-    completedAt: new Date().toISOString()
+    completedAt: new Date().toISOString(),
+    activeRestTimer: null
   };
 }

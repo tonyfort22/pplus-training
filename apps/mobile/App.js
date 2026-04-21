@@ -2,11 +2,16 @@ import { useMemo, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
+  adjustRestTimer,
+  clearRestTimer,
   completeWorkoutSessionSet,
   createWorkoutSessionFromTemplate,
   finishWorkoutSession,
+  findSessionSet,
+  formatClock,
   formatWorkoutTimer,
-  getSessionProgress
+  getSessionProgress,
+  updateSessionSetActuals
 } from '@pplus/core';
 
 const workoutTemplate = {
@@ -51,6 +56,9 @@ export default function App() {
   const [elapsedSeconds] = useState(35);
 
   const progress = useMemo(() => getSessionProgress(session), [session]);
+  const selectedSet = session.activeRestTimer
+    ? findSessionSet(session, session.activeRestTimer.exerciseId, session.activeRestTimer.setId)
+    : null;
 
   function handleCompleteSet(exerciseId, setId) {
     if (session.status === 'completed') return;
@@ -60,6 +68,22 @@ export default function App() {
   function handleFinishWorkout() {
     if (session.status === 'completed') return;
     setSession((currentSession) => finishWorkoutSession(currentSession));
+  }
+
+  function handleQuickActualUpdate(exerciseId, setId, field, delta) {
+    if (session.status === 'completed') return;
+
+    const currentSet = findSessionSet(session, exerciseId, setId);
+    if (!currentSet) return;
+
+    const currentValue = Number(currentSet[field] ?? currentSet[`prescribed${field.slice(6)}`] ?? 0);
+    const nextValue = Math.max(0, currentValue + delta);
+
+    setSession((currentSession) =>
+      updateSessionSetActuals(currentSession, exerciseId, setId, {
+        [field]: nextValue
+      })
+    );
   }
 
   return (
@@ -92,6 +116,29 @@ export default function App() {
           <Text style={styles.progressLabel}>{progress.completionPercent}% complete</Text>
         </View>
 
+        {session.activeRestTimer ? (
+          <View style={styles.restCard}>
+            <View style={styles.restHeaderRow}>
+              <View>
+                <Text style={styles.restEyebrow}>Rest timer</Text>
+                <Text style={styles.restTitle}>{selectedSet ? 'Between completed sets' : 'Active rest block'}</Text>
+              </View>
+              <Pressable onPress={() => setSession((currentSession) => clearRestTimer(currentSession))}>
+                <Text style={styles.dismissText}>Dismiss</Text>
+              </Pressable>
+            </View>
+            <Text style={styles.restClock}>{formatClock(session.activeRestTimer.remainingSeconds)}</Text>
+            <View style={styles.restActions}>
+              <Pressable style={styles.restActionButton} onPress={() => setSession((currentSession) => adjustRestTimer(currentSession, -15))}>
+                <Text style={styles.restActionText}>-15s</Text>
+              </Pressable>
+              <Pressable style={styles.restActionButton} onPress={() => setSession((currentSession) => adjustRestTimer(currentSession, 15))}>
+                <Text style={styles.restActionText}>+15s</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : null}
+
         {session.exercises.map((exercise) => (
           <View key={exercise.id} style={styles.exerciseCard}>
             <View style={styles.exerciseHeader}>
@@ -105,12 +152,8 @@ export default function App() {
             </View>
 
             {exercise.sets.map((set, index) => (
-              <Pressable
-                key={set.id}
-                onPress={() => handleCompleteSet(exercise.id, set.id)}
-                style={[styles.setRow, set.isCompleted && styles.setRowCompleted]}
-              >
-                <View style={styles.setCopy}>
+              <View key={set.id} style={[styles.setRow, set.isCompleted && styles.setRowCompleted]}>
+                <Pressable style={styles.setCopy} onPress={() => handleCompleteSet(exercise.id, set.id)}>
                   <Text style={styles.setTitle}>Set {index + 1}</Text>
                   <Text style={styles.setMeta}>
                     Prescribed: {set.prescribedLoad ?? '-'} lb x {set.prescribedReps ?? '-'} reps, RPE {set.prescribedRpe ?? '-'}
@@ -118,11 +161,40 @@ export default function App() {
                   <Text style={styles.setMeta}>
                     Actual: {set.actualLoad ?? '-'} lb x {set.actualReps ?? '-'} reps, RPE {set.actualRpe ?? '-'}
                   </Text>
+                </Pressable>
+
+                <View style={styles.setControlsColumn}>
+                  <View style={styles.actualControl}>
+                    <Text style={styles.actualControlLabel}>Load</Text>
+                    <View style={styles.actualControlButtons}>
+                      <Pressable style={styles.stepButton} onPress={() => handleQuickActualUpdate(exercise.id, set.id, 'actualLoad', -5)}>
+                        <Text style={styles.stepButtonText}>-</Text>
+                      </Pressable>
+                      <Text style={styles.actualValue}>{set.actualLoad ?? set.prescribedLoad ?? 0}</Text>
+                      <Pressable style={styles.stepButton} onPress={() => handleQuickActualUpdate(exercise.id, set.id, 'actualLoad', 5)}>
+                        <Text style={styles.stepButtonText}>+</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+
+                  <View style={styles.actualControl}>
+                    <Text style={styles.actualControlLabel}>Reps</Text>
+                    <View style={styles.actualControlButtons}>
+                      <Pressable style={styles.stepButton} onPress={() => handleQuickActualUpdate(exercise.id, set.id, 'actualReps', -1)}>
+                        <Text style={styles.stepButtonText}>-</Text>
+                      </Pressable>
+                      <Text style={styles.actualValue}>{set.actualReps ?? set.prescribedReps ?? 0}</Text>
+                      <Pressable style={styles.stepButton} onPress={() => handleQuickActualUpdate(exercise.id, set.id, 'actualReps', 1)}>
+                        <Text style={styles.stepButtonText}>+</Text>
+                      </Pressable>
+                    </View>
+                  </View>
+
+                  <View style={[styles.badge, set.isCompleted ? styles.badgeDone : styles.badgeTodo]}>
+                    <Text style={styles.badgeText}>{set.isCompleted ? 'Done' : 'Tap left side to complete'}</Text>
+                  </View>
                 </View>
-                <View style={[styles.badge, set.isCompleted ? styles.badgeDone : styles.badgeTodo]}>
-                  <Text style={styles.badgeText}>{set.isCompleted ? 'Done' : 'Tap to complete'}</Text>
-                </View>
-              </Pressable>
+              </View>
             ))}
           </View>
         ))}
@@ -130,7 +202,8 @@ export default function App() {
         <View style={styles.footerCard}>
           <Text style={styles.footerTitle}>Session engine rules in play</Text>
           <Text style={styles.footerLine}>Prescribed values stay unchanged in the session.</Text>
-          <Text style={styles.footerLine}>Actual values are filled when the set is completed.</Text>
+          <Text style={styles.footerLine}>Actual load and reps can be adjusted before or after completion.</Text>
+          <Text style={styles.footerLine}>Completing a set starts a rest timer from the prescribed rest target.</Text>
           <Text style={styles.footerLine}>Later analytics will run from actual completed session data only.</Text>
         </View>
       </ScrollView>
@@ -214,6 +287,51 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
     fontSize: 13
   },
+  restCard: {
+    backgroundColor: '#172554',
+    borderRadius: 20,
+    padding: 20,
+    gap: 14
+  },
+  restHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  restEyebrow: {
+    color: '#93c5fd',
+    textTransform: 'uppercase',
+    fontSize: 12,
+    letterSpacing: 1
+  },
+  restTitle: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '700'
+  },
+  dismissText: {
+    color: '#bfdbfe',
+    fontWeight: '700'
+  },
+  restClock: {
+    color: '#ffffff',
+    fontSize: 42,
+    fontWeight: '700'
+  },
+  restActions: {
+    flexDirection: 'row',
+    gap: 12
+  },
+  restActionButton: {
+    backgroundColor: '#2563eb',
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 18
+  },
+  restActionText: {
+    color: '#ffffff',
+    fontWeight: '700'
+  },
   exerciseCard: {
     backgroundColor: '#111827',
     borderRadius: 20,
@@ -251,7 +369,7 @@ const styles = StyleSheet.create({
     padding: 14,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'stretch',
     gap: 12
   },
   setRowCompleted: {
@@ -259,6 +377,11 @@ const styles = StyleSheet.create({
   },
   setCopy: {
     flex: 1
+  },
+  setControlsColumn: {
+    minWidth: 120,
+    gap: 8,
+    alignItems: 'stretch'
   },
   setTitle: {
     color: '#ffffff',
@@ -269,6 +392,38 @@ const styles = StyleSheet.create({
     color: '#d1d5db',
     fontSize: 13,
     marginTop: 2
+  },
+  actualControl: {
+    gap: 4
+  },
+  actualControlLabel: {
+    color: '#bfdbfe',
+    fontSize: 12,
+    fontWeight: '700'
+  },
+  actualControlButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8
+  },
+  stepButton: {
+    backgroundColor: '#2563eb',
+    borderRadius: 10,
+    width: 26,
+    height: 26,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  stepButtonText: {
+    color: '#ffffff',
+    fontWeight: '700'
+  },
+  actualValue: {
+    color: '#ffffff',
+    fontWeight: '700',
+    minWidth: 28,
+    textAlign: 'center'
   },
   badge: {
     paddingVertical: 8,
@@ -283,8 +438,9 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '700'
+    fontSize: 11,
+    fontWeight: '700',
+    textAlign: 'center'
   },
   footerCard: {
     backgroundColor: '#111827',
