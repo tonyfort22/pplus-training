@@ -38,20 +38,19 @@ const workoutTemplate = {
         { id: 'rdl-2', prescribedReps: 8, prescribedLoad: 95, prescribedRpe: 7 },
         { id: 'rdl-3', prescribedReps: 8, prescribedLoad: 95, prescribedRpe: 8 }
       ]
-    },
-    {
-      id: 'split-squat',
-      name: 'Rear Foot Elevated Split Squat',
-      defaultRestSeconds: 120,
-      sets: [
-        { id: 'split-1', prescribedReps: 10, prescribedLoad: 35, prescribedRpe: 7 },
-        { id: 'split-2', prescribedReps: 10, prescribedLoad: 35, prescribedRpe: 8 }
-      ]
     }
   ]
 };
 
+const mobileTabs = [
+  { key: 'train', label: 'Train' },
+  { key: 'progress', label: 'Progress' },
+  { key: 'team', label: 'Team' },
+  { key: 'inbox', label: 'Inbox' }
+];
+
 export default function App() {
+  const [activeTab, setActiveTab] = useState('train');
   const [session, setSession] = useState(() => createWorkoutSessionFromTemplate(workoutTemplate));
   const [elapsedSeconds] = useState(35);
 
@@ -86,14 +85,14 @@ export default function App() {
     );
   }
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+  function renderTrainSurface() {
+    return (
+      <>
         <View style={styles.headerCard}>
           <View style={styles.headerTopRow}>
             <View>
-              <Text style={styles.eyebrow}>Active workout</Text>
-              <Text style={styles.title}>{session.name}</Text>
+              <Text style={styles.eyebrow}>Train</Text>
+              <Text style={styles.title}>Today</Text>
             </View>
             <Pressable
               onPress={handleFinishWorkout}
@@ -105,15 +104,15 @@ export default function App() {
             </Pressable>
           </View>
 
-          <Text style={styles.summary}>
-            {progress.completedSets}/{progress.totalSets} sets, {progress.completedExercises}/{progress.totalExercises} exercises
-          </Text>
+          <Text style={styles.summary}>{session.name}</Text>
           <Text style={styles.timer}>{formatWorkoutTimer(elapsedSeconds)}</Text>
 
           <View style={styles.progressTrack}>
             <View style={[styles.progressFill, { width: `${progress.completionPercent}%` }]} />
           </View>
-          <Text style={styles.progressLabel}>{progress.completionPercent}% complete</Text>
+          <Text style={styles.progressLabel}>
+            {progress.completedSets}/{progress.totalSets} sets, {progress.completedExercises}/{progress.totalExercises} exercises
+          </Text>
         </View>
 
         {session.activeRestTimer ? (
@@ -139,74 +138,108 @@ export default function App() {
           </View>
         ) : null}
 
-        {session.exercises.map((exercise) => (
-          <View key={exercise.id} style={styles.exerciseCard}>
-            <View style={styles.exerciseHeader}>
-              <View>
-                <Text style={styles.exerciseTitle}>{exercise.name}</Text>
-                <Text style={styles.exerciseMeta}>Rest {Math.floor(exercise.defaultRestSeconds / 60)}:{String(exercise.defaultRestSeconds % 60).padStart(2, '0')}</Text>
-              </View>
-              <View style={[styles.exerciseStatusBadge, statusStyles[exercise.status]]}>
-                <Text style={styles.exerciseStatusText}>{exercise.status.replace('_', ' ')}</Text>
-              </View>
-            </View>
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Program snapshot</Text>
+          <Text style={styles.sectionBody}>Spring Hypertrophy, week 3 of 8. Lower A is scheduled for today.</Text>
+        </View>
 
-            {exercise.sets.map((set, index) => (
-              <View key={set.id} style={[styles.setRow, set.isCompleted && styles.setRowCompleted]}>
-                <Pressable style={styles.setCopy} onPress={() => handleCompleteSet(exercise.id, set.id)}>
-                  <Text style={styles.setTitle}>Set {index + 1}</Text>
-                  <Text style={styles.setMeta}>
-                    Prescribed: {set.prescribedLoad ?? '-'} lb x {set.prescribedReps ?? '-'} reps, RPE {set.prescribedRpe ?? '-'}
-                  </Text>
-                  <Text style={styles.setMeta}>
-                    Actual: {set.actualLoad ?? '-'} lb x {set.actualReps ?? '-'} reps, RPE {set.actualRpe ?? '-'}
-                  </Text>
-                </Pressable>
-
-                <View style={styles.setControlsColumn}>
-                  <View style={styles.actualControl}>
-                    <Text style={styles.actualControlLabel}>Load</Text>
-                    <View style={styles.actualControlButtons}>
-                      <Pressable style={styles.stepButton} onPress={() => handleQuickActualUpdate(exercise.id, set.id, 'actualLoad', -5)}>
-                        <Text style={styles.stepButtonText}>-</Text>
-                      </Pressable>
-                      <Text style={styles.actualValue}>{set.actualLoad ?? set.prescribedLoad ?? 0}</Text>
-                      <Pressable style={styles.stepButton} onPress={() => handleQuickActualUpdate(exercise.id, set.id, 'actualLoad', 5)}>
-                        <Text style={styles.stepButtonText}>+</Text>
-                      </Pressable>
-                    </View>
-                  </View>
-
-                  <View style={styles.actualControl}>
-                    <Text style={styles.actualControlLabel}>Reps</Text>
-                    <View style={styles.actualControlButtons}>
-                      <Pressable style={styles.stepButton} onPress={() => handleQuickActualUpdate(exercise.id, set.id, 'actualReps', -1)}>
-                        <Text style={styles.stepButtonText}>-</Text>
-                      </Pressable>
-                      <Text style={styles.actualValue}>{set.actualReps ?? set.prescribedReps ?? 0}</Text>
-                      <Pressable style={styles.stepButton} onPress={() => handleQuickActualUpdate(exercise.id, set.id, 'actualReps', 1)}>
-                        <Text style={styles.stepButtonText}>+</Text>
-                      </Pressable>
-                    </View>
-                  </View>
-
-                  <View style={[styles.badge, set.isCompleted ? styles.badgeDone : styles.badgeTodo]}>
-                    <Text style={styles.badgeText}>{set.isCompleted ? 'Done' : 'Tap left side to complete'}</Text>
-                  </View>
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Active workout session</Text>
+          {session.exercises.map((exercise) => (
+            <View key={exercise.id} style={styles.exerciseCard}>
+              <View style={styles.exerciseHeader}>
+                <View>
+                  <Text style={styles.exerciseTitle}>{exercise.name}</Text>
+                  <Text style={styles.exerciseMeta}>Rest {Math.floor(exercise.defaultRestSeconds / 60)}:{String(exercise.defaultRestSeconds % 60).padStart(2, '0')}</Text>
+                </View>
+                <View style={[styles.exerciseStatusBadge, statusStyles[exercise.status]]}>
+                  <Text style={styles.exerciseStatusText}>{exercise.status.replace('_', ' ')}</Text>
                 </View>
               </View>
-            ))}
-          </View>
-        ))}
 
-        <View style={styles.footerCard}>
-          <Text style={styles.footerTitle}>Session engine rules in play</Text>
-          <Text style={styles.footerLine}>Prescribed values stay unchanged in the session.</Text>
-          <Text style={styles.footerLine}>Actual load and reps can be adjusted before or after completion.</Text>
-          <Text style={styles.footerLine}>Completing a set starts a rest timer from the prescribed rest target.</Text>
-          <Text style={styles.footerLine}>Later analytics will run from actual completed session data only.</Text>
+              {exercise.sets.map((set, index) => (
+                <View key={set.id} style={[styles.setRow, set.isCompleted && styles.setRowCompleted]}>
+                  <Pressable style={styles.setCopy} onPress={() => handleCompleteSet(exercise.id, set.id)}>
+                    <Text style={styles.setTitle}>Set {index + 1}</Text>
+                    <Text style={styles.setMeta}>
+                      Prescribed: {set.prescribedLoad ?? '-'} lb x {set.prescribedReps ?? '-'} reps, RPE {set.prescribedRpe ?? '-'}
+                    </Text>
+                    <Text style={styles.setMeta}>
+                      Actual: {set.actualLoad ?? '-'} lb x {set.actualReps ?? '-'} reps, RPE {set.actualRpe ?? '-'}
+                    </Text>
+                  </Pressable>
+
+                  <View style={styles.setControlsColumn}>
+                    <View style={styles.actualControl}>
+                      <Text style={styles.actualControlLabel}>Load</Text>
+                      <View style={styles.actualControlButtons}>
+                        <Pressable style={styles.stepButton} onPress={() => handleQuickActualUpdate(exercise.id, set.id, 'actualLoad', -5)}>
+                          <Text style={styles.stepButtonText}>-</Text>
+                        </Pressable>
+                        <Text style={styles.actualValue}>{set.actualLoad ?? set.prescribedLoad ?? 0}</Text>
+                        <Pressable style={styles.stepButton} onPress={() => handleQuickActualUpdate(exercise.id, set.id, 'actualLoad', 5)}>
+                          <Text style={styles.stepButtonText}>+</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+
+                    <View style={styles.actualControl}>
+                      <Text style={styles.actualControlLabel}>Reps</Text>
+                      <View style={styles.actualControlButtons}>
+                        <Pressable style={styles.stepButton} onPress={() => handleQuickActualUpdate(exercise.id, set.id, 'actualReps', -1)}>
+                          <Text style={styles.stepButtonText}>-</Text>
+                        </Pressable>
+                        <Text style={styles.actualValue}>{set.actualReps ?? set.prescribedReps ?? 0}</Text>
+                        <Pressable style={styles.stepButton} onPress={() => handleQuickActualUpdate(exercise.id, set.id, 'actualReps', 1)}>
+                          <Text style={styles.stepButtonText}>+</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+
+                    <View style={[styles.badge, set.isCompleted ? styles.badgeDone : styles.badgeTodo]}>
+                      <Text style={styles.badgeText}>{set.isCompleted ? 'Done' : 'Tap left side to complete'}</Text>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </View>
+          ))}
         </View>
-      </ScrollView>
+      </>
+    );
+  }
+
+  function renderPlaceholderSurface(title, copy) {
+    return (
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        <Text style={styles.sectionBody}>{copy}</Text>
+      </View>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.appShell}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          {activeTab === 'train' && renderTrainSurface()}
+          {activeTab === 'progress' && renderPlaceholderSurface('Progress', 'This surface will hold performance snapshots, training load, and fatigue/recovery views.')}
+          {activeTab === 'team' && renderPlaceholderSurface('Team', 'This surface will hold coach context, team relationships, and collaboration later.')}
+          {activeTab === 'inbox' && renderPlaceholderSurface('Inbox', 'This surface will hold communication, reminders, and support flows later.')}
+        </ScrollView>
+
+        <View style={styles.tabBar}>
+          {mobileTabs.map((tab) => (
+            <Pressable
+              key={tab.key}
+              style={[styles.tabButton, activeTab === tab.key && styles.tabButtonActive]}
+              onPress={() => setActiveTab(tab.key)}
+            >
+              <Text style={[styles.tabLabel, activeTab === tab.key && styles.tabLabelActive]}>{tab.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
       <StatusBar style="light" />
     </SafeAreaView>
   );
@@ -224,9 +257,13 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0b1220'
   },
+  appShell: {
+    flex: 1
+  },
   scrollContent: {
     padding: 20,
-    gap: 16
+    gap: 16,
+    paddingBottom: 110
   },
   headerCard: {
     backgroundColor: '#111827',
@@ -265,7 +302,8 @@ const styles = StyleSheet.create({
   },
   summary: {
     color: '#d1d5db',
-    fontSize: 16
+    fontSize: 18,
+    fontWeight: '600'
   },
   timer: {
     color: '#34d399',
@@ -332,10 +370,26 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: '700'
   },
-  exerciseCard: {
+  sectionCard: {
     backgroundColor: '#111827',
     borderRadius: 20,
-    padding: 16,
+    padding: 20,
+    gap: 8
+  },
+  sectionTitle: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontWeight: '700'
+  },
+  sectionBody: {
+    color: '#cbd5e1',
+    fontSize: 15,
+    lineHeight: 22
+  },
+  exerciseCard: {
+    backgroundColor: '#1f2937',
+    borderRadius: 18,
+    padding: 14,
     gap: 12
   },
   exerciseHeader: {
@@ -364,7 +418,7 @@ const styles = StyleSheet.create({
     fontWeight: '700'
   },
   setRow: {
-    backgroundColor: '#1f2937',
+    backgroundColor: '#111827',
     borderRadius: 16,
     padding: 14,
     flexDirection: 'row',
@@ -442,21 +496,31 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'center'
   },
-  footerCard: {
+  tabBar: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 16,
     backgroundColor: '#111827',
-    borderRadius: 20,
-    padding: 20,
-    gap: 8,
-    marginBottom: 28
+    borderRadius: 18,
+    padding: 8,
+    flexDirection: 'row',
+    gap: 8
   },
-  footerTitle: {
-    color: '#ffffff',
-    fontSize: 18,
+  tabButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center'
+  },
+  tabButtonActive: {
+    backgroundColor: '#2563eb'
+  },
+  tabLabel: {
+    color: '#94a3b8',
     fontWeight: '700'
   },
-  footerLine: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20
+  tabLabelActive: {
+    color: '#ffffff'
   }
 });

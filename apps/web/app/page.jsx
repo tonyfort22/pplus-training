@@ -1,3 +1,12 @@
+const sections = [
+  { key: 'dashboard', label: 'Dashboard' },
+  { key: 'athletes', label: 'Athletes' },
+  { key: 'programs', label: 'Programs' },
+  { key: 'workouts', label: 'Workouts' },
+  { key: 'exercises', label: 'Exercises' },
+  { key: 'analytics', label: 'Analytics' }
+];
+
 const coachCards = [
   {
     title: 'Athletes',
@@ -16,59 +25,74 @@ const coachCards = [
   }
 ];
 
-const priorities = [
-  'Build the workout session engine first',
-  'Keep prescribed and actual values separate',
-  'Run fatigue analytics from completed session data only'
-];
-
-const engineSteps = [
-  'Create workout session from planned workout snapshot',
-  'Support actual load and rep edits on the session set',
-  'Start and adjust rest timer state when a set is completed',
-  'Finish session and make it the trigger for analytics'
-];
+function SectionPanel({ title, copy }) {
+  return (
+    <section style={styles.panel}>
+      <h2 style={styles.panelTitle}>{title}</h2>
+      <p style={styles.panelCopy}>{copy}</p>
+    </section>
+  );
+}
 
 export default function HomePage() {
   return (
     <main style={styles.page}>
-      <section style={styles.hero}>
+      <aside style={styles.sidebar}>
         <div>
-          <p style={styles.eyebrow}>PPLUS Training</p>
-          <h1 style={styles.heading}>Coach dashboard scaffold</h1>
-          <p style={styles.subheading}>
-            Clean planning, clean execution, and analytics built on real completed sessions.
-          </p>
+          <p style={styles.brandEyebrow}>PPLUS Training</p>
+          <h1 style={styles.brandTitle}>Coach OS</h1>
         </div>
-      </section>
+        <nav style={styles.nav}>
+          {sections.map((section) => (
+            <div key={section.key} style={styles.navItem}>
+              {section.label}
+            </div>
+          ))}
+        </nav>
+      </aside>
 
-      <section style={styles.cardGrid}>
-        {coachCards.map((card) => (
-          <article key={card.title} style={styles.metricCard}>
-            <p style={styles.metricLabel}>{card.title}</p>
-            <h2 style={styles.metricValue}>{card.value}</h2>
-            <p style={styles.metricDetail}>{card.detail}</p>
-          </article>
-        ))}
-      </section>
-
-      <section style={styles.twoColumn}>
-        <section style={styles.panel}>
-          <h2 style={styles.panelTitle}>Current build priorities</h2>
-          <ul style={styles.list}>
-            {priorities.map((priority) => (
-              <li key={priority}>{priority}</li>
-            ))}
-          </ul>
+      <section style={styles.content}>
+        <section style={styles.hero}>
+          <div>
+            <p style={styles.eyebrow}>Dashboard</p>
+            <h2 style={styles.heading}>Coach dashboard scaffold</h2>
+            <p style={styles.subheading}>
+              The app now has a real section shell so the workout flow is one part of a broader coach product.
+            </p>
+          </div>
         </section>
 
-        <section style={styles.panel}>
-          <h2 style={styles.panelTitle}>Session engine milestones</h2>
-          <ol style={styles.list}>
-            {engineSteps.map((step) => (
-              <li key={step}>{step}</li>
-            ))}
-          </ol>
+        <section style={styles.cardGrid}>
+          {coachCards.map((card) => (
+            <article key={card.title} style={styles.metricCard}>
+              <p style={styles.metricLabel}>{card.title}</p>
+              <h3 style={styles.metricValue}>{card.value}</h3>
+              <p style={styles.metricDetail}>{card.detail}</p>
+            </article>
+          ))}
+        </section>
+
+        <section style={styles.twoColumn}>
+          <SectionPanel
+            title="Athletes"
+            copy="Athlete list, athlete detail, assigned programs, recent sessions, and progress review will live here."
+          />
+          <SectionPanel
+            title="Programs"
+            copy="Program authoring, week/day scheduling, and assignment flows will live here."
+          />
+          <SectionPanel
+            title="Workouts"
+            copy="Workout template creation and set composition will live here."
+          />
+          <SectionPanel
+            title="Exercises"
+            copy="Exercise library, muscle maps, and sub-muscle maps will live here."
+          />
+          <SectionPanel
+            title="Analytics"
+            copy="Fatigue, performance, compliance, and workload summaries will live here."
+          />
         </section>
       </section>
     </main>
@@ -80,6 +104,39 @@ const styles = {
     minHeight: '100vh',
     background: '#08111f',
     color: '#f8fafc',
+    display: 'grid',
+    gridTemplateColumns: '240px 1fr'
+  },
+  sidebar: {
+    background: '#020617',
+    borderRight: '1px solid #1e293b',
+    padding: '24px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '24px'
+  },
+  brandEyebrow: {
+    color: '#93c5fd',
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    fontSize: '12px'
+  },
+  brandTitle: {
+    margin: '8px 0 0'
+  },
+  nav: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px'
+  },
+  navItem: {
+    padding: '12px 14px',
+    borderRadius: '12px',
+    background: '#0f172a',
+    color: '#dbeafe',
+    fontWeight: 600
+  },
+  content: {
     padding: '32px'
   },
   hero: {
@@ -99,7 +156,7 @@ const styles = {
     fontSize: '40px'
   },
   subheading: {
-    maxWidth: '700px',
+    maxWidth: '760px',
     lineHeight: 1.5,
     color: '#dbeafe'
   },
@@ -141,12 +198,11 @@ const styles = {
   },
   panelTitle: {
     marginTop: 0,
-    marginBottom: '16px'
+    marginBottom: '12px'
   },
-  list: {
+  panelCopy: {
     margin: 0,
-    paddingLeft: '20px',
-    lineHeight: 1.8,
-    color: '#dbeafe'
+    color: '#dbeafe',
+    lineHeight: 1.7
   }
 };
