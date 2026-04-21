@@ -22,6 +22,7 @@ Mobile-first training platform for hockey athletes and coaches.
 - `docs/schema-v1.md`
 - `docs/build-roadmap-v1.md`
 - `docs/product-map-v1.md`
+- `docs/app-structure-v1.md`
 
 ## Backend foundation
 - `infra/supabase/schema-v1.sql`
