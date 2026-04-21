@@ -49,8 +49,30 @@ const mobileTabs = [
   { key: 'inbox', label: 'Inbox' }
 ];
 
+const trainTabs = [
+  { key: 'today', label: 'Today' },
+  { key: 'program', label: 'Program' },
+  { key: 'workout', label: 'Workout' },
+  { key: 'session', label: 'Session' }
+];
+
+function SurfaceCard({ title, body, actionLabel, onAction }) {
+  return (
+    <View style={styles.sectionCard}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <Text style={styles.sectionBody}>{body}</Text>
+      {actionLabel ? (
+        <Pressable style={styles.primaryAction} onPress={onAction}>
+          <Text style={styles.primaryActionText}>{actionLabel}</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('train');
+  const [activeTrainTab, setActiveTrainTab] = useState('today');
   const [session, setSession] = useState(() => createWorkoutSessionFromTemplate(workoutTemplate));
   const [elapsedSeconds] = useState(35);
 
@@ -85,14 +107,14 @@ export default function App() {
     );
   }
 
-  function renderTrainSurface() {
+  function renderSessionSurface() {
     return (
       <>
         <View style={styles.headerCard}>
           <View style={styles.headerTopRow}>
             <View>
-              <Text style={styles.eyebrow}>Train</Text>
-              <Text style={styles.title}>Today</Text>
+              <Text style={styles.eyebrow}>Train / Session</Text>
+              <Text style={styles.title}>{session.name}</Text>
             </View>
             <Pressable
               onPress={handleFinishWorkout}
@@ -104,9 +126,7 @@ export default function App() {
             </Pressable>
           </View>
 
-          <Text style={styles.summary}>{session.name}</Text>
-          <Text style={styles.timer}>{formatWorkoutTimer(elapsedSeconds)}</Text>
-
+          <Text style={styles.summary}>{formatWorkoutTimer(elapsedSeconds)}</Text>
           <View style={styles.progressTrack}>
             <View style={[styles.progressFill, { width: `${progress.completionPercent}%` }]} />
           </View>
@@ -137,11 +157,6 @@ export default function App() {
             </View>
           </View>
         ) : null}
-
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Program snapshot</Text>
-          <Text style={styles.sectionBody}>Spring Hypertrophy, week 3 of 8. Lower A is scheduled for today.</Text>
-        </View>
 
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Active workout session</Text>
@@ -209,6 +224,74 @@ export default function App() {
     );
   }
 
+  function renderTrainSurface() {
+    return (
+      <>
+        <View style={styles.trainTabsRow}>
+          {trainTabs.map((tab) => (
+            <Pressable
+              key={tab.key}
+              style={[styles.trainTabButton, activeTrainTab === tab.key && styles.trainTabButtonActive]}
+              onPress={() => setActiveTrainTab(tab.key)}
+            >
+              <Text style={[styles.trainTabLabel, activeTrainTab === tab.key && styles.trainTabLabelActive]}>{tab.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {activeTrainTab === 'today' && (
+          <>
+            <SurfaceCard
+              title="Today"
+              body="You have Lower A scheduled today. The athlete should see the next workout, high-level progress, and quick access into the session flow."
+              actionLabel="Open workout"
+              onAction={() => setActiveTrainTab('workout')}
+            />
+            <SurfaceCard
+              title="Program snapshot"
+              body="Spring Hypertrophy, week 3 of 8. 6 of 39 workouts completed so far."
+              actionLabel="View program"
+              onAction={() => setActiveTrainTab('program')}
+            />
+          </>
+        )}
+
+        {activeTrainTab === 'program' && (
+          <SurfaceCard
+            title="Program overview"
+            body="This area should hold the current program, weekly structure, training calendar, and scheduled workout progression."
+            actionLabel="See today’s workout"
+            onAction={() => setActiveTrainTab('workout')}
+          />
+        )}
+
+        {activeTrainTab === 'workout' && (
+          <>
+            <SurfaceCard
+              title="Workout detail"
+              body="Lower A contains 2 exercises in this scaffold, with prescribed sets, loads, reps, and planned rest. This is the preview before starting or continuing the session."
+              actionLabel="Go to session"
+              onAction={() => setActiveTrainTab('session')}
+            />
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>Planned exercises</Text>
+              {session.exercises.map((exercise) => (
+                <View key={exercise.id} style={styles.listRow}>
+                  <View>
+                    <Text style={styles.listRowTitle}>{exercise.name}</Text>
+                    <Text style={styles.listRowBody}>{exercise.sets.length} sets, default rest {Math.floor(exercise.defaultRestSeconds / 60)}:{String(exercise.defaultRestSeconds % 60).padStart(2, '0')}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
+
+        {activeTrainTab === 'session' && renderSessionSurface()}
+      </>
+    );
+  }
+
   function renderPlaceholderSurface(title, copy) {
     return (
       <View style={styles.sectionCard}>
@@ -264,6 +347,27 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 16,
     paddingBottom: 110
+  },
+  trainTabsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap'
+  },
+  trainTabButton: {
+    backgroundColor: '#111827',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 999
+  },
+  trainTabButtonActive: {
+    backgroundColor: '#2563eb'
+  },
+  trainTabLabel: {
+    color: '#94a3b8',
+    fontWeight: '700'
+  },
+  trainTabLabelActive: {
+    color: '#ffffff'
   },
   headerCard: {
     backgroundColor: '#111827',
@@ -386,6 +490,18 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22
   },
+  primaryAction: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#2563eb',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    marginTop: 4
+  },
+  primaryActionText: {
+    color: '#ffffff',
+    fontWeight: '700'
+  },
   exerciseCard: {
     backgroundColor: '#1f2937',
     borderRadius: 18,
@@ -495,6 +611,21 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     textAlign: 'center'
+  },
+  listRow: {
+    backgroundColor: '#1f2937',
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 10
+  },
+  listRowTitle: {
+    color: '#ffffff',
+    fontWeight: '700',
+    fontSize: 16
+  },
+  listRowBody: {
+    color: '#cbd5e1',
+    marginTop: 4
   },
   tabBar: {
     position: 'absolute',

@@ -57,7 +57,7 @@ export default function HomePage() {
             <p style={styles.eyebrow}>Dashboard</p>
             <h2 style={styles.heading}>Coach dashboard scaffold</h2>
             <p style={styles.subheading}>
-              The app now has a real section shell so the workout flow is one part of a broader coach product.
+              The mobile Train surface is now split into Today, Program, Workout, and Session. The web side stays aligned around real coach sections.
             </p>
           </div>
         </section>
