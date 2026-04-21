@@ -70,6 +70,16 @@ function SurfaceCard({ title, body, actionLabel, onAction }) {
   );
 }
 
+function MetricCard({ label, value, detail }) {
+  return (
+    <View style={styles.metricCard}>
+      <Text style={styles.metricLabel}>{label}</Text>
+      <Text style={styles.metricValue}>{value}</Text>
+      <Text style={styles.metricDetail}>{detail}</Text>
+    </View>
+  );
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('train');
   const [activeTrainTab, setActiveTrainTab] = useState('today');
@@ -292,6 +302,59 @@ export default function App() {
     );
   }
 
+  function renderProgressSurface() {
+    return (
+      <>
+        <View style={styles.headerCard}>
+          <Text style={styles.eyebrow}>Progress</Text>
+          <Text style={styles.title}>Performance & recovery</Text>
+          <Text style={styles.sectionBody}>
+            This is where the athlete should see results from training, not just the workouts themselves.
+          </Text>
+        </View>
+
+        <View style={styles.metricsGrid}>
+          <MetricCard label="Back Squat est. 1RM" value="205 lb" detail="Up 10 lb over the last 4 weeks" />
+          <MetricCard label="Weekly load" value="78" detail="Current training load score based on completed sessions" />
+          <MetricCard label="Readiness" value="Moderate" detail="Good to train, but lower body fatigue is accumulating" />
+        </View>
+
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Training load</Text>
+          <Text style={styles.sectionBody}>
+            The app should summarize completed session load across the week and connect it to muscles and sub-muscles through the analytics domain.
+          </Text>
+        </View>
+
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Muscle fatigue</Text>
+          <Text style={styles.sectionBody}>
+            This surface will show fatigue and recovery signals per muscle group once analytics are wired from the completed session data.
+          </Text>
+          <View style={styles.listRow}>
+            <Text style={styles.listRowTitle}>Quads</Text>
+            <Text style={styles.listRowBody}>High fatigue</Text>
+          </View>
+          <View style={styles.listRow}>
+            <Text style={styles.listRowTitle}>Hamstrings</Text>
+            <Text style={styles.listRowBody}>Moderate fatigue</Text>
+          </View>
+          <View style={styles.listRow}>
+            <Text style={styles.listRowTitle}>Glutes</Text>
+            <Text style={styles.listRowBody}>Moderate fatigue</Text>
+          </View>
+        </View>
+
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Performance snapshots</Text>
+          <Text style={styles.sectionBody}>
+            This area should hold lift progress, compliance, and trend summaries over time.
+          </Text>
+        </View>
+      </>
+    );
+  }
+
   function renderPlaceholderSurface(title, copy) {
     return (
       <View style={styles.sectionCard}>
@@ -306,7 +369,7 @@ export default function App() {
       <View style={styles.appShell}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {activeTab === 'train' && renderTrainSurface()}
-          {activeTab === 'progress' && renderPlaceholderSurface('Progress', 'This surface will hold performance snapshots, training load, and fatigue/recovery views.')}
+          {activeTab === 'progress' && renderProgressSurface()}
           {activeTab === 'team' && renderPlaceholderSurface('Team', 'This surface will hold coach context, team relationships, and collaboration later.')}
           {activeTab === 'inbox' && renderPlaceholderSurface('Inbox', 'This surface will hold communication, reminders, and support flows later.')}
         </ScrollView>
@@ -375,11 +438,6 @@ const styles = StyleSheet.create({
     padding: 20,
     gap: 8
   },
-  headerTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center'
-  },
   eyebrow: {
     color: '#93c5fd',
     fontSize: 14,
@@ -390,6 +448,11 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 32,
     fontWeight: '700'
+  },
+  headerTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
   },
   finishButton: {
     backgroundColor: '#2563eb',
@@ -626,6 +689,28 @@ const styles = StyleSheet.create({
   listRowBody: {
     color: '#cbd5e1',
     marginTop: 4
+  },
+  metricsGrid: {
+    gap: 12
+  },
+  metricCard: {
+    backgroundColor: '#111827',
+    borderRadius: 18,
+    padding: 18,
+    gap: 6
+  },
+  metricLabel: {
+    color: '#93c5fd',
+    fontWeight: '700'
+  },
+  metricValue: {
+    color: '#ffffff',
+    fontSize: 28,
+    fontWeight: '700'
+  },
+  metricDetail: {
+    color: '#cbd5e1',
+    lineHeight: 20
   },
   tabBar: {
     position: 'absolute',

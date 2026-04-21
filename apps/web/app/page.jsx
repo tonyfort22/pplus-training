@@ -57,7 +57,7 @@ export default function HomePage() {
             <p style={styles.eyebrow}>Dashboard</p>
             <h2 style={styles.heading}>Coach dashboard scaffold</h2>
             <p style={styles.subheading}>
-              The mobile Train surface is now split into Today, Program, Workout, and Session. The web side stays aligned around real coach sections.
+              The athlete app now has a more meaningful Progress surface, so training execution and performance feedback are both represented in the shell.
             </p>
           </div>
         </section>
@@ -91,7 +91,7 @@ export default function HomePage() {
           />
           <SectionPanel
             title="Analytics"
-            copy="Fatigue, performance, compliance, and workload summaries will live here."
+            copy="Fatigue, performance, compliance, and workload summaries will live here, aligned with the athlete Progress surface."
           />
         </section>
       </section>
