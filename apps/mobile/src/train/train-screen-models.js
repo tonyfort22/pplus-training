@@ -98,8 +98,8 @@ function getSelectedWorkoutCardModel(workoutModel) {
     variant: 'today-summary',
     workoutName: workoutModel.workoutName,
     scheduledLabel: getSelectedWorkoutScheduledLabel(workoutModel.scheduleStatusLabel),
-    summaryLabel: `${workoutModel.exerciseCount} exercises, ${totalSets} total sets`,
-    statusLabel: targetKey === 'session' ? 'Ready to log' : workoutModel.scheduleStatusLabel,
+    summaryLabel: getSelectedWorkoutScheduledLabel(workoutModel.scheduleStatusLabel),
+    statusLabel: undefined,
     quickSummary: workoutModel.sessionProgressSummary || workoutModel.previewHighlights?.[0]?.body || workoutModel.body,
     completionTone: workoutModel.scheduleStatusLabel === 'Completed' ? 'done' : 'pending',
   }

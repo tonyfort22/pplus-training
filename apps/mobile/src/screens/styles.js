@@ -373,7 +373,7 @@ export const styles = {
   },
   calendarDayNumber: {
     color: '#f8fafc',
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '500',
   },
   calendarDayNumberSelected: {

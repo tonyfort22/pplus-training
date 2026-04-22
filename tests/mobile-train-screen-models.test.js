@@ -65,6 +65,8 @@ test('getTrainSurfaceModel keeps the selected-date workout card aligned with the
   assert.equal(model.surface.type, 'train-home')
   assert.equal(model.surface.selectedWorkoutCard.actionLabel, 'Resume session')
   assert.equal(model.surface.selectedWorkoutCard.scheduledLabel, 'Scheduled for today')
+  assert.equal(model.surface.selectedWorkoutCard.summaryLabel, 'Scheduled for today')
+  assert.equal(model.surface.selectedWorkoutCard.statusLabel, undefined)
   assert.equal(model.surface.selectedWorkoutCard.targetKey, 'session')
   assert.equal(model.surface.calendarStripDays[1].targetKey, 'session')
   assert.equal(model.surface.calendarStripDays[1].indicatorTone, 'active')
