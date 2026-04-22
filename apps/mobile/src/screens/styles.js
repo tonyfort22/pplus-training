@@ -401,7 +401,9 @@ export const styles = {
     borderWidth: 1,
     borderColor: '#243041',
     padding: 14,
-    gap: 10,
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
   },
   todayCardTopRow: {
     flexDirection: 'row',
@@ -409,26 +411,30 @@ export const styles = {
     alignItems: 'center',
     gap: 10,
   },
+  todayCardContent: {
+    flex: 1,
+    gap: 4,
+  },
   todayCardTitleBlock: {
     flex: 1,
-    gap: 3,
+    gap: 2,
   },
   todayCardLabel: {
     color: '#cbd5e1',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
   todayCardWorkoutName: {
     color: '#ffffff',
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '700',
   },
   todayCardCheckWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#475569',
     alignItems: 'center',
@@ -441,7 +447,7 @@ export const styles = {
   },
   todayCardCheckIcon: {
     color: '#64748b',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
   },
   todayCardCheckIconDone: {
@@ -449,13 +455,13 @@ export const styles = {
   },
   todayCardScheduledLabel: {
     color: '#94a3b8',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
   },
   todayCardSummary: {
     color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 16,
   },
   todayCardFooterRow: {
     flexDirection: 'row',

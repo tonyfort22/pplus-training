@@ -56,20 +56,17 @@ export function SurfaceCard({
 
     return (
       <CardWrapper style={styles.todayCard} onPress={onAction}>
-        <View style={styles.todayCardTopRow}>
+        <View style={styles.todayCardContent}>
           <View style={styles.todayCardTitleBlock}>
             {title ? <Text style={styles.todayCardLabel}>{title}</Text> : null}
             <Text style={styles.todayCardWorkoutName}>{workoutName || title}</Text>
-            <Text style={styles.todayCardScheduledLabel}>{scheduledLabel || body}</Text>
           </View>
-          <View style={[styles.todayCardCheckWrap, isDone && styles.todayCardCheckWrapDone]}>
-            <Text style={[styles.todayCardCheckIcon, isDone && styles.todayCardCheckIconDone]}>✓</Text>
-          </View>
-        </View>
-        <Text style={styles.todayCardSummary}>{quickSummary || body}</Text>
-        <View style={styles.todayCardFooterRow}>
-          <Text style={styles.todayCardFooterMeta}>{summaryLabel}</Text>
+          <Text style={styles.todayCardScheduledLabel}>{scheduledLabel || body}</Text>
+          <Text style={styles.todayCardSummary}>{summaryLabel || quickSummary || body}</Text>
           <Text style={styles.todayCardFooterStatus}>{statusLabel}</Text>
+        </View>
+        <View style={[styles.todayCardCheckWrap, isDone && styles.todayCardCheckWrapDone]}>
+          <Text style={[styles.todayCardCheckIcon, isDone && styles.todayCardCheckIconDone]}>✓</Text>
         </View>
       </CardWrapper>
     )
