@@ -147,20 +147,45 @@ function buildRecentMomentumRows(sessions) {
     ]
   }
 
-  return [...sessions]
+  const sortedSessions = [...sessions]
     .sort((left, right) => new Date(right.completedAt || 0).getTime() - new Date(left.completedAt || 0).getTime())
     .slice(0, 3)
-    .map((session) => {
+
+  return sortedSessions.map((session, index) => {
       const bestSet = getSessionBestSet(session)
       const bestSetCopy = bestSet
         ? `${estimateOneRepMax(bestSet.actualLoad, bestSet.actualReps)} lb est. 1RM from ${bestSet.exerciseName} (${bestSet.actualLoad} x ${bestSet.actualReps})`
         : 'Completed session logged with no usable strength set yet.'
+      const trendCopy = getMomentumTrendCopy({
+        currentBestSet: bestSet,
+        previousBestSet: index < sortedSessions.length - 1 ? getSessionBestSet(sortedSessions[index + 1]) : null,
+      })
 
       return {
         title: `${formatSessionDate(session.completedAt)} • ${session.nameSnapshot || session.workoutName || 'Completed session'}`,
-        body: `${session.completedSetsCount} of ${session.totalSetsCount} sets completed. ${bestSetCopy}`,
+        body: `${session.completedSetsCount} of ${session.totalSetsCount} sets completed. ${bestSetCopy} ${trendCopy}`.trim(),
       }
     })
+}
+
+function getMomentumTrendCopy({ currentBestSet, previousBestSet }) {
+  if (!currentBestSet || !previousBestSet) {
+    return 'First completed session in this sample.'
+  }
+
+  const currentEstimate = estimateOneRepMax(currentBestSet.actualLoad, currentBestSet.actualReps)
+  const previousEstimate = estimateOneRepMax(previousBestSet.actualLoad, previousBestSet.actualReps)
+  const delta = currentEstimate - previousEstimate
+
+  if (delta > 0) {
+    return `Trending up. +${delta} lb vs last completed session.`
+  }
+
+  if (delta < 0) {
+    return `Trending down. ${delta} lb vs last completed session.`
+  }
+
+  return 'Holding steady. Flat vs last completed session.'
 }
 
 function getSessionBestSet(session) {
