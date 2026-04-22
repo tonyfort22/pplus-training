@@ -94,16 +94,17 @@ export function createDemoCompletedSessions(programWorkout = createDemoProgramWo
 
 export function getTodaySurfaceModel(trainState) {
   const sessionProgress = getSessionProgressCopy(trainState.session)
+  const sessionOutcome = getSessionOutcomeCopy(trainState.session)
 
   return {
     heroTitle: trainState.today.title,
     workoutName: trainState.today.workoutName,
     scheduledLabel: trainState.today.scheduledLabel,
-    quickSummary: sessionProgress ? sessionProgress.summary : trainState.today.quickSummary,
+    quickSummary: sessionOutcome ? sessionOutcome.summary : sessionProgress ? sessionProgress.summary : trainState.today.quickSummary,
     programName: trainState.program.name,
     programWeekLabel: trainState.program.weekLabel,
     completionLabel: trainState.program.completionLabel,
-    primaryActionLabel: sessionProgress ? 'Resume session' : 'Open workout',
+    primaryActionLabel: sessionOutcome ? sessionOutcome.actionLabel : sessionProgress ? 'Resume session' : 'Open workout',
   }
 }
 
@@ -112,6 +113,7 @@ export function getWorkoutSurfaceModel(trainState, selectedCalendarDayId = train
   const workoutPreview = selectedDay.workoutPreview || createWorkoutPreviewFromSession(trainState.session)
   const isTodayWorkout = selectedDay.id === 'tue'
   const sessionProgress = isTodayWorkout ? getSessionProgressCopy(trainState.session) : null
+  const sessionOutcome = isTodayWorkout ? getSessionOutcomeCopy(trainState.session) : null
   const canOpenSession = isTodayWorkout
 
   return {
@@ -120,9 +122,9 @@ export function getWorkoutSurfaceModel(trainState, selectedCalendarDayId = train
     scheduleStatusLabel: formatCalendarStatus(selectedDay.status),
     workoutName: workoutPreview.workoutName,
     exerciseCount: workoutPreview.exercises.length,
-    sessionProgressSummary: sessionProgress?.summary || null,
-    primaryActionLabel: canOpenSession ? (sessionProgress ? 'Resume session' : 'Go to session') : 'Back to calendar',
-    primaryTargetKey: canOpenSession ? 'session' : 'calendar',
+    sessionProgressSummary: sessionOutcome ? sessionOutcome.summary : sessionProgress?.summary || null,
+    primaryActionLabel: canOpenSession ? sessionOutcome ? sessionOutcome.actionLabel : sessionProgress ? 'Resume session' : 'Go to session' : 'Back to calendar',
+    primaryTargetKey: canOpenSession ? sessionOutcome ? 'session' : 'session' : 'calendar',
     actionPayload: { selectedDayId: selectedDay.id },
     exercises: workoutPreview.exercises.map((exercise) => ({
       id: exercise.id,
@@ -141,7 +143,7 @@ export function getCalendarSurfaceModel(trainState, selectedCalendarDayId = trai
   return {
     title: 'Weekly schedule',
     body: `${trainState.program.name}, ${trainState.program.weekLabel}. ${selectedDay.dayLabel} is ${formatCalendarStatus(selectedDay.status).toLowerCase()} with ${selectedDay.workoutName}.`,
-    actionLabel: getCalendarActionLabel({ day: selectedDay, targetKey: selectedDayTarget }),
+    actionLabel: getCalendarActionLabel({ day: selectedDay, targetKey: selectedDayTarget, trainState }),
     actionTargetKey: selectedDayTarget,
     selectedDayId: selectedDay.id,
     selectedDay: {
@@ -171,19 +173,33 @@ function getCalendarDayTarget({ trainState, day }) {
     return undefined
   }
 
-  if (day.id === 'tue' && trainState.session.status === 'in_progress' && trainState.session.completedSetsCount > 0) {
-    return 'session'
+  if (day.id === 'tue') {
+    if (trainState.session.status === 'completed' || trainState.session.status === 'discarded') {
+      return 'session'
+    }
+
+    if (trainState.session.status === 'in_progress' && trainState.session.completedSetsCount > 0) {
+      return 'session'
+    }
   }
 
   return 'workout'
 }
 
-function getCalendarActionLabel({ day, targetKey }) {
+function getCalendarActionLabel({ day, targetKey, trainState }) {
   if (!day.workoutPreview) {
     return 'Stay on calendar'
   }
 
-  if (targetKey === 'session') {
+  if (targetKey === 'session' && day.id === 'tue') {
+    if (trainState.session.status === 'completed') {
+      return `View ${day.dayLabel} summary`
+    }
+
+    if (trainState.session.status === 'discarded') {
+      return `View ${day.dayLabel} summary`
+    }
+
     return `Resume ${day.dayLabel} session`
   }
 
@@ -198,6 +214,28 @@ function getSessionProgressCopy(session) {
   return {
     summary: `${session.completedSetsCount} of ${session.totalSetsCount} sets logged. Pick up where you left off and keep the rest timer moving.`,
   }
+}
+
+function getSessionOutcomeCopy(session) {
+  if (!session || session.status === 'in_progress') {
+    return null
+  }
+
+  if (session.status === 'completed') {
+    return {
+      actionLabel: 'View completed session',
+      summary: 'Workout completed. Review the session summary and actual logged work.',
+    }
+  }
+
+  if (session.status === 'discarded') {
+    return {
+      actionLabel: 'View discarded session',
+      summary: 'Workout discarded. Review what was logged before the session was abandoned.',
+    }
+  }
+
+  return null
 }
 
 function formatCalendarStatus(status) {

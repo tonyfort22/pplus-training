@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { completeWorkoutSet } from '../packages/core/src/index.js'
+import { completeWorkoutSet, finishWorkoutSession } from '../packages/core/src/index.js'
 import { createDemoProgramWorkout, createTrainDemoState, getCalendarSurfaceModel, getTodaySurfaceModel, getWorkoutSurfaceModel, trainTabs } from '../apps/mobile/src/train/index.js'
 import { getActiveSessionSurfaceModel } from '../apps/mobile/src/train/active-session-models.js'
 import { getTrainSurfaceModel } from '../apps/mobile/src/train/train-screen-models.js'
@@ -99,6 +99,26 @@ test('getTrainSurfaceModel routes selected today directly to session when it is 
   assert.equal(model.surface.detailCard.actionLabel, 'Resume Tue session')
   assert.equal(model.surface.detailCard.targetKey, 'session')
   assert.equal(model.surface.days[1].targetKey, 'session')
+})
+
+test('getTrainSurfaceModel routes completed today to the completed session summary', () => {
+  const trainState = createTrainDemoState({
+    programWorkout: createDemoProgramWorkout(),
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+  const finishedSession = finishWorkoutSession({ session: trainState.session, completedAt: '2026-04-21T21:00:00.000Z', elapsedSeconds: 1800 })
+
+  const model = getTrainSurfaceModel({
+    trainTabs,
+    activeTrainTab: 'calendar',
+    todayModel: getTodaySurfaceModel({ ...trainState, session: finishedSession }),
+    calendarModel: getCalendarSurfaceModel({ ...trainState, session: finishedSession }, 'tue'),
+    workoutModel: getWorkoutSurfaceModel({ ...trainState, session: finishedSession }, 'tue'),
+    activeSessionModel: getActiveSessionSurfaceModel(finishedSession, 35, null),
+  })
+
+  assert.equal(model.surface.detailCard.actionLabel, 'View Tue summary')
+  assert.equal(model.surface.detailCard.targetKey, 'session')
 })
 
 test('getTrainSurfaceModel builds the workout preview surface', () => {

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { completeWorkoutSet } from '../packages/core/src/index.js'
+import { completeWorkoutSet, discardWorkoutSession, finishWorkoutSession } from '../packages/core/src/index.js'
 import { createDemoProgramWorkout, createTrainDemoState, getCalendarSurfaceModel, getTodaySurfaceModel, getWorkoutSurfaceModel } from '../apps/mobile/src/train/index.js'
 import { getCalendarDetailCardModel, getProgramSurfaceModel, getTodayCardsModel, getWorkoutDetailCardModel } from '../apps/mobile/src/train/surface-models.js'
 
@@ -81,6 +81,32 @@ test('getWorkoutDetailCardModel switches to resume when today session has starte
   assert.match(model.body, /1 of 7 sets logged/)
 })
 
+test('getTodayCardsModel switches to completed summary once today session is finished', () => {
+  const trainState = createTrainDemoState({
+    programWorkout: createDemoProgramWorkout(),
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+  const finishedSession = finishWorkoutSession({ session: trainState.session, completedAt: '2026-04-21T21:00:00.000Z', elapsedSeconds: 1800 })
+
+  const cards = getTodayCardsModel(getTodaySurfaceModel({ ...trainState, session: finishedSession }))
+
+  assert.equal(cards.todayCard.actionLabel, 'View completed session')
+  assert.match(cards.todayCard.body, /Workout completed/)
+})
+
+test('getWorkoutDetailCardModel switches to discarded summary once today session is abandoned', () => {
+  const trainState = createTrainDemoState({
+    programWorkout: createDemoProgramWorkout(),
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+  const discardedSession = discardWorkoutSession({ session: trainState.session, discardedAt: '2026-04-21T20:20:00.000Z', elapsedSeconds: 600 })
+
+  const model = getWorkoutDetailCardModel(getWorkoutSurfaceModel({ ...trainState, session: discardedSession }))
+
+  assert.equal(model.actionLabel, 'View discarded session')
+  assert.match(model.body, /Workout discarded/)
+})
+
 test('getCalendarDetailCardModel creates the weekly schedule copy and rows', () => {
   const trainState = createTrainDemoState({
     programWorkout: createDemoProgramWorkout(),
@@ -125,6 +151,19 @@ test('getCalendarSurfaceModel routes today directly to session once the workout 
   const calendarModel = getCalendarSurfaceModel({ ...trainState, session: startedSession }, 'tue')
 
   assert.equal(calendarModel.actionLabel, 'Resume Tue session')
+  assert.equal(calendarModel.actionTargetKey, 'session')
+  assert.equal(calendarModel.days[1].targetKey, 'session')
+})
+
+test('getCalendarSurfaceModel routes completed today to the session summary', () => {
+  const trainState = createTrainDemoState({
+    programWorkout: createDemoProgramWorkout(),
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+  const finishedSession = finishWorkoutSession({ session: trainState.session, completedAt: '2026-04-21T21:00:00.000Z', elapsedSeconds: 1800 })
+  const calendarModel = getCalendarSurfaceModel({ ...trainState, session: finishedSession }, 'tue')
+
+  assert.equal(calendarModel.actionLabel, 'View Tue summary')
   assert.equal(calendarModel.actionTargetKey, 'session')
   assert.equal(calendarModel.days[1].targetKey, 'session')
 })
