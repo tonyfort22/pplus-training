@@ -13,6 +13,15 @@ export function getProgressSections(progressModel) {
       items: progressModel.metrics.map((metric) => createMetricCardModel(metric)),
     },
     {
+      type: 'body-with-rows',
+      title: progressModel.readinessInterpretation.title,
+      body: progressModel.readinessInterpretation.body,
+      rows: progressModel.readinessInterpretation.rows.map((row) => ({
+        title: row.title,
+        body: row.body,
+      })),
+    },
+    {
       type: 'body',
       title: progressModel.trainingLoad.title,
       body: progressModel.trainingLoad.body,

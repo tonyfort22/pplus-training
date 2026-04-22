@@ -8,6 +8,12 @@ export function getProgressSurfaceModel({ sessions = [] } = {}) {
   const readiness = getReadinessLabel(totalLoadScore)
   const fatigueRows = buildFatigueRows(completedSessions)
   const adherence = completedSessions.length > 0 ? '100% adherence' : 'No completed sessions yet'
+  const readinessInterpretation = getReadinessInterpretation({
+    completedSessions,
+    totalLoadScore,
+    readiness,
+    fatigueRows,
+  })
 
   return {
     header: {
@@ -36,6 +42,7 @@ export function getProgressSurfaceModel({ sessions = [] } = {}) {
           : 'Solid work logged, but fatigue is starting to accumulate',
       },
     ],
+    readinessInterpretation,
     trainingLoad: {
       title: 'Training load',
       body: `${completedSessions.length} completed sessions are currently feeding this load view. The score comes from actual load x reps across logged sets.`,
@@ -108,6 +115,57 @@ function getSessionLoadVolume(session) {
 function getReadinessLabel(totalLoadScore) {
   if (totalLoadScore >= 70) return 'Moderate'
   return 'Low'
+}
+
+function getReadinessInterpretation({ completedSessions, totalLoadScore, readiness, fatigueRows }) {
+  if (completedSessions.length === 0) {
+    return {
+      title: 'Readiness interpretation',
+      body: 'No completed sessions are feeding readiness yet, so this is still a placeholder signal.',
+      rows: [
+        {
+          title: 'Recent load',
+          body: 'No completed load yet. Finish a session to start building the readiness score.',
+        },
+        {
+          title: 'Lower-body fatigue',
+          body: 'No completed lower-body work yet, so fatigue is still effectively clear.',
+        },
+        {
+          title: 'Coach read',
+          body: 'Finish a session to turn readiness into a real signal instead of a default low state.',
+        },
+      ],
+    }
+  }
+
+  const topFatigueRows = fatigueRows
+    .slice()
+    .sort((left, right) => getFatigueSeverity(right.body) - getFatigueSeverity(left.body))
+    .slice(0, 2)
+    .map((row) => `${row.title}: ${row.body.toLowerCase()}`)
+    .join(' · ')
+
+  return {
+    title: 'Readiness interpretation',
+    body: `${completedSessions.length} completed sessions are driving a ${readiness.toLowerCase()} readiness signal right now.`,
+    rows: [
+      {
+        title: 'Recent load',
+        body: `Weekly load score is ${totalLoadScore}, built only from completed actual work.`,
+      },
+      {
+        title: 'Lower-body fatigue',
+        body: topFatigueRows || 'No meaningful lower-body fatigue signal yet.',
+      },
+      {
+        title: 'Coach read',
+        body: readiness === 'Low'
+          ? 'Recovery still looks open. The athlete can push quality work without much fatigue carryover yet.'
+          : 'The athlete can still push quality work, but recovery is no longer wide open after the recent completed load.',
+      },
+    ],
+  }
 }
 
 function buildFatigueRows(sessions) {
@@ -301,6 +359,12 @@ function formatSessionDate(value) {
     day: 'numeric',
     timeZone: 'America/Toronto',
   })
+}
+
+function getFatigueSeverity(label) {
+  if (label === 'High fatigue') return 3
+  if (label === 'Moderate fatigue') return 2
+  return 1
 }
 
 function getFatigueLabel(volume) {
