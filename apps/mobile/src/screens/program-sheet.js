@@ -27,7 +27,7 @@ function ProgramSheetStatusBadge({ status }) {
 
 function ProgramSheetWeekCard({ week }) {
   return (
-    <View key={week.id} className="gap-3.5 rounded-3xl border border-[#2c3645] bg-slate-800 p-[18px]">
+    <View key={week.id} className="gap-3.5 rounded-3xl border border-[#243041] bg-[#111827] p-[18px]">
       <Text className="text-[13px] font-semibold text-slate-400">{week.dateRangeLabel}</Text>
       <Text className="text-2xl font-bold text-white">{week.title}</Text>
 
@@ -115,7 +115,7 @@ export function renderProgramSheet({ isVisible, onClose, model }) {
                 {model.routines.map((routine) => (
                   <View
                     key={routine.id}
-                    className="min-h-[52px] w-[48%] justify-center rounded-[18px] border border-[#2c3645] bg-slate-800 px-4"
+                    className="min-h-[52px] w-[48%] justify-center rounded-[18px] border border-[#243041] bg-[#111827] px-4"
                   >
                     <Text className="text-[15px] font-semibold text-white">{routine.label}</Text>
                   </View>
