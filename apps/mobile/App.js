@@ -23,6 +23,7 @@ import { getQuickActualUpdatePayload } from './src/train/session-actions.js';
 import { getPlaceholderSurfaceModel, getProgressSurfaceModel } from './src/progress/index.js';
 import { getAppRenderModel } from './src/screens/app-render-models.js';
 import { getPlaceholderSections, getProgressSections } from './src/screens/surface-sections.js';
+import { getGenericSectionRenderPlan, getSessionSectionRenderPlan } from './src/screens/render-plans.js';
 import { getSessionSections } from './src/screens/session-sections.js';
 import { getTabButtonModels } from './src/ui/tab-models.js';
 
@@ -56,16 +57,19 @@ export default function App() {
   const workoutModel = useMemo(() => getWorkoutSurfaceModel(demoTrainState), [demoTrainState]);
   const progressModel = useMemo(() => getProgressSurfaceModel(), []);
   const progressSections = useMemo(() => getProgressSections(progressModel), [progressModel]);
+  const progressRenderPlan = useMemo(() => getGenericSectionRenderPlan(progressSections), [progressSections]);
   const teamPlaceholder = useMemo(
     () => getPlaceholderSurfaceModel('Team', 'This surface will hold coach context, team relationships, and collaboration later.'),
     []
   );
   const teamSections = useMemo(() => getPlaceholderSections(teamPlaceholder), [teamPlaceholder]);
+  const teamRenderPlan = useMemo(() => getGenericSectionRenderPlan(teamSections), [teamSections]);
   const inboxPlaceholder = useMemo(
     () => getPlaceholderSurfaceModel('Inbox', 'This surface will hold communication, reminders, and support flows later.'),
     []
   );
   const inboxSections = useMemo(() => getPlaceholderSections(inboxPlaceholder), [inboxPlaceholder]);
+  const inboxRenderPlan = useMemo(() => getGenericSectionRenderPlan(inboxSections), [inboxSections]);
   const [activeTab, setActiveTab] = useState('train');
   const [activeTrainTab, setActiveTrainTab] = useState('today');
   const bottomTabModels = useMemo(() => getTabButtonModels({ tabs: mobileTabs, activeKey: activeTab }), [activeTab]);
@@ -80,6 +84,7 @@ export default function App() {
     [elapsedSeconds, selectedSet, session]
   );
   const sessionSections = useMemo(() => getSessionSections(activeSessionModel), [activeSessionModel]);
+  const sessionRenderPlan = useMemo(() => getSessionSectionRenderPlan(sessionSections), [sessionSections]);
   const trainSurfaceModel = useMemo(
     () =>
       getTrainSurfaceModel({
@@ -92,8 +97,8 @@ export default function App() {
     [activeSessionModel, activeTrainTab, todayModel, workoutModel]
   );
   const trainRenderModel = useMemo(
-    () => getTrainRenderModel({ trainSurfaceModel, sessionSections }),
-    [sessionSections, trainSurfaceModel]
+    () => getTrainRenderModel({ trainSurfaceModel, sessionSections: sessionRenderPlan }),
+    [sessionRenderPlan, trainSurfaceModel]
   );
   const appRenderModel = useMemo(
     () =>
@@ -101,11 +106,11 @@ export default function App() {
         activeTab,
         bottomTabModels,
         trainRenderModel,
-        progressSections,
-        teamSections,
-        inboxSections,
+        progressSections: progressRenderPlan,
+        teamSections: teamRenderPlan,
+        inboxSections: inboxRenderPlan,
       }),
-    [activeTab, bottomTabModels, inboxSections, progressSections, teamSections, trainRenderModel]
+    [activeTab, bottomTabModels, inboxRenderPlan, progressRenderPlan, teamRenderPlan, trainRenderModel]
   );
 
   function handleCompleteSet(exerciseId, setId) {
@@ -283,7 +288,7 @@ export default function App() {
         );
       }
 
-      if (section.type === 'header') {
+      if (section.type === 'header-card') {
         return (
           <View key={section.title} style={styles.headerCard}>
             <Text style={styles.eyebrow}>{section.eyebrow}</Text>
