@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-test('mobile shell renders a branded top header before the content controls', () => {
+test('mobile shell renders a branded top header without the old preview-state controls', () => {
   const shellSource = readFileSync(
     resolve(process.cwd(), 'apps/mobile/src/screens/shell-renderers.js'),
     'utf8'
@@ -34,8 +34,9 @@ test('mobile shell renders a branded top header before the content controls', ()
   assert.match(shellSource, /pphtUsersSvg/)
   assert.match(shellSource, /pphtChatTextSvg/)
   assert.match(shellSource, /style=\{styles\.brandHeader\}/)
-  assert.match(shellSource, /style=\{styles\.topHeader\}/)
-  assert.match(shellSource, /style=\{styles\.previewHeaderTopRow\}/)
+  assert.doesNotMatch(shellSource, /Preview state/)
+  assert.doesNotMatch(shellSource, /previewHeaderTopRow/)
+  assert.doesNotMatch(shellSource, /previewBar/)
   assert.match(rendererSource, /style=\{styles\.trainTabsPill\}/)
   assert.match(rendererSource, /styles\.trainTabButton[\s\S]*styles\.trainTabButtonActive/)
   assert.match(logoSource, /<svg width="92" height="30"/)

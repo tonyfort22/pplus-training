@@ -200,11 +200,9 @@ export default function App() {
           styles,
           screen: appRenderModel.screen,
           bottomTabs: appRenderModel.bottomTabs,
-          previewStates: previewStateModels,
           trainRenderModel,
           sessionRenderModel,
           onTabPress: setActiveTab,
-          onPreviewStatePress: setPreviewState,
           renderTrainSurface: ({ trainRenderModel, sessionRenderModel, styles }) =>
             renderTrainSurface({
               trainRenderModel,

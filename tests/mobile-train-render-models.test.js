@@ -39,6 +39,7 @@ test('getTrainRenderModel builds the stacked train-home sections for the barbell
   assert.equal(renderModel.content.sections[2].variant, 'today-summary')
   assert.equal(renderModel.content.sections[2].title, undefined)
   assert.equal(renderModel.content.sections[2].workoutName, 'Recovery + mobility')
+  assert.equal(renderModel.content.sections[2].scheduledLabel, 'Upcoming')
   assert.equal(renderModel.content.sections[3].type, 'section-heading')
   assert.equal(renderModel.content.sections[3].title, 'My Programs')
   assert.equal(renderModel.content.sections[4].type, 'action-card')

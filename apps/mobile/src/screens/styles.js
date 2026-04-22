@@ -320,7 +320,7 @@ export const styles = {
   },
   sectionHeading: {
     color: '#ffffff',
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '700',
   },
   sectionListOnly: {
@@ -396,7 +396,7 @@ export const styles = {
     height: 4,
   },
   todayCard: {
-    backgroundColor: '#1f2937',
+    backgroundColor: '#111827',
     borderRadius: 24,
     borderWidth: 1,
     borderColor: '#243041',
@@ -475,7 +475,7 @@ export const styles = {
     fontWeight: '700',
   },
   programCard: {
-    backgroundColor: '#1f2937',
+    backgroundColor: '#111827',
     borderRadius: 22,
     borderWidth: 1,
     borderColor: '#243041',
@@ -536,7 +536,7 @@ export const styles = {
     fontWeight: '600',
   },
   workoutListCard: {
-    backgroundColor: '#1f2937',
+    backgroundColor: '#111827',
     borderRadius: 18,
     borderWidth: 1,
     borderColor: '#243041',
