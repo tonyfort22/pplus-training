@@ -54,6 +54,50 @@ export function renderGenericSections({ sections, styles, onActionTarget }) {
       )
     }
 
+    if (section.type === 'calendar-strip') {
+      return (
+        <View key={section.key} style={styles.calendarStripCard}>
+          <Text style={styles.sectionTitle}>{section.title}</Text>
+          <View style={styles.calendarStripRow}>
+            {section.days.map((day) => {
+              const dayContent = (
+                <>
+                  <Text style={[styles.calendarDayWeekLabel, day.isSelected && styles.calendarDayWeekLabelSelected]}>{day.weekdayLabel}</Text>
+                  <View style={[styles.calendarDayButton, day.isSelected && styles.calendarDaySelected]}>
+                    <Text style={[styles.calendarDayNumber, day.isSelected && styles.calendarDayNumberSelected]}>{day.dateNumber}</Text>
+                    {day.indicatorTone !== 'none' ? (
+                      <View
+                        style={[
+                          styles.calendarIndicator,
+                          day.indicatorTone === 'active' ? styles.calendarIndicatorActive : styles.calendarIndicatorMuted,
+                        ]}
+                      />
+                    ) : (
+                      <View style={styles.calendarIndicatorSpacer} />
+                    )}
+                  </View>
+                </>
+              )
+
+              if (!day.targetKey || !onActionTarget) {
+                return (
+                  <View key={day.id} style={styles.calendarDayColumn}>
+                    {dayContent}
+                  </View>
+                )
+              }
+
+              return (
+                <Pressable key={day.id} style={styles.calendarDayColumn} onPress={() => onActionTarget(day.targetKey, day.actionPayload)}>
+                  {dayContent}
+                </Pressable>
+              )
+            })}
+          </View>
+        </View>
+      )
+    }
+
     if (section.type === 'metrics-grid') {
       return (
         <View key={section.key} style={styles.metricsGrid}>

@@ -236,10 +236,13 @@ export function getCalendarSurfaceModel(trainState, selectedCalendarDayId = trai
     actionPayload: { selectedDayId: selectedDay.id },
     days: trainState.program.calendarWeek.map((day) => ({
       id: day.id,
+      weekdayLabel: day.dayLabel.toUpperCase(),
+      dateNumber: getCalendarDateNumber(day.dateLabel),
       title: `${day.dayLabel} • ${day.workoutName}`,
       body: `${day.dateLabel} · ${formatCalendarStatus(day.status)}`,
       status: day.status,
       isSelected: day.id === selectedDay.id,
+      indicatorTone: getCalendarIndicatorTone({ day, selectedDayId: selectedDay.id }),
       targetKey: getCalendarDayTarget({ trainState, day }),
       actionPayload: day.workoutPreview ? { selectedDayId: day.id } : null,
     })),
@@ -286,6 +289,22 @@ function getCalendarActionLabel({ day, targetKey, trainState }) {
   }
 
   return `Open ${day.dayLabel} workout`
+}
+
+function getCalendarDateNumber(dateLabel) {
+  return dateLabel.split(' ').at(-1)
+}
+
+function getCalendarIndicatorTone({ day, selectedDayId }) {
+  if (day.id === selectedDayId || day.status === 'today') {
+    return 'active'
+  }
+
+  if (day.status === 'completed' || day.status === 'upcoming') {
+    return 'muted'
+  }
+
+  return 'none'
 }
 
 function getCalendarSelectedDayPlan({ day, trainState }) {

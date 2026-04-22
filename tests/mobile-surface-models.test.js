@@ -216,3 +216,25 @@ test('getCalendarSurfaceModel routes completed today to the session summary', ()
   assert.equal(calendarModel.actionTargetKey, 'session')
   assert.equal(calendarModel.days[1].targetKey, 'session')
 })
+
+test('getCalendarSurfaceModel builds calendar-strip metadata for weekday labels, dates, and indicators', () => {
+  const trainState = createTrainDemoState({
+    programWorkout: createDemoProgramWorkout(),
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+
+  const calendarModel = getCalendarSurfaceModel(trainState, 'wed')
+
+  assert.equal(calendarModel.days.length, 7)
+  assert.equal(calendarModel.days[0].weekdayLabel, 'MON')
+  assert.equal(calendarModel.days[0].dateNumber, '20')
+  assert.equal(calendarModel.days[0].indicatorTone, 'muted')
+  assert.equal(calendarModel.days[1].weekdayLabel, 'TUE')
+  assert.equal(calendarModel.days[1].indicatorTone, 'active')
+  assert.equal(calendarModel.days[2].weekdayLabel, 'WED')
+  assert.equal(calendarModel.days[2].dateNumber, '22')
+  assert.equal(calendarModel.days[2].isSelected, true)
+  assert.equal(calendarModel.days[2].indicatorTone, 'active')
+  assert.equal(calendarModel.days[6].weekdayLabel, 'SUN')
+  assert.equal(calendarModel.days[6].indicatorTone, 'none')
+})

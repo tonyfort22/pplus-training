@@ -314,6 +314,76 @@ export const styles = {
     padding: 20,
     gap: 8,
   },
+  calendarStripCard: {
+    backgroundColor: '#111827',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#243041',
+    paddingTop: 16,
+    paddingBottom: 14,
+    paddingHorizontal: 12,
+    gap: 12,
+  },
+  calendarStripRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 2,
+  },
+  calendarDayColumn: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  calendarDayWeekLabel: {
+    color: '#94a3b8',
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 10,
+  },
+  calendarDayWeekLabelSelected: {
+    color: '#cbd5e1',
+  },
+  calendarDayButton: {
+    minWidth: 40,
+    minHeight: 54,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 6,
+    paddingBottom: 6,
+    paddingHorizontal: 8,
+  },
+  calendarDaySelected: {
+    borderWidth: 2,
+    borderColor: '#06D6A0',
+    backgroundColor: '#0f172a',
+  },
+  calendarDayNumber: {
+    color: '#f8fafc',
+    fontSize: 20,
+    fontWeight: '500',
+  },
+  calendarDayNumberSelected: {
+    color: '#06D6A0',
+    fontWeight: '700',
+  },
+  calendarIndicator: {
+    width: 12,
+    height: 4,
+    borderRadius: 999,
+  },
+  calendarIndicatorActive: {
+    backgroundColor: '#06D6A0',
+  },
+  calendarIndicatorMuted: {
+    backgroundColor: '#475569',
+  },
+  calendarIndicatorSpacer: {
+    width: 12,
+    height: 4,
+  },
   todayCard: {
     backgroundColor: '#111827',
     borderRadius: 24,

@@ -71,11 +71,13 @@ test('getTrainSurfaceModel builds the calendar preview surface', () => {
   assert.equal(model.surface.detailCard.title, 'Weekly schedule')
   assert.equal(model.surface.detailCard.targetKey, 'workout')
   assert.equal(model.surface.detailCard.actionPayload.selectedDayId, 'thu')
+  assert.equal(model.surface.calendarStripTitle, 'This week')
   assert.equal(model.surface.selectedDayPlanTitle, 'Selected day plan')
   assert.equal(model.surface.selectedDayPlanRows[0].title, 'Primary focus')
-  assert.equal(model.surface.days[3].title, 'Thu • Upper B')
-  assert.equal(model.surface.days[3].isSelected, true)
-  assert.equal(model.surface.days[3].actionPayload.selectedDayId, 'thu')
+  assert.equal(model.surface.calendarStripDays[3].weekdayLabel, 'THU')
+  assert.equal(model.surface.calendarStripDays[3].dateNumber, '23')
+  assert.equal(model.surface.calendarStripDays[3].isSelected, true)
+  assert.equal(model.surface.calendarStripDays[3].actionPayload.selectedDayId, 'thu')
 })
 
 test('getTrainSurfaceModel routes selected today directly to session when it is already in progress', () => {
@@ -100,7 +102,8 @@ test('getTrainSurfaceModel routes selected today directly to session when it is 
 
   assert.equal(model.surface.detailCard.actionLabel, 'Resume Tue session')
   assert.equal(model.surface.detailCard.targetKey, 'session')
-  assert.equal(model.surface.days[1].targetKey, 'session')
+  assert.equal(model.surface.calendarStripDays[1].targetKey, 'session')
+  assert.equal(model.surface.calendarStripDays[1].indicatorTone, 'active')
 })
 
 test('getTrainSurfaceModel routes completed today to the completed session summary', () => {
