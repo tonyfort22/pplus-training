@@ -1,6 +1,6 @@
 import { Check, ChevronLeft, RotateCcw, X } from 'lucide-react-native';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function WeekBadge({ label }) {
   return (
@@ -52,7 +52,7 @@ function TrainingCalendarDayRow({ day }) {
   )
 }
 
-export function renderTrainingCalendarSheet({ isVisible, onClose, model }) {
+function TrainingCalendarSheetContent({ onClose, model }) {
   const insets = useSafeAreaInsets()
 
   if (!model) {
@@ -60,43 +60,51 @@ export function renderTrainingCalendarSheet({ isVisible, onClose, model }) {
   }
 
   return (
-    <Modal visible={isVisible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView className="flex-1 bg-[#0b1220]">
-        <View className="border-b border-[#243041] px-5 pb-4" style={{ paddingTop: Math.max(insets.top, 16) }}>
-          <View className="flex-row items-center justify-between">
-            <Pressable className="flex-row items-center gap-2 rounded-[14px] border border-[#243041] bg-[#111827] px-3 py-2 focus:outline-none" onPress={onClose}>
-              <ChevronLeft color="#ffffff" size={24} strokeWidth={2.4} />
-              <Text className="text-[16px] font-semibold text-white">Back</Text>
-            </Pressable>
-            <Text className="flex-1 text-center text-[19px] font-semibold text-white">Training Calendar</Text>
-            <View className="w-11" />
-          </View>
-        </View>
-
-        <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 18, paddingBottom: 40 }}>
-          <Pressable className="mb-7 flex-row items-center justify-center gap-2 rounded-[14px] border border-[#243041] bg-[#111827] px-4 py-4" onPress={() => {}}>
-            <RotateCcw color="#cbd5e1" size={16} strokeWidth={2.2} />
-            <Text className="text-[16px] font-medium text-slate-300">Load more</Text>
+    <SafeAreaView className="flex-1 bg-[#0b1220]">
+      <View className="border-b border-[#243041] px-5 pb-4" style={{ paddingTop: Math.max(insets.top, 16) }}>
+        <View className="flex-row items-center justify-between">
+          <Pressable className="flex-row items-center gap-2 rounded-[14px] border border-[#243041] bg-[#111827] px-3 py-2 focus:outline-none" onPress={onClose}>
+            <ChevronLeft color="#ffffff" size={24} strokeWidth={2.4} />
+            <Text className="text-[16px] font-semibold text-white">Back</Text>
           </Pressable>
+          <Text className="flex-1 text-center text-[19px] font-semibold text-white">Training Calendar</Text>
+          <View className="w-11" />
+        </View>
+      </View>
 
-          <View className="gap-7">
-            {model.weeks.map((week) => (
-              <View key={week.id} className="gap-4">
-                <View className="flex-row items-center justify-between">
-                  <Text className="text-[20px] font-semibold text-slate-200">{week.dateRangeLabel}</Text>
-                  <WeekBadge label={week.weekLabel} />
-                </View>
-                <View className="h-px bg-[#243041]" />
-                <View className="gap-1">
-                  {week.days.map((day) => (
-                    <TrainingCalendarDayRow key={day.id} day={day} />
-                  ))}
-                </View>
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 18, paddingBottom: 40 }}>
+        <Pressable className="mb-7 flex-row items-center justify-center gap-2 rounded-[14px] border border-[#243041] bg-[#111827] px-4 py-4" onPress={() => {}}>
+          <RotateCcw color="#cbd5e1" size={16} strokeWidth={2.2} />
+          <Text className="text-[16px] font-medium text-slate-300">Load more</Text>
+        </Pressable>
+
+        <View className="gap-7">
+          {model.weeks.map((week) => (
+            <View key={week.id} className="gap-4">
+              <View className="flex-row items-center justify-between">
+                <Text className="text-[20px] font-semibold text-slate-200">{week.dateRangeLabel}</Text>
+                <WeekBadge label={week.weekLabel} />
               </View>
-            ))}
-          </View>
-        </ScrollView>
-      </SafeAreaView>
+              <View className="h-px bg-[#243041]" />
+              <View className="gap-1">
+                {week.days.map((day) => (
+                  <TrainingCalendarDayRow key={day.id} day={day} />
+                ))}
+              </View>
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  )
+}
+
+export function TrainingCalendarSheet({ isVisible, onClose, model }) {
+  return (
+    <Modal visible={isVisible} animationType="slide" onRequestClose={onClose}>
+      <SafeAreaProvider>
+        <TrainingCalendarSheetContent onClose={onClose} model={model} />
+      </SafeAreaProvider>
     </Modal>
   )
 }

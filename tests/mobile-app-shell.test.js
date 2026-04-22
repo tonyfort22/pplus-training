@@ -76,5 +76,5 @@ test('mobile app shell also owns a dedicated training calendar screen state from
 
   assert.match(appSource, /const \[isTrainingCalendarOpen, setIsTrainingCalendarOpen\] = useState\(false\);/)
   assert.match(appSource, /const trainingCalendarModel = useMemo\(/)
-  assert.match(appSource, /renderTrainingCalendarSheet\(\{[\s\S]*isVisible: isTrainingCalendarOpen/)
+  assert.match(appSource, /<TrainingCalendarSheet[\s\S]*isVisible=\{isTrainingCalendarOpen\}/)
 })

@@ -35,7 +35,7 @@ import { getSessionRenderModel } from './src/screens/session-render-models.js';
 import { getSessionSections } from './src/screens/session-sections.js';
 import { renderGenericSections, renderSessionSections, renderTrainSurface } from './src/screens/renderers.js';
 import { renderProgramSheet } from './src/screens/program-sheet.js';
-import { renderTrainingCalendarSheet } from './src/screens/training-calendar-sheet.js';
+import { TrainingCalendarSheet } from './src/screens/training-calendar-sheet.js';
 import { renderAppShell } from './src/screens/shell-renderers.js';
 import { statusStyles, styles } from './src/screens/styles.js';
 import { getTabButtonModels } from './src/ui/tab-models.js';
@@ -248,11 +248,11 @@ export default function App() {
           model: programSheetModel,
           styles,
         })}
-        {renderTrainingCalendarSheet({
-          isVisible: isTrainingCalendarOpen,
-          onClose: () => setIsTrainingCalendarOpen(false),
-          model: trainingCalendarModel,
-        })}
+        <TrainingCalendarSheet
+          isVisible={isTrainingCalendarOpen}
+          onClose={() => setIsTrainingCalendarOpen(false)}
+          model={trainingCalendarModel}
+        />
         <StatusBar style="light" />
       </SafeAreaView>
     </SafeAreaProvider>
