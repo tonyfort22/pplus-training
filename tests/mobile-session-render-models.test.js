@@ -64,6 +64,8 @@ test('getSessionRenderModel marks completed set rows and includes rest timer car
 
   assert.equal(model[0].isCompleted, true)
   assert.equal(model[1].type, 'rest-timer-card')
+  assert.equal(model[1].title, 'Barbell Back Squat • Set 1 complete')
+  assert.equal(model[1].body, 'Recover, then roll straight into Set 2.')
   assert.equal(model[2].exercises[0].sets[0].completionTone, 'done')
   assert.equal(model[2].exercises[0].sets[1].completionTone, 'ready')
   assert.equal(model[2].exercises[0].sets[1].isCurrent, true)

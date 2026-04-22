@@ -18,6 +18,7 @@ export function getSessionSections(activeSessionModel) {
       type: 'rest-timer',
       eyebrow: activeSessionModel.restTimer.eyebrow,
       title: activeSessionModel.restTimer.title,
+      body: activeSessionModel.restTimer.body,
       dismissLabel: activeSessionModel.restTimer.dismissLabel,
       clockLabel: activeSessionModel.restTimer.clockLabel,
       minusLabel: activeSessionModel.restTimer.minusLabel,

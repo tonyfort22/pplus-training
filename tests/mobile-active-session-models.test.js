@@ -61,7 +61,8 @@ test('getActiveSessionSurfaceModel includes the rest timer after a set is comple
 
   const model = getActiveSessionSurfaceModel(completedSession, 90, selectedSet)
 
-  assert.equal(model.restTimer.title, 'Between completed sets')
+  assert.equal(model.restTimer.title, 'Barbell Back Squat • Set 1 complete')
+  assert.equal(model.restTimer.body, 'Recover, then roll straight into Set 2.')
   assert.equal(model.restTimer.dismissLabel, 'Dismiss')
   assert.equal(model.restTimer.minusLabel, '-15s')
   assert.equal(model.restTimer.plusLabel, '+15s')

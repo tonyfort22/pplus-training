@@ -20,9 +20,13 @@ export function getSessionHeaderModel(session, elapsedSeconds) {
 export function getRestTimerModel(session, selectedSet) {
   if (!session.activeRestTimer) return null
 
+  const nextUpSet = getNextUpSet(session)
+  const completedSetContext = getCompletedSetContext(session, selectedSet)
+
   return {
     eyebrow: 'Rest timer',
-    title: selectedSet ? 'Between completed sets' : 'Active rest block',
+    title: `${completedSetContext.exerciseTitle} • ${completedSetContext.setTitle} complete`,
+    body: nextUpSet ? `Recover, then roll straight into ${nextUpSet.setTitle}.` : 'Recover, then finish the session summary when ready.',
     clockLabel: formatClock(session.activeRestTimer.remainingSeconds),
     minusLabel: '-15s',
     plusLabel: '+15s',
@@ -72,4 +76,30 @@ function getNextUpSet(session) {
   }
 
   return null
+}
+
+function getCompletedSetContext(session, selectedSet) {
+  const exerciseId = session.activeRestTimer?.exerciseId
+  const setId = session.activeRestTimer?.setId
+
+  for (const exercise of session.exercises || []) {
+    if (exerciseId && exercise.id !== exerciseId) continue
+
+    for (let index = 0; index < (exercise.sets || []).length; index += 1) {
+      const set = exercise.sets[index]
+      if (setId && set.id !== setId) continue
+
+      if (selectedSet && set.id !== selectedSet.id) continue
+
+      return {
+        exerciseTitle: exercise.nameSnapshot || exercise.name,
+        setTitle: `Set ${index + 1}`,
+      }
+    }
+  }
+
+  return {
+    exerciseTitle: 'Exercise',
+    setTitle: 'Last set',
+  }
 }

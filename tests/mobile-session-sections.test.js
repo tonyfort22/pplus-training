@@ -44,7 +44,8 @@ test('getSessionSections includes a rest timer section when present', () => {
 
   assert.equal(sections.length, 3)
   assert.equal(sections[1].type, 'rest-timer')
-  assert.equal(sections[1].title, 'Between completed sets')
+  assert.equal(sections[1].title, 'Barbell Back Squat • Set 1 complete')
+  assert.equal(sections[1].body, 'Recover, then roll straight into Set 2.')
   assert.equal(sections[1].dismissLabel, 'Dismiss')
   assert.equal(sections[2].exercises[0].sets[0].completionLabel, 'Done')
   assert.equal(sections[2].exercises[0].sets[1].isCurrent, true)

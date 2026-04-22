@@ -135,6 +135,7 @@ export function renderSessionSections({
             </Pressable>
           </View>
           <Text style={styles.restClock}>{section.clockLabel}</Text>
+          <Text style={styles.sectionBody}>{section.body}</Text>
           <View style={styles.restActions}>
             <Pressable style={styles.restActionButton} onPress={() => onAdjustRestTimer(-15)}>
               <Text style={styles.restActionText}>{section.minusLabel}</Text>
