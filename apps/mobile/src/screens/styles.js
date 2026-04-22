@@ -314,6 +314,18 @@ export const styles = {
     padding: 20,
     gap: 8,
   },
+  sectionHeadingWrap: {
+    paddingTop: 2,
+    paddingBottom: 2,
+  },
+  sectionHeading: {
+    color: '#ffffff',
+    fontSize: 28,
+    fontWeight: '700',
+  },
+  sectionListOnly: {
+    gap: 10,
+  },
   calendarStripCard: {
     backgroundColor: '#111827',
     borderRadius: 24,
@@ -322,7 +334,6 @@ export const styles = {
     paddingTop: 16,
     paddingBottom: 14,
     paddingHorizontal: 12,
-    gap: 12,
   },
   calendarStripRow: {
     flexDirection: 'row',
@@ -385,7 +396,7 @@ export const styles = {
     height: 4,
   },
   todayCard: {
-    backgroundColor: '#111827',
+    backgroundColor: '#1f2937',
     borderRadius: 24,
     borderWidth: 1,
     borderColor: '#243041',
@@ -414,17 +425,27 @@ export const styles = {
     fontSize: 30,
     fontWeight: '800',
   },
-  todayCardActionBadge: {
-    backgroundColor: '#06D6A0',
-    borderRadius: 999,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    alignSelf: 'flex-start',
+  todayCardCheckWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#475569',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#111827',
   },
-  todayCardActionBadgeText: {
-    color: '#ffffff',
-    fontSize: 12,
+  todayCardCheckWrapDone: {
+    borderColor: '#06D6A0',
+    backgroundColor: '#064e3b',
+  },
+  todayCardCheckIcon: {
+    color: '#64748b',
+    fontSize: 18,
     fontWeight: '700',
+  },
+  todayCardCheckIconDone: {
+    color: '#ffffff',
   },
   todayCardScheduledLabel: {
     color: '#94a3b8',
@@ -454,7 +475,7 @@ export const styles = {
     fontWeight: '700',
   },
   programCard: {
-    backgroundColor: '#111827',
+    backgroundColor: '#1f2937',
     borderRadius: 22,
     borderWidth: 1,
     borderColor: '#243041',
@@ -513,6 +534,25 @@ export const styles = {
     color: '#cbd5e1',
     fontSize: 13,
     fontWeight: '600',
+  },
+  workoutListCard: {
+    backgroundColor: '#1f2937',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#243041',
+    padding: 14,
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'stretch',
+  },
+  workoutListAccentRail: {
+    width: 4,
+    borderRadius: 999,
+    backgroundColor: '#06D6A0',
+  },
+  workoutListCardContent: {
+    flex: 1,
+    gap: 4,
   },
   sectionTitle: {
     color: '#ffffff',

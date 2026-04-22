@@ -17,6 +17,7 @@ export function SurfaceCard({
   summaryLabel,
   statusLabel,
   quickSummary,
+  completionTone,
 }) {
   if (variant === 'program-summary') {
     const CardWrapper = onAction ? Pressable : View
@@ -25,7 +26,7 @@ export function SurfaceCard({
       <CardWrapper style={styles.programCard} onPress={onAction}>
         <View style={styles.programAccentRail} />
         <View style={styles.programCardContent}>
-          <Text style={styles.programCardLabel}>{title}</Text>
+          {title ? <Text style={styles.programCardLabel}>{title}</Text> : null}
           <Text style={styles.programCardTitle}>{programName || title}</Text>
           <Text style={styles.programCardDateRange}>{dateRangeLabel || body}</Text>
           <View style={styles.programProgressRow}>
@@ -51,19 +52,20 @@ export function SurfaceCard({
 
   if (variant === 'today-summary') {
     const CardWrapper = onAction ? Pressable : View
+    const isDone = completionTone === 'done'
 
     return (
       <CardWrapper style={styles.todayCard} onPress={onAction}>
         <View style={styles.todayCardTopRow}>
           <View style={styles.todayCardTitleBlock}>
-            <Text style={styles.todayCardLabel}>{title}</Text>
+            {title ? <Text style={styles.todayCardLabel}>{title}</Text> : null}
             <Text style={styles.todayCardWorkoutName}>{workoutName || title}</Text>
+            <Text style={styles.todayCardScheduledLabel}>{scheduledLabel || body}</Text>
           </View>
-          <View style={styles.todayCardActionBadge}>
-            <Text style={styles.todayCardActionBadgeText}>{actionLabel}</Text>
+          <View style={[styles.todayCardCheckWrap, isDone && styles.todayCardCheckWrapDone]}>
+            <Text style={[styles.todayCardCheckIcon, isDone && styles.todayCardCheckIconDone]}>✓</Text>
           </View>
         </View>
-        <Text style={styles.todayCardScheduledLabel}>{scheduledLabel || body}</Text>
         <Text style={styles.todayCardSummary}>{quickSummary || body}</Text>
         <View style={styles.todayCardFooterRow}>
           <Text style={styles.todayCardFooterMeta}>{summaryLabel}</Text>

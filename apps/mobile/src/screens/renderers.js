@@ -16,6 +16,14 @@ export function renderGenericSections({ sections, styles, onActionTarget }) {
       )
     }
 
+    if (section.type === 'section-heading') {
+      return (
+        <View key={section.key} style={styles.sectionHeadingWrap}>
+          <Text style={styles.sectionHeading}>{section.title}</Text>
+        </View>
+      )
+    }
+
     if (section.type === 'header-card') {
       return (
         <View key={section.key} style={styles.headerCard}>
@@ -28,12 +36,13 @@ export function renderGenericSections({ sections, styles, onActionTarget }) {
 
     if (section.type === 'body-list') {
       return (
-        <View key={section.key} style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>{section.title}</Text>
+        <View key={section.key} style={section.title ? styles.sectionCard : styles.sectionListOnly}>
+          {section.title ? <Text style={styles.sectionTitle}>{section.title}</Text> : null}
           {section.rows.map((row) => {
             const rowBody = (
-              <View style={[styles.listRow, row.isSelected && styles.listRowSelected]}>
-                <View>
+              <View style={styles.workoutListCard}>
+                <View style={styles.workoutListAccentRail} />
+                <View style={styles.workoutListCardContent}>
                   <Text style={styles.listRowTitle}>{row.title}</Text>
                   <Text style={styles.listRowBody}>{row.body}</Text>
                 </View>
@@ -57,7 +66,6 @@ export function renderGenericSections({ sections, styles, onActionTarget }) {
     if (section.type === 'calendar-strip') {
       return (
         <View key={section.key} style={styles.calendarStripCard}>
-          <Text style={styles.sectionTitle}>{section.title}</Text>
           <View style={styles.calendarStripRow}>
             {section.days.map((day) => {
               const dayContent = (

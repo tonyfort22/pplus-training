@@ -55,7 +55,7 @@ function getTrainHomeSurface({ todayModel, calendarModel, workoutModel }) {
 
   return {
     type: 'train-home',
-    calendarStripTitle: 'This week',
+    calendarStripTitle: undefined,
     calendarStripDays: calendarModel.days.map((day) => ({
       id: day.id,
       weekdayLabel: day.weekdayLabel,
@@ -65,12 +65,15 @@ function getTrainHomeSurface({ todayModel, calendarModel, workoutModel }) {
       targetKey: day.targetKey,
       actionPayload: day.actionPayload,
     })),
+    selectedWorkoutHeading: workoutModel.dayLabel,
     selectedWorkoutCard: createActionCardModel(getSelectedWorkoutCardModel(workoutModel)),
+    programSectionTitle: 'My Programs',
     programCard: createActionCardModel({
       ...cards.programCard,
+      title: undefined,
       targetKey: 'program',
     }),
-    workoutListTitle: 'Program workouts',
+    workoutListTitle: 'My Workouts',
     workoutListRows: calendarModel.days
       .filter((day) => day.status !== 'off')
       .map((day) => ({
@@ -87,17 +90,18 @@ function getSelectedWorkoutCardModel(workoutModel) {
   const actionLabel = workoutModel.primaryTargetKey === 'calendar' ? 'Open workout' : workoutModel.primaryActionLabel
 
   return {
-    title: workoutModel.dayLabel,
+    title: undefined,
     body: `${workoutModel.scheduleStatusLabel}. ${workoutModel.workoutName}.`,
     actionLabel,
     actionPayload: workoutModel.actionPayload,
     targetKey,
     variant: 'today-summary',
     workoutName: workoutModel.workoutName,
-    scheduledLabel: workoutModel.scheduleStatusLabel,
+    scheduledLabel: getSelectedWorkoutScheduledLabel(workoutModel.scheduleStatusLabel),
     summaryLabel: `${workoutModel.exerciseCount} exercises, ${totalSets} total sets`,
     statusLabel: targetKey === 'session' ? 'Ready to log' : workoutModel.scheduleStatusLabel,
     quickSummary: workoutModel.sessionProgressSummary || workoutModel.previewHighlights?.[0]?.body || workoutModel.body,
+    completionTone: workoutModel.scheduleStatusLabel === 'Completed' ? 'done' : 'pending',
   }
 }
 
@@ -115,4 +119,12 @@ function getDateLabelFromCalendarBody(body) {
 
 function getStatusLabelFromCalendarBody(body) {
   return body.split(' · ').at(-1)
+}
+
+function getSelectedWorkoutScheduledLabel(scheduleStatusLabel) {
+  if (scheduleStatusLabel === 'Today') {
+    return 'Scheduled for today'
+  }
+
+  return scheduleStatusLabel
 }

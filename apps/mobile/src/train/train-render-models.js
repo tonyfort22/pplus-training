@@ -65,16 +65,28 @@ export function getTrainRenderModel({ trainSurfaceModel, sessionSections }) {
             days: trainSurfaceModel.surface.calendarStripDays,
           },
           {
+            type: 'section-heading',
+            title: trainSurfaceModel.surface.selectedWorkoutHeading,
+          },
+          {
             type: 'action-card',
             ...trainSurfaceModel.surface.selectedWorkoutCard,
+          },
+          {
+            type: 'section-heading',
+            title: trainSurfaceModel.surface.programSectionTitle,
           },
           {
             type: 'action-card',
             ...trainSurfaceModel.surface.programCard,
           },
           {
-            type: 'body-list',
+            type: 'section-heading',
             title: trainSurfaceModel.surface.workoutListTitle,
+          },
+          {
+            type: 'body-list',
+            title: undefined,
             rows: trainSurfaceModel.surface.workoutListRows,
           },
         ],
