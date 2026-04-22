@@ -313,7 +313,7 @@ function formatCalendarStatus(status) {
   return 'Upcoming'
 }
 
-function getWorkoutPreviewHighlights({ workoutPreview, selectedDay, canOpenSession }) {
+export function getWorkoutPreviewHighlights({ workoutPreview, selectedDay, canOpenSession }) {
   const totalSets = workoutPreview.exercises.reduce((sum, exercise) => sum + exercise.setCount, 0)
   const firstExercise = workoutPreview.exercises[0]
 

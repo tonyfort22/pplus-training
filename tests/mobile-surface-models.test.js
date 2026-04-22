@@ -1,7 +1,15 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { completeWorkoutSet, discardWorkoutSession, finishWorkoutSession } from '../packages/core/src/index.js'
-import { createDemoProgramWorkout, createTrainDemoState, getCalendarSurfaceModel, getTodaySurfaceModel, getWorkoutSurfaceModel } from '../apps/mobile/src/train/index.js'
+import * as train from '../apps/mobile/src/train/index.js'
+
+const {
+  createDemoProgramWorkout,
+  createTrainDemoState,
+  getCalendarSurfaceModel,
+  getTodaySurfaceModel,
+  getWorkoutSurfaceModel,
+} = train
 import { getCalendarDetailCardModel, getProgramSurfaceModel, getTodayCardsModel, getWorkoutDetailCardModel } from '../apps/mobile/src/train/surface-models.js'
 
 test('getTodayCardsModel creates the two top-level Today cards', () => {
@@ -80,6 +88,10 @@ test('getWorkoutDetailCardModel switches to resume when today session has starte
 
   assert.equal(model.actionLabel, 'Resume session')
   assert.match(model.body, /1 of 7 sets logged/)
+})
+
+test('train index exports workout preview highlight helper for runtime consumers', () => {
+  assert.equal(typeof train.getWorkoutPreviewHighlights, 'function')
 })
 
 test('getWorkoutSurfaceModel builds quick preview highlights before session start', () => {
