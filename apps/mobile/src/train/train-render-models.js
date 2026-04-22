@@ -13,6 +13,15 @@ export function getTrainRenderModel({ trainSurfaceModel, sessionSections }) {
             type: 'metrics-grid',
             items: trainSurfaceModel.surface.summary.metrics,
           },
+          ...(trainSurfaceModel.surface.summary.highlights
+            ? [
+                {
+                  type: 'body-list',
+                  title: trainSurfaceModel.surface.summary.highlights.title,
+                  rows: trainSurfaceModel.surface.summary.highlights.rows,
+                },
+              ]
+            : []),
           ...(trainSurfaceModel.surface.summary.exerciseResults
             ? [
                 {

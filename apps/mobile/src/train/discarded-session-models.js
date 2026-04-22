@@ -27,6 +27,21 @@ export function getDiscardedSessionSurfaceModel(session) {
         detail: 'Discarded sessions should not count toward adherence or progress',
       }),
     ],
+    highlights: {
+      title: 'Discard recap',
+      rows: [
+        {
+          id: 'discarded-outcome',
+          title: 'Outcome',
+          body: 'This session was intentionally discarded and will not feed analytics or athlete progress.',
+        },
+        {
+          id: 'discarded-work',
+          title: 'Work logged',
+          body: `${progress.completedSets}/${progress.totalSets} sets were logged before the athlete stopped the session.`,
+        },
+      ],
+    },
     nextAction: createActionCardModel({
       title: 'Start clean next time',
       body: 'Go back to Today and restart the session when the athlete is ready.',

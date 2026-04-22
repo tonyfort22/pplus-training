@@ -29,6 +29,21 @@ export function getCompletedSessionSurfaceModel(session) {
         detail: 'Actual completed work recorded against the plan',
       }),
     ],
+    highlights: {
+      title: 'Session recap',
+      rows: [
+        {
+          id: 'completed-outcome',
+          title: 'Outcome',
+          body: 'This completed session feeds progress, adherence, and athlete history.',
+        },
+        {
+          id: 'completed-work',
+          title: 'Work completed',
+          body: `${progress.completedSets}/${progress.totalSets} sets across ${progress.completedExercises}/${progress.totalExercises} exercises were logged as actual work.`,
+        },
+      ],
+    },
     exerciseResults: {
       title: 'Logged exercises',
       rows: exerciseModels.map((exercise) => ({
