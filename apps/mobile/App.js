@@ -5,56 +5,20 @@ import {
   adjustRestTimer,
   clearRestTimer,
   completeWorkoutSessionSet,
-  createWorkoutSessionFromTemplate,
-  finishWorkoutSession,
   findSessionSet,
+  finishWorkoutSession,
   formatClock,
   formatWorkoutTimer,
   getSessionProgress,
-  updateSessionSetActuals
+  updateSessionSetActuals,
 } from '@pplus/core';
-
-const workoutTemplate = {
-  id: 'lower-a',
-  name: 'Lower A',
-  exercises: [
-    {
-      id: 'squat',
-      name: 'Barbell Back Squat',
-      defaultRestSeconds: 180,
-      sets: [
-        { id: 'squat-1', prescribedReps: 8, prescribedLoad: 120, prescribedRpe: 6 },
-        { id: 'squat-2', prescribedReps: 8, prescribedLoad: 120, prescribedRpe: 7 },
-        { id: 'squat-3', prescribedReps: 8, prescribedLoad: 120, prescribedRpe: 8 },
-        { id: 'squat-4', prescribedReps: 8, prescribedLoad: 120, prescribedRpe: 9 }
-      ]
-    },
-    {
-      id: 'rdl',
-      name: 'Barbell Romanian Deadlift',
-      defaultRestSeconds: 150,
-      sets: [
-        { id: 'rdl-1', prescribedReps: 8, prescribedLoad: 95, prescribedRpe: 6 },
-        { id: 'rdl-2', prescribedReps: 8, prescribedLoad: 95, prescribedRpe: 7 },
-        { id: 'rdl-3', prescribedReps: 8, prescribedLoad: 95, prescribedRpe: 8 }
-      ]
-    }
-  ]
-};
-
-const mobileTabs = [
-  { key: 'train', label: 'Train' },
-  { key: 'progress', label: 'Progress' },
-  { key: 'team', label: 'Team' },
-  { key: 'inbox', label: 'Inbox' }
-];
-
-const trainTabs = [
-  { key: 'today', label: 'Today' },
-  { key: 'program', label: 'Program' },
-  { key: 'workout', label: 'Workout' },
-  { key: 'session', label: 'Session' }
-];
+import {
+  createTrainDemoState,
+  getTodaySurfaceModel,
+  getWorkoutSurfaceModel,
+  mobileTabs,
+  trainTabs,
+} from './src/train/index.js';
 
 function SurfaceCard({ title, body, actionLabel, onAction }) {
   return (
@@ -81,9 +45,12 @@ function MetricCard({ label, value, detail }) {
 }
 
 export default function App() {
+  const demoTrainState = useMemo(() => createTrainDemoState(), []);
+  const todayModel = useMemo(() => getTodaySurfaceModel(demoTrainState), [demoTrainState]);
+  const workoutModel = useMemo(() => getWorkoutSurfaceModel(demoTrainState), [demoTrainState]);
   const [activeTab, setActiveTab] = useState('train');
   const [activeTrainTab, setActiveTrainTab] = useState('today');
-  const [session, setSession] = useState(() => createWorkoutSessionFromTemplate(workoutTemplate));
+  const [session, setSession] = useState(() => demoTrainState.session);
   const [elapsedSeconds] = useState(35);
 
   const progress = useMemo(() => getSessionProgress(session), [session]);
@@ -174,7 +141,7 @@ export default function App() {
             <View key={exercise.id} style={styles.exerciseCard}>
               <View style={styles.exerciseHeader}>
                 <View>
-                  <Text style={styles.exerciseTitle}>{exercise.name}</Text>
+                  <Text style={styles.exerciseTitle}>{exercise.nameSnapshot || exercise.name}</Text>
                   <Text style={styles.exerciseMeta}>Rest {Math.floor(exercise.defaultRestSeconds / 60)}:{String(exercise.defaultRestSeconds % 60).padStart(2, '0')}</Text>
                 </View>
                 <View style={[styles.exerciseStatusBadge, statusStyles[exercise.status]]}>
@@ -252,14 +219,14 @@ export default function App() {
         {activeTrainTab === 'today' && (
           <>
             <SurfaceCard
-              title="Today"
-              body="You have Lower A scheduled today. The athlete should see the next workout, high-level progress, and quick access into the session flow."
-              actionLabel="Open workout"
+              title={todayModel.heroTitle}
+              body={`You have ${todayModel.workoutName} ${todayModel.scheduledLabel.toLowerCase()}. ${todayModel.quickSummary}`}
+              actionLabel={todayModel.primaryActionLabel}
               onAction={() => setActiveTrainTab('workout')}
             />
             <SurfaceCard
               title="Program snapshot"
-              body="Spring Hypertrophy, week 3 of 8. 6 of 39 workouts completed so far."
+              body={`${todayModel.programName}, ${todayModel.programWeekLabel}. ${todayModel.completionLabel}.`}
               actionLabel="View program"
               onAction={() => setActiveTrainTab('program')}
             />
@@ -269,7 +236,7 @@ export default function App() {
         {activeTrainTab === 'program' && (
           <SurfaceCard
             title="Program overview"
-            body="This area should hold the current program, weekly structure, training calendar, and scheduled workout progression."
+            body={`${todayModel.programName} is currently in ${todayModel.programWeekLabel}. ${todayModel.completionLabel}. This area should hold the weekly structure, training calendar, and scheduled workout progression.`}
             actionLabel="See today’s workout"
             onAction={() => setActiveTrainTab('workout')}
           />
@@ -279,17 +246,17 @@ export default function App() {
           <>
             <SurfaceCard
               title="Workout detail"
-              body="Lower A contains 2 exercises in this scaffold, with prescribed sets, loads, reps, and planned rest. This is the preview before starting or continuing the session."
+              body={`${workoutModel.workoutName} contains ${workoutModel.exerciseCount} exercises in this scaffold, with prescribed sets, loads, reps, and planned rest. This is the preview before starting or continuing the session.`}
               actionLabel="Go to session"
               onAction={() => setActiveTrainTab('session')}
             />
             <View style={styles.sectionCard}>
               <Text style={styles.sectionTitle}>Planned exercises</Text>
-              {session.exercises.map((exercise) => (
+              {workoutModel.exercises.map((exercise) => (
                 <View key={exercise.id} style={styles.listRow}>
                   <View>
                     <Text style={styles.listRowTitle}>{exercise.name}</Text>
-                    <Text style={styles.listRowBody}>{exercise.sets.length} sets, default rest {Math.floor(exercise.defaultRestSeconds / 60)}:{String(exercise.defaultRestSeconds % 60).padStart(2, '0')}</Text>
+                    <Text style={styles.listRowBody}>{exercise.setCount} sets, default rest {exercise.defaultRestLabel}</Text>
                   </View>
                 </View>
               ))}
