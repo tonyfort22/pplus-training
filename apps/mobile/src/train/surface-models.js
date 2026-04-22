@@ -28,3 +28,12 @@ export function getWorkoutDetailCardModel(workoutModel) {
     actionLabel: 'Go to session',
   }
 }
+
+export function getCalendarDetailCardModel(calendarModel) {
+  return {
+    title: calendarModel.title,
+    body: calendarModel.body,
+    actionLabel: calendarModel.actionLabel,
+    rows: calendarModel.days,
+  }
+}

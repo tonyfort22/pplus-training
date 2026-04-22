@@ -69,6 +69,26 @@ export function getTrainRenderModel({ trainSurfaceModel, sessionSections }) {
     }
   }
 
+  if (trainSurfaceModel.surface.type === 'calendar') {
+    return {
+      tabs: trainSurfaceModel.tabs,
+      content: {
+        type: 'sections',
+        sections: [
+          {
+            type: 'action-card',
+            ...trainSurfaceModel.surface.detailCard,
+          },
+          {
+            type: 'body-list',
+            title: trainSurfaceModel.surface.daysSectionTitle,
+            rows: trainSurfaceModel.surface.days,
+          },
+        ],
+      },
+    }
+  }
+
   return {
     tabs: trainSurfaceModel.tabs,
     content: {

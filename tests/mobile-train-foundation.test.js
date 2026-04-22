@@ -17,7 +17,7 @@ test('train navigation matches the athlete app structure', () => {
 
   assert.deepEqual(
     trainTabs.map((tab) => tab.key),
-    ['today', 'program', 'workout', 'session']
+    ['today', 'program', 'calendar', 'workout', 'session']
   )
 })
 

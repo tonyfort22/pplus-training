@@ -10,6 +10,7 @@ export const mobileTabs = [
 export const trainTabs = [
   { key: 'today', label: 'Today' },
   { key: 'program', label: 'Program' },
+  { key: 'calendar', label: 'Calendar' },
   { key: 'workout', label: 'Workout' },
   { key: 'session', label: 'Session' },
 ]
@@ -76,6 +77,15 @@ export function createTrainDemoState({ programWorkout = createDemoProgramWorkout
       name: 'Spring Hypertrophy',
       weekLabel: 'Week 3 of 8',
       completionLabel: '6 of 39 workouts completed',
+      calendarWeek: [
+        { id: 'mon', dayLabel: 'Mon', dateLabel: 'Apr 20', workoutName: 'Upper A', status: 'completed' },
+        { id: 'tue', dayLabel: 'Tue', dateLabel: 'Apr 21', workoutName: programWorkout.nameSnapshot, status: 'today' },
+        { id: 'wed', dayLabel: 'Wed', dateLabel: 'Apr 22', workoutName: 'Recovery + mobility', status: 'upcoming' },
+        { id: 'thu', dayLabel: 'Thu', dateLabel: 'Apr 23', workoutName: 'Upper B', status: 'upcoming' },
+        { id: 'fri', dayLabel: 'Fri', dateLabel: 'Apr 24', workoutName: 'Lower B', status: 'upcoming' },
+        { id: 'sat', dayLabel: 'Sat', dateLabel: 'Apr 25', workoutName: 'Speed + jumps', status: 'optional' },
+        { id: 'sun', dayLabel: 'Sun', dateLabel: 'Apr 26', workoutName: 'Off', status: 'off' },
+      ],
     },
     session,
     completedSessions: createDemoCompletedSessions(programWorkout),
@@ -116,6 +126,28 @@ export function getWorkoutSurfaceModel(trainState) {
       defaultRestLabel: formatRestLabel(exercise.defaultRestSeconds),
     })),
   }
+}
+
+export function getCalendarSurfaceModel(trainState) {
+  return {
+    title: 'Weekly schedule',
+    body: `${trainState.program.name}, ${trainState.program.weekLabel}. Review the training rhythm before jumping into the next session.`,
+    actionLabel: 'Open today',
+    days: trainState.program.calendarWeek.map((day) => ({
+      id: day.id,
+      title: `${day.dayLabel} • ${day.workoutName}`,
+      body: `${day.dateLabel} · ${formatCalendarStatus(day.status)}`,
+      status: day.status,
+    })),
+  }
+}
+
+function formatCalendarStatus(status) {
+  if (status === 'today') return 'Today'
+  if (status === 'completed') return 'Completed'
+  if (status === 'optional') return 'Optional'
+  if (status === 'off') return 'Off day'
+  return 'Upcoming'
 }
 
 function buildDemoCompletedSession({ programWorkout, completedAt, squatLoad, rdlLoad }) {

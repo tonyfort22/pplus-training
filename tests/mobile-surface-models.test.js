@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createDemoProgramWorkout, createTrainDemoState, getTodaySurfaceModel, getWorkoutSurfaceModel } from '../apps/mobile/src/train/index.js'
-import { getProgramSurfaceModel, getTodayCardsModel, getWorkoutDetailCardModel } from '../apps/mobile/src/train/surface-models.js'
+import { createDemoProgramWorkout, createTrainDemoState, getCalendarSurfaceModel, getTodaySurfaceModel, getWorkoutSurfaceModel } from '../apps/mobile/src/train/index.js'
+import { getCalendarDetailCardModel, getProgramSurfaceModel, getTodayCardsModel, getWorkoutDetailCardModel } from '../apps/mobile/src/train/surface-models.js'
 
 test('getTodayCardsModel creates the two top-level Today cards', () => {
   const trainState = createTrainDemoState({
@@ -44,4 +44,19 @@ test('getWorkoutDetailCardModel creates the workout preview card copy', () => {
   assert.equal(model.actionLabel, 'Go to session')
   assert.match(model.body, /2 exercises/)
   assert.match(model.body, /planned rest/)
+})
+
+test('getCalendarDetailCardModel creates the weekly schedule copy and rows', () => {
+  const trainState = createTrainDemoState({
+    programWorkout: createDemoProgramWorkout(),
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+  const calendarModel = getCalendarSurfaceModel(trainState)
+  const model = getCalendarDetailCardModel(calendarModel)
+
+  assert.equal(model.title, 'Weekly schedule')
+  assert.equal(model.actionLabel, 'Open today')
+  assert.equal(model.rows.length, 7)
+  assert.equal(model.rows[1].title, 'Tue • Lower A')
+  assert.match(model.rows[1].body, /Today/) 
 })

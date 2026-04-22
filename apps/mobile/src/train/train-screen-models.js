@@ -1,4 +1,4 @@
-import { getProgramSurfaceModel, getTodayCardsModel, getWorkoutDetailCardModel } from './surface-models.js'
+import { getCalendarDetailCardModel, getProgramSurfaceModel, getTodayCardsModel, getWorkoutDetailCardModel } from './surface-models.js'
 import { createActionCardModel } from '../ui/card-models.js'
 import { getTabButtonModels } from '../ui/tab-models.js'
 
@@ -6,6 +6,7 @@ export function getTrainSurfaceModel({
   trainTabs,
   activeTrainTab,
   todayModel,
+  calendarModel,
   workoutModel,
   activeSessionModel,
   completedSessionModel = null,
@@ -35,8 +36,27 @@ export function getTrainSurfaceModel({
         type: 'program',
         card: createActionCardModel({
           ...getProgramSurfaceModel(todayModel),
+          targetKey: 'calendar',
+        }),
+      },
+    }
+  }
+
+  if (activeTrainTab === 'calendar') {
+    return {
+      tabs,
+      surface: {
+        type: 'calendar',
+        detailCard: createActionCardModel({
+          ...getCalendarDetailCardModel(calendarModel),
           targetKey: 'workout',
         }),
+        daysSectionTitle: 'This week',
+        days: calendarModel.days.map((day) => ({
+          id: day.id,
+          title: day.title,
+          body: day.body,
+        })),
       },
     }
   }

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createDemoProgramWorkout, createTrainDemoState, getTodaySurfaceModel, getWorkoutSurfaceModel, trainTabs } from '../apps/mobile/src/train/index.js'
+import { createDemoProgramWorkout, createTrainDemoState, getCalendarSurfaceModel, getTodaySurfaceModel, getWorkoutSurfaceModel, trainTabs } from '../apps/mobile/src/train/index.js'
 import { getActiveSessionSurfaceModel } from '../apps/mobile/src/train/active-session-models.js'
 import { getTrainSurfaceModel } from '../apps/mobile/src/train/train-screen-models.js'
 import { getSessionSections } from '../apps/mobile/src/screens/session-sections.js'
@@ -15,6 +15,7 @@ test('getTrainRenderModel builds action-card sections for Today', () => {
     trainTabs,
     activeTrainTab: 'today',
     todayModel: getTodaySurfaceModel(trainState),
+    calendarModel: getCalendarSurfaceModel(trainState),
     workoutModel: getWorkoutSurfaceModel(trainState),
     activeSessionModel: getActiveSessionSurfaceModel(trainState.session, 35, null),
   })
@@ -24,11 +25,36 @@ test('getTrainRenderModel builds action-card sections for Today', () => {
     sessionSections: getSessionSections(getActiveSessionSurfaceModel(trainState.session, 35, null)),
   })
 
-  assert.equal(renderModel.tabs.length, 4)
+  assert.equal(renderModel.tabs.length, 5)
   assert.equal(renderModel.content.type, 'sections')
   assert.equal(renderModel.content.sections.length, 2)
   assert.equal(renderModel.content.sections[0].type, 'action-card')
   assert.equal(renderModel.content.sections[0].targetKey, 'workout')
+})
+
+test('getTrainRenderModel builds a list section for the weekly calendar', () => {
+  const trainState = createTrainDemoState({
+    programWorkout: createDemoProgramWorkout(),
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+  const trainSurfaceModel = getTrainSurfaceModel({
+    trainTabs,
+    activeTrainTab: 'calendar',
+    todayModel: getTodaySurfaceModel(trainState),
+    calendarModel: getCalendarSurfaceModel(trainState),
+    workoutModel: getWorkoutSurfaceModel(trainState),
+    activeSessionModel: getActiveSessionSurfaceModel(trainState.session, 35, null),
+  })
+
+  const renderModel = getTrainRenderModel({
+    trainSurfaceModel,
+    sessionSections: getSessionSections(getActiveSessionSurfaceModel(trainState.session, 35, null)),
+  })
+
+  assert.equal(renderModel.content.sections[0].type, 'action-card')
+  assert.equal(renderModel.content.sections[1].type, 'body-list')
+  assert.equal(renderModel.content.sections[1].title, 'This week')
+  assert.equal(renderModel.content.sections[1].rows[1].title, 'Tue • Lower A')
 })
 
 test('getTrainRenderModel includes a list section for Workout', () => {
@@ -40,6 +66,7 @@ test('getTrainRenderModel includes a list section for Workout', () => {
     trainTabs,
     activeTrainTab: 'workout',
     todayModel: getTodaySurfaceModel(trainState),
+    calendarModel: getCalendarSurfaceModel(trainState),
     workoutModel: getWorkoutSurfaceModel(trainState),
     activeSessionModel: getActiveSessionSurfaceModel(trainState.session, 35, null),
   })
@@ -66,6 +93,7 @@ test('getTrainRenderModel passes through session sections for the session tab', 
     trainTabs,
     activeTrainTab: 'session',
     todayModel: getTodaySurfaceModel(trainState),
+    calendarModel: getCalendarSurfaceModel(trainState),
     workoutModel: getWorkoutSurfaceModel(trainState),
     activeSessionModel,
   })

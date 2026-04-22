@@ -12,6 +12,7 @@ import {
 } from '@pplus/core';
 import {
   createTrainDemoState,
+  getCalendarSurfaceModel,
   getTodaySurfaceModel,
   getWorkoutSurfaceModel,
   mobileTabs,
@@ -38,6 +39,7 @@ export default function App() {
   const demoTrainState = useMemo(() => createTrainDemoState(), []);
   const todayModel = useMemo(() => getTodaySurfaceModel(demoTrainState), [demoTrainState]);
   const workoutModel = useMemo(() => getWorkoutSurfaceModel(demoTrainState), [demoTrainState]);
+  const calendarModel = useMemo(() => getCalendarSurfaceModel(demoTrainState), [demoTrainState]);
   const teamPlaceholder = useMemo(
     () => getPlaceholderSurfaceModel('Team', 'This surface will hold coach context, team relationships, and collaboration later.'),
     []
@@ -93,12 +95,21 @@ export default function App() {
         trainTabs,
         activeTrainTab,
         todayModel,
+        calendarModel,
         workoutModel,
         activeSessionModel,
         completedSessionModel,
         discardedSessionModel,
       }),
-    [activeSessionModel, activeTrainTab, completedSessionModel, discardedSessionModel, todayModel, workoutModel]
+    [
+      activeSessionModel,
+      activeTrainTab,
+      calendarModel,
+      completedSessionModel,
+      discardedSessionModel,
+      todayModel,
+      workoutModel,
+    ]
   );
   const trainRenderModel = useMemo(
     () => getTrainRenderModel({ trainSurfaceModel, sessionSections: sessionRenderPlan }),
