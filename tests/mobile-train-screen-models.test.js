@@ -139,6 +139,8 @@ test('getTrainSurfaceModel builds the workout preview surface', () => {
   assert.equal(model.surface.type, 'workout')
   assert.equal(model.surface.detailCard.title, 'Workout detail')
   assert.equal(model.surface.detailCard.targetKey, 'session')
+  assert.equal(model.surface.previewSectionTitle, 'Preview snapshot')
+  assert.equal(model.surface.previewHighlights[0].title, 'Primary focus')
   assert.equal(model.surface.exerciseSectionTitle, 'Planned exercises')
   assert.equal(model.surface.exercises[0].restLabel, '3:00')
 })

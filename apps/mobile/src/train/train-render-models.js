@@ -109,6 +109,11 @@ export function getTrainRenderModel({ trainSurfaceModel, sessionSections }) {
         },
         {
           type: 'body-list',
+          title: trainSurfaceModel.surface.previewSectionTitle,
+          rows: trainSurfaceModel.surface.previewHighlights,
+        },
+        {
+          type: 'body-list',
           title: trainSurfaceModel.surface.exerciseSectionTitle,
           rows: trainSurfaceModel.surface.exercises.map((exercise) => ({
             id: exercise.id,

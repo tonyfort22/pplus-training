@@ -77,6 +77,8 @@ export function getTrainSurfaceModel({
           ...detailCardModel,
           targetKey: detailCardModel.actionTargetKey || workoutModel.primaryTargetKey,
         }),
+        previewSectionTitle: 'Preview snapshot',
+        previewHighlights: workoutModel.previewHighlights,
         exerciseSectionTitle: 'Planned exercises',
         exercises: workoutModel.exercises.map((exercise) => ({
           id: exercise.id,

@@ -188,6 +188,11 @@ export function getWorkoutSurfaceModel(trainState, selectedCalendarDayId = train
     primaryActionLabel: canOpenSession ? sessionOutcome ? sessionOutcome.actionLabel : sessionProgress ? 'Resume session' : 'Go to session' : 'Back to calendar',
     primaryTargetKey: canOpenSession ? sessionOutcome ? 'session' : 'session' : 'calendar',
     actionPayload: { selectedDayId: selectedDay.id },
+    previewHighlights: getWorkoutPreviewHighlights({
+      workoutPreview,
+      selectedDay,
+      canOpenSession,
+    }),
     exercises: workoutPreview.exercises.map((exercise) => ({
       id: exercise.id,
       name: exercise.name,
@@ -306,6 +311,29 @@ function formatCalendarStatus(status) {
   if (status === 'optional') return 'Optional'
   if (status === 'off') return 'Off day'
   return 'Upcoming'
+}
+
+function getWorkoutPreviewHighlights({ workoutPreview, selectedDay, canOpenSession }) {
+  const totalSets = workoutPreview.exercises.reduce((sum, exercise) => sum + exercise.setCount, 0)
+  const firstExercise = workoutPreview.exercises[0]
+
+  return [
+    {
+      id: `${selectedDay.id}-primary-focus`,
+      title: 'Primary focus',
+      body: firstExercise ? `${firstExercise.name} opens the session and sets the tone for ${selectedDay.workoutName}.` : `${selectedDay.workoutName} is the primary focus today.`,
+    },
+    {
+      id: `${selectedDay.id}-planned-work`,
+      title: 'Planned work',
+      body: `${workoutPreview.exercises.length} exercises, ${totalSets} total sets, and scheduled rest blocks are queued up.`,
+    },
+    {
+      id: `${selectedDay.id}-session-cue`,
+      title: 'Session cue',
+      body: canOpenSession ? 'Open today when the athlete is ready to log actual work.' : 'Preview the plan here, then head back to Calendar when you are done reviewing.',
+    },
+  ]
 }
 
 function createDemoCalendarWeek(programWorkout) {

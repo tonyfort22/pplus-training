@@ -60,7 +60,7 @@ test('getTrainRenderModel builds a list section for the weekly calendar', () => 
   assert.equal(renderModel.content.sections[1].rows[3].actionPayload.selectedDayId, 'thu')
 })
 
-test('getTrainRenderModel includes a list section for Workout', () => {
+test('getTrainRenderModel includes preview and exercise list sections for Workout', () => {
   const trainState = createTrainDemoState({
     programWorkout: createDemoProgramWorkout(),
     startedAt: '2026-04-21T20:00:00.000Z',
@@ -81,8 +81,11 @@ test('getTrainRenderModel includes a list section for Workout', () => {
 
   assert.equal(renderModel.content.sections[0].type, 'action-card')
   assert.equal(renderModel.content.sections[1].type, 'body-list')
-  assert.equal(renderModel.content.sections[1].title, 'Planned exercises')
-  assert.equal(renderModel.content.sections[1].rows[0].title, 'Barbell Back Squat')
+  assert.equal(renderModel.content.sections[1].title, 'Preview snapshot')
+  assert.equal(renderModel.content.sections[1].rows[0].title, 'Primary focus')
+  assert.equal(renderModel.content.sections[2].type, 'body-list')
+  assert.equal(renderModel.content.sections[2].title, 'Planned exercises')
+  assert.equal(renderModel.content.sections[2].rows[0].title, 'Barbell Back Squat')
 })
 
 test('getTrainRenderModel passes through session sections for the session tab', () => {

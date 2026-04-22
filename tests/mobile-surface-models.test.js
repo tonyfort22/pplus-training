@@ -62,6 +62,7 @@ test('getWorkoutDetailCardModel creates the workout preview card copy', () => {
   assert.equal(model.actionLabel, 'Go to session')
   assert.match(model.body, /2 exercises/)
   assert.match(model.body, /planned rest/)
+  assert.match(model.body, /Barbell Back Squat/)
 })
 
 test('getWorkoutDetailCardModel switches to resume when today session has started', () => {
@@ -79,6 +80,23 @@ test('getWorkoutDetailCardModel switches to resume when today session has starte
 
   assert.equal(model.actionLabel, 'Resume session')
   assert.match(model.body, /1 of 7 sets logged/)
+})
+
+test('getWorkoutSurfaceModel builds quick preview highlights before session start', () => {
+  const trainState = createTrainDemoState({
+    programWorkout: createDemoProgramWorkout(),
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+
+  const model = getWorkoutSurfaceModel(trainState)
+
+  assert.equal(model.previewHighlights.length, 3)
+  assert.equal(model.previewHighlights[0].title, 'Primary focus')
+  assert.match(model.previewHighlights[0].body, /Barbell Back Squat/)
+  assert.equal(model.previewHighlights[1].title, 'Planned work')
+  assert.match(model.previewHighlights[1].body, /7 total sets/)
+  assert.equal(model.previewHighlights[2].title, 'Session cue')
+  assert.match(model.previewHighlights[2].body, /Open today/)
 })
 
 test('getTodayCardsModel switches to completed summary once today session is finished', () => {
