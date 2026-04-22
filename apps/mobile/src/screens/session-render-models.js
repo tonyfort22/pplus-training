@@ -23,7 +23,7 @@ export function getSessionRenderModel({ sessionRenderPlan, sessionStatus }) {
         ...exercise,
         sets: exercise.sets.map((set) => ({
           ...set,
-          completionTone: set.isCompleted ? 'done' : 'todo',
+          completionTone: set.isCompleted ? 'done' : set.completionLabel === 'Ready now' ? 'ready' : 'todo',
         })),
       })),
     }

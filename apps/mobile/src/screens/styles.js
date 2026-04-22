@@ -322,6 +322,9 @@ export const styles = {
   badgeDone: {
     backgroundColor: '#10b981',
   },
+  badgeReady: {
+    backgroundColor: '#f59e0b',
+  },
   badgeTodo: {
     backgroundColor: '#2563eb',
   },

@@ -17,6 +17,7 @@ test('getSessionSections converts an in-progress active session model into rende
   assert.equal(sections.length, 2)
   assert.equal(sections[0].type, 'session-header')
   assert.equal(sections[0].finishLabel, 'Finish')
+  assert.equal(sections[0].nextUpLabel, 'Next up: Barbell Back Squat Set 1 • 120 lb x 8')
   assert.equal(sections[1].type, 'session-exercise-list')
   assert.equal(sections[1].title, 'Active workout session')
   assert.equal(sections[1].exercises.length, 2)

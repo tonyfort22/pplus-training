@@ -7,6 +7,7 @@ export function getSessionSections(activeSessionModel) {
       finishLabel: activeSessionModel.header.finishLabel,
       discardLabel: activeSessionModel.header.discardLabel,
       workoutTimerLabel: activeSessionModel.header.workoutTimerLabel,
+      nextUpLabel: activeSessionModel.header.nextUpLabel,
       progressLabel: activeSessionModel.header.progressLabel,
       progressPercent: activeSessionModel.header.progressPercent,
     },

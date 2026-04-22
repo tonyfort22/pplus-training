@@ -113,6 +113,7 @@ export function renderSessionSections({
           </View>
 
           <Text style={styles.summary}>{section.workoutTimerLabel}</Text>
+          <Text style={styles.progressLabel}>{section.nextUpLabel}</Text>
           <View style={styles.progressTrack}>
             <View style={[styles.progressFill, { width: `${section.progressPercent}%` }]} />
           </View>
@@ -196,7 +197,16 @@ export function renderSessionSections({
                     </View>
                   </View>
 
-                  <View style={[styles.badge, set.completionTone === 'done' ? styles.badgeDone : styles.badgeTodo]}>
+                  <View
+                    style={[
+                      styles.badge,
+                      set.completionTone === 'done'
+                        ? styles.badgeDone
+                        : set.completionTone === 'ready'
+                          ? styles.badgeReady
+                          : styles.badgeTodo,
+                    ]}
+                  >
                     <Text style={styles.badgeText}>{set.completionLabel}</Text>
                   </View>
                 </View>
