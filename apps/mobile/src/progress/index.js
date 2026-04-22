@@ -1,47 +1,140 @@
-export function getProgressSurfaceModel() {
+export function getProgressSurfaceModel({ sessions = [] } = {}) {
+  const completedSessions = sessions.filter((session) => session.status === 'completed')
+  const squatPerformance = getBestExercisePerformance(completedSessions, 'Back Squat')
+  const squatEstimate = squatPerformance ? estimateOneRepMax(squatPerformance.actualLoad, squatPerformance.actualReps) : null
+  const totalLoadScore = Math.round(
+    completedSessions.reduce((sum, session) => sum + getSessionLoadVolume(session), 0) / 100
+  )
+  const readiness = getReadinessLabel(totalLoadScore)
+  const fatigueRows = buildFatigueRows(completedSessions)
+  const adherence = completedSessions.length > 0 ? '100% adherence' : 'No completed sessions yet'
+
   return {
     header: {
       eyebrow: 'Progress',
       title: 'Performance & recovery',
-      body: 'This is where the athlete should see results from training, not just the workouts themselves.',
+      body: 'This is where the athlete should see results from completed training, not just the workouts themselves.',
     },
     metrics: [
       {
         label: 'Back Squat est. 1RM',
-        value: '205 lb',
-        detail: 'Up 10 lb over the last 4 weeks',
+        value: squatEstimate ? `${squatEstimate} lb` : '--',
+        detail: squatEstimate
+          ? `Best completed set came from ${squatPerformance.actualLoad} lb x ${squatPerformance.actualReps} reps`
+          : 'Complete squat sessions to unlock a trend line',
       },
       {
         label: 'Weekly load',
-        value: '78',
-        detail: 'Current training load score based on completed sessions',
+        value: String(totalLoadScore),
+        detail: `${completedSessions.length} completed sessions contributing to the current load score`,
       },
       {
         label: 'Readiness',
-        value: 'Moderate',
-        detail: 'Good to train, but lower body fatigue is accumulating',
+        value: readiness,
+        detail: readiness === 'Low'
+          ? 'Recovery is clear and ready for more completed work'
+          : 'Solid work logged, but fatigue is starting to accumulate',
       },
     ],
     trainingLoad: {
       title: 'Training load',
-      body: 'The app should summarize completed session load across the week and connect it to muscles and sub-muscles through the analytics domain.',
+      body: `${completedSessions.length} completed sessions are currently feeding this load view. The score comes from actual load x reps across logged sets.`,
     },
     muscleFatigue: {
       title: 'Muscle fatigue',
-      body: 'This surface will show fatigue and recovery signals per muscle group once analytics are wired from the completed session data.',
-      rows: [
-        { title: 'Quads', body: 'High fatigue' },
-        { title: 'Hamstrings', body: 'Moderate fatigue' },
-        { title: 'Glutes', body: 'Moderate fatigue' },
-      ],
+      body: 'This surface now reflects which lower-body groups are carrying the most completed work from logged sessions.',
+      rows: fatigueRows,
     },
     performanceSnapshots: {
       title: 'Performance snapshots',
-      body: 'This area should hold lift progress, compliance, and trend summaries over time.',
+      body: completedSessions.length > 0
+        ? `${adherence} across the current sample, with progress driven only by completed actual work.`
+        : 'No completed sessions yet. Finish a workout to start building adherence and performance snapshots.',
     },
   }
 }
 
 export function getPlaceholderSurfaceModel(title, body) {
   return { title, body }
+}
+
+function getBestExercisePerformance(sessions, exerciseNamePart) {
+  const normalized = exerciseNamePart.toLowerCase()
+  let bestSet = null
+
+  for (const session of sessions) {
+    for (const exercise of session.exercises || []) {
+      const name = (exercise.nameSnapshot || exercise.name || '').toLowerCase()
+      if (!name.includes(normalized)) continue
+
+      for (const set of exercise.sets || []) {
+        if (!set.isCompleted || set.actualLoad == null || set.actualReps == null) continue
+        if (!bestSet || estimateOneRepMax(set.actualLoad, set.actualReps) > estimateOneRepMax(bestSet.actualLoad, bestSet.actualReps)) {
+          bestSet = {
+            actualLoad: set.actualLoad,
+            actualReps: set.actualReps,
+          }
+        }
+      }
+    }
+  }
+
+  return bestSet
+}
+
+function estimateOneRepMax(load, reps) {
+  return Math.round(load * (1 + reps / 30))
+}
+
+function getSessionLoadVolume(session) {
+  return (session.exercises || []).reduce((sessionSum, exercise) => {
+    return sessionSum + (exercise.sets || []).reduce((setSum, set) => {
+      if (!set.isCompleted || set.actualLoad == null || set.actualReps == null) return setSum
+      return setSum + set.actualLoad * set.actualReps
+    }, 0)
+  }, 0)
+}
+
+function getReadinessLabel(totalLoadScore) {
+  if (totalLoadScore >= 70) return 'Moderate'
+  return 'Low'
+}
+
+function buildFatigueRows(sessions) {
+  const totals = {
+    Quads: 0,
+    Hamstrings: 0,
+    Glutes: 0,
+  }
+
+  for (const session of sessions) {
+    for (const exercise of session.exercises || []) {
+      const volume = (exercise.sets || []).reduce((sum, set) => {
+        if (!set.isCompleted || set.actualLoad == null || set.actualReps == null) return sum
+        return sum + set.actualLoad * set.actualReps
+      }, 0)
+      const name = (exercise.nameSnapshot || exercise.name || '').toLowerCase()
+
+      if (name.includes('squat')) {
+        totals.Quads += volume
+        totals.Glutes += Math.round(volume * 0.6)
+      }
+
+      if (name.includes('deadlift') || name.includes('rdl')) {
+        totals.Hamstrings += volume
+        totals.Glutes += Math.round(volume * 0.5)
+      }
+    }
+  }
+
+  return Object.entries(totals).map(([title, volume]) => ({
+    title,
+    body: getFatigueLabel(volume),
+  }))
+}
+
+function getFatigueLabel(volume) {
+  if (volume >= 3000) return 'High fatigue'
+  if (volume >= 1200) return 'Moderate fatigue'
+  return 'Low fatigue'
 }

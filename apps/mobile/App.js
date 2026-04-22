@@ -38,9 +38,6 @@ export default function App() {
   const demoTrainState = useMemo(() => createTrainDemoState(), []);
   const todayModel = useMemo(() => getTodaySurfaceModel(demoTrainState), [demoTrainState]);
   const workoutModel = useMemo(() => getWorkoutSurfaceModel(demoTrainState), [demoTrainState]);
-  const progressModel = useMemo(() => getProgressSurfaceModel(), []);
-  const progressSections = useMemo(() => getProgressSections(progressModel), [progressModel]);
-  const progressRenderPlan = useMemo(() => getGenericSectionRenderPlan(progressSections), [progressSections]);
   const teamPlaceholder = useMemo(
     () => getPlaceholderSurfaceModel('Team', 'This surface will hold coach context, team relationships, and collaboration later.'),
     []
@@ -58,6 +55,16 @@ export default function App() {
   const bottomTabModels = useMemo(() => getTabButtonModels({ tabs: mobileTabs, activeKey: activeTab }), [activeTab]);
   const [session, setSession] = useState(() => demoTrainState.session);
   const [elapsedSeconds] = useState(35);
+  const progressSessions = useMemo(() => {
+    if (session.status === 'completed') {
+      return [...demoTrainState.completedSessions, session]
+    }
+
+    return demoTrainState.completedSessions
+  }, [demoTrainState.completedSessions, session])
+  const progressModel = useMemo(() => getProgressSurfaceModel({ sessions: progressSessions }), [progressSessions]);
+  const progressSections = useMemo(() => getProgressSections(progressModel), [progressModel]);
+  const progressRenderPlan = useMemo(() => getGenericSectionRenderPlan(progressSections), [progressSections]);
 
   const selectedSet = session.activeRestTimer
     ? findSessionSet(session, session.activeRestTimer.exerciseId, session.activeRestTimer.setId)

@@ -1,4 +1,4 @@
-import { createWorkoutSession } from '../../../../packages/core/src/index.js'
+import { completeWorkoutSet, createWorkoutSession, finishWorkoutSession } from '../../../../packages/core/src/index.js'
 
 export const mobileTabs = [
   { key: 'train', label: 'Train' },
@@ -78,7 +78,15 @@ export function createTrainDemoState({ programWorkout = createDemoProgramWorkout
       completionLabel: '6 of 39 workouts completed',
     },
     session,
+    completedSessions: createDemoCompletedSessions(programWorkout),
   }
+}
+
+export function createDemoCompletedSessions(programWorkout = createDemoProgramWorkout()) {
+  return [
+    buildDemoCompletedSession({ programWorkout, completedAt: '2026-04-18T20:30:00.000Z', squatLoad: 125, rdlLoad: 100 }),
+    buildDemoCompletedSession({ programWorkout, completedAt: '2026-04-20T20:30:00.000Z', squatLoad: 135, rdlLoad: 105 }),
+  ]
 }
 
 export function getTodaySurfaceModel(trainState) {
@@ -108,4 +116,34 @@ export function getWorkoutSurfaceModel(trainState) {
       defaultRestLabel: formatRestLabel(exercise.defaultRestSeconds),
     })),
   }
+}
+
+function buildDemoCompletedSession({ programWorkout, completedAt, squatLoad, rdlLoad }) {
+  let session = createWorkoutSession({
+    programWorkout,
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+
+  for (const exercise of session.exercises) {
+    for (const set of exercise.sets) {
+      const actualLoad = exercise.id === 'pwe-squat' ? squatLoad : rdlLoad
+      session = completeWorkoutSet({
+        session,
+        exerciseId: exercise.id,
+        setId: set.id,
+        actuals: {
+          actualLoad,
+          actualReps: set.prescribedReps,
+          actualRpe: set.prescribedRpe,
+          actualRestSeconds: set.prescribedRestSeconds,
+        },
+      })
+    }
+  }
+
+  return finishWorkoutSession({
+    session,
+    completedAt,
+    elapsedSeconds: 1800,
+  })
 }

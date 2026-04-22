@@ -1,17 +1,69 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { completeWorkoutSet, finishWorkoutSession } from '../packages/core/src/index.js'
+import { createDemoProgramWorkout, createTrainDemoState } from '../apps/mobile/src/train/index.js'
 import { getPlaceholderSurfaceModel, getProgressSurfaceModel } from '../apps/mobile/src/progress/index.js'
 
-test('getProgressSurfaceModel returns the athlete analytics surface structure', () => {
-  const model = getProgressSurfaceModel()
+function buildCompletedSessionHistory() {
+  const baseWorkout = createDemoProgramWorkout()
+
+  function buildFinishedSession({ completedAt, squatLoad, rdlLoad }) {
+    const trainState = createTrainDemoState({
+      programWorkout: baseWorkout,
+      startedAt: '2026-04-21T20:00:00.000Z',
+    })
+
+    let session = trainState.session
+    for (const exercise of session.exercises) {
+      for (const set of exercise.sets) {
+        const actualLoad = exercise.id === 'pwe-squat' ? squatLoad : rdlLoad
+        session = completeWorkoutSet({
+          session,
+          exerciseId: exercise.id,
+          setId: set.id,
+          actuals: {
+            actualLoad,
+            actualReps: set.prescribedReps,
+            actualRpe: set.prescribedRpe,
+            actualRestSeconds: set.prescribedRestSeconds,
+          },
+        })
+      }
+    }
+
+    return finishWorkoutSession({ session, completedAt, elapsedSeconds: 1800 })
+  }
+
+  return [
+    buildFinishedSession({ completedAt: '2026-04-18T20:30:00.000Z', squatLoad: 125, rdlLoad: 100 }),
+    buildFinishedSession({ completedAt: '2026-04-20T20:30:00.000Z', squatLoad: 135, rdlLoad: 105 }),
+  ]
+}
+
+test('getProgressSurfaceModel derives athlete metrics from completed sessions', () => {
+  const model = getProgressSurfaceModel({ sessions: buildCompletedSessionHistory() })
 
   assert.equal(model.header.eyebrow, 'Progress')
   assert.equal(model.header.title, 'Performance & recovery')
   assert.equal(model.metrics.length, 3)
   assert.equal(model.metrics[0].label, 'Back Squat est. 1RM')
+  assert.equal(model.metrics[0].value, '171 lb')
+  assert.match(model.metrics[1].detail, /2 completed sessions/i)
+  assert.equal(model.metrics[2].value, 'Moderate')
   assert.equal(model.trainingLoad.title, 'Training load')
-  assert.equal(model.muscleFatigue.rows.length, 3)
+  assert.match(model.trainingLoad.body, /2 completed sessions/i)
+  assert.equal(model.muscleFatigue.rows[0].title, 'Quads')
   assert.equal(model.performanceSnapshots.title, 'Performance snapshots')
+  assert.match(model.performanceSnapshots.body, /100% adherence/i)
+})
+
+test('getProgressSurfaceModel falls back cleanly when no completed sessions exist', () => {
+  const model = getProgressSurfaceModel({ sessions: [] })
+
+  assert.equal(model.metrics[0].value, '--')
+  assert.equal(model.metrics[1].value, '0')
+  assert.equal(model.metrics[2].value, 'Low')
+  assert.match(model.performanceSnapshots.body, /No completed sessions yet/i)
 })
 
 test('getPlaceholderSurfaceModel keeps placeholder screens consistent', () => {
