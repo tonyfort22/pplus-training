@@ -24,10 +24,16 @@ test('mobile training calendar screen matches the calendar reference structure',
   assert.match(sheetSource, /TrainingCalendarDayRow/)
   assert.match(sheetSource, /Rest Day/)
   assert.match(sheetSource, /Check/)
-  assert.match(sheetSource, /X/
-  )
+  assert.match(sheetSource, /X/)
   assert.match(sheetSource, /ChevronLeft/)
   assert.match(sheetSource, /Modal/)
+  assert.match(sheetSource, /Pressable className="h-11 w-11 items-center justify-center rounded-\[14px\] border border-\[#243041\] bg-\[#111827\]" onPress=\{onClose\}/)
+  assert.match(sheetSource, /SafeAreaView className="flex-1 bg-\[#0b1220\]"/)
+  assert.match(sheetSource, /bg-\[#111827\]/)
+  assert.match(sheetSource, /border-\[#243041\]/)
+  assert.doesNotMatch(sheetSource, /bg-\[#1f1f2b\]/)
+  assert.doesNotMatch(sheetSource, /bg-\[#2c2e3a\]/)
+  assert.doesNotMatch(sheetSource, /bg-\[#2a2c37\]/)
 
   assert.match(modelSource, /getTrainingCalendarModel/)
   assert.match(modelSource, /Apr 5 - Apr 11/)
