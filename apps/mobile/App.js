@@ -24,6 +24,7 @@ import { getPlaceholderSurfaceModel, getProgressSurfaceModel } from './src/progr
 import { getAppRenderModel } from './src/screens/app-render-models.js';
 import { getPlaceholderSections, getProgressSections } from './src/screens/surface-sections.js';
 import { getGenericSectionRenderPlan, getSessionSectionRenderPlan } from './src/screens/render-plans.js';
+import { getSessionRenderModel } from './src/screens/session-render-models.js';
 import { getSessionSections } from './src/screens/session-sections.js';
 import { getTabButtonModels } from './src/ui/tab-models.js';
 
@@ -85,6 +86,10 @@ export default function App() {
   );
   const sessionSections = useMemo(() => getSessionSections(activeSessionModel), [activeSessionModel]);
   const sessionRenderPlan = useMemo(() => getSessionSectionRenderPlan(sessionSections), [sessionSections]);
+  const sessionRenderModel = useMemo(
+    () => getSessionRenderModel({ sessionRenderPlan, sessionStatus: session.status }),
+    [session.status, sessionRenderPlan]
+  );
   const trainSurfaceModel = useMemo(
     () =>
       getTrainSurfaceModel({
@@ -140,7 +145,7 @@ export default function App() {
 
   function renderSessionSections(sections) {
     return sections.map((section) => {
-      if (section.type === 'session-header') {
+      if (section.type === 'session-header-card') {
         return (
           <View key={section.title} style={styles.headerCard}>
             <View style={styles.headerTopRow}>
@@ -150,7 +155,7 @@ export default function App() {
               </View>
               <Pressable
                 onPress={handleFinishWorkout}
-                style={[styles.finishButton, session.status === 'completed' && styles.finishButtonDone]}
+                style={[styles.finishButton, section.isCompleted && styles.finishButtonDone]}
               >
                 <Text style={styles.finishButtonText}>{section.finishLabel}</Text>
               </Pressable>
@@ -165,7 +170,7 @@ export default function App() {
         );
       }
 
-      if (section.type === 'rest-timer') {
+      if (section.type === 'rest-timer-card') {
         return (
           <View key="rest-timer" style={styles.restCard}>
             <View style={styles.restHeaderRow}>
@@ -240,7 +245,7 @@ export default function App() {
                       </View>
                     </View>
 
-                    <View style={[styles.badge, set.isCompleted ? styles.badgeDone : styles.badgeTodo]}>
+                    <View style={[styles.badge, set.completionTone === 'done' ? styles.badgeDone : styles.badgeTodo]}>
                       <Text style={styles.badgeText}>{set.completionLabel}</Text>
                     </View>
                   </View>
@@ -269,7 +274,7 @@ export default function App() {
         </View>
 
         {trainRenderModel.content.type === 'sections' && renderSections(trainRenderModel.content.sections, setActiveTrainTab)}
-        {trainRenderModel.content.type === 'session-sections' && renderSessionSections(trainRenderModel.content.sections)}
+        {trainRenderModel.content.type === 'session-sections' && renderSessionSections(sessionRenderModel)}
       </>
     );
   }
