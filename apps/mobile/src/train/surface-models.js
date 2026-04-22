@@ -29,6 +29,7 @@ export function getWorkoutDetailCardModel(workoutModel) {
     body: `${workoutModel.dayLabel} · ${workoutModel.scheduleStatusLabel}. ${workoutModel.workoutName} contains ${workoutModel.exerciseCount} exercises in this scaffold, with prescribed sets, loads, reps, and planned rest.${progressCopy} This is the preview before starting or continuing the session.`,
     actionLabel: workoutModel.primaryActionLabel || 'Go to session',
     actionPayload: workoutModel.actionPayload || null,
+    actionTargetKey: workoutModel.primaryTargetKey || null,
   }
 }
 
@@ -38,6 +39,7 @@ export function getCalendarDetailCardModel(calendarModel) {
     body: calendarModel.body,
     actionLabel: calendarModel.actionLabel,
     actionPayload: calendarModel.actionPayload || null,
+    actionTargetKey: calendarModel.actionTargetKey || null,
     rows: calendarModel.days,
   }
 }

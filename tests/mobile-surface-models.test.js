@@ -107,6 +107,24 @@ test('getCalendarSurfaceModel tracks the selected day and where it should route 
   assert.equal(calendarModel.selectedDayId, 'thu')
   assert.equal(calendarModel.selectedDay.title, 'Thu • Upper B')
   assert.equal(calendarModel.actionLabel, 'Open Thu workout')
+  assert.equal(calendarModel.actionTargetKey, 'workout')
   assert.equal(calendarModel.days[3].targetKey, 'workout')
   assert.equal(calendarModel.days[3].actionPayload.selectedDayId, 'thu')
+})
+
+test('getCalendarSurfaceModel routes today directly to session once the workout has started', () => {
+  const trainState = createTrainDemoState({
+    programWorkout: createDemoProgramWorkout(),
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+  const startedSession = completeWorkoutSet({
+    session: trainState.session,
+    exerciseId: trainState.session.exercises[0].id,
+    setId: trainState.session.exercises[0].sets[0].id,
+  })
+  const calendarModel = getCalendarSurfaceModel({ ...trainState, session: startedSession }, 'tue')
+
+  assert.equal(calendarModel.actionLabel, 'Resume Tue session')
+  assert.equal(calendarModel.actionTargetKey, 'session')
+  assert.equal(calendarModel.days[1].targetKey, 'session')
 })

@@ -22,7 +22,7 @@ export function getTrainSurfaceModel({
       surface: {
         type: 'today',
         cards: [
-          createActionCardModel({ ...cards.todayCard, targetKey: 'workout' }),
+          createActionCardModel({ ...cards.todayCard, targetKey: cards.todayCard.actionLabel === 'Resume session' ? 'session' : 'workout' }),
           createActionCardModel({ ...cards.programCard, targetKey: 'program' }),
         ],
       },
@@ -43,13 +43,15 @@ export function getTrainSurfaceModel({
   }
 
   if (activeTrainTab === 'calendar') {
+    const detailCardModel = getCalendarDetailCardModel(calendarModel)
+
     return {
       tabs,
       surface: {
         type: 'calendar',
         detailCard: createActionCardModel({
-          ...getCalendarDetailCardModel(calendarModel),
-          targetKey: 'workout',
+          ...detailCardModel,
+          targetKey: detailCardModel.actionTargetKey || 'workout',
         }),
         daysSectionTitle: 'This week',
         days: calendarModel.days.map((day) => ({
@@ -65,13 +67,15 @@ export function getTrainSurfaceModel({
   }
 
   if (activeTrainTab === 'workout') {
+    const detailCardModel = getWorkoutDetailCardModel(workoutModel)
+
     return {
       tabs,
       surface: {
         type: 'workout',
         detailCard: createActionCardModel({
-          ...getWorkoutDetailCardModel(workoutModel),
-          targetKey: workoutModel.primaryTargetKey,
+          ...detailCardModel,
+          targetKey: detailCardModel.actionTargetKey || workoutModel.primaryTargetKey,
         }),
         exerciseSectionTitle: 'Planned exercises',
         exercises: workoutModel.exercises.map((exercise) => ({

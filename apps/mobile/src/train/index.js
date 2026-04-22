@@ -136,11 +136,13 @@ export function getWorkoutSurfaceModel(trainState, selectedCalendarDayId = train
 
 export function getCalendarSurfaceModel(trainState, selectedCalendarDayId = trainState.program.selectedCalendarDayId) {
   const selectedDay = getSelectedCalendarDay(trainState, selectedCalendarDayId)
+  const selectedDayTarget = getCalendarDayTarget({ trainState, day: selectedDay })
 
   return {
     title: 'Weekly schedule',
     body: `${trainState.program.name}, ${trainState.program.weekLabel}. ${selectedDay.dayLabel} is ${formatCalendarStatus(selectedDay.status).toLowerCase()} with ${selectedDay.workoutName}.`,
-    actionLabel: selectedDay.workoutPreview ? `Open ${selectedDay.dayLabel} workout` : 'Stay on calendar',
+    actionLabel: getCalendarActionLabel({ day: selectedDay, targetKey: selectedDayTarget }),
+    actionTargetKey: selectedDayTarget,
     selectedDayId: selectedDay.id,
     selectedDay: {
       id: selectedDay.id,
@@ -154,7 +156,7 @@ export function getCalendarSurfaceModel(trainState, selectedCalendarDayId = trai
       body: `${day.dateLabel} · ${formatCalendarStatus(day.status)}`,
       status: day.status,
       isSelected: day.id === selectedDay.id,
-      targetKey: day.workoutPreview ? 'workout' : undefined,
+      targetKey: getCalendarDayTarget({ trainState, day }),
       actionPayload: day.workoutPreview ? { selectedDayId: day.id } : null,
     })),
   }
@@ -162,6 +164,30 @@ export function getCalendarSurfaceModel(trainState, selectedCalendarDayId = trai
 
 export function getSelectedCalendarDay(trainState, selectedCalendarDayId = trainState.program.selectedCalendarDayId) {
   return trainState.program.calendarWeek.find((day) => day.id === selectedCalendarDayId) || trainState.program.calendarWeek[0]
+}
+
+function getCalendarDayTarget({ trainState, day }) {
+  if (!day.workoutPreview) {
+    return undefined
+  }
+
+  if (day.id === 'tue' && trainState.session.status === 'in_progress' && trainState.session.completedSetsCount > 0) {
+    return 'session'
+  }
+
+  return 'workout'
+}
+
+function getCalendarActionLabel({ day, targetKey }) {
+  if (!day.workoutPreview) {
+    return 'Stay on calendar'
+  }
+
+  if (targetKey === 'session') {
+    return `Resume ${day.dayLabel} session`
+  }
+
+  return `Open ${day.dayLabel} workout`
 }
 
 function getSessionProgressCopy(session) {
