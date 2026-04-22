@@ -26,6 +26,30 @@ test('getSessionHeaderModel summarizes workout progress for the active session s
   assert.equal(model.progressPercent, 0)
 })
 
+test('getSessionHeaderModel shifts to a wrap-up cue when every set is already logged', () => {
+  const trainState = createTrainDemoState({
+    programWorkout: createDemoProgramWorkout(),
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+
+  let session = trainState.session
+  for (const exercise of session.exercises) {
+    for (const set of exercise.sets) {
+      session = completeWorkoutSet({
+        session,
+        exerciseId: exercise.id,
+        setId: set.id,
+      })
+    }
+  }
+
+  const model = getSessionHeaderModel(session, 1800)
+
+  assert.equal(model.finishLabel, 'View summary')
+  assert.equal(model.nextUpLabel, 'All sets logged. Finish to open the session summary.')
+  assert.equal(model.progressPercent, 100)
+})
+
 test('getRestTimerModel returns null until a set completion starts a timer', () => {
   const trainState = createTrainDemoState({
     programWorkout: createDemoProgramWorkout(),

@@ -4,6 +4,26 @@ import { createDemoProgramWorkout, createTrainDemoState } from '../apps/mobile/s
 import { getActiveSessionSurfaceModel } from '../apps/mobile/src/train/active-session-models.js'
 import { completeWorkoutSet, findSessionSet } from '../packages/core/src/index.js'
 
+function buildAllSetsLoggedSession() {
+  const trainState = createTrainDemoState({
+    programWorkout: createDemoProgramWorkout(),
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+
+  let session = trainState.session
+  for (const exercise of session.exercises) {
+    for (const set of exercise.sets) {
+      session = completeWorkoutSet({
+        session,
+        exerciseId: exercise.id,
+        setId: set.id,
+      })
+    }
+  }
+
+  return session
+}
+
 test('getActiveSessionSurfaceModel builds the session surface for an in-progress workout', () => {
   const trainState = createTrainDemoState({
     programWorkout: createDemoProgramWorkout(),
@@ -31,15 +51,14 @@ test('getActiveSessionSurfaceModel includes the rest timer after a set is comple
     programWorkout: createDemoProgramWorkout(),
     startedAt: '2026-04-21T20:00:00.000Z',
   })
-
   const completedSession = completeWorkoutSet({
     session: trainState.session,
     exerciseId: 'pwe-squat',
     setId: 'pws-squat-1',
     completedAt: '2026-04-21T20:10:00.000Z',
   })
-
   const selectedSet = findSessionSet(completedSession, 'pwe-squat', 'pws-squat-1')
+
   const model = getActiveSessionSurfaceModel(completedSession, 90, selectedSet)
 
   assert.equal(model.restTimer.title, 'Between completed sets')
@@ -50,3 +69,14 @@ test('getActiveSessionSurfaceModel includes the rest timer after a set is comple
   assert.equal(model.exercises[0].sets[0].completionLabel, 'Done')
   assert.equal(model.exercises[0].sets[1].completionLabel, 'Ready now')
 })
+
+test('getActiveSessionSurfaceModel shifts to a ready-to-wrap state once every set is logged', () => {
+  const session = buildAllSetsLoggedSession()
+
+  const model = getActiveSessionSurfaceModel(session, 1800, null)
+
+  assert.equal(model.header.finishLabel, 'View summary')
+  assert.equal(model.header.nextUpLabel, 'All sets logged. Finish to open the session summary.')
+  assert.equal(model.header.progressLabel, '7/7 sets, 2/2 exercises')
+})
+

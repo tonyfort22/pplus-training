@@ -3,14 +3,15 @@ import { formatClock, formatWorkoutTimer, getSessionProgress } from '../../../..
 export function getSessionHeaderModel(session, elapsedSeconds) {
   const progress = getSessionProgress(session)
   const nextUpSet = getNextUpSet(session)
+  const allSetsLogged = progress.totalSets > 0 && progress.completedSets === progress.totalSets
 
   return {
     eyebrow: 'Train / Session',
     title: session.nameSnapshot || session.name || 'Workout Session',
-    finishLabel: session.status === 'completed' ? 'Completed' : 'Finish',
+    finishLabel: session.status === 'completed' ? 'Completed' : allSetsLogged ? 'View summary' : 'Finish',
     discardLabel: session.status === 'in_progress' ? 'Discard session' : null,
     workoutTimerLabel: formatWorkoutTimer(elapsedSeconds),
-    nextUpLabel: nextUpSet ? `Next up: ${nextUpSet.exerciseTitle} ${nextUpSet.setTitle} • ${nextUpSet.loadLabel} x ${nextUpSet.repsLabel}` : 'All sets logged',
+    nextUpLabel: allSetsLogged ? 'All sets logged. Finish to open the session summary.' : nextUpSet ? `Next up: ${nextUpSet.exerciseTitle} ${nextUpSet.setTitle} • ${nextUpSet.loadLabel} x ${nextUpSet.repsLabel}` : 'All sets logged',
     progressLabel: `${progress.completedSets}/${progress.totalSets} sets, ${progress.completedExercises}/${progress.totalExercises} exercises`,
     progressPercent: progress.completionPercent,
   }
