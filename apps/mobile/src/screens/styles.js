@@ -403,7 +403,7 @@ export const styles = {
     padding: 14,
     flexDirection: 'row',
     gap: 12,
-    alignItems: 'center',
+    alignItems: 'stretch',
   },
   todayCardTopRow: {
     flexDirection: 'row',
@@ -414,6 +414,7 @@ export const styles = {
   todayCardContent: {
     flex: 1,
     gap: 4,
+    justifyContent: 'center',
   },
   todayCardTitleBlock: {
     flex: 1,
@@ -428,7 +429,7 @@ export const styles = {
   },
   todayCardWorkoutName: {
     color: '#ffffff',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
   },
   todayCardCheckWrap: {
@@ -508,7 +509,7 @@ export const styles = {
   },
   programCardTitle: {
     color: '#ffffff',
-    fontSize: 24,
+    fontSize: 16,
     fontWeight: '700',
   },
   programCardDateRange: {

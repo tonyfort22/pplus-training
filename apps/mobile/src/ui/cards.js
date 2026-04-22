@@ -53,6 +53,7 @@ export function SurfaceCard({
   if (variant === 'today-summary') {
     const CardWrapper = onAction ? Pressable : View
     const isDone = completionTone === 'done'
+    const metaLine = [scheduledLabel, summaryLabel].filter(Boolean).join(' • ')
 
     return (
       <CardWrapper style={styles.todayCard} onPress={onAction}>
@@ -61,8 +62,7 @@ export function SurfaceCard({
             {title ? <Text style={styles.todayCardLabel}>{title}</Text> : null}
             <Text style={styles.todayCardWorkoutName}>{workoutName || title}</Text>
           </View>
-          <Text style={styles.todayCardScheduledLabel}>{scheduledLabel || body}</Text>
-          <Text style={styles.todayCardSummary}>{summaryLabel || quickSummary || body}</Text>
+          <Text style={styles.todayCardSummary}>{metaLine || quickSummary || body}</Text>
           <Text style={styles.todayCardFooterStatus}>{statusLabel}</Text>
         </View>
         <View style={[styles.todayCardCheckWrap, isDone && styles.todayCardCheckWrapDone]}>
