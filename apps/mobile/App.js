@@ -41,7 +41,7 @@ export default function App() {
   const [previewState, setPreviewState] = useState('planned');
   const demoTrainState = useMemo(() => createTrainDemoState({ previewState }), [previewState]);
   const [activeTab, setActiveTab] = useState('train');
-  const [activeTrainTab, setActiveTrainTab] = useState('today');
+  const [activeTrainTab, setActiveTrainTab] = useState('calendar');
   const [selectedCalendarDayId, setSelectedCalendarDayId] = useState(() => demoTrainState.program.selectedCalendarDayId);
   const bottomTabModels = useMemo(() => getTabButtonModels({ tabs: mobileTabs, activeKey: activeTab }), [activeTab]);
   const previewStateModels = useMemo(
@@ -54,7 +54,7 @@ export default function App() {
   useEffect(() => {
     setSession(demoTrainState.session)
     setSelectedCalendarDayId(demoTrainState.program.selectedCalendarDayId)
-    setActiveTrainTab('today')
+    setActiveTrainTab('calendar')
   }, [demoTrainState])
 
   const trainState = useMemo(() => ({ ...demoTrainState, session }), [demoTrainState, session]);
