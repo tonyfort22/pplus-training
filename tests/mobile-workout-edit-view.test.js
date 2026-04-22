@@ -46,11 +46,11 @@ test('mobile workout edit view matches the edit reference structure and uses Nat
   assert.match(editViewSource, /absolute bottom-16 right-6 flex-row items-center overflow-hidden rounded-\[24px\] border border-\[#34D399\]\/70 bg-\[#052E2B\]\/92/)
   assert.match(editViewSource, /min-w-\[112px\] justify-center/)
   assert.match(editViewSource, /uppercase tracking-\[1\.6px\]/)
-  assert.match(editViewSource, /text-\[#A7F3D0\]/)
-  assert.match(editViewSource, /text-\[#06D6A0\]/)
+  assert.match(editViewSource, /text-\[#34D399\]/)
+  assert.doesNotMatch(editViewSource, /text-\[#A7F3D0\]/)
 
   assert.match(workoutSheetSource, /rounded-\[18px\] border border-\[#34D399\]\/70 bg-\[#052E2B\]\/90 py-4/)
-  assert.match(workoutSheetSource, /text-\[#A7F3D0\]/)
+  assert.match(workoutSheetSource, /text-\[#34D399\]/)
 
   assert.match(modelSource, /getWorkoutEditViewModel/)
   assert.match(modelSource, /editLabel: 'Save'/)

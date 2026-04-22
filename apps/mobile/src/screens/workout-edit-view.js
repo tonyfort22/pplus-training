@@ -84,22 +84,22 @@ function WorkoutEditExerciseControls({ exercise, addSetLabel, onAddSet }) {
   return (
     <View className="flex-row items-center justify-between gap-3">
       <Pressable className="h-11 w-11 items-center justify-center rounded-[16px] border border-[#34D399]/70 bg-[#052E2B]/88" onPress={() => {}}>
-        <Link2 color="#A7F3D0" size={18} strokeWidth={2.2} />
+        <Link2 color="#34D399" size={18} strokeWidth={2.2} />
       </Pressable>
 
       <Pressable className="min-w-[112px] justify-center flex-row items-center gap-2 rounded-[16px] border border-[#34D399]/70 bg-[#052E2B]/88 px-4 py-3" onPress={() => onAddSet(exercise.id)}>
-        <Text className="text-[18px] font-semibold text-[#A7F3D0]">+</Text>
-        <Text className="text-[15px] font-semibold text-[#A7F3D0]">{addSetLabel || 'Add Set'}</Text>
+        <Text className="text-[18px] font-semibold text-[#34D399]">+</Text>
+        <Text className="text-[15px] font-semibold text-[#34D399]">{addSetLabel || 'Add Set'}</Text>
       </Pressable>
 
       <View className="flex-1 flex-row items-center justify-end gap-2">
         <View className="flex-row items-center gap-1.5 rounded-[16px] border border-[#34D399]/70 bg-[#052E2B]/88 px-3 py-3">
-          <Clock3 color="#A7F3D0" size={17} strokeWidth={2.2} />
-          <Text className="text-[14px] font-semibold text-[#A7F3D0]">{exercise.restLabel}</Text>
+          <Clock3 color="#34D399" size={17} strokeWidth={2.2} />
+          <Text className="text-[14px] font-semibold text-[#34D399]">{exercise.restLabel}</Text>
         </View>
         <View className="flex-row items-center gap-1 rounded-[16px] border border-[#34D399]/70 bg-[#052E2B]/88 px-3 py-3">
-          <ArrowUpDown color="#A7F3D0" size={17} strokeWidth={2.2} />
-          <Text className="text-[13px] font-semibold text-[#A7F3D0]">{exercise.supersetCount}</Text>
+          <ArrowUpDown color="#34D399" size={17} strokeWidth={2.2} />
+          <Text className="text-[13px] font-semibold text-[#34D399]">{exercise.supersetCount}</Text>
         </View>
       </View>
     </View>
@@ -139,11 +139,11 @@ function WorkoutEditFloatingTools() {
   return (
     <View className="absolute bottom-16 right-6 flex-row items-center overflow-hidden rounded-[24px] border border-[#34D399]/70 bg-[#052E2B]/92 shadow-2xl shadow-black/40">
       <Pressable className="px-5 py-4" onPress={() => {}}>
-        <Sparkles color="#A7F3D0" size={22} strokeWidth={2.2} />
+        <Sparkles color="#34D399" size={22} strokeWidth={2.2} />
       </Pressable>
       <View className="h-8 w-px bg-[#34D399]/35" />
       <Pressable className="px-5 py-4" onPress={() => {}}>
-        <Mic color="#A7F3D0" size={22} strokeWidth={2.2} />
+        <Mic color="#34D399" size={22} strokeWidth={2.2} />
       </Pressable>
     </View>
   )
@@ -229,7 +229,7 @@ function WorkoutEditViewContent({ model, onClose, onSave }) {
             <Text className="text-[17px] text-slate-300">{model.cancelLabel || 'Cancel'}</Text>
           </Pressable>
           <Pressable className="px-1 py-2" onPress={() => onSave?.(draft)}>
-            <Text className="text-[17px] font-semibold text-[#06D6A0]">{model.editLabel || 'Save'}</Text>
+            <Text className="text-[17px] font-semibold text-[#34D399]">{model.editLabel || 'Save'}</Text>
           </Pressable>
         </View>
 
