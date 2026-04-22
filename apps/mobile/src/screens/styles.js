@@ -1,5 +1,5 @@
 export const statusStyles = {
-  not_started: { backgroundColor: '#1d4ed8' },
+  not_started: { backgroundColor: '#06D6A0' },
   active: { backgroundColor: '#7c3aed' },
   completed: { backgroundColor: '#059669' },
   skipped: { backgroundColor: '#b45309' },
@@ -124,7 +124,7 @@ export const styles = {
     gap: 12,
   },
   previewBarLabel: {
-    color: '#93c5fd',
+    color: '#6EE7B7',
     fontSize: 12,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -149,7 +149,7 @@ export const styles = {
     paddingHorizontal: 12,
   },
   previewButtonActive: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#06D6A0',
   },
   previewButtonText: {
     color: '#cbd5e1',
@@ -179,7 +179,7 @@ export const styles = {
     borderRadius: 999,
   },
   trainTabButtonActive: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#06D6A0',
   },
   trainTabLabel: {
     color: '#94a3b8',
@@ -195,7 +195,7 @@ export const styles = {
     gap: 8,
   },
   eyebrow: {
-    color: '#93c5fd',
+    color: '#6EE7B7',
     fontSize: 14,
     textTransform: 'uppercase',
     letterSpacing: 1,
@@ -216,7 +216,7 @@ export const styles = {
     alignItems: 'center',
   },
   finishButton: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#06D6A0',
     borderRadius: 999,
     paddingVertical: 10,
     paddingHorizontal: 16,
@@ -257,14 +257,14 @@ export const styles = {
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#3b82f6',
+    backgroundColor: '#06D6A0',
   },
   progressLabel: {
     color: '#9ca3af',
     fontSize: 13,
   },
   restCard: {
-    backgroundColor: '#172554',
+    backgroundColor: '#052E2B',
     borderRadius: 20,
     padding: 20,
     gap: 14,
@@ -275,7 +275,7 @@ export const styles = {
     alignItems: 'center',
   },
   restEyebrow: {
-    color: '#93c5fd',
+    color: '#6EE7B7',
     textTransform: 'uppercase',
     fontSize: 12,
     letterSpacing: 1,
@@ -286,7 +286,7 @@ export const styles = {
     fontWeight: '700',
   },
   dismissText: {
-    color: '#bfdbfe',
+    color: '#A7F3D0',
     fontWeight: '700',
   },
   restClock: {
@@ -299,7 +299,7 @@ export const styles = {
     gap: 12,
   },
   restActionButton: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#06D6A0',
     borderRadius: 14,
     paddingVertical: 10,
     paddingHorizontal: 18,
@@ -345,7 +345,7 @@ export const styles = {
     fontWeight: '800',
   },
   todayCardActionBadge: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#06D6A0',
     borderRadius: 999,
     paddingVertical: 10,
     paddingHorizontal: 14,
@@ -379,7 +379,7 @@ export const styles = {
     fontWeight: '600',
   },
   todayCardFooterStatus: {
-    color: '#60a5fa',
+    color: '#34D399',
     fontSize: 13,
     fontWeight: '700',
   },
@@ -396,7 +396,7 @@ export const styles = {
   programAccentRail: {
     width: 5,
     borderRadius: 999,
-    backgroundColor: '#2563eb',
+    backgroundColor: '#06D6A0',
   },
   programCardContent: {
     flex: 1,
@@ -429,10 +429,10 @@ export const styles = {
     backgroundColor: '#243041',
   },
   programProgressSegmentComplete: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#06D6A0',
   },
   programProgressSegmentCurrent: {
-    backgroundColor: '#60a5fa',
+    backgroundColor: '#34D399',
   },
   programMetaRow: {
     flexDirection: 'row',
@@ -456,7 +456,7 @@ export const styles = {
   },
   primaryAction: {
     alignSelf: 'flex-start',
-    backgroundColor: '#2563eb',
+    backgroundColor: '#06D6A0',
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 12,
@@ -536,7 +536,7 @@ export const styles = {
     gap: 4,
   },
   actualControlLabel: {
-    color: '#bfdbfe',
+    color: '#A7F3D0',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -547,7 +547,7 @@ export const styles = {
     gap: 8,
   },
   stepButton: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#06D6A0',
     borderRadius: 10,
     width: 26,
     height: 26,
@@ -576,7 +576,7 @@ export const styles = {
     backgroundColor: '#f59e0b',
   },
   badgeTodo: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#06D6A0',
   },
   badgeText: {
     color: '#ffffff',
@@ -592,8 +592,8 @@ export const styles = {
   },
   listRowSelected: {
     borderWidth: 1,
-    borderColor: '#60a5fa',
-    backgroundColor: '#172554',
+    borderColor: '#34D399',
+    backgroundColor: '#052E2B',
   },
   listRowTitle: {
     color: '#ffffff',
@@ -614,7 +614,7 @@ export const styles = {
     gap: 6,
   },
   metricLabel: {
-    color: '#93c5fd',
+    color: '#6EE7B7',
     fontWeight: '700',
   },
   metricValue: {
@@ -676,7 +676,7 @@ export const styles = {
     justifyContent: 'center',
   },
   bottomNavTabActive: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#06D6A0',
   },
   bottomNavUtilityButton: {
     width: 56,
@@ -693,7 +693,7 @@ export const styles = {
     shadowOffset: { width: 0, height: 6 },
   },
   bottomNavUtilityButtonActive: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#06D6A0',
   },
   bottomNavIcon: {
     fontSize: 18,
