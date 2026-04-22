@@ -39,6 +39,27 @@ test('createActionCardModel preserves extra card metadata for richer variants', 
   assert.equal(model.progressSegments[2].isCurrent, true)
 })
 
+test('createActionCardModel preserves today summary metadata for richer workout cards', () => {
+  const model = createActionCardModel({
+    title: 'Today',
+    body: 'You have Lower A scheduled today. 2 exercises, 7 total sets.',
+    targetKey: 'workout',
+    variant: 'today-summary',
+    workoutName: 'Lower A',
+    scheduledLabel: 'Scheduled for today',
+    summaryLabel: '2 exercises, 7 total sets',
+    statusLabel: 'Open today',
+    actionLabel: 'Open workout',
+  })
+
+  assert.equal(model.variant, 'today-summary')
+  assert.equal(model.workoutName, 'Lower A')
+  assert.equal(model.scheduledLabel, 'Scheduled for today')
+  assert.equal(model.summaryLabel, '2 exercises, 7 total sets')
+  assert.equal(model.statusLabel, 'Open today')
+  assert.equal(model.actionLabel, 'Open workout')
+})
+
 test('createMetricCardModel keeps metric card fields stable for rendering', () => {
   const model = createMetricCardModel({
     label: 'Weekly load',

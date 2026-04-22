@@ -162,12 +162,16 @@ function createPreviewSession({ programWorkout, startedAt, previewState }) {
 export function getTodaySurfaceModel(trainState) {
   const sessionProgress = getSessionProgressCopy(trainState.session)
   const sessionOutcome = getSessionOutcomeCopy(trainState.session)
+  const exerciseCount = trainState.session.exercises.length
+  const totalSets = trainState.session.totalSetsCount
 
   return {
     heroTitle: trainState.today.title,
     workoutName: trainState.today.workoutName,
     scheduledLabel: trainState.today.scheduledLabel,
     quickSummary: sessionOutcome ? sessionOutcome.summary : sessionProgress ? sessionProgress.summary : trainState.today.quickSummary,
+    workoutSummaryLabel: `${exerciseCount} exercises, ${totalSets} total sets`,
+    workoutStatusLabel: sessionOutcome ? 'Session finished' : sessionProgress ? 'In progress' : 'Open today',
     programName: trainState.program.name,
     programDateRangeLabel: trainState.program.dateRangeLabel,
     programCurrentWeek: trainState.program.currentWeek,

@@ -12,6 +12,12 @@ export function getTodayCardsModel(todayModel) {
       title: todayModel.heroTitle,
       body: `You have ${todayModel.workoutName} ${todayModel.scheduledLabel.toLowerCase()}. ${todayModel.quickSummary}`,
       actionLabel: todayModel.primaryActionLabel,
+      variant: 'today-summary',
+      workoutName: todayModel.workoutName,
+      scheduledLabel: todayModel.scheduledLabel,
+      summaryLabel: todayModel.workoutSummaryLabel,
+      statusLabel: todayModel.workoutStatusLabel,
+      quickSummary: todayModel.quickSummary,
     },
     programCard: {
       title: 'Program snapshot',

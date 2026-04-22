@@ -29,6 +29,8 @@ test('getTrainRenderModel builds action-card sections for Today', () => {
   assert.equal(renderModel.content.type, 'sections')
   assert.equal(renderModel.content.sections.length, 2)
   assert.equal(renderModel.content.sections[0].type, 'action-card')
+  assert.equal(renderModel.content.sections[0].variant, 'today-summary')
+  assert.equal(renderModel.content.sections[0].workoutName, 'Lower A')
   assert.equal(renderModel.content.sections[0].targetKey, 'workout')
 })
 

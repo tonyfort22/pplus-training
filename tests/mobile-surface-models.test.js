@@ -21,6 +21,11 @@ test('getTodayCardsModel creates the two top-level Today cards', () => {
   const cards = getTodayCardsModel(todayModel)
 
   assert.equal(cards.todayCard.title, 'Today')
+  assert.equal(cards.todayCard.variant, 'today-summary')
+  assert.equal(cards.todayCard.workoutName, 'Lower A')
+  assert.equal(cards.todayCard.scheduledLabel, 'Scheduled for today')
+  assert.equal(cards.todayCard.summaryLabel, '2 exercises, 7 total sets')
+  assert.match(cards.todayCard.statusLabel, /Open today/)
   assert.equal(cards.todayCard.actionLabel, 'Open workout')
   assert.match(cards.todayCard.body, /Lower A/)
   assert.equal(cards.programCard.title, 'Program snapshot')
