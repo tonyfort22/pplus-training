@@ -24,7 +24,13 @@ test('getTodayCardsModel creates the two top-level Today cards', () => {
   assert.equal(cards.todayCard.actionLabel, 'Open workout')
   assert.match(cards.todayCard.body, /Lower A/)
   assert.equal(cards.programCard.title, 'Program snapshot')
-  assert.match(cards.programCard.body, /Spring Hypertrophy/)
+  assert.equal(cards.programCard.variant, 'program-summary')
+  assert.equal(cards.programCard.dateRangeLabel, 'Apr 5 - May 30')
+  assert.equal(cards.programCard.weekLabel, 'Week 3 of 8')
+  assert.equal(cards.programCard.completionLabel, '6 of 39 workouts')
+  assert.equal(cards.programCard.progressSegments.length, 8)
+  assert.equal(cards.programCard.progressSegments[0].isComplete, true)
+  assert.equal(cards.programCard.progressSegments[2].isCurrent, true)
 })
 
 test('getTodayCardsModel switches to a resume action once the live session has started', () => {

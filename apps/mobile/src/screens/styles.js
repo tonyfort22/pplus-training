@@ -199,6 +199,67 @@ export const styles = {
     padding: 20,
     gap: 8,
   },
+  programCard: {
+    backgroundColor: '#111827',
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: '#243041',
+    padding: 18,
+    flexDirection: 'row',
+    gap: 14,
+    alignItems: 'stretch',
+  },
+  programAccentRail: {
+    width: 5,
+    borderRadius: 999,
+    backgroundColor: '#2563eb',
+  },
+  programCardContent: {
+    flex: 1,
+    gap: 12,
+  },
+  programCardLabel: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  programCardTitle: {
+    color: '#ffffff',
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  programCardDateRange: {
+    color: '#94a3b8',
+    fontSize: 14,
+  },
+  programProgressRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  programProgressSegment: {
+    flex: 1,
+    height: 12,
+    borderRadius: 999,
+    backgroundColor: '#243041',
+  },
+  programProgressSegmentComplete: {
+    backgroundColor: '#2563eb',
+  },
+  programProgressSegmentCurrent: {
+    backgroundColor: '#60a5fa',
+  },
+  programMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  programMetaText: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '600',
+  },
   sectionTitle: {
     color: '#ffffff',
     fontSize: 20,

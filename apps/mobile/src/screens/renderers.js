@@ -9,9 +9,7 @@ export function renderGenericSections({ sections, styles, onActionTarget }) {
         <SurfaceCard
           key={section.key}
           styles={styles}
-          title={section.title}
-          body={section.body}
-          actionLabel={section.actionLabel}
+          {...section}
           onAction={onActionTarget ? () => onActionTarget(section.targetKey, section.actionPayload) : undefined}
         />
       )
