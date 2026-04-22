@@ -7,7 +7,7 @@ test('getProgressSections converts the progress surface model into renderable se
   const progressModel = getProgressSurfaceModel()
   const sections = getProgressSections(progressModel)
 
-  assert.equal(sections.length, 6)
+  assert.equal(sections.length, 7)
   assert.equal(sections[0].type, 'header')
   assert.equal(sections[1].type, 'metrics-grid')
   assert.equal(sections[1].items.length, 3)
@@ -15,6 +15,8 @@ test('getProgressSections converts the progress surface model into renderable se
   assert.equal(sections[3].rows[0].title, 'Quads')
   assert.equal(sections[5].type, 'body-with-rows')
   assert.equal(sections[5].title, 'Recent momentum')
+  assert.equal(sections[6].type, 'body-with-rows')
+  assert.equal(sections[6].title, 'Exercise breakdown')
 })
 
 test('getPlaceholderSections creates a single simple section for placeholder tabs', () => {

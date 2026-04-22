@@ -39,6 +39,14 @@ export function getProgressSections(progressModel) {
         body: row.body,
       })),
     },
+    {
+      type: 'body-with-rows',
+      title: progressModel.exerciseBreakdown.title,
+      rows: progressModel.exerciseBreakdown.rows.map((row) => ({
+        title: row.title,
+        body: row.body,
+      })),
+    },
   ]
 }
 

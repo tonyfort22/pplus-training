@@ -62,6 +62,13 @@ test('getProgressSurfaceModel derives athlete metrics from completed sessions', 
   assert.match(model.recentMomentum.rows[0].body, /171 lb est\. 1RM/)
   assert.match(model.recentMomentum.rows[0].body, /Trending up/)
   assert.match(model.recentMomentum.rows[0].body, /\+13 lb vs last completed session/)
+  assert.equal(model.exerciseBreakdown.title, 'Exercise breakdown')
+  assert.equal(model.exerciseBreakdown.rows.length, 2)
+  assert.equal(model.exerciseBreakdown.rows[0].title, 'Squat pattern')
+  assert.match(model.exerciseBreakdown.rows[0].body, /171 lb best estimate/)
+  assert.match(model.exerciseBreakdown.rows[0].body, /Trending up/)
+  assert.equal(model.exerciseBreakdown.rows[1].title, 'Hinge pattern')
+  assert.match(model.exerciseBreakdown.rows[1].body, /133 lb best estimate/)
 })
 
 test('getProgressSurfaceModel falls back cleanly when no completed sessions exist', () => {
@@ -74,6 +81,10 @@ test('getProgressSurfaceModel falls back cleanly when no completed sessions exis
   assert.equal(model.recentMomentum.title, 'Recent momentum')
   assert.equal(model.recentMomentum.rows.length, 1)
   assert.match(model.recentMomentum.rows[0].body, /Finish a workout to start building recent momentum/i)
+  assert.equal(model.exerciseBreakdown.title, 'Exercise breakdown')
+  assert.equal(model.exerciseBreakdown.rows.length, 2)
+  assert.match(model.exerciseBreakdown.rows[0].body, /Complete squat sessions to unlock this breakdown/i)
+  assert.match(model.exerciseBreakdown.rows[1].body, /Complete hinge sessions to unlock this breakdown/i)
 })
 
 test('getProgressSurfaceModel keeps first recent momentum row neutral when there is no prior session to compare', () => {

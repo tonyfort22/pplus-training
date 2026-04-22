@@ -55,6 +55,10 @@ export function getProgressSurfaceModel({ sessions = [] } = {}) {
       title: 'Recent momentum',
       rows: buildRecentMomentumRows(completedSessions),
     },
+    exerciseBreakdown: {
+      title: 'Exercise breakdown',
+      rows: buildExerciseBreakdownRows(completedSessions),
+    },
   }
 }
 
@@ -73,10 +77,12 @@ function getBestExercisePerformance(sessions, exerciseNamePart) {
 
       for (const set of exercise.sets || []) {
         if (!set.isCompleted || set.actualLoad == null || set.actualReps == null) continue
-        if (!bestSet || estimateOneRepMax(set.actualLoad, set.actualReps) > estimateOneRepMax(bestSet.actualLoad, bestSet.actualReps)) {
+        const estimate = estimateOneRepMax(set.actualLoad, set.actualReps)
+        if (!bestSet || estimate > estimateOneRepMax(bestSet.actualLoad, bestSet.actualReps)) {
           bestSet = {
             actualLoad: set.actualLoad,
             actualReps: set.actualReps,
+            estimate,
           }
         }
       }
@@ -186,6 +192,80 @@ function getMomentumTrendCopy({ currentBestSet, previousBestSet }) {
   }
 
   return 'Holding steady. Flat vs last completed session.'
+}
+
+function buildExerciseBreakdownRows(sessions) {
+  return [
+    buildExerciseBreakdownRow({
+      title: 'Squat pattern',
+      sessions,
+      exerciseNamePart: 'Back Squat',
+      emptyCopy: 'Complete squat sessions to unlock this breakdown.',
+    }),
+    buildExerciseBreakdownRow({
+      title: 'Hinge pattern',
+      sessions,
+      exerciseNamePart: 'Romanian Deadlift',
+      emptyCopy: 'Complete hinge sessions to unlock this breakdown.',
+    }),
+  ]
+}
+
+function buildExerciseBreakdownRow({ title, sessions, exerciseNamePart, emptyCopy }) {
+  const bestSet = getBestExercisePerformance(sessions, exerciseNamePart)
+  if (!bestSet) {
+    return {
+      title,
+      body: emptyCopy,
+    }
+  }
+
+  const recentPerformances = getRecentExercisePerformances(sessions, exerciseNamePart)
+  const current = recentPerformances[0] || null
+  const previous = recentPerformances[1] || null
+  const trendCopy = getMomentumTrendCopy({
+    currentBestSet: current,
+    previousBestSet: previous,
+  })
+
+  return {
+    title,
+    body: `${bestSet.estimate} lb best estimate from ${bestSet.actualLoad} x ${bestSet.actualReps}. ${trendCopy}`,
+  }
+}
+
+function getRecentExercisePerformances(sessions, exerciseNamePart) {
+  const normalized = exerciseNamePart.toLowerCase()
+
+  return [...sessions]
+    .sort((left, right) => new Date(right.completedAt || 0).getTime() - new Date(left.completedAt || 0).getTime())
+    .map((session) => getSessionBestSetByExerciseNamePart(session, normalized))
+    .filter(Boolean)
+    .slice(0, 2)
+}
+
+function getSessionBestSetByExerciseNamePart(session, exerciseNamePart) {
+  let bestSet = null
+
+  for (const exercise of session.exercises || []) {
+    const name = (exercise.nameSnapshot || exercise.name || '').toLowerCase()
+    if (!name.includes(exerciseNamePart)) continue
+
+    for (const set of exercise.sets || []) {
+      if (!set.isCompleted || set.actualLoad == null || set.actualReps == null) continue
+
+      const estimate = estimateOneRepMax(set.actualLoad, set.actualReps)
+      if (!bestSet || estimate > bestSet.estimate) {
+        bestSet = {
+          actualLoad: set.actualLoad,
+          actualReps: set.actualReps,
+          estimate,
+        }
+      }
+    }
+  }
+
+  return bestSet
 }
 
 function getSessionBestSet(session) {
