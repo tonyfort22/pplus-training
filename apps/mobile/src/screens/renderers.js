@@ -20,7 +20,7 @@ export function renderGenericSections({ sections, styles, onActionTarget }) {
     if (section.type === 'section-heading') {
       return (
         <View key={section.key} style={styles.sectionHeadingWrap}>
-          <Text style={styles.sectionHeading}>{section.title}</Text>
+          <Text className="text-[22px] font-bold text-white">{section.title}</Text>
         </View>
       )
     }
@@ -28,9 +28,9 @@ export function renderGenericSections({ sections, styles, onActionTarget }) {
     if (section.type === 'header-card') {
       return (
         <View key={section.key} style={styles.headerCard}>
-          <Text style={styles.eyebrow}>{section.eyebrow}</Text>
-          <Text style={styles.title}>{section.title}</Text>
-          <Text style={styles.sectionBody}>{section.body}</Text>
+          <Text className="text-sm font-medium uppercase tracking-[1px] text-emerald-200">{section.eyebrow}</Text>
+          <Text className="text-[32px] font-bold text-white">{section.title}</Text>
+          <Text className="text-[15px] leading-[22px] text-slate-300">{section.body}</Text>
         </View>
       )
     }
@@ -38,7 +38,7 @@ export function renderGenericSections({ sections, styles, onActionTarget }) {
     if (section.type === 'body-list') {
       return (
         <View key={section.key} style={section.title ? styles.sectionCard : styles.sectionListOnly}>
-          {section.title ? <Text style={styles.sectionTitle}>{section.title}</Text> : null}
+          {section.title ? <Text className="text-[20px] font-bold text-white">{section.title}</Text> : null}
           {section.rows.map((row) => {
             const isActionable = !!(row.targetKey && onActionTarget)
             const RowWrapper = isActionable ? Pressable : View
@@ -132,12 +132,12 @@ export function renderGenericSections({ sections, styles, onActionTarget }) {
 
     return (
       <View key={section.key} style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>{section.title}</Text>
-        <Text style={styles.sectionBody}>{section.body}</Text>
+        <Text className="text-[20px] font-bold text-white">{section.title}</Text>
+        <Text className="text-[15px] leading-[22px] text-slate-300">{section.body}</Text>
         {section.rows?.map((row) => (
           <View key={row.title} style={styles.listRow}>
-            <Text style={styles.listRowTitle}>{row.title}</Text>
-            <Text style={styles.listRowBody}>{row.body}</Text>
+            <Text className="text-base font-bold text-white">{row.title}</Text>
+            <Text className="mt-1 text-slate-300">{row.body}</Text>
           </View>
         ))}
       </View>
@@ -157,7 +157,7 @@ export function renderTrainSurface({ trainRenderModel, sessionRenderModel, style
                 style={[styles.trainTabButton, tab.isActive && styles.trainTabButtonActive]}
                 onPress={() => onTrainTabPress(tab.key)}
               >
-                <Text style={[styles.trainTabLabel, tab.isActive && styles.trainTabLabelActive]}>{tab.label}</Text>
+                <Text className={tab.isActive ? 'font-bold text-white' : 'font-bold text-slate-400'}>{tab.label}</Text>
               </Pressable>
             ))}
           </View>
@@ -187,27 +187,27 @@ export function renderSessionSections({
         <View key={section.key} style={styles.headerCard}>
           <View style={styles.headerTopRow}>
             <View>
-              <Text style={styles.eyebrow}>{section.eyebrow}</Text>
-              <Text style={styles.title}>{section.title}</Text>
+              <Text className="text-sm font-medium uppercase tracking-[1px] text-emerald-200">{section.eyebrow}</Text>
+              <Text className="text-[32px] font-bold text-white">{section.title}</Text>
             </View>
             <View style={styles.headerActionsRow}>
               {section.discardLabel && !section.isCompleted && !section.isDiscarded ? (
                 <Pressable onPress={onDiscardWorkout} style={styles.discardButton}>
-                  <Text style={styles.discardButtonText}>{section.discardLabel}</Text>
+                  <Text className="font-bold text-red-200">{section.discardLabel}</Text>
                 </Pressable>
               ) : null}
               <Pressable onPress={onFinishWorkout} style={[styles.finishButton, section.isCompleted && styles.finishButtonDone]}>
-                <Text style={styles.finishButtonText}>{section.finishLabel}</Text>
+                <Text className="font-bold text-white">{section.finishLabel}</Text>
               </Pressable>
             </View>
           </View>
 
-          <Text style={styles.summary}>{section.workoutTimerLabel}</Text>
-          <Text style={styles.progressLabel}>{section.nextUpLabel}</Text>
+          <Text className="text-[18px] font-semibold text-slate-300">{section.workoutTimerLabel}</Text>
+          <Text className="text-[13px] text-slate-400">{section.nextUpLabel}</Text>
           <View style={styles.progressTrack}>
             <View style={[styles.progressFill, { width: `${section.progressPercent}%` }]} />
           </View>
-          <Text style={styles.progressLabel}>{section.progressLabel}</Text>
+          <Text className="text-[13px] text-slate-400">{section.progressLabel}</Text>
         </View>
       )
     }
@@ -217,21 +217,21 @@ export function renderSessionSections({
         <View key={section.key} style={styles.restCard}>
           <View style={styles.restHeaderRow}>
             <View>
-              <Text style={styles.restEyebrow}>{section.eyebrow}</Text>
-              <Text style={styles.restTitle}>{section.title}</Text>
+              <Text className="text-xs font-medium uppercase tracking-[1px] text-emerald-200">{section.eyebrow}</Text>
+              <Text className="text-[18px] font-bold text-white">{section.title}</Text>
             </View>
             <Pressable onPress={onDismissRestTimer}>
-              <Text style={styles.dismissText}>{section.dismissLabel}</Text>
+              <Text className="font-bold text-emerald-200">{section.dismissLabel}</Text>
             </Pressable>
           </View>
-          <Text style={styles.restClock}>{section.clockLabel}</Text>
-          <Text style={styles.sectionBody}>{section.body}</Text>
+          <Text className="text-[42px] font-bold text-white">{section.clockLabel}</Text>
+          <Text className="text-[15px] leading-[22px] text-slate-300">{section.body}</Text>
           <View style={styles.restActions}>
             <Pressable style={styles.restActionButton} onPress={() => onAdjustRestTimer(-15)}>
-              <Text style={styles.restActionText}>{section.minusLabel}</Text>
+              <Text className="font-bold text-white">{section.minusLabel}</Text>
             </Pressable>
             <Pressable style={styles.restActionButton} onPress={() => onAdjustRestTimer(15)}>
-              <Text style={styles.restActionText}>{section.plusLabel}</Text>
+              <Text className="font-bold text-white">{section.plusLabel}</Text>
             </Pressable>
           </View>
         </View>
@@ -240,16 +240,16 @@ export function renderSessionSections({
 
     return (
       <View key={section.key} style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>{section.title}</Text>
+        <Text className="text-[20px] font-bold text-white">{section.title}</Text>
         {section.exercises.map((exercise) => (
           <View key={exercise.key} style={styles.exerciseCard}>
             <View style={styles.exerciseHeader}>
               <View>
-                <Text style={styles.exerciseTitle}>{exercise.title}</Text>
-                <Text style={styles.exerciseMeta}>Rest {exercise.restLabel}</Text>
+                <Text className="text-[18px] font-bold text-white">{exercise.title}</Text>
+                <Text className="text-sm text-slate-400">Rest {exercise.restLabel}</Text>
               </View>
               <View style={[styles.exerciseStatusBadge, statusStyles[exercise.status]]}>
-                <Text style={styles.exerciseStatusText}>{exercise.status.replace('_', ' ')}</Text>
+                <Text className="text-xs font-bold text-white">{exercise.status.replace('_', ' ')}</Text>
               </View>
             </View>
 
@@ -263,34 +263,34 @@ export function renderSessionSections({
                 ]}
               >
                 <Pressable style={styles.setCopy} onPress={() => onCompleteSet(exercise.id, set.id)}>
-                  <Text style={styles.setTitle}>{set.title}</Text>
-                  <Text style={styles.setMeta}>{set.prescribedLabel}</Text>
-                  <Text style={styles.setMeta}>{set.actualLabel}</Text>
+                  <Text className="text-base font-semibold text-white">{set.title}</Text>
+                  <Text className="mt-0.5 text-[13px] text-slate-300">{set.prescribedLabel}</Text>
+                  <Text className="mt-0.5 text-[13px] text-slate-300">{set.actualLabel}</Text>
                 </Pressable>
 
                 <View style={styles.setControlsColumn}>
                   <View style={styles.actualControl}>
-                    <Text style={styles.actualControlLabel}>{set.loadControl.label}</Text>
+                    <Text className="text-xs font-bold text-emerald-200">{set.loadControl.label}</Text>
                     <View style={styles.actualControlButtons}>
                       <Pressable style={styles.stepButton} onPress={() => onQuickActualUpdate(exercise.id, set.id, 'actualLoad', -5)}>
-                        <Text style={styles.stepButtonText}>{set.loadControl.decrementLabel}</Text>
+                        <Text className="font-bold text-white">{set.loadControl.decrementLabel}</Text>
                       </Pressable>
-                      <Text style={styles.actualValue}>{set.loadControl.value}</Text>
+                      <Text className="min-w-[28px] text-center font-bold text-white">{set.loadControl.value}</Text>
                       <Pressable style={styles.stepButton} onPress={() => onQuickActualUpdate(exercise.id, set.id, 'actualLoad', 5)}>
-                        <Text style={styles.stepButtonText}>{set.loadControl.incrementLabel}</Text>
+                        <Text className="font-bold text-white">{set.loadControl.incrementLabel}</Text>
                       </Pressable>
                     </View>
                   </View>
 
                   <View style={styles.actualControl}>
-                    <Text style={styles.actualControlLabel}>{set.repsControl.label}</Text>
+                    <Text className="text-xs font-bold text-emerald-200">{set.repsControl.label}</Text>
                     <View style={styles.actualControlButtons}>
                       <Pressable style={styles.stepButton} onPress={() => onQuickActualUpdate(exercise.id, set.id, 'actualReps', -1)}>
-                        <Text style={styles.stepButtonText}>{set.repsControl.decrementLabel}</Text>
+                        <Text className="font-bold text-white">{set.repsControl.decrementLabel}</Text>
                       </Pressable>
-                      <Text style={styles.actualValue}>{set.repsControl.value}</Text>
+                      <Text className="min-w-[28px] text-center font-bold text-white">{set.repsControl.value}</Text>
                       <Pressable style={styles.stepButton} onPress={() => onQuickActualUpdate(exercise.id, set.id, 'actualReps', 1)}>
-                        <Text style={styles.stepButtonText}>{set.repsControl.incrementLabel}</Text>
+                        <Text className="font-bold text-white">{set.repsControl.incrementLabel}</Text>
                       </Pressable>
                     </View>
                   </View>
@@ -305,7 +305,7 @@ export function renderSessionSections({
                           : styles.badgeTodo,
                     ]}
                   >
-                    <Text style={styles.badgeText}>{set.completionLabel}</Text>
+                    <Text className="text-center text-[11px] font-bold text-white">{set.completionLabel}</Text>
                   </View>
                 </View>
               </View>

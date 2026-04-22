@@ -110,11 +110,11 @@ export function SurfaceCard({
 
   return (
     <View style={styles.sectionCard}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <Text style={styles.sectionBody}>{body}</Text>
+      <Text className="text-[20px] font-bold text-white">{title}</Text>
+      <Text className="text-[15px] leading-[22px] text-slate-300">{body}</Text>
       {actionLabel ? (
         <Pressable style={styles.primaryAction} onPress={onAction}>
-          <Text style={styles.primaryActionText}>{actionLabel}</Text>
+          <Text className="font-bold text-white">{actionLabel}</Text>
         </Pressable>
       ) : null}
     </View>
@@ -124,9 +124,9 @@ export function SurfaceCard({
 export function MetricCard({ styles, label, value, detail }) {
   return (
     <View style={styles.metricCard}>
-      <Text style={styles.metricLabel}>{label}</Text>
-      <Text style={styles.metricValue}>{value}</Text>
-      <Text style={styles.metricDetail}>{detail}</Text>
+      <Text className="font-bold text-emerald-200">{label}</Text>
+      <Text className="text-[28px] font-bold text-white">{value}</Text>
+      <Text className="leading-5 text-slate-300">{detail}</Text>
     </View>
   )
 }
