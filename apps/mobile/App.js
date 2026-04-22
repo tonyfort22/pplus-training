@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   adjustRestTimer,
   clearRestTimer,
