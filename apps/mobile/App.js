@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import {
   adjustRestTimer,
   clearRestTimer,
@@ -12,6 +12,7 @@ import {
 } from '@pplus/core';
 import {
   createTrainDemoState,
+  demoPreviewStates,
   getCalendarSurfaceModel,
   getTodaySurfaceModel,
   getWorkoutSurfaceModel,
@@ -34,19 +35,32 @@ import { renderGenericSections, renderSessionSections, renderTrainSurface } from
 import { renderAppShell } from './src/screens/shell-renderers.js';
 import { statusStyles, styles } from './src/screens/styles.js';
 import { getTabButtonModels } from './src/ui/tab-models.js';
+import { getPreviewStateButtonModels } from './src/ui/preview-state-models.js';
 
 export default function App() {
-  const demoTrainState = useMemo(() => createTrainDemoState(), []);
+  const [previewState, setPreviewState] = useState('planned');
+  const demoTrainState = useMemo(() => createTrainDemoState({ previewState }), [previewState]);
   const [activeTab, setActiveTab] = useState('train');
   const [activeTrainTab, setActiveTrainTab] = useState('today');
   const [selectedCalendarDayId, setSelectedCalendarDayId] = useState(() => demoTrainState.program.selectedCalendarDayId);
   const bottomTabModels = useMemo(() => getTabButtonModels({ tabs: mobileTabs, activeKey: activeTab }), [activeTab]);
+  const previewStateModels = useMemo(
+    () => getPreviewStateButtonModels({ states: demoPreviewStates, activeKey: previewState }),
+    [previewState]
+  );
   const [session, setSession] = useState(() => demoTrainState.session);
   const [elapsedSeconds] = useState(35);
 
-  const todayModel = useMemo(() => getTodaySurfaceModel(demoTrainState), [demoTrainState]);
-  const workoutModel = useMemo(() => getWorkoutSurfaceModel(demoTrainState, selectedCalendarDayId), [demoTrainState, selectedCalendarDayId]);
-  const calendarModel = useMemo(() => getCalendarSurfaceModel(demoTrainState, selectedCalendarDayId), [demoTrainState, selectedCalendarDayId]);
+  useEffect(() => {
+    setSession(demoTrainState.session)
+    setSelectedCalendarDayId(demoTrainState.program.selectedCalendarDayId)
+    setActiveTrainTab('today')
+  }, [demoTrainState])
+
+  const trainState = useMemo(() => ({ ...demoTrainState, session }), [demoTrainState, session]);
+  const todayModel = useMemo(() => getTodaySurfaceModel(trainState), [trainState]);
+  const workoutModel = useMemo(() => getWorkoutSurfaceModel(trainState, selectedCalendarDayId), [trainState, selectedCalendarDayId]);
+  const calendarModel = useMemo(() => getCalendarSurfaceModel(trainState, selectedCalendarDayId), [trainState, selectedCalendarDayId]);
   const teamPlaceholder = useMemo(
     () => getPlaceholderSurfaceModel('Team', 'This surface will hold coach context, team relationships, and collaboration later.'),
     []
@@ -62,11 +76,11 @@ export default function App() {
 
   const progressSessions = useMemo(() => {
     if (session.status === 'completed') {
-      return [...demoTrainState.completedSessions, session]
+      return [...trainState.completedSessions, session]
     }
 
-    return demoTrainState.completedSessions
-  }, [demoTrainState.completedSessions, session])
+    return trainState.completedSessions
+  }, [session, trainState.completedSessions])
   const progressModel = useMemo(() => getProgressSurfaceModel({ sessions: progressSessions }), [progressSessions]);
   const progressSections = useMemo(() => getProgressSections(progressModel), [progressModel]);
   const progressRenderPlan = useMemo(() => getGenericSectionRenderPlan(progressSections), [progressSections]);
@@ -180,38 +194,42 @@ export default function App() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      {renderAppShell({
-        styles,
-        screen: appRenderModel.screen,
-        bottomTabs: appRenderModel.bottomTabs,
-        trainRenderModel,
-        sessionRenderModel,
-        onTabPress: setActiveTab,
-        renderTrainSurface: ({ trainRenderModel, sessionRenderModel, styles }) =>
-          renderTrainSurface({
-            trainRenderModel,
-            sessionRenderModel,
-            styles,
-            onTrainTabPress: setActiveTrainTab,
-            onActionTarget: handleTrainNavigation,
-            renderSections: (sections, onActionTarget) => renderGenericSections({ sections, styles, onActionTarget }),
-            renderSessionSections: (sections) =>
-              renderSessionSections({
-                sections,
-                styles,
-                statusStyles,
-                onFinishWorkout: handleFinishWorkout,
-                onDiscardWorkout: handleDiscardWorkout,
-                onDismissRestTimer: handleDismissRestTimer,
-                onAdjustRestTimer: handleAdjustRestTimer,
-                onCompleteSet: handleCompleteSet,
-                onQuickActualUpdate: handleQuickActualUpdate,
-              }),
-          }),
-        renderGenericSections: ({ sections, styles }) => renderGenericSections({ sections, styles }),
-      })}
-      <StatusBar style="light" />
-    </SafeAreaView>
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.container}>
+        {renderAppShell({
+          styles,
+          screen: appRenderModel.screen,
+          bottomTabs: appRenderModel.bottomTabs,
+          previewStates: previewStateModels,
+          trainRenderModel,
+          sessionRenderModel,
+          onTabPress: setActiveTab,
+          onPreviewStatePress: setPreviewState,
+          renderTrainSurface: ({ trainRenderModel, sessionRenderModel, styles }) =>
+            renderTrainSurface({
+              trainRenderModel,
+              sessionRenderModel,
+              styles,
+              onTrainTabPress: setActiveTrainTab,
+              onActionTarget: handleTrainNavigation,
+              renderSections: (sections, onActionTarget) => renderGenericSections({ sections, styles, onActionTarget }),
+              renderSessionSections: (sections) =>
+                renderSessionSections({
+                  sections,
+                  styles,
+                  statusStyles,
+                  onFinishWorkout: handleFinishWorkout,
+                  onDiscardWorkout: handleDiscardWorkout,
+                  onDismissRestTimer: handleDismissRestTimer,
+                  onAdjustRestTimer: handleAdjustRestTimer,
+                  onCompleteSet: handleCompleteSet,
+                  onQuickActualUpdate: handleQuickActualUpdate,
+                }),
+            }),
+          renderGenericSections: ({ sections, styles }) => renderGenericSections({ sections, styles }),
+        })}
+        <StatusBar style="light" />
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }

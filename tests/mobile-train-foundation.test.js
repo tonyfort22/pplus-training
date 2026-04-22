@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   mobileTabs,
   trainTabs,
+  demoPreviewStates,
   createDemoProgramWorkout,
   createTrainDemoState,
   getTodaySurfaceModel,
@@ -76,4 +77,21 @@ test('getWorkoutSurfaceModel can switch to the selected calendar day workout pre
   assert.equal(model.dayLabel, 'Thu • Apr 23')
   assert.equal(model.exercises[0].name, 'Bench Press')
   assert.equal(model.exercises[0].setCount, 4)
+})
+
+test('createTrainDemoState can seed simulator preview states across the athlete session lifecycle', () => {
+  const plannedState = createTrainDemoState({ previewState: 'planned' })
+  const activeState = createTrainDemoState({ previewState: 'active' })
+  const completedState = createTrainDemoState({ previewState: 'completed' })
+  const discardedState = createTrainDemoState({ previewState: 'discarded' })
+
+  assert.deepEqual(demoPreviewStates.map((state) => state.key), ['planned', 'active', 'completed', 'discarded'])
+  assert.equal(plannedState.session.status, 'in_progress')
+  assert.equal(plannedState.session.completedSetsCount, 0)
+  assert.equal(activeState.session.status, 'in_progress')
+  assert.equal(activeState.session.completedSetsCount, 1)
+  assert.equal(completedState.session.status, 'completed')
+  assert.equal(completedState.session.completedSetsCount, completedState.session.totalSetsCount)
+  assert.equal(discardedState.session.status, 'discarded')
+  assert.equal(discardedState.session.completedSetsCount, 1)
 })

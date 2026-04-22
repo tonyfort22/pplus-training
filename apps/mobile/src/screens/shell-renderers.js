@@ -32,10 +32,37 @@ export function renderBottomTabBar({ bottomTabs, styles, onTabPress }) {
   )
 }
 
-export function renderAppShell({ styles, screen, bottomTabs, trainRenderModel, sessionRenderModel, onTabPress, renderTrainSurface, renderGenericSections }) {
+export function renderAppShell({
+  styles,
+  screen,
+  bottomTabs,
+  previewStates,
+  trainRenderModel,
+  sessionRenderModel,
+  onTabPress,
+  onPreviewStatePress,
+  renderTrainSurface,
+  renderGenericSections,
+}) {
   return (
     <View style={styles.appShell}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {previewStates?.length ? (
+          <View style={styles.previewBar}>
+            <Text style={styles.previewBarLabel}>Preview state</Text>
+            <View style={styles.previewButtonRow}>
+              {previewStates.map((state) => (
+                <Pressable
+                  key={state.key}
+                  style={[styles.previewButton, state.isActive && styles.previewButtonActive]}
+                  onPress={() => onPreviewStatePress?.(state.key)}
+                >
+                  <Text style={[styles.previewButtonText, state.isActive && styles.previewButtonTextActive]}>{state.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        ) : null}
         {renderAppScreen({
           screen,
           trainRenderModel,

@@ -5,10 +5,12 @@ import { styles, statusStyles } from '../apps/mobile/src/screens/styles.js'
 test('mobile screen styles exports the shared shell and renderer style keys', () => {
   assert.ok(styles.container)
   assert.ok(styles.appShell)
+  assert.ok(styles.previewBar)
   assert.ok(styles.trainTabsRow)
   assert.ok(styles.sectionCard)
   assert.ok(styles.tabBar)
   assert.equal(styles.container.backgroundColor, '#0b1220')
+  assert.equal(styles.previewButtonActive.backgroundColor, '#2563eb')
   assert.equal(styles.progressFill.backgroundColor, '#3b82f6')
 })
 

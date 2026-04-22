@@ -1,4 +1,4 @@
-import { completeWorkoutSet, createWorkoutSession, finishWorkoutSession } from '../../../../packages/core/src/index.js'
+import { completeWorkoutSet, createWorkoutSession, discardWorkoutSession, finishWorkoutSession } from '../../../../packages/core/src/index.js'
 
 export const mobileTabs = [
   { key: 'train', label: 'Train' },
@@ -13,6 +13,13 @@ export const trainTabs = [
   { key: 'calendar', label: 'Calendar' },
   { key: 'workout', label: 'Workout' },
   { key: 'session', label: 'Session' },
+]
+
+export const demoPreviewStates = [
+  { key: 'planned', label: 'Planned' },
+  { key: 'active', label: 'Active' },
+  { key: 'completed', label: 'Completed' },
+  { key: 'discarded', label: 'Discarded' },
 ]
 
 function formatRestLabel(totalSeconds) {
@@ -63,8 +70,8 @@ export function createDemoProgramWorkout() {
   }
 }
 
-export function createTrainDemoState({ programWorkout = createDemoProgramWorkout(), startedAt } = {}) {
-  const session = createWorkoutSession({ programWorkout, startedAt })
+export function createTrainDemoState({ programWorkout = createDemoProgramWorkout(), startedAt, previewState = 'planned' } = {}) {
+  const session = createPreviewSession({ programWorkout, startedAt, previewState })
 
   return {
     today: {
@@ -90,6 +97,61 @@ export function createDemoCompletedSessions(programWorkout = createDemoProgramWo
     buildDemoCompletedSession({ programWorkout, completedAt: '2026-04-18T20:30:00.000Z', squatLoad: 125, rdlLoad: 100 }),
     buildDemoCompletedSession({ programWorkout, completedAt: '2026-04-20T20:30:00.000Z', squatLoad: 135, rdlLoad: 105 }),
   ]
+}
+
+function createPreviewSession({ programWorkout, startedAt, previewState }) {
+  let session = createWorkoutSession({ programWorkout, startedAt })
+
+  if (previewState === 'planned') {
+    return session
+  }
+
+  const firstExercise = session.exercises[0]
+  const firstSet = firstExercise?.sets[0]
+
+  if (!firstExercise || !firstSet) {
+    return session
+  }
+
+  session = completeWorkoutSet({
+    session,
+    exerciseId: firstExercise.id,
+    setId: firstSet.id,
+  })
+
+  if (previewState === 'active') {
+    return session
+  }
+
+  if (previewState === 'discarded') {
+    return discardWorkoutSession({
+      session,
+      discardedAt: '2026-04-21T20:20:00.000Z',
+      elapsedSeconds: 600,
+    })
+  }
+
+  if (previewState === 'completed') {
+    for (const exercise of session.exercises) {
+      for (const set of exercise.sets) {
+        if (set.isCompleted) continue
+
+        session = completeWorkoutSet({
+          session,
+          exerciseId: exercise.id,
+          setId: set.id,
+        })
+      }
+    }
+
+    return finishWorkoutSession({
+      session,
+      completedAt: '2026-04-21T21:00:00.000Z',
+      elapsedSeconds: 1800,
+    })
+  }
+
+  return session
 }
 
 export function getTodaySurfaceModel(trainState) {

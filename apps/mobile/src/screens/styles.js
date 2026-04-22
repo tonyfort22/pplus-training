@@ -18,6 +18,40 @@ export const styles = {
     gap: 16,
     paddingBottom: 110,
   },
+  previewBar: {
+    backgroundColor: '#111827',
+    borderRadius: 20,
+    padding: 16,
+    gap: 12,
+  },
+  previewBarLabel: {
+    color: '#93c5fd',
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  previewButtonRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  previewButton: {
+    backgroundColor: '#1f2937',
+    borderRadius: 999,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  previewButtonActive: {
+    backgroundColor: '#2563eb',
+  },
+  previewButtonText: {
+    color: '#cbd5e1',
+    fontWeight: '700',
+  },
+  previewButtonTextActive: {
+    color: '#ffffff',
+  },
   trainTabsRow: {
     flexDirection: 'row',
     gap: 8,
