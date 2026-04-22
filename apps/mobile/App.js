@@ -20,6 +20,7 @@ import { getActiveSessionSurfaceModel } from './src/train/active-session-models.
 import { getTrainSurfaceModel } from './src/train/train-screen-models.js';
 import { getPlaceholderSurfaceModel, getProgressSurfaceModel } from './src/progress/index.js';
 import { getPlaceholderSections, getProgressSections } from './src/screens/surface-sections.js';
+import { getSessionSections } from './src/screens/session-sections.js';
 
 function SurfaceCard({ title, body, actionLabel, onAction }) {
   return (
@@ -73,6 +74,7 @@ export default function App() {
     () => getActiveSessionSurfaceModel(session, elapsedSeconds, selectedSet),
     [elapsedSeconds, selectedSet, session]
   );
+  const sessionSections = useMemo(() => getSessionSections(activeSessionModel), [activeSessionModel]);
   const trainSurfaceModel = useMemo(
     () =>
       getTrainSurfaceModel({
@@ -111,56 +113,62 @@ export default function App() {
     );
   }
 
-  function renderSessionSurface() {
-    return (
-      <>
-        <View style={styles.headerCard}>
-          <View style={styles.headerTopRow}>
-            <View>
-              <Text style={styles.eyebrow}>{activeSessionModel.header.eyebrow}</Text>
-              <Text style={styles.title}>{activeSessionModel.header.title}</Text>
+  function renderSessionSections(sections) {
+    return sections.map((section) => {
+      if (section.type === 'session-header') {
+        return (
+          <View key={section.title} style={styles.headerCard}>
+            <View style={styles.headerTopRow}>
+              <View>
+                <Text style={styles.eyebrow}>{section.eyebrow}</Text>
+                <Text style={styles.title}>{section.title}</Text>
+              </View>
+              <Pressable
+                onPress={handleFinishWorkout}
+                style={[styles.finishButton, session.status === 'completed' && styles.finishButtonDone]}
+              >
+                <Text style={styles.finishButtonText}>{section.finishLabel}</Text>
+              </Pressable>
             </View>
-            <Pressable
-              onPress={handleFinishWorkout}
-              style={[styles.finishButton, session.status === 'completed' && styles.finishButtonDone]}
-            >
-              <Text style={styles.finishButtonText}>{activeSessionModel.header.finishLabel}</Text>
-            </Pressable>
-          </View>
 
-          <Text style={styles.summary}>{activeSessionModel.header.workoutTimerLabel}</Text>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${activeSessionModel.header.progressPercent}%` }]} />
+            <Text style={styles.summary}>{section.workoutTimerLabel}</Text>
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: `${section.progressPercent}%` }]} />
+            </View>
+            <Text style={styles.progressLabel}>{section.progressLabel}</Text>
           </View>
-          <Text style={styles.progressLabel}>{activeSessionModel.header.progressLabel}</Text>
-        </View>
+        );
+      }
 
-        {activeSessionModel.restTimer ? (
-          <View style={styles.restCard}>
+      if (section.type === 'rest-timer') {
+        return (
+          <View key="rest-timer" style={styles.restCard}>
             <View style={styles.restHeaderRow}>
               <View>
-                <Text style={styles.restEyebrow}>{activeSessionModel.restTimer.eyebrow}</Text>
-                <Text style={styles.restTitle}>{activeSessionModel.restTimer.title}</Text>
+                <Text style={styles.restEyebrow}>{section.eyebrow}</Text>
+                <Text style={styles.restTitle}>{section.title}</Text>
               </View>
               <Pressable onPress={() => setSession((currentSession) => clearRestTimer(currentSession))}>
-                <Text style={styles.dismissText}>{activeSessionModel.restTimer.dismissLabel}</Text>
+                <Text style={styles.dismissText}>{section.dismissLabel}</Text>
               </Pressable>
             </View>
-            <Text style={styles.restClock}>{activeSessionModel.restTimer.clockLabel}</Text>
+            <Text style={styles.restClock}>{section.clockLabel}</Text>
             <View style={styles.restActions}>
               <Pressable style={styles.restActionButton} onPress={() => setSession((currentSession) => adjustRestTimer(currentSession, -15))}>
-                <Text style={styles.restActionText}>{activeSessionModel.restTimer.minusLabel}</Text>
+                <Text style={styles.restActionText}>{section.minusLabel}</Text>
               </Pressable>
               <Pressable style={styles.restActionButton} onPress={() => setSession((currentSession) => adjustRestTimer(currentSession, 15))}>
-                <Text style={styles.restActionText}>{activeSessionModel.restTimer.plusLabel}</Text>
+                <Text style={styles.restActionText}>{section.plusLabel}</Text>
               </Pressable>
             </View>
           </View>
-        ) : null}
+        );
+      }
 
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>{activeSessionModel.sectionTitle}</Text>
-          {activeSessionModel.exercises.map((exercise) => (
+      return (
+        <View key={section.title} style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>{section.title}</Text>
+          {section.exercises.map((exercise) => (
             <View key={exercise.id} style={styles.exerciseCard}>
               <View style={styles.exerciseHeader}>
                 <View>
@@ -172,7 +180,7 @@ export default function App() {
                 </View>
               </View>
 
-              {exercise.sets.map((set, index) => (
+              {exercise.sets.map((set) => (
                 <View key={set.id} style={[styles.setRow, set.isCompleted && styles.setRowCompleted]}>
                   <Pressable style={styles.setCopy} onPress={() => handleCompleteSet(exercise.id, set.id)}>
                     <Text style={styles.setTitle}>{set.title}</Text>
@@ -216,8 +224,8 @@ export default function App() {
             </View>
           ))}
         </View>
-      </>
-    );
+      );
+    });
   }
 
   function renderTrainSurface() {
@@ -280,7 +288,7 @@ export default function App() {
           </>
         )}
 
-        {trainSurfaceModel.surface.type === 'session' && renderSessionSurface()}
+        {trainSurfaceModel.surface.type === 'session' && renderSessionSections(sessionSections)}
       </>
     );
   }
