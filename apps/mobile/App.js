@@ -17,6 +17,7 @@ import {
   trainTabs,
 } from './src/train/index.js';
 import { getActiveSessionSurfaceModel } from './src/train/active-session-models.js';
+import { getTrainRenderModel } from './src/train/train-render-models.js';
 import { getTrainSurfaceModel } from './src/train/train-screen-models.js';
 import { getQuickActualUpdatePayload } from './src/train/session-actions.js';
 import { getPlaceholderSurfaceModel, getProgressSurfaceModel } from './src/progress/index.js';
@@ -88,6 +89,10 @@ export default function App() {
         activeSessionModel,
       }),
     [activeSessionModel, activeTrainTab, todayModel, workoutModel]
+  );
+  const trainRenderModel = useMemo(
+    () => getTrainRenderModel({ trainSurfaceModel, sessionSections }),
+    [sessionSections, trainSurfaceModel]
   );
 
   function handleCompleteSet(exerciseId, setId) {
@@ -234,7 +239,7 @@ export default function App() {
     return (
       <>
         <View style={styles.trainTabsRow}>
-          {trainSurfaceModel.tabs.map((tab) => (
+          {trainRenderModel.tabs.map((tab) => (
             <Pressable
               key={tab.key}
               style={[styles.trainTabButton, tab.isActive && styles.trainTabButtonActive]}
@@ -245,64 +250,48 @@ export default function App() {
           ))}
         </View>
 
-        {trainSurfaceModel.surface.type === 'today' && (
-          <>
-            {trainSurfaceModel.surface.cards.map((card) => (
-              <SurfaceCard
-                key={card.title}
-                title={card.title}
-                body={card.body}
-                actionLabel={card.actionLabel}
-                onAction={() => setActiveTrainTab(card.targetKey)}
-              />
-            ))}
-          </>
-        )}
-
-        {trainSurfaceModel.surface.type === 'program' && (
-          <SurfaceCard
-            title={trainSurfaceModel.surface.card.title}
-            body={trainSurfaceModel.surface.card.body}
-            actionLabel={trainSurfaceModel.surface.card.actionLabel}
-            onAction={() => setActiveTrainTab(trainSurfaceModel.surface.card.targetKey)}
-          />
-        )}
-
-        {trainSurfaceModel.surface.type === 'workout' && (
-          <>
-            <SurfaceCard
-              title={trainSurfaceModel.surface.detailCard.title}
-              body={trainSurfaceModel.surface.detailCard.body}
-              actionLabel={trainSurfaceModel.surface.detailCard.actionLabel}
-              onAction={() => setActiveTrainTab(trainSurfaceModel.surface.detailCard.targetKey)}
-            />
-            <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>{trainSurfaceModel.surface.exerciseSectionTitle}</Text>
-              {trainSurfaceModel.surface.exercises.map((exercise) => (
-                <View key={exercise.id} style={styles.listRow}>
-                  <View>
-                    <Text style={styles.listRowTitle}>{exercise.name}</Text>
-                    <Text style={styles.listRowBody}>{exercise.setCount} sets, default rest {exercise.restLabel}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          </>
-        )}
-
-        {trainSurfaceModel.surface.type === 'session' && renderSessionSections(sessionSections)}
+        {trainRenderModel.content.type === 'sections' && renderSections(trainRenderModel.content.sections, setActiveTrainTab)}
+        {trainRenderModel.content.type === 'session-sections' && renderSessionSections(trainRenderModel.content.sections)}
       </>
     );
   }
 
-  function renderSections(sections) {
+  function renderSections(sections, onActionTarget) {
     return sections.map((section) => {
+      if (section.type === 'action-card') {
+        return (
+          <SurfaceCard
+            key={section.title}
+            title={section.title}
+            body={section.body}
+            actionLabel={section.actionLabel}
+            onAction={onActionTarget ? () => onActionTarget(section.targetKey) : undefined}
+          />
+        );
+      }
+
       if (section.type === 'header') {
         return (
           <View key={section.title} style={styles.headerCard}>
             <Text style={styles.eyebrow}>{section.eyebrow}</Text>
             <Text style={styles.title}>{section.title}</Text>
             <Text style={styles.sectionBody}>{section.body}</Text>
+          </View>
+        );
+      }
+
+      if (section.type === 'body-list') {
+        return (
+          <View key={section.title} style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>{section.title}</Text>
+            {section.rows.map((row) => (
+              <View key={row.id || row.title} style={styles.listRow}>
+                <View>
+                  <Text style={styles.listRowTitle}>{row.title}</Text>
+                  <Text style={styles.listRowBody}>{row.body}</Text>
+                </View>
+              </View>
+            ))}
           </View>
         );
       }
@@ -337,9 +326,9 @@ export default function App() {
       <View style={styles.appShell}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {activeTab === 'train' && renderTrainSurface()}
-          {activeTab === 'progress' && renderSections(progressSections)}
-          {activeTab === 'team' && renderSections(teamSections)}
-          {activeTab === 'inbox' && renderSections(inboxSections)}
+          {activeTab === 'progress' && renderSections(progressSections, null)}
+          {activeTab === 'team' && renderSections(teamSections, null)}
+          {activeTab === 'inbox' && renderSections(inboxSections, null)}
         </ScrollView>
 
         <View style={styles.tabBar}>
