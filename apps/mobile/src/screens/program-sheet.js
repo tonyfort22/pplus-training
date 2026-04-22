@@ -3,10 +3,10 @@ import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 
 function ProgramSheetStatIcon({ icon }) {
   if (icon === 'calendar') {
-    return <CalendarDays color="#8b5cf6" size={18} strokeWidth={2.2} />
+    return <CalendarDays color="#06D6A0" size={18} strokeWidth={2.2} />
   }
 
-  return <Dumbbell color="#8b5cf6" size={18} strokeWidth={2.2} />
+  return <Dumbbell color="#06D6A0" size={18} strokeWidth={2.2} />
 }
 
 function ProgramSheetStatusBadge({ status }) {
@@ -77,7 +77,7 @@ export function renderProgramSheet({ isVisible, onClose, model }) {
                 <ChevronLeft color="#ffffff" size={24} strokeWidth={2.2} />
               </Pressable>
               <Pressable onPress={() => {}}>
-                <Text className="text-[17px] font-semibold text-violet-500">{model.editLabel}</Text>
+                <Text className="text-[17px] font-semibold text-emerald-400">{model.editLabel}</Text>
               </Pressable>
             </View>
 
@@ -90,9 +90,9 @@ export function renderProgramSheet({ isVisible, onClose, model }) {
               <View className="flex-row gap-1.5">
                 {model.progressSegments.map((segment) => {
                   const stateClass = segment.isCurrent
-                    ? 'bg-violet-700'
+                    ? 'bg-emerald-700'
                     : segment.isComplete
-                      ? 'bg-violet-500'
+                      ? 'bg-emerald-500'
                       : 'bg-slate-700'
 
                   return <View key={segment.id} className={`h-3 flex-1 rounded-full ${stateClass}`} />

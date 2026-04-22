@@ -14,9 +14,9 @@ function ProgramSummaryCard({ onAction, title, programName, dateRangeLabel, body
         <View className="flex-row gap-1.5">
           {progressSegments.map((segment) => {
             const stateClass = segment.isCurrent
-              ? 'bg-violet-700'
+              ? 'bg-emerald-700'
               : segment.isComplete
-                ? 'bg-violet-500'
+                ? 'bg-emerald-500'
                 : 'bg-slate-700'
 
             return <View key={segment.id} className={`h-2 flex-1 rounded-full ${stateClass}`} />
