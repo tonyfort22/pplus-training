@@ -67,3 +67,14 @@ test('mobile app shell opens a dedicated program sheet from the program card ins
   assert.doesNotMatch(sheetSource, /pphtChatTextSvg/)
   assert.match(iconsSource, /export const pphtCheckSvg/)
 })
+
+test('mobile app shell also owns a dedicated training calendar screen state from the header utility icon', () => {
+  const appSource = readFileSync(
+    resolve(process.cwd(), 'apps/mobile/App.js'),
+    'utf8'
+  )
+
+  assert.match(appSource, /const \[isTrainingCalendarOpen, setIsTrainingCalendarOpen\] = useState\(false\);/)
+  assert.match(appSource, /const trainingCalendarModel = useMemo\(/)
+  assert.match(appSource, /renderTrainingCalendarSheet\(\{[\s\S]*isVisible: isTrainingCalendarOpen/)
+})

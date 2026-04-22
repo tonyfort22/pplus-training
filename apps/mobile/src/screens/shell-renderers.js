@@ -83,6 +83,7 @@ export function renderAppShell({
   trainRenderModel,
   sessionRenderModel,
   onTabPress,
+  onUtilityHeaderPress,
   renderTrainSurface,
   renderGenericSections,
 }) {
@@ -99,7 +100,7 @@ export function renderAppShell({
             </View>
           </View>
           <View style={[styles.brandHeaderSide, styles.brandHeaderSideRight]}>
-            <Pressable style={styles.brandIconButton}>{renderUtilityHeaderIcon(styles)}</Pressable>
+            <Pressable style={styles.brandIconButton} onPress={onUtilityHeaderPress}>{renderUtilityHeaderIcon(styles)}</Pressable>
           </View>
         </View>
         {renderAppScreen({
