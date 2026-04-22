@@ -1,0 +1,47 @@
+export function getProgressSections(progressModel) {
+  return [
+    {
+      type: 'header',
+      eyebrow: progressModel.header.eyebrow,
+      title: progressModel.header.title,
+      body: progressModel.header.body,
+    },
+    {
+      type: 'metrics-grid',
+      items: progressModel.metrics.map((metric) => ({
+        label: metric.label,
+        value: metric.value,
+        detail: metric.detail,
+      })),
+    },
+    {
+      type: 'body',
+      title: progressModel.trainingLoad.title,
+      body: progressModel.trainingLoad.body,
+    },
+    {
+      type: 'body-with-rows',
+      title: progressModel.muscleFatigue.title,
+      body: progressModel.muscleFatigue.body,
+      rows: progressModel.muscleFatigue.rows.map((row) => ({
+        title: row.title,
+        body: row.body,
+      })),
+    },
+    {
+      type: 'body',
+      title: progressModel.performanceSnapshots.title,
+      body: progressModel.performanceSnapshots.body,
+    },
+  ]
+}
+
+export function getPlaceholderSections(placeholderModel) {
+  return [
+    {
+      type: 'body',
+      title: placeholderModel.title,
+      body: placeholderModel.body,
+    },
+  ]
+}

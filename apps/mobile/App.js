@@ -19,6 +19,7 @@ import {
 import { getActiveSessionSurfaceModel } from './src/train/active-session-models.js';
 import { getTrainSurfaceModel } from './src/train/train-screen-models.js';
 import { getPlaceholderSurfaceModel, getProgressSurfaceModel } from './src/progress/index.js';
+import { getPlaceholderSections, getProgressSections } from './src/screens/surface-sections.js';
 
 function SurfaceCard({ title, body, actionLabel, onAction }) {
   return (
@@ -49,14 +50,17 @@ export default function App() {
   const todayModel = useMemo(() => getTodaySurfaceModel(demoTrainState), [demoTrainState]);
   const workoutModel = useMemo(() => getWorkoutSurfaceModel(demoTrainState), [demoTrainState]);
   const progressModel = useMemo(() => getProgressSurfaceModel(), []);
+  const progressSections = useMemo(() => getProgressSections(progressModel), [progressModel]);
   const teamPlaceholder = useMemo(
     () => getPlaceholderSurfaceModel('Team', 'This surface will hold coach context, team relationships, and collaboration later.'),
     []
   );
+  const teamSections = useMemo(() => getPlaceholderSections(teamPlaceholder), [teamPlaceholder]);
   const inboxPlaceholder = useMemo(
     () => getPlaceholderSurfaceModel('Inbox', 'This surface will hold communication, reminders, and support flows later.'),
     []
   );
+  const inboxSections = useMemo(() => getPlaceholderSections(inboxPlaceholder), [inboxPlaceholder]);
   const [activeTab, setActiveTab] = useState('train');
   const [activeTrainTab, setActiveTrainTab] = useState('today');
   const [session, setSession] = useState(() => demoTrainState.session);
@@ -281,60 +285,41 @@ export default function App() {
     );
   }
 
-  function renderProgressSurface() {
-    return (
-      <>
-        <View style={styles.headerCard}>
-          <Text style={styles.eyebrow}>{progressModel.header.eyebrow}</Text>
-          <Text style={styles.title}>{progressModel.header.title}</Text>
-          <Text style={styles.sectionBody}>
-            {progressModel.header.body}
-          </Text>
-        </View>
+  function renderSections(sections) {
+    return sections.map((section) => {
+      if (section.type === 'header') {
+        return (
+          <View key={section.title} style={styles.headerCard}>
+            <Text style={styles.eyebrow}>{section.eyebrow}</Text>
+            <Text style={styles.title}>{section.title}</Text>
+            <Text style={styles.sectionBody}>{section.body}</Text>
+          </View>
+        );
+      }
 
-        <View style={styles.metricsGrid}>
-          {progressModel.metrics.map((metric) => (
-            <MetricCard key={metric.label} label={metric.label} value={metric.value} detail={metric.detail} />
-          ))}
-        </View>
+      if (section.type === 'metrics-grid') {
+        return (
+          <View key="metrics-grid" style={styles.metricsGrid}>
+            {section.items.map((metric) => (
+              <MetricCard key={metric.label} label={metric.label} value={metric.value} detail={metric.detail} />
+            ))}
+          </View>
+        );
+      }
 
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>{progressModel.trainingLoad.title}</Text>
-          <Text style={styles.sectionBody}>
-            {progressModel.trainingLoad.body}
-          </Text>
-        </View>
-
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>{progressModel.muscleFatigue.title}</Text>
-          <Text style={styles.sectionBody}>
-            {progressModel.muscleFatigue.body}
-          </Text>
-          {progressModel.muscleFatigue.rows.map((row) => (
+      return (
+        <View key={section.title} style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>{section.title}</Text>
+          <Text style={styles.sectionBody}>{section.body}</Text>
+          {section.rows?.map((row) => (
             <View key={row.title} style={styles.listRow}>
               <Text style={styles.listRowTitle}>{row.title}</Text>
               <Text style={styles.listRowBody}>{row.body}</Text>
             </View>
           ))}
         </View>
-
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>{progressModel.performanceSnapshots.title}</Text>
-          <Text style={styles.sectionBody}>
-            {progressModel.performanceSnapshots.body}
-          </Text>
-        </View>
-      </>
-    );
-  }
-
-  function renderPlaceholderSurface(model) {
-    return (
-      <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>{model.title}</Text>
-        <Text style={styles.sectionBody}>{model.body}</Text>
-      </View>
-    );
+      );
+    });
   }
 
   return (
@@ -342,9 +327,9 @@ export default function App() {
       <View style={styles.appShell}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {activeTab === 'train' && renderTrainSurface()}
-          {activeTab === 'progress' && renderProgressSurface()}
-          {activeTab === 'team' && renderPlaceholderSurface(teamPlaceholder)}
-          {activeTab === 'inbox' && renderPlaceholderSurface(inboxPlaceholder)}
+          {activeTab === 'progress' && renderSections(progressSections)}
+          {activeTab === 'team' && renderSections(teamSections)}
+          {activeTab === 'inbox' && renderSections(inboxSections)}
         </ScrollView>
 
         <View style={styles.tabBar}>
