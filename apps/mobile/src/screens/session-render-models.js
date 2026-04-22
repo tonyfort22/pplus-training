@@ -5,6 +5,7 @@ export function getSessionRenderModel({ sessionRenderPlan, sessionStatus }) {
         ...section,
         type: 'session-header-card',
         isCompleted: sessionStatus === 'completed',
+        isDiscarded: sessionStatus === 'discarded',
       }
     }
 

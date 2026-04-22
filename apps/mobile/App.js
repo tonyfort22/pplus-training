@@ -5,6 +5,7 @@ import {
   adjustRestTimer,
   clearRestTimer,
   completeWorkoutSessionSet,
+  discardWorkoutSession,
   findSessionSet,
   finishWorkoutSession,
   updateSessionSetActuals,
@@ -17,6 +18,8 @@ import {
   trainTabs,
 } from './src/train/index.js';
 import { getActiveSessionSurfaceModel } from './src/train/active-session-models.js';
+import { getCompletedSessionSurfaceModel } from './src/train/completed-session-models.js';
+import { getDiscardedSessionSurfaceModel } from './src/train/discarded-session-models.js';
 import { getTrainRenderModel } from './src/train/train-render-models.js';
 import { getTrainSurfaceModel } from './src/train/train-screen-models.js';
 import { getQuickActualUpdatePayload } from './src/train/session-actions.js';
@@ -63,6 +66,14 @@ export default function App() {
     () => getActiveSessionSurfaceModel(session, elapsedSeconds, selectedSet),
     [elapsedSeconds, selectedSet, session]
   );
+  const completedSessionModel = useMemo(
+    () => (session.status === 'completed' ? getCompletedSessionSurfaceModel(session) : null),
+    [session]
+  );
+  const discardedSessionModel = useMemo(
+    () => (session.status === 'discarded' ? getDiscardedSessionSurfaceModel(session) : null),
+    [session]
+  );
   const sessionSections = useMemo(() => getSessionSections(activeSessionModel), [activeSessionModel]);
   const sessionRenderPlan = useMemo(() => getSessionSectionRenderPlan(sessionSections), [sessionSections]);
   const sessionRenderModel = useMemo(
@@ -77,8 +88,10 @@ export default function App() {
         todayModel,
         workoutModel,
         activeSessionModel,
+        completedSessionModel,
+        discardedSessionModel,
       }),
-    [activeSessionModel, activeTrainTab, todayModel, workoutModel]
+    [activeSessionModel, activeTrainTab, completedSessionModel, discardedSessionModel, todayModel, workoutModel]
   );
   const trainRenderModel = useMemo(
     () => getTrainRenderModel({ trainSurfaceModel, sessionSections: sessionRenderPlan }),
@@ -98,17 +111,22 @@ export default function App() {
   );
 
   function handleCompleteSet(exerciseId, setId) {
-    if (session.status === 'completed') return;
+    if (session.status === 'completed' || session.status === 'discarded') return;
     setSession((currentSession) => completeWorkoutSessionSet(currentSession, exerciseId, setId));
   }
 
   function handleFinishWorkout() {
-    if (session.status === 'completed') return;
-    setSession((currentSession) => finishWorkoutSession(currentSession));
+    if (session.status === 'completed' || session.status === 'discarded') return;
+    setSession((currentSession) => finishWorkoutSession({ session: currentSession, elapsedSeconds }));
+  }
+
+  function handleDiscardWorkout() {
+    if (session.status === 'completed' || session.status === 'discarded') return;
+    setSession((currentSession) => discardWorkoutSession({ session: currentSession, discardedAt: new Date().toISOString(), elapsedSeconds }));
   }
 
   function handleQuickActualUpdate(exerciseId, setId, field, delta) {
-    if (session.status === 'completed') return;
+    if (session.status === 'completed' || session.status === 'discarded') return;
 
     const payload = getQuickActualUpdatePayload({
       session,
@@ -154,6 +172,7 @@ export default function App() {
                 styles,
                 statusStyles,
                 onFinishWorkout: handleFinishWorkout,
+                onDiscardWorkout: handleDiscardWorkout,
                 onDismissRestTimer: handleDismissRestTimer,
                 onAdjustRestTimer: handleAdjustRestTimer,
                 onCompleteSet: handleCompleteSet,

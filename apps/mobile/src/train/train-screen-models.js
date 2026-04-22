@@ -2,7 +2,15 @@ import { getProgramSurfaceModel, getTodayCardsModel, getWorkoutDetailCardModel }
 import { createActionCardModel } from '../ui/card-models.js'
 import { getTabButtonModels } from '../ui/tab-models.js'
 
-export function getTrainSurfaceModel({ trainTabs, activeTrainTab, todayModel, workoutModel, activeSessionModel }) {
+export function getTrainSurfaceModel({
+  trainTabs,
+  activeTrainTab,
+  todayModel,
+  workoutModel,
+  activeSessionModel,
+  completedSessionModel = null,
+  discardedSessionModel = null,
+}) {
   const tabs = getTabButtonModels({ tabs: trainTabs, activeKey: activeTrainTab })
 
   if (activeTrainTab === 'today') {
@@ -49,6 +57,26 @@ export function getTrainSurfaceModel({ trainTabs, activeTrainTab, todayModel, wo
           setCount: exercise.setCount,
           restLabel: exercise.defaultRestLabel,
         })),
+      },
+    }
+  }
+
+  if (activeTrainTab === 'session' && completedSessionModel) {
+    return {
+      tabs,
+      surface: {
+        type: 'completed-session',
+        summary: completedSessionModel,
+      },
+    }
+  }
+
+  if (activeTrainTab === 'session' && discardedSessionModel) {
+    return {
+      tabs,
+      surface: {
+        type: 'discarded-session',
+        summary: discardedSessionModel,
       },
     }
   }

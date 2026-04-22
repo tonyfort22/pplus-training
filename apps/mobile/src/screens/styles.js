@@ -61,6 +61,11 @@ export const styles = {
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  headerActionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
   finishButton: {
     backgroundColor: '#2563eb',
     borderRadius: 999,
@@ -69,6 +74,16 @@ export const styles = {
   },
   finishButtonDone: {
     backgroundColor: '#059669',
+  },
+  discardButton: {
+    backgroundColor: '#7f1d1d',
+    borderRadius: 999,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  discardButtonText: {
+    color: '#fecaca',
+    fontWeight: '700',
   },
   finishButtonText: {
     color: '#ffffff',

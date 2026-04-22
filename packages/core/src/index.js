@@ -328,3 +328,17 @@ export function finishWorkoutSession(sessionOrInput) {
 
   return nextSession;
 }
+
+export function discardWorkoutSession(sessionOrInput) {
+  const session = sessionOrInput?.session || sessionOrInput;
+  const discardedAt = sessionOrInput?.discardedAt;
+  const elapsedSeconds = sessionOrInput?.elapsedSeconds;
+
+  return applySessionProgress(updateExerciseStatuses({
+    ...session,
+    status: 'discarded',
+    completedAt: toIsoString(discardedAt),
+    elapsedSeconds: elapsedSeconds ?? session.elapsedSeconds ?? 0,
+    activeRestTimer: null
+  }));
+}

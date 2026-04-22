@@ -14,6 +14,7 @@ test('getActiveSessionSurfaceModel builds the session surface for an in-progress
 
   assert.equal(model.header.title, 'Lower A')
   assert.equal(model.header.finishLabel, 'Finish')
+  assert.equal(model.header.discardLabel, 'Discard session')
   assert.equal(model.header.progressLabel, '0/7 sets, 0/2 exercises')
   assert.equal(model.restTimer, null)
   assert.equal(model.sectionTitle, 'Active workout session')

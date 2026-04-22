@@ -4,6 +4,7 @@ import {
   createWorkoutSession,
   completeWorkoutSet,
   finishWorkoutSession,
+  discardWorkoutSession,
 } from '../packages/core/src/index.js'
 
 function buildProgramWorkout() {
@@ -127,6 +128,33 @@ test('completeWorkoutSet respects provided actual values instead of overwriting 
   assert.equal(set.actualRestSeconds, 180)
   assert.equal(set.prescribedLoad, 145)
   assert.equal(updated.activeRestTimer.remainingSeconds, 180)
+})
+
+test('discardWorkoutSession abandons the in-progress session and clears active timer state', () => {
+  let session = createWorkoutSession({
+    programWorkout: buildProgramWorkout(),
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+
+  session = completeWorkoutSet({
+    session,
+    exerciseId: 'pwe-1',
+    setId: 'pws-1',
+    completedAt: '2026-04-21T20:10:00.000Z',
+  })
+
+  const discarded = discardWorkoutSession({
+    session,
+    discardedAt: '2026-04-21T20:12:00.000Z',
+    elapsedSeconds: 720,
+  })
+
+  assert.equal(discarded.status, 'discarded')
+  assert.equal(discarded.completedAt, '2026-04-21T20:12:00.000Z')
+  assert.equal(discarded.elapsedSeconds, 720)
+  assert.equal(discarded.activeRestTimer, null)
+  assert.equal(discarded.completedSetsCount, 1)
+  assert.equal(discarded.exercises[0].sets[0].isCompleted, true)
 })
 
 test('finishWorkoutSession finalizes counts and clears active timer', () => {

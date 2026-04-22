@@ -5,6 +5,7 @@ export function getSessionSections(activeSessionModel) {
       eyebrow: activeSessionModel.header.eyebrow,
       title: activeSessionModel.header.title,
       finishLabel: activeSessionModel.header.finishLabel,
+      discardLabel: activeSessionModel.header.discardLabel,
       workoutTimerLabel: activeSessionModel.header.workoutTimerLabel,
       progressLabel: activeSessionModel.header.progressLabel,
       progressPercent: activeSessionModel.header.progressPercent,

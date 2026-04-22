@@ -73,6 +73,7 @@ export function renderSessionSections({
   styles,
   statusStyles,
   onFinishWorkout,
+  onDiscardWorkout,
   onDismissRestTimer,
   onAdjustRestTimer,
   onCompleteSet,
@@ -87,9 +88,16 @@ export function renderSessionSections({
               <Text style={styles.eyebrow}>{section.eyebrow}</Text>
               <Text style={styles.title}>{section.title}</Text>
             </View>
-            <Pressable onPress={onFinishWorkout} style={[styles.finishButton, section.isCompleted && styles.finishButtonDone]}>
-              <Text style={styles.finishButtonText}>{section.finishLabel}</Text>
-            </Pressable>
+            <View style={styles.headerActionsRow}>
+              {section.discardLabel && !section.isCompleted && !section.isDiscarded ? (
+                <Pressable onPress={onDiscardWorkout} style={styles.discardButton}>
+                  <Text style={styles.discardButtonText}>{section.discardLabel}</Text>
+                </Pressable>
+              ) : null}
+              <Pressable onPress={onFinishWorkout} style={[styles.finishButton, section.isCompleted && styles.finishButtonDone]}>
+                <Text style={styles.finishButtonText}>{section.finishLabel}</Text>
+              </Pressable>
+            </View>
           </View>
 
           <Text style={styles.summary}>{section.workoutTimerLabel}</Text>

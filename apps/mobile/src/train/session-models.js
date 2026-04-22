@@ -7,6 +7,7 @@ export function getSessionHeaderModel(session, elapsedSeconds) {
     eyebrow: 'Train / Session',
     title: session.nameSnapshot || session.name || 'Workout Session',
     finishLabel: session.status === 'completed' ? 'Completed' : 'Finish',
+    discardLabel: session.status === 'in_progress' ? 'Discard session' : null,
     workoutTimerLabel: formatWorkoutTimer(elapsedSeconds),
     progressLabel: `${progress.completedSets}/${progress.totalSets} sets, ${progress.completedExercises}/${progress.totalExercises} exercises`,
     progressPercent: progress.completionPercent,
