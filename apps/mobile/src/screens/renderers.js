@@ -230,15 +230,17 @@ export function renderTrainSurface({ trainRenderModel, sessionRenderModel, style
   return (
     <>
       <View style={styles.trainTabsRow}>
-        {trainRenderModel.tabs.map((tab) => (
-          <Pressable
-            key={tab.key}
-            style={[styles.trainTabButton, tab.isActive && styles.trainTabButtonActive]}
-            onPress={() => onTrainTabPress(tab.key)}
-          >
-            <Text style={[styles.trainTabLabel, tab.isActive && styles.trainTabLabelActive]}>{tab.label}</Text>
-          </Pressable>
-        ))}
+        <View style={styles.trainTabsPill}>
+          {trainRenderModel.tabs.map((tab) => (
+            <Pressable
+              key={tab.key}
+              style={[styles.trainTabButton, tab.isActive && styles.trainTabButtonActive]}
+              onPress={() => onTrainTabPress(tab.key)}
+            >
+              <Text style={[styles.trainTabLabel, tab.isActive && styles.trainTabLabelActive]}>{tab.label}</Text>
+            </Pressable>
+          ))}
+        </View>
       </View>
 
       {trainRenderModel.content.type === 'sections' && renderSections(trainRenderModel.content.sections, onActionTarget)}

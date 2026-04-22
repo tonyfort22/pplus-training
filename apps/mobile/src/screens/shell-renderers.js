@@ -96,22 +96,29 @@ export function renderAppShell({
   renderTrainSurface,
   renderGenericSections,
 }) {
+  const activePreviewState = previewStates?.find((state) => state.isActive) || null
+
   return (
     <View style={styles.appShell}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {previewStates?.length ? (
-          <View style={styles.previewBar}>
-            <Text style={styles.previewBarLabel}>Preview state</Text>
-            <View style={styles.previewButtonRow}>
-              {previewStates.map((state) => (
-                <Pressable
-                  key={state.key}
-                  style={[styles.previewButton, state.isActive && styles.previewButtonActive]}
-                  onPress={() => onPreviewStatePress?.(state.key)}
-                >
-                  <Text style={[styles.previewButtonText, state.isActive && styles.previewButtonTextActive]}>{state.label}</Text>
-                </Pressable>
-              ))}
+          <View style={styles.topHeader}>
+            <View style={styles.previewBar}>
+              <View style={styles.previewHeaderTopRow}>
+                <Text style={styles.previewBarLabel}>Preview state</Text>
+                {activePreviewState ? <Text style={styles.previewHeaderActiveLabel}>{activePreviewState.label}</Text> : null}
+              </View>
+              <View style={styles.previewButtonRow}>
+                {previewStates.map((state) => (
+                  <Pressable
+                    key={state.key}
+                    style={[styles.previewButton, state.isActive && styles.previewButtonActive]}
+                    onPress={() => onPreviewStatePress?.(state.key)}
+                  >
+                    <Text style={[styles.previewButtonText, state.isActive && styles.previewButtonTextActive]}>{state.label}</Text>
+                  </Pressable>
+                ))}
+              </View>
             </View>
           </View>
         ) : null}

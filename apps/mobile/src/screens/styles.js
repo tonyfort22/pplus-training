@@ -18,10 +18,21 @@ export const styles = {
     gap: 16,
     paddingBottom: 110,
   },
+  topHeader: {
+    gap: 12,
+  },
   previewBar: {
     backgroundColor: '#111827',
-    borderRadius: 20,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#243041',
     padding: 16,
+    gap: 12,
+  },
+  previewHeaderTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     gap: 12,
   },
   previewBarLabel: {
@@ -30,6 +41,13 @@ export const styles = {
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 1,
+  },
+  previewHeaderActiveLabel: {
+    color: '#e2e8f0',
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
   previewButtonRow: {
     flexDirection: 'row',
@@ -54,11 +72,20 @@ export const styles = {
   },
   trainTabsRow: {
     flexDirection: 'row',
-    gap: 8,
+  },
+  trainTabsPill: {
+    flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: 8,
+    backgroundColor: '#111827',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#243041',
+    padding: 6,
+    alignSelf: 'flex-start',
   },
   trainTabButton: {
-    backgroundColor: '#111827',
+    backgroundColor: 'transparent',
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 999,
