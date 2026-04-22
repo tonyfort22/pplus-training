@@ -5,6 +5,10 @@ import { styles, statusStyles } from '../apps/mobile/src/screens/styles.js'
 test('mobile screen styles exports the shared shell and renderer style keys', () => {
   assert.ok(styles.container)
   assert.ok(styles.appShell)
+  assert.ok(styles.brandHeader)
+  assert.ok(styles.brandHeaderSide)
+  assert.ok(styles.brandWordmark)
+  assert.ok(styles.brandIconButton)
   assert.ok(styles.topHeader)
   assert.ok(styles.previewBar)
   assert.ok(styles.previewHeaderTopRow)

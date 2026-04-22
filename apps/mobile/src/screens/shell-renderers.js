@@ -1,6 +1,35 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { getAppScreenViewModel } from './shell-view-models.js';
 
+function renderProfileHeaderIcon(styles) {
+  return (
+    <View style={styles.brandIconCanvas}>
+      <View style={styles.brandProfileHead} />
+      <View style={styles.brandProfileShoulders} />
+    </View>
+  )
+}
+
+function renderUtilityHeaderIcon(styles) {
+  return (
+    <View style={styles.brandIconCanvas}>
+      <View style={styles.brandUtilityCard}>
+        <View style={styles.brandUtilityCardTop} />
+        <View style={styles.brandUtilityCardDotsRow}>
+          <View style={styles.brandUtilityCardDot} />
+          <View style={styles.brandUtilityCardDot} />
+          <View style={styles.brandUtilityCardDot} />
+        </View>
+        <View style={styles.brandUtilityCardDotsRow}>
+          <View style={styles.brandUtilityCardDot} />
+          <View style={styles.brandUtilityCardDot} />
+          <View style={styles.brandUtilityCardDot} />
+        </View>
+      </View>
+    </View>
+  )
+}
+
 function BottomNavIcon({ tabKey, styles, isActive }) {
   const strokeStyle = [styles.bottomNavIconStroke, isActive && styles.bottomNavIconStrokeActive]
 
@@ -101,6 +130,17 @@ export function renderAppShell({
   return (
     <View style={styles.appShell}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.brandHeader}>
+          <View style={styles.brandHeaderSide}>
+            <Pressable style={styles.brandIconButton}>{renderProfileHeaderIcon(styles)}</Pressable>
+          </View>
+          <View style={styles.brandHeaderCenter}>
+            <Text style={styles.brandWordmark}>PPLUS</Text>
+          </View>
+          <View style={[styles.brandHeaderSide, styles.brandHeaderSideRight]}>
+            <Pressable style={styles.brandIconButton}>{renderUtilityHeaderIcon(styles)}</Pressable>
+          </View>
+        </View>
         {previewStates?.length ? (
           <View style={styles.topHeader}>
             <View style={styles.previewBar}>
