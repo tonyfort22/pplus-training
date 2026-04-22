@@ -1,74 +1,40 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SvgXml } from 'react-native-svg';
 import { logoPphtGreenSvg } from '../assets/logo-ppht-green.js';
+import { pphtBarbellSvg, pphtCalendarDotsSvg, pphtChartBarSvg, pphtUserSvg, pphtUsersSvg } from '../assets/ppht-icons.js';
 import { getAppScreenViewModel } from './shell-view-models.js';
 
+function tintSvg(svg, color) {
+  return svg.replace(/fill="#000000"/g, `fill="${color}"`)
+}
+
 function renderProfileHeaderIcon(styles) {
-  return (
-    <View style={styles.brandIconCanvas}>
-      <View style={styles.brandProfileHead} />
-      <View style={styles.brandProfileShoulders} />
-    </View>
-  )
+  return <SvgXml xml={tintSvg(pphtUserSvg, '#ffffff')} width="26" height="26" />
 }
 
 function renderUtilityHeaderIcon(styles) {
-  return (
-    <View style={styles.brandIconCanvas}>
-      <View style={styles.brandUtilityCard}>
-        <View style={styles.brandUtilityCardTop} />
-        <View style={styles.brandUtilityCardDotsRow}>
-          <View style={styles.brandUtilityCardDot} />
-          <View style={styles.brandUtilityCardDot} />
-          <View style={styles.brandUtilityCardDot} />
-        </View>
-        <View style={styles.brandUtilityCardDotsRow}>
-          <View style={styles.brandUtilityCardDot} />
-          <View style={styles.brandUtilityCardDot} />
-          <View style={styles.brandUtilityCardDot} />
-        </View>
-      </View>
-    </View>
-  )
+  return <SvgXml xml={tintSvg(pphtCalendarDotsSvg, '#ffffff')} width="24" height="24" />
 }
 
 function BottomNavIcon({ tabKey, styles, isActive }) {
-  const strokeStyle = [styles.bottomNavIconStroke, isActive && styles.bottomNavIconStrokeActive]
+  const iconColor = isActive ? '#ffffff' : '#f8fafc'
 
   if (tabKey === 'train') {
-    return (
-      <View style={styles.bottomNavIconCanvas}>
-        <View style={[styles.bottomNavIconBarbell, strokeStyle]} />
-        <View style={[styles.bottomNavIconWeightLeft, strokeStyle]} />
-        <View style={[styles.bottomNavIconWeightRight, strokeStyle]} />
-      </View>
-    )
+    return <SvgXml xml={tintSvg(pphtBarbellSvg, iconColor)} width="22" height="22" />
   }
 
   if (tabKey === 'progress') {
-    return (
-      <View style={styles.bottomNavIconCanvas}>
-        <View style={[styles.bottomNavIconChartBarShort, strokeStyle]} />
-        <View style={[styles.bottomNavIconChartBarMid, strokeStyle]} />
-        <View style={[styles.bottomNavIconChartBarTall, strokeStyle]} />
-      </View>
-    )
+    return <SvgXml xml={tintSvg(pphtChartBarSvg, iconColor)} width="22" height="22" />
   }
 
   if (tabKey === 'team') {
-    return (
-      <View style={styles.bottomNavIconCanvas}>
-        <View style={[styles.bottomNavIconHeadLeft, strokeStyle]} />
-        <View style={[styles.bottomNavIconHeadRight, strokeStyle]} />
-        <View style={[styles.bottomNavIconShoulders, strokeStyle]} />
-      </View>
-    )
+    return <SvgXml xml={tintSvg(pphtUsersSvg, iconColor)} width="22" height="22" />
   }
 
   return (
     <View style={styles.bottomNavIconCanvas}>
-      <View style={[styles.bottomNavIconChatBubble, strokeStyle]} />
-      <View style={[styles.bottomNavIconChatTail, strokeStyle]} />
+      <View style={[styles.bottomNavIconChatBubble, styles.bottomNavIconStroke, isActive && styles.bottomNavIconStrokeActive]} />
+      <View style={[styles.bottomNavIconChatTail, styles.bottomNavIconStroke, isActive && styles.bottomNavIconStrokeActive]} />
     </View>
   )
 }

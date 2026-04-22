@@ -16,17 +16,31 @@ test('mobile shell renders a branded top header before the content controls', ()
     resolve(process.cwd(), 'apps/mobile/src/assets/logo-ppht-green.js'),
     'utf8'
   )
+  const iconsSource = readFileSync(
+    resolve(process.cwd(), 'apps/mobile/src/assets/ppht-icons.js'),
+    'utf8'
+  )
 
   assert.match(shellSource, /from 'react-native-svg'/)
   assert.match(shellSource, /from '..\/assets\/logo-ppht-green\.js'/)
+  assert.match(shellSource, /from '..\/assets\/ppht-icons\.js'/)
   assert.match(shellSource, /<SvgXml xml=\{logoPphtGreenSvg\}/)
   assert.match(shellSource, /renderProfileHeaderIcon\(styles\)/)
   assert.match(shellSource, /renderUtilityHeaderIcon\(styles\)/)
+  assert.match(shellSource, /pphtUserSvg/)
+  assert.match(shellSource, /pphtCalendarDotsSvg/)
+  assert.match(shellSource, /pphtBarbellSvg/)
+  assert.match(shellSource, /pphtChartBarSvg/)
+  assert.match(shellSource, /pphtUsersSvg/)
   assert.match(shellSource, /style=\{styles\.brandHeader\}/)
   assert.match(shellSource, /style=\{styles\.topHeader\}/)
   assert.match(shellSource, /style=\{styles\.previewHeaderTopRow\}/)
   assert.match(rendererSource, /style=\{styles\.trainTabsPill\}/)
   assert.match(rendererSource, /styles\.trainTabButton[\s\S]*styles\.trainTabButtonActive/)
   assert.match(logoSource, /<svg width="92" height="30"/)
-  assert.match(logoSource, /#06D6A0/)
+  assert.match(iconsSource, /export const pphtUserSvg/)
+  assert.match(iconsSource, /export const pphtUsersSvg/)
+  assert.match(iconsSource, /export const pphtBarbellSvg/)
+  assert.match(iconsSource, /export const pphtChartBarSvg/)
+  assert.match(iconsSource, /export const pphtCalendarDotsSvg/)
 })
