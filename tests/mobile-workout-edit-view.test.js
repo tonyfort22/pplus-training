@@ -49,7 +49,7 @@ test('mobile workout edit view matches the edit reference structure and uses Nat
   assert.match(editViewSource, /text-\[#34D399\]/)
   assert.doesNotMatch(editViewSource, /text-\[#A7F3D0\]/)
 
-  assert.match(workoutSheetSource, /rounded-\[18px\] border border-\[#34D399\]\/70 bg-\[#0B5F53\] py-4/)
+  assert.match(workoutSheetSource, /rounded-\[18px\] border border-\[#34D399\]\/70 bg-\[#0A564B\] py-4/)
   assert.match(workoutSheetSource, /text-\[#34D399\]/)
 
   assert.match(modelSource, /getWorkoutEditViewModel/)
