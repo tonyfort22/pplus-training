@@ -69,37 +69,48 @@ export function renderGenericSections({ sections, styles, onActionTarget }) {
     if (section.type === 'calendar-strip') {
       return (
         <View key={section.key} style={styles.calendarStripCard}>
-          <View style={styles.calendarStripRow}>
+          <View className="flex-row items-start justify-between gap-0.5">
             {section.days.map((day) => {
+              const columnClassName = 'flex-1 items-center'
+              const weekdayClassName = [
+                'mb-2.5 text-[11px] font-bold uppercase tracking-[1px]',
+                day.isSelected ? 'text-slate-300' : 'text-slate-400',
+              ].join(' ')
+              const dayButtonClassName = [
+                'min-h-[42px] min-w-[40px] items-center justify-between rounded-[14px] px-2 pt-1 pb-1',
+                day.isSelected ? 'border-2 border-emerald-400 bg-slate-950' : 'border border-transparent bg-transparent',
+              ].join(' ')
+              const dayNumberClassName = [
+                'text-base font-medium',
+                day.isSelected ? 'font-bold text-emerald-400' : 'text-slate-50',
+              ].join(' ')
+              const indicatorClassName = day.indicatorTone === 'none'
+                ? 'h-1 w-3'
+                : [
+                    'h-1 w-3 rounded-full',
+                    day.indicatorTone === 'active' ? 'bg-emerald-400' : 'bg-slate-600',
+                  ].join(' ')
+
               const dayContent = (
                 <>
-                  <Text style={[styles.calendarDayWeekLabel, day.isSelected && styles.calendarDayWeekLabelSelected]}>{day.weekdayLabel}</Text>
-                  <View style={[styles.calendarDayButton, day.isSelected && styles.calendarDaySelected]}>
-                    <Text style={[styles.calendarDayNumber, day.isSelected && styles.calendarDayNumberSelected]}>{day.dateNumber}</Text>
-                    {day.indicatorTone !== 'none' ? (
-                      <View
-                        style={[
-                          styles.calendarIndicator,
-                          day.indicatorTone === 'active' ? styles.calendarIndicatorActive : styles.calendarIndicatorMuted,
-                        ]}
-                      />
-                    ) : (
-                      <View style={styles.calendarIndicatorSpacer} />
-                    )}
+                  <Text className={weekdayClassName}>{day.weekdayLabel}</Text>
+                  <View className={dayButtonClassName}>
+                    <Text className={dayNumberClassName}>{day.dateNumber}</Text>
+                    <View className={indicatorClassName} />
                   </View>
                 </>
               )
 
               if (!day.targetKey || !onActionTarget) {
                 return (
-                  <View key={day.id} style={styles.calendarDayColumn}>
+                  <View key={day.id} className={columnClassName}>
                     {dayContent}
                   </View>
                 )
               }
 
               return (
-                <Pressable key={day.id} style={styles.calendarDayColumn} onPress={() => onActionTarget(day.targetKey, day.actionPayload)}>
+                <Pressable key={day.id} className={columnClassName} onPress={() => onActionTarget(day.targetKey, day.actionPayload)}>
                   {dayContent}
                 </Pressable>
               )
