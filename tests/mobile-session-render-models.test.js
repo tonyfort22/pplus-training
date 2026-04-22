@@ -25,7 +25,9 @@ test('getSessionRenderModel normalizes session header and exercise list renderin
   assert.equal(model[0].nextUpLabel, 'Next up: Barbell Back Squat Set 1 • 120 lb x 8')
   assert.equal(model[1].type, 'session-exercise-card')
   assert.equal(model[1].exercises[0].sets[0].completionTone, 'ready')
+  assert.equal(model[1].exercises[0].sets[0].isCurrent, true)
   assert.equal(model[1].exercises[0].sets[1].completionTone, 'todo')
+  assert.equal(model[1].exercises[0].sets[1].isCurrent, false)
 })
 
 test('getSessionRenderModel marks completed set rows and includes rest timer cards', () => {
@@ -63,4 +65,6 @@ test('getSessionRenderModel marks completed set rows and includes rest timer car
   assert.equal(model[0].isCompleted, true)
   assert.equal(model[1].type, 'rest-timer-card')
   assert.equal(model[2].exercises[0].sets[0].completionTone, 'done')
+  assert.equal(model[2].exercises[0].sets[1].completionTone, 'ready')
+  assert.equal(model[2].exercises[0].sets[1].isCurrent, true)
 })

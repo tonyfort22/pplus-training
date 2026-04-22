@@ -163,7 +163,14 @@ export function renderSessionSections({
             </View>
 
             {exercise.sets.map((set) => (
-              <View key={set.key} style={[styles.setRow, set.isCompleted && styles.setRowCompleted]}>
+              <View
+                key={set.key}
+                style={[
+                  styles.setRow,
+                  set.isCurrent && styles.setRowCurrent,
+                  set.isCompleted && styles.setRowCompleted,
+                ]}
+              >
                 <Pressable style={styles.setCopy} onPress={() => onCompleteSet(exercise.id, set.id)}>
                   <Text style={styles.setTitle}>{set.title}</Text>
                   <Text style={styles.setMeta}>{set.prescribedLabel}</Text>

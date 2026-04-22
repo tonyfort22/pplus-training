@@ -264,6 +264,11 @@ export const styles = {
   setRowCompleted: {
     backgroundColor: '#064e3b',
   },
+  setRowCurrent: {
+    borderWidth: 1,
+    borderColor: '#f59e0b',
+    backgroundColor: '#3b2a12',
+  },
   setCopy: {
     flex: 1,
   },

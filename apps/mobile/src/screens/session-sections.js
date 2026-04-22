@@ -39,6 +39,7 @@ export function getSessionSections(activeSessionModel) {
         prescribedLabel: set.prescribedLabel,
         actualLabel: set.actualLabel,
         isCompleted: set.isCompleted,
+        isCurrent: set.completionLabel === 'Ready now',
         completionLabel: set.completionLabel,
         loadControl: { ...set.loadControl },
         repsControl: { ...set.repsControl },

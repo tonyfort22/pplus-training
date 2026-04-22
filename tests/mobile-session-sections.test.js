@@ -22,6 +22,8 @@ test('getSessionSections converts an in-progress active session model into rende
   assert.equal(sections[1].title, 'Active workout session')
   assert.equal(sections[1].exercises.length, 2)
   assert.equal(sections[1].exercises[0].sets[0].loadControl.value, 120)
+  assert.equal(sections[1].exercises[0].sets[0].isCurrent, true)
+  assert.equal(sections[1].exercises[0].sets[1].isCurrent, false)
 })
 
 test('getSessionSections includes a rest timer section when present', () => {
@@ -45,4 +47,5 @@ test('getSessionSections includes a rest timer section when present', () => {
   assert.equal(sections[1].title, 'Between completed sets')
   assert.equal(sections[1].dismissLabel, 'Dismiss')
   assert.equal(sections[2].exercises[0].sets[0].completionLabel, 'Done')
+  assert.equal(sections[2].exercises[0].sets[1].isCurrent, true)
 })

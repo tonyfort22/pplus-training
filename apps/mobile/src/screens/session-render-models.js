@@ -24,6 +24,7 @@ export function getSessionRenderModel({ sessionRenderPlan, sessionStatus }) {
         sets: exercise.sets.map((set) => ({
           ...set,
           completionTone: set.isCompleted ? 'done' : set.completionLabel === 'Ready now' ? 'ready' : 'todo',
+          isCurrent: Boolean(set.isCurrent),
         })),
       })),
     }
