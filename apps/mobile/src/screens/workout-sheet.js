@@ -61,7 +61,7 @@ function WorkoutSheetExerciseBlock({ exercise }) {
   )
 }
 
-function WorkoutSheetContent({ model, onClose, onStartWorkout }) {
+function WorkoutSheetContent({ model, onClose, onStartWorkout, onEditWorkout }) {
   const insets = useSafeAreaInsets()
 
   if (!model) return null
@@ -73,7 +73,7 @@ function WorkoutSheetContent({ model, onClose, onStartWorkout }) {
           <Pressable className="h-10 w-10 items-center justify-center rounded-[14px] border border-[#243041] bg-[#111827]" onPress={onClose}>
             <X color="#ffffff" size={20} strokeWidth={2.4} />
           </Pressable>
-          <Pressable onPress={() => {}}>
+          <Pressable onPress={onEditWorkout}>
             <Text className="text-[17px] font-semibold text-emerald-300">{model.editLabel || 'Edit'}</Text>
           </Pressable>
         </View>
@@ -110,11 +110,11 @@ function WorkoutSheetContent({ model, onClose, onStartWorkout }) {
   )
 }
 
-export function WorkoutSheet({ isVisible, model, onClose, onStartWorkout }) {
+export function WorkoutSheet({ isVisible, model, onClose, onStartWorkout, onEditWorkout }) {
   return (
     <Modal visible={isVisible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaProvider>
-        <WorkoutSheetContent model={model} onClose={onClose} onStartWorkout={onStartWorkout} />
+        <WorkoutSheetContent model={model} onClose={onClose} onStartWorkout={onStartWorkout} onEditWorkout={onEditWorkout} />
       </SafeAreaProvider>
     </Modal>
   )

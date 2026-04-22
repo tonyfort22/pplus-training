@@ -27,6 +27,7 @@ import { getTrainSurfaceModel } from './src/train/train-screen-models.js';
 import { getProgramSheetModel } from './src/train/program-sheet-models.js';
 import { getTrainingCalendarModel } from './src/train/training-calendar-models.js';
 import { getWorkoutSheetModel } from './src/train/workout-sheet-models.js';
+import { getWorkoutEditViewModel } from './src/train/workout-edit-view-models.js';
 import { getQuickActualUpdatePayload } from './src/train/session-actions.js';
 import { getPlaceholderSurfaceModel, getProgressSurfaceModel } from './src/progress/index.js';
 import { getAppRenderModel } from './src/screens/app-render-models.js';
@@ -38,6 +39,7 @@ import { renderGenericSections, renderSessionSections, renderTrainSurface } from
 import { renderProgramSheet } from './src/screens/program-sheet.js';
 import { TrainingCalendarSheet } from './src/screens/training-calendar-sheet.js';
 import { WorkoutSheet } from './src/screens/workout-sheet.js';
+import { WorkoutEditView } from './src/screens/workout-edit-view.js';
 import { renderAppShell } from './src/screens/shell-renderers.js';
 import { statusStyles, styles } from './src/screens/styles.js';
 import { getTabButtonModels } from './src/ui/tab-models.js';
@@ -51,6 +53,7 @@ export default function App() {
   const [isProgramSheetOpen, setIsProgramSheetOpen] = useState(false);
   const [isTrainingCalendarOpen, setIsTrainingCalendarOpen] = useState(false);
   const [isWorkoutSheetOpen, setIsWorkoutSheetOpen] = useState(false);
+  const [isWorkoutEditViewOpen, setIsWorkoutEditViewOpen] = useState(false);
   const [selectedCalendarDayId, setSelectedCalendarDayId] = useState(() => demoTrainState.program.selectedCalendarDayId);
   const bottomTabModels = useMemo(() => getTabButtonModels({ tabs: mobileTabs, activeKey: activeTab }), [activeTab]);
   const previewStateModels = useMemo(
@@ -67,6 +70,7 @@ export default function App() {
     setIsProgramSheetOpen(false)
     setIsTrainingCalendarOpen(false)
     setIsWorkoutSheetOpen(false)
+    setIsWorkoutEditViewOpen(false)
   }, [demoTrainState])
 
   const trainState = useMemo(() => ({ ...demoTrainState, session }), [demoTrainState, session]);
@@ -75,6 +79,7 @@ export default function App() {
   const todayModel = useMemo(() => getTodaySurfaceModel(trainState), [trainState]);
   const workoutModel = useMemo(() => getWorkoutSurfaceModel(trainState, selectedCalendarDayId), [trainState, selectedCalendarDayId]);
   const workoutSheetModel = useMemo(() => getWorkoutSheetModel({ workoutModel, session, selectedDayId: selectedCalendarDayId }), [selectedCalendarDayId, session, workoutModel]);
+  const workoutEditViewModel = useMemo(() => getWorkoutEditViewModel({ workoutSheetModel }), [workoutSheetModel]);
   const calendarModel = useMemo(() => getCalendarSurfaceModel(trainState, selectedCalendarDayId), [trainState, selectedCalendarDayId]);
   const teamPlaceholder = useMemo(
     () => getPlaceholderSurfaceModel('Team', 'This surface will hold coach context, team relationships, and collaboration later.'),
@@ -267,10 +272,20 @@ export default function App() {
           isVisible={isWorkoutSheetOpen}
           model={workoutSheetModel}
           onClose={() => setIsWorkoutSheetOpen(false)}
+          onEditWorkout={() => {
+            setIsWorkoutSheetOpen(false)
+            setIsWorkoutEditViewOpen(true)
+          }}
           onStartWorkout={() => {
             setIsWorkoutSheetOpen(false)
             setActiveTrainTab('session')
           }}
+        />
+        <WorkoutEditView
+          isVisible={isWorkoutEditViewOpen}
+          model={workoutEditViewModel}
+          onClose={() => setIsWorkoutEditViewOpen(false)}
+          onSave={() => setIsWorkoutEditViewOpen(false)}
         />
         <StatusBar style="light" />
       </SafeAreaView>

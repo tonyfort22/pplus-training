@@ -89,3 +89,14 @@ test('mobile app shell also owns a dedicated workout sheet state for workout pre
   assert.match(appSource, /const workoutSheetModel = useMemo\(/)
   assert.match(appSource, /<WorkoutSheet[\s\S]*isVisible=\{isWorkoutSheetOpen\}/)
 })
+
+test('mobile app shell also owns a dedicated workout edit view state', () => {
+  const appSource = readFileSync(
+    resolve(process.cwd(), 'apps/mobile/App.js'),
+    'utf8'
+  )
+
+  assert.match(appSource, /const \[isWorkoutEditViewOpen, setIsWorkoutEditViewOpen\] = useState\(false\);/)
+  assert.match(appSource, /const workoutEditViewModel = useMemo\(/)
+  assert.match(appSource, /<WorkoutEditView[\s\S]*isVisible=\{isWorkoutEditViewOpen\}/)
+})
