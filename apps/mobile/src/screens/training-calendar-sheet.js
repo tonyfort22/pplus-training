@@ -62,8 +62,9 @@ export function renderTrainingCalendarSheet({ isVisible, onClose, model }) {
       <SafeAreaView className="flex-1 bg-[#0b1220]">
         <View className="border-b border-[#243041] px-5 pb-4 pt-2">
           <View className="flex-row items-center justify-between">
-            <Pressable className="h-11 w-11 items-center justify-center rounded-[14px] border border-[#243041] bg-[#111827]" onPress={onClose}>
+            <Pressable className="flex-row items-center gap-2 rounded-[14px] border border-[#243041] bg-[#111827] px-3 py-2 focus:outline-none" onPress={onClose}>
               <ChevronLeft color="#ffffff" size={24} strokeWidth={2.4} />
+              <Text className="text-[16px] font-semibold text-white">Back</Text>
             </Pressable>
             <Text className="flex-1 text-center text-[19px] font-semibold text-white">Training Calendar</Text>
             <View className="w-11" />
