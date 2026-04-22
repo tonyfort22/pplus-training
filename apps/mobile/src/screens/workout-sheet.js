@@ -102,8 +102,8 @@ function WorkoutSheetContent({ model, onClose, onStartWorkout, onEditWorkout }) 
       </View>
 
       <View className="absolute inset-x-0 bottom-0 px-5 pb-6" style={{ paddingBottom: Math.max(insets.bottom, 24) }}>
-        <Pressable className="items-center justify-center rounded-[18px] bg-emerald-700 py-4" onPress={onStartWorkout}>
-          <Text className="text-[18px] font-semibold text-emerald-200">{model.ctaLabel || 'Start Workout'}</Text>
+        <Pressable className="items-center justify-center rounded-[18px] border border-[#34D399]/70 bg-[#052E2B]/90 py-4 shadow-2xl shadow-black/35" onPress={onStartWorkout}>
+          <Text className="text-[18px] font-semibold text-[#A7F3D0]">{model.ctaLabel || 'Start Workout'}</Text>
         </Pressable>
       </View>
     </SafeAreaView>

@@ -41,16 +41,16 @@ test('mobile workout edit view matches the edit reference structure and uses Nat
   assert.doesNotMatch(editViewSource, /<Text style=\{/) 
 
   assert.match(editViewSource, /rounded-\[20px\] border border-\[#243041\] bg-\[#111827\]/)
-  assert.match(editViewSource, /rounded-\[16px\] bg-emerald-700/)
+  assert.match(editViewSource, /rounded-\[16px\] border border-\[#34D399\]\/70 bg-\[#052E2B\]\/88/)
   assert.match(editViewSource, /border-b border-\[#1f2937\]\/80 py-3/)
-  assert.match(editViewSource, /absolute bottom-16 right-6 flex-row items-center overflow-hidden rounded-\[24px\] bg-emerald-700/)
+  assert.match(editViewSource, /absolute bottom-16 right-6 flex-row items-center overflow-hidden rounded-\[24px\] border border-\[#34D399\]\/70 bg-\[#052E2B\]\/92/)
   assert.match(editViewSource, /min-w-\[112px\] justify-center/)
   assert.match(editViewSource, /uppercase tracking-\[1\.6px\]/)
-  assert.match(editViewSource, /text-emerald-200/)
-  assert.match(editViewSource, /text-emerald-400/)
+  assert.match(editViewSource, /text-\[#A7F3D0\]/)
+  assert.match(editViewSource, /text-\[#06D6A0\]/)
 
-  assert.match(workoutSheetSource, /bg-emerald-700 py-4/)
-  assert.match(workoutSheetSource, /text-emerald-200/)
+  assert.match(workoutSheetSource, /rounded-\[18px\] border border-\[#34D399\]\/70 bg-\[#052E2B\]\/90 py-4/)
+  assert.match(workoutSheetSource, /text-\[#A7F3D0\]/)
 
   assert.match(modelSource, /getWorkoutEditViewModel/)
   assert.match(modelSource, /editLabel: 'Save'/)
