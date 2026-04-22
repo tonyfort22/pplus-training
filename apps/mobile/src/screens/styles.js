@@ -913,4 +913,204 @@ export const styles = {
     bottom: 3,
     right: 5,
   },
+  programSheetBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(2, 6, 23, 0.76)',
+    justifyContent: 'flex-end',
+  },
+  programSheetBackdropPressable: {
+    flex: 1,
+  },
+  programSheetPanel: {
+    backgroundColor: '#111827',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 28,
+    maxHeight: '88%',
+  },
+  programSheetScrollContent: {
+    paddingBottom: 32,
+    gap: 24,
+  },
+  programSheetHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  programSheetBackButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: '#1f2937',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  programSheetBackButtonText: {
+    color: '#ffffff',
+    fontSize: 28,
+    lineHeight: 30,
+    fontWeight: '500',
+  },
+  programSheetEditText: {
+    color: '#8b5cf6',
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  programSheetIntro: {
+    gap: 8,
+  },
+  programSheetTitle: {
+    color: '#ffffff',
+    fontSize: 28,
+    fontWeight: '700',
+  },
+  programSheetDateRange: {
+    color: '#94a3b8',
+    fontSize: 14,
+  },
+  programSheetProgressTrack: {
+    gap: 16,
+  },
+  programSheetProgressRow: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  programSheetProgressSegment: {
+    flex: 1,
+    height: 12,
+    borderRadius: 999,
+    backgroundColor: '#374151',
+  },
+  programSheetProgressSegmentComplete: {
+    backgroundColor: '#8b5cf6',
+  },
+  programSheetProgressSegmentCurrent: {
+    backgroundColor: '#7c3aed',
+  },
+  programSheetStatsList: {
+    gap: 10,
+  },
+  programSheetStatRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  programSheetStatText: {
+    color: '#cbd5e1',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  programSheetSection: {
+    gap: 14,
+  },
+  programSheetSectionTitle: {
+    color: '#cbd5e1',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  programSheetRoutineGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  programSheetRoutineChip: {
+    width: '48%',
+    minHeight: 52,
+    borderRadius: 18,
+    backgroundColor: '#1f2937',
+    borderWidth: 1,
+    borderColor: '#2c3645',
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+  },
+  programSheetRoutineChipText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  programSheetWeeksList: {
+    gap: 16,
+  },
+  programSheetWeekCard: {
+    backgroundColor: '#1f2937',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#2c3645',
+    padding: 18,
+    gap: 14,
+  },
+  programSheetWeekDateRange: {
+    color: '#94a3b8',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  programSheetWeekTitle: {
+    color: '#ffffff',
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  programSheetDividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  programSheetDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#334155',
+  },
+  programSheetDividerText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  programSheetWorkoutList: {
+    gap: 14,
+  },
+  programSheetWorkoutRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  programSheetWorkoutDay: {
+    width: 34,
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  programSheetWorkoutLabel: {
+    flex: 1,
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  programSheetWorkoutDuration: {
+    color: '#94a3b8',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  programSheetStatusBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  programSheetStatusBadgeDone: {
+    borderColor: '#22c55e',
+    backgroundColor: '#052e1a',
+  },
+  programSheetStatusBadgeMissed: {
+    borderColor: '#ef4444',
+    backgroundColor: '#3b0b12',
+  },
+  programSheetStatusBadgeMissedText: {
+    color: '#ef4444',
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 16,
+  },
 }

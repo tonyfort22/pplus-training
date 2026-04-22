@@ -36,3 +36,30 @@ test('mobile app shell no longer renders the preview state control in the top he
   assert.doesNotMatch(shellSource, /previewStates\?\.length/)
   assert.doesNotMatch(shellSource, /onPreviewStatePress/)
 })
+
+test('mobile app shell opens a dedicated program sheet from the program card instead of navigating away', () => {
+  const appSource = readFileSync(
+    resolve(process.cwd(), 'apps/mobile/App.js'),
+    'utf8'
+  )
+  const sheetSource = readFileSync(
+    resolve(process.cwd(), 'apps/mobile/src/screens/program-sheet.js'),
+    'utf8'
+  )
+  const iconsSource = readFileSync(
+    resolve(process.cwd(), 'apps/mobile/src/assets/ppht-icons.js'),
+    'utf8'
+  )
+
+  assert.match(appSource, /const \[isProgramSheetOpen, setIsProgramSheetOpen\] = useState\(false\);/)
+  assert.match(appSource, /const programSheetModel = useMemo\(/)
+  assert.match(appSource, /if \(targetKey === 'program'\) \{[\s\S]*setIsProgramSheetOpen\(true\)[\s\S]*return/)
+  assert.match(appSource, /renderProgramSheet\(\{[\s\S]*isVisible: isProgramSheetOpen/)
+  assert.match(sheetSource, /from 'react-native-svg'/)
+  assert.match(sheetSource, /Modal/)
+  assert.match(sheetSource, /pphtCheckSvg/)
+  assert.match(sheetSource, /pphtCalendarDotsSvg/)
+  assert.match(sheetSource, /pphtBarbellSvg/)
+  assert.doesNotMatch(sheetSource, /pphtChatTextSvg/)
+  assert.match(iconsSource, /export const pphtCheckSvg/)
+})

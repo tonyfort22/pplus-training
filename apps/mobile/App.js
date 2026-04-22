@@ -24,6 +24,7 @@ import { getCompletedSessionSurfaceModel } from './src/train/completed-session-m
 import { getDiscardedSessionSurfaceModel } from './src/train/discarded-session-models.js';
 import { getTrainRenderModel } from './src/train/train-render-models.js';
 import { getTrainSurfaceModel } from './src/train/train-screen-models.js';
+import { getProgramSheetModel } from './src/train/program-sheet-models.js';
 import { getQuickActualUpdatePayload } from './src/train/session-actions.js';
 import { getPlaceholderSurfaceModel, getProgressSurfaceModel } from './src/progress/index.js';
 import { getAppRenderModel } from './src/screens/app-render-models.js';
@@ -32,6 +33,7 @@ import { getGenericSectionRenderPlan, getSessionSectionRenderPlan } from './src/
 import { getSessionRenderModel } from './src/screens/session-render-models.js';
 import { getSessionSections } from './src/screens/session-sections.js';
 import { renderGenericSections, renderSessionSections, renderTrainSurface } from './src/screens/renderers.js';
+import { renderProgramSheet } from './src/screens/program-sheet.js';
 import { renderAppShell } from './src/screens/shell-renderers.js';
 import { statusStyles, styles } from './src/screens/styles.js';
 import { getTabButtonModels } from './src/ui/tab-models.js';
@@ -42,6 +44,7 @@ export default function App() {
   const demoTrainState = useMemo(() => createTrainDemoState({ previewState }), [previewState]);
   const [activeTab, setActiveTab] = useState('train');
   const [activeTrainTab, setActiveTrainTab] = useState('calendar');
+  const [isProgramSheetOpen, setIsProgramSheetOpen] = useState(false);
   const [selectedCalendarDayId, setSelectedCalendarDayId] = useState(() => demoTrainState.program.selectedCalendarDayId);
   const bottomTabModels = useMemo(() => getTabButtonModels({ tabs: mobileTabs, activeKey: activeTab }), [activeTab]);
   const previewStateModels = useMemo(
@@ -55,9 +58,11 @@ export default function App() {
     setSession(demoTrainState.session)
     setSelectedCalendarDayId(demoTrainState.program.selectedCalendarDayId)
     setActiveTrainTab('calendar')
+    setIsProgramSheetOpen(false)
   }, [demoTrainState])
 
   const trainState = useMemo(() => ({ ...demoTrainState, session }), [demoTrainState, session]);
+  const programSheetModel = useMemo(() => getProgramSheetModel(trainState), [trainState]);
   const todayModel = useMemo(() => getTodaySurfaceModel(trainState), [trainState]);
   const workoutModel = useMemo(() => getWorkoutSurfaceModel(trainState, selectedCalendarDayId), [trainState, selectedCalendarDayId]);
   const calendarModel = useMemo(() => getCalendarSurfaceModel(trainState, selectedCalendarDayId), [trainState, selectedCalendarDayId]);
@@ -188,6 +193,11 @@ export default function App() {
       setSelectedCalendarDayId(payload.selectedDayId)
     }
 
+    if (targetKey === 'program') {
+      setIsProgramSheetOpen(true)
+      return
+    }
+
     if (targetKey) {
       setActiveTrainTab(targetKey)
     }
@@ -225,6 +235,12 @@ export default function App() {
                 }),
             }),
           renderGenericSections: ({ sections, styles }) => renderGenericSections({ sections, styles }),
+        })}
+        {renderProgramSheet({
+          isVisible: isProgramSheetOpen,
+          onClose: () => setIsProgramSheetOpen(false),
+          model: programSheetModel,
+          styles,
         })}
         <StatusBar style="light" />
       </SafeAreaView>
