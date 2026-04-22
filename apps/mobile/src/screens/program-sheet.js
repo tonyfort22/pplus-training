@@ -1,126 +1,133 @@
+import { Check, CalendarDays, ChevronLeft, Dumbbell, X } from 'lucide-react-native';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
-import { SvgXml } from 'react-native-svg';
-import { pphtBarbellSvg, pphtCalendarDotsSvg, pphtCheckSvg } from '../assets/ppht-icons.js';
-
-function tintSvg(svg, color) {
-  return svg.replace(/fill="#000000"/g, `fill="${color}"`)
-}
 
 function ProgramSheetStatIcon({ icon }) {
   if (icon === 'calendar') {
-    return <SvgXml xml={tintSvg(pphtCalendarDotsSvg, '#8b5cf6')} width="18" height="18" />
+    return <CalendarDays color="#8b5cf6" size={18} strokeWidth={2.2} />
   }
 
-  return <SvgXml xml={tintSvg(pphtBarbellSvg, '#8b5cf6')} width="18" height="18" />
+  return <Dumbbell color="#8b5cf6" size={18} strokeWidth={2.2} />
 }
 
-function ProgramSheetStatusBadge({ status, styles }) {
+function ProgramSheetStatusBadge({ status }) {
   if (status === 'done') {
     return (
-      <View style={[styles.programSheetStatusBadge, styles.programSheetStatusBadgeDone]}>
-        <SvgXml xml={tintSvg(pphtCheckSvg, '#22c55e')} width="14" height="14" />
+      <View className="h-6 w-6 items-center justify-center rounded-lg border border-green-500 bg-[#052e1a]">
+        <Check color="#22c55e" size={14} strokeWidth={2.6} />
       </View>
     )
   }
 
   return (
-    <View style={[styles.programSheetStatusBadge, styles.programSheetStatusBadgeMissed]}>
-      <Text style={styles.programSheetStatusBadgeMissedText}>×</Text>
+    <View className="h-6 w-6 items-center justify-center rounded-lg border border-red-500 bg-[#3b0b12]">
+      <X color="#ef4444" size={14} strokeWidth={2.6} />
     </View>
   )
 }
 
-export function renderProgramSheet({ isVisible, onClose, model, styles }) {
+function ProgramSheetWeekCard({ week }) {
+  return (
+    <View key={week.id} className="gap-3.5 rounded-3xl border border-[#2c3645] bg-slate-800 p-[18px]">
+      <Text className="text-[13px] font-semibold text-slate-400">{week.dateRangeLabel}</Text>
+      <Text className="text-2xl font-bold text-white">{week.title}</Text>
+
+      <View className="flex-row items-center gap-3">
+        <View className="h-px flex-1 bg-slate-600" />
+        <Text className="text-xs font-semibold text-slate-400">{week.topDividerLabel}</Text>
+        <View className="h-px flex-1 bg-slate-600" />
+      </View>
+
+      <View className="gap-3.5">
+        {week.entries.map((entry) => (
+          <View key={entry.id} className="flex-row items-center gap-2.5">
+            <Text className="w-[34px] text-[15px] font-bold text-white">{entry.dayLabel}</Text>
+            <Text className="flex-1 text-[15px] font-semibold text-white">{entry.workoutLabel}</Text>
+            <Text className="text-[13px] font-semibold text-slate-400">{entry.durationLabel}</Text>
+            <ProgramSheetStatusBadge status={entry.status} />
+          </View>
+        ))}
+      </View>
+
+      <View className="flex-row items-center gap-3">
+        <View className="h-px flex-1 bg-slate-600" />
+        <Text className="text-xs font-semibold text-slate-400">{week.bottomDividerLabel}</Text>
+        <View className="h-px flex-1 bg-slate-600" />
+      </View>
+    </View>
+  )
+}
+
+export function renderProgramSheet({ isVisible, onClose, model }) {
   if (!model) {
     return null
   }
 
   return (
     <Modal visible={isVisible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.programSheetBackdrop}>
-        <Pressable style={styles.programSheetBackdropPressable} onPress={onClose} />
-        <View style={styles.programSheetPanel}>
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.programSheetScrollContent}>
-            <View style={styles.programSheetHeaderRow}>
-              <Pressable style={styles.programSheetBackButton} onPress={onClose}>
-                <Text style={styles.programSheetBackButtonText}>‹</Text>
+      <View className="flex-1 justify-end bg-[rgba(2,6,23,0.76)]">
+        <Pressable className="flex-1" onPress={onClose} />
+        <View className="max-h-[88%] rounded-t-[28px] bg-slate-900 px-5 pb-7 pt-[18px]">
+          <ScrollView
+            className="flex-grow-0"
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ gap: 24, paddingBottom: 32 }}
+          >
+            <View className="flex-row items-center justify-between">
+              <Pressable className="h-10 w-10 items-center justify-center rounded-[14px] bg-slate-800" onPress={onClose}>
+                <ChevronLeft color="#ffffff" size={24} strokeWidth={2.2} />
               </Pressable>
               <Pressable onPress={() => {}}>
-                <Text style={styles.programSheetEditText}>{model.editLabel}</Text>
+                <Text className="text-[17px] font-semibold text-violet-500">{model.editLabel}</Text>
               </Pressable>
             </View>
 
-            <View style={styles.programSheetIntro}>
-              <Text style={styles.programSheetTitle}>{model.title}</Text>
-              <Text style={styles.programSheetDateRange}>{model.dateRangeLabel}</Text>
+            <View className="gap-2">
+              <Text className="text-[28px] font-bold text-white">{model.title}</Text>
+              <Text className="text-sm text-slate-400">{model.dateRangeLabel}</Text>
             </View>
 
-            <View style={styles.programSheetProgressTrack}>
-              <View style={styles.programSheetProgressRow}>
-                {model.progressSegments.map((segment) => (
-                  <View
-                    key={segment.id}
-                    style={[
-                      styles.programSheetProgressSegment,
-                      segment.isComplete && styles.programSheetProgressSegmentComplete,
-                      segment.isCurrent && styles.programSheetProgressSegmentCurrent,
-                    ]}
-                  />
-                ))}
+            <View className="gap-4">
+              <View className="flex-row gap-1.5">
+                {model.progressSegments.map((segment) => {
+                  const stateClass = segment.isCurrent
+                    ? 'bg-violet-700'
+                    : segment.isComplete
+                      ? 'bg-violet-500'
+                      : 'bg-slate-700'
+
+                  return <View key={segment.id} className={`h-3 flex-1 rounded-full ${stateClass}`} />
+                })}
               </View>
             </View>
 
-            <View style={styles.programSheetStatsList}>
+            <View className="gap-2.5">
               {model.stats.map((stat) => (
-                <View key={stat.id} style={styles.programSheetStatRow}>
+                <View key={stat.id} className="flex-row items-center gap-2.5">
                   <ProgramSheetStatIcon icon={stat.icon} />
-                  <Text style={styles.programSheetStatText}>{stat.label}</Text>
+                  <Text className="text-sm font-semibold text-slate-300">{stat.label}</Text>
                 </View>
               ))}
             </View>
 
-            <View style={styles.programSheetSection}>
-              <Text style={styles.programSheetSectionTitle}>Routines</Text>
-              <View style={styles.programSheetRoutineGrid}>
+            <View className="gap-3.5">
+              <Text className="text-lg font-semibold text-slate-300">Routines</Text>
+              <View className="flex-row flex-wrap gap-3">
                 {model.routines.map((routine) => (
-                  <View key={routine.id} style={styles.programSheetRoutineChip}>
-                    <Text style={styles.programSheetRoutineChipText}>{routine.label}</Text>
+                  <View
+                    key={routine.id}
+                    className="min-h-[52px] w-[48%] justify-center rounded-[18px] border border-[#2c3645] bg-slate-800 px-4"
+                  >
+                    <Text className="text-[15px] font-semibold text-white">{routine.label}</Text>
                   </View>
                 ))}
               </View>
             </View>
 
-            <View style={styles.programSheetSection}>
-              <Text style={styles.programSheetSectionTitle}>Schedule</Text>
-              <View style={styles.programSheetWeeksList}>
+            <View className="gap-3.5">
+              <Text className="text-lg font-semibold text-slate-300">Schedule</Text>
+              <View className="gap-4">
                 {model.weeks.map((week) => (
-                  <View key={week.id} style={styles.programSheetWeekCard}>
-                    <Text style={styles.programSheetWeekDateRange}>{week.dateRangeLabel}</Text>
-                    <Text style={styles.programSheetWeekTitle}>{week.title}</Text>
-
-                    <View style={styles.programSheetDividerRow}>
-                      <View style={styles.programSheetDividerLine} />
-                      <Text style={styles.programSheetDividerText}>{week.topDividerLabel}</Text>
-                      <View style={styles.programSheetDividerLine} />
-                    </View>
-
-                    <View style={styles.programSheetWorkoutList}>
-                      {week.entries.map((entry) => (
-                        <View key={entry.id} style={styles.programSheetWorkoutRow}>
-                          <Text style={styles.programSheetWorkoutDay}>{entry.dayLabel}</Text>
-                          <Text style={styles.programSheetWorkoutLabel}>{entry.workoutLabel}</Text>
-                          <Text style={styles.programSheetWorkoutDuration}>{entry.durationLabel}</Text>
-                          <ProgramSheetStatusBadge status={entry.status} styles={styles} />
-                        </View>
-                      ))}
-                    </View>
-
-                    <View style={styles.programSheetDividerRow}>
-                      <View style={styles.programSheetDividerLine} />
-                      <Text style={styles.programSheetDividerText}>{week.bottomDividerLabel}</Text>
-                      <View style={styles.programSheetDividerLine} />
-                    </View>
-                  </View>
+                  <ProgramSheetWeekCard key={week.id} week={week} />
                 ))}
               </View>
             </View>
