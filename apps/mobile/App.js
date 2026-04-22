@@ -18,6 +18,7 @@ import {
 } from './src/train/index.js';
 import { getActiveSessionSurfaceModel } from './src/train/active-session-models.js';
 import { getTrainSurfaceModel } from './src/train/train-screen-models.js';
+import { getQuickActualUpdatePayload } from './src/train/session-actions.js';
 import { getPlaceholderSurfaceModel, getProgressSurfaceModel } from './src/progress/index.js';
 import { getPlaceholderSections, getProgressSections } from './src/screens/surface-sections.js';
 import { getSessionSections } from './src/screens/session-sections.js';
@@ -102,17 +103,16 @@ export default function App() {
   function handleQuickActualUpdate(exerciseId, setId, field, delta) {
     if (session.status === 'completed') return;
 
-    const currentSet = findSessionSet(session, exerciseId, setId);
-    if (!currentSet) return;
+    const payload = getQuickActualUpdatePayload({
+      session,
+      exerciseId,
+      setId,
+      field,
+      delta,
+    });
+    if (!payload) return;
 
-    const currentValue = Number(currentSet[field] ?? currentSet[`prescribed${field.slice(6)}`] ?? 0);
-    const nextValue = Math.max(0, currentValue + delta);
-
-    setSession((currentSession) =>
-      updateSessionSetActuals(currentSession, exerciseId, setId, {
-        [field]: nextValue
-      })
-    );
+    setSession((currentSession) => updateSessionSetActuals(currentSession, exerciseId, setId, payload));
   }
 
   function renderSessionSections(sections) {
