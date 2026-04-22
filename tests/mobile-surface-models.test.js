@@ -159,9 +159,9 @@ test('getCalendarDetailCardModel creates the weekly schedule copy and rows', () 
   assert.equal(model.title, 'Weekly schedule')
   assert.equal(model.actionLabel, 'Open Tue workout')
   assert.equal(model.rows.length, 7)
-  assert.equal(model.rows[1].title, 'Tue • Lower A')
-  assert.match(model.rows[1].body, /Today/)
-  assert.equal(model.rows[1].isSelected, true)
+  assert.equal(model.rows[2].title, 'Tue • Lower A')
+  assert.match(model.rows[2].body, /Today/)
+  assert.equal(model.rows[2].isSelected, true)
 })
 
 test('getCalendarSurfaceModel tracks the selected day and where it should route next', () => {
@@ -183,8 +183,8 @@ test('getCalendarSurfaceModel tracks the selected day and where it should route 
   assert.match(calendarModel.selectedDayPlan.rows[1].body, /2 exercises, 8 total sets/)
   assert.equal(calendarModel.selectedDayPlan.rows[2].title, 'Session cue')
   assert.match(calendarModel.selectedDayPlan.rows[2].body, /Preview the plan here/)
-  assert.equal(calendarModel.days[3].targetKey, 'workout')
-  assert.equal(calendarModel.days[3].actionPayload.selectedDayId, 'thu')
+  assert.equal(calendarModel.days[4].targetKey, 'workout')
+  assert.equal(calendarModel.days[4].actionPayload.selectedDayId, 'thu')
 })
 
 test('getCalendarSurfaceModel routes today directly to session once the workout has started', () => {
@@ -201,7 +201,7 @@ test('getCalendarSurfaceModel routes today directly to session once the workout 
 
   assert.equal(calendarModel.actionLabel, 'Resume Tue session')
   assert.equal(calendarModel.actionTargetKey, 'session')
-  assert.equal(calendarModel.days[1].targetKey, 'session')
+  assert.equal(calendarModel.days[2].targetKey, 'session')
 })
 
 test('getCalendarSurfaceModel routes completed today to the session summary', () => {
@@ -214,7 +214,7 @@ test('getCalendarSurfaceModel routes completed today to the session summary', ()
 
   assert.equal(calendarModel.actionLabel, 'View Tue summary')
   assert.equal(calendarModel.actionTargetKey, 'session')
-  assert.equal(calendarModel.days[1].targetKey, 'session')
+  assert.equal(calendarModel.days[2].targetKey, 'session')
 })
 
 test('getCalendarSurfaceModel builds calendar-strip metadata for weekday labels, dates, and indicators', () => {
@@ -226,15 +226,15 @@ test('getCalendarSurfaceModel builds calendar-strip metadata for weekday labels,
   const calendarModel = getCalendarSurfaceModel(trainState, 'wed')
 
   assert.equal(calendarModel.days.length, 7)
-  assert.equal(calendarModel.days[0].weekdayLabel, 'MON')
-  assert.equal(calendarModel.days[0].dateNumber, '20')
-  assert.equal(calendarModel.days[0].indicatorTone, 'muted')
-  assert.equal(calendarModel.days[1].weekdayLabel, 'TUE')
-  assert.equal(calendarModel.days[1].indicatorTone, 'active')
-  assert.equal(calendarModel.days[2].weekdayLabel, 'WED')
-  assert.equal(calendarModel.days[2].dateNumber, '22')
-  assert.equal(calendarModel.days[2].isSelected, true)
-  assert.equal(calendarModel.days[2].indicatorTone, 'active')
-  assert.equal(calendarModel.days[6].weekdayLabel, 'SUN')
+  assert.equal(calendarModel.days[0].weekdayLabel, 'SUN')
+  assert.equal(calendarModel.days[0].dateNumber, '19')
+  assert.equal(calendarModel.days[0].indicatorTone, 'none')
+  assert.equal(calendarModel.days[1].weekdayLabel, 'MON')
+  assert.equal(calendarModel.days[1].indicatorTone, 'muted')
+  assert.equal(calendarModel.days[3].weekdayLabel, 'WED')
+  assert.equal(calendarModel.days[3].dateNumber, '22')
+  assert.equal(calendarModel.days[3].isSelected, true)
+  assert.equal(calendarModel.days[3].indicatorTone, 'active')
+  assert.equal(calendarModel.days[6].weekdayLabel, 'SAT')
   assert.equal(calendarModel.days[6].indicatorTone, 'none')
 })

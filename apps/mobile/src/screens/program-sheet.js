@@ -110,7 +110,7 @@ export function renderProgramSheet({ isVisible, onClose, model }) {
             </View>
 
             <View className="gap-3.5">
-              <Text className="text-lg font-semibold text-slate-300">Routines</Text>
+              <Text className="text-lg font-semibold text-slate-300">Workouts</Text>
               <View className="flex-row flex-wrap gap-3">
                 {model.routines.map((routine) => (
                   <View

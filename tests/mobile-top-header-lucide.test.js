@@ -7,7 +7,7 @@ test('mobile top header keeps the PPLUS logo but uses Lucide user and calendar i
   const shellSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/shell-renderers.js'), 'utf8')
 
   assert.match(shellSource, /from 'lucide-react-native'/)
-  assert.match(shellSource, /CircleUserRound/)
+  assert.match(shellSource, /User/)
   assert.match(shellSource, /CalendarDays/)
   assert.match(shellSource, /logoPphtGreenSvg/)
   assert.match(shellSource, /<SvgXml xml=\{logoPphtGreenSvg\}/)

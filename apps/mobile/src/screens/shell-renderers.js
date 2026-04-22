@@ -1,4 +1,4 @@
-import { BarChart3, CalendarDays, CircleUserRound, Dumbbell, MessageCircle, Users } from 'lucide-react-native';
+import { BarChart3, CalendarDays, Dumbbell, MessageCircle, User, Users } from 'lucide-react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SvgXml } from 'react-native-svg';
 import { logoPphtGreenSvg } from '../assets/logo-ppht-green.js';
@@ -9,7 +9,7 @@ function tintSvg(svg, color) {
 }
 
 function renderProfileHeaderIcon(styles) {
-  return <CircleUserRound color="#ffffff" size={26} strokeWidth={2.1} />
+  return <User color="#ffffff" size={24} strokeWidth={2.2} />
 }
 
 function renderUtilityHeaderIcon(styles) {

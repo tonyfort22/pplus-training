@@ -27,7 +27,7 @@ test('mobile shell renders a branded top header without the old preview-state co
   assert.match(shellSource, /<SvgXml xml=\{logoPphtGreenSvg\}/)
   assert.match(shellSource, /renderProfileHeaderIcon\(styles\)/)
   assert.match(shellSource, /renderUtilityHeaderIcon\(styles\)/)
-  assert.match(shellSource, /CircleUserRound/)
+  assert.match(shellSource, /User/)
   assert.match(shellSource, /CalendarDays/)
   assert.match(shellSource, /style=\{styles\.brandHeader\}/)
   assert.doesNotMatch(shellSource, /pphtUserSvg/)

@@ -396,6 +396,14 @@ export function getWorkoutPreviewHighlights({ workoutPreview, selectedDay, canOp
 function createDemoCalendarWeek(programWorkout) {
   return [
     {
+      id: 'sun',
+      dayLabel: 'Sun',
+      dateLabel: 'Apr 19',
+      workoutName: 'Off',
+      status: 'off',
+      workoutPreview: null,
+    },
+    {
       id: 'mon',
       dayLabel: 'Mon',
       dateLabel: 'Apr 20',
@@ -472,14 +480,6 @@ function createDemoCalendarWeek(programWorkout) {
           { id: 'speed-sprint', name: '10m Sprint', setCount: 6, defaultRestSeconds: 75 },
         ],
       }),
-    },
-    {
-      id: 'sun',
-      dayLabel: 'Sun',
-      dateLabel: 'Apr 26',
-      workoutName: 'Off',
-      status: 'off',
-      workoutPreview: null,
     },
   ]
 }
