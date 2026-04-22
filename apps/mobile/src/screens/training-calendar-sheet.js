@@ -33,9 +33,9 @@ function TrainingCalendarStatusBadge({ status }) {
 function TrainingCalendarDayRow({ day }) {
   return (
     <View className="flex-row items-center gap-4 py-2.5">
-      <View className="w-[52px] items-start">
+      <View className="w-[52px] items-center">
         <Text className="text-[12px] font-semibold uppercase tracking-[1px] text-slate-400">{day.dayLabel}</Text>
-        <Text className="text-[20px] font-semibold text-white">{day.dateNumber}</Text>
+        <Text className="text-center text-[20px] font-semibold text-white">{day.dateNumber}</Text>
       </View>
 
       <View className="flex-1">
@@ -63,7 +63,7 @@ function TrainingCalendarSheetContent({ onClose, model }) {
     <SafeAreaView className="flex-1 bg-[#0b1220]">
       <View className="border-b border-[#243041] px-5 pb-4" style={{ paddingTop: Math.max(insets.top, 16) }}>
         <View className="flex-row items-center justify-between">
-          <Pressable className="flex-row items-center gap-2 rounded-[14px] border border-[#243041] bg-[#111827] px-3 py-2 focus:outline-none" onPress={onClose}>
+          <Pressable className="w-[84px] flex-row items-center justify-start gap-2 rounded-[14px] border border-[#243041] bg-[#111827] px-3 py-2 focus:outline-none" onPress={onClose}>
             <ChevronLeft color="#ffffff" size={24} strokeWidth={2.4} />
             <Text className="text-[16px] font-semibold text-white">Back</Text>
           </Pressable>
