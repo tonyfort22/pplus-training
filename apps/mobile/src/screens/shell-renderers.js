@@ -1,7 +1,8 @@
+import { BarChart3, Dumbbell, MessageCircle, Users } from 'lucide-react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SvgXml } from 'react-native-svg';
 import { logoPphtGreenSvg } from '../assets/logo-ppht-green.js';
-import { pphtBarbellSvg, pphtCalendarDotsSvg, pphtChartBarSvg, pphtChatTextSvg, pphtUserSvg, pphtUsersSvg } from '../assets/ppht-icons.js';
+import { pphtCalendarDotsSvg, pphtUserSvg } from '../assets/ppht-icons.js';
 import { getAppScreenViewModel } from './shell-view-models.js';
 
 function tintSvg(svg, color) {
@@ -20,18 +21,18 @@ function BottomNavIcon({ tabKey, styles, isActive }) {
   const iconColor = isActive ? '#ffffff' : '#f8fafc'
 
   if (tabKey === 'train') {
-    return <SvgXml xml={tintSvg(pphtBarbellSvg, iconColor)} width="22" height="22" />
+    return <Dumbbell color={iconColor} size={22} strokeWidth={2.2} />
   }
 
   if (tabKey === 'progress') {
-    return <SvgXml xml={tintSvg(pphtChartBarSvg, iconColor)} width="22" height="22" />
+    return <BarChart3 color={iconColor} size={22} strokeWidth={2.2} />
   }
 
   if (tabKey === 'team') {
-    return <SvgXml xml={tintSvg(pphtUsersSvg, iconColor)} width="22" height="22" />
+    return <Users color={iconColor} size={22} strokeWidth={2.2} />
   }
 
-  return <SvgXml xml={tintSvg(pphtChatTextSvg, iconColor)} width="22" height="22" />
+  return <MessageCircle color={iconColor} size={22} strokeWidth={2.2} />
 }
 
 export function renderAppScreen({ screen, trainRenderModel, sessionRenderModel, styles, renderTrainSurface, renderGenericSections }) {
