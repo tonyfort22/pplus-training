@@ -26,6 +26,99 @@ export function formatClock(totalSeconds) {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
+function toIsoString(value) {
+  if (!value) return new Date().toISOString();
+  return typeof value === 'string' ? value : new Date(value).toISOString();
+}
+
+function buildSessionCounts(session) {
+  const exercises = session.exercises || [];
+  const totalExercisesCount = exercises.length;
+  const totalSetsCount = exercises.reduce((sum, exercise) => sum + (exercise.sets?.length || 0), 0);
+  const completedSetsCount = exercises.reduce(
+    (sum, exercise) => sum + (exercise.sets || []).filter((set) => set.isCompleted).length,
+    0
+  );
+  const completedExercisesCount = exercises.filter((exercise) => {
+    const sets = exercise.sets || [];
+    return sets.length > 0 && sets.every((set) => set.isCompleted);
+  }).length;
+
+  return {
+    totalExercisesCount,
+    completedExercisesCount,
+    totalSetsCount,
+    completedSetsCount,
+  };
+}
+
+function applySessionProgress(session) {
+  return {
+    ...session,
+    ...buildSessionCounts(session),
+  };
+}
+
+export function createWorkoutSession({ programWorkout, startedAt } = {}) {
+  const safeWorkout = programWorkout || {};
+  const exercises = (safeWorkout.exercises || []).map((exercise) => ({
+    id: exercise.id,
+    programWorkoutExerciseId: exercise.id,
+    exerciseId: exercise.exerciseId,
+    nameSnapshot: exercise.nameSnapshot || exercise.name || '',
+    sortOrder: exercise.sortOrder || 0,
+    notes: exercise.notes || '',
+    defaultRestSeconds: exercise.defaultRestSeconds ?? 0,
+    status: 'not_started',
+    sets: (exercise.sets || []).map((set) => ({
+      id: set.id,
+      programWorkoutSetId: set.id,
+      sortOrder: set.sortOrder || 0,
+      setType: set.setType || 'straight',
+      prescribedReps: set.targetReps ?? null,
+      prescribedLoad: set.targetLoad ?? null,
+      prescribedLoadUnit: set.targetLoadUnit ?? null,
+      prescribedDurationSeconds: set.targetDurationSeconds ?? null,
+      prescribedDistance: set.targetDistance ?? null,
+      prescribedDistanceUnit: set.targetDistanceUnit ?? null,
+      prescribedRpe: set.targetRpe ?? null,
+      prescribedRir: set.targetRir ?? null,
+      prescribedRestSeconds: set.targetRestSeconds ?? exercise.defaultRestSeconds ?? null,
+      actualReps: null,
+      actualLoad: null,
+      actualLoadUnit: null,
+      actualDurationSeconds: null,
+      actualDistance: null,
+      actualDistanceUnit: null,
+      actualRpe: null,
+      actualRir: null,
+      actualRestSeconds: null,
+      completedAt: null,
+      isCompleted: false,
+      notes: set.notes || '',
+    })),
+  }));
+
+  return applySessionProgress({
+    id: safeWorkout.id,
+    athleteId: safeWorkout.athleteId ?? null,
+    coachId: safeWorkout.coachId ?? null,
+    programId: safeWorkout.programId ?? null,
+    programDayId: safeWorkout.programDayId ?? null,
+    programWorkoutId: safeWorkout.id ?? null,
+    workoutTemplateId: safeWorkout.workoutTemplateId ?? null,
+    nameSnapshot: safeWorkout.nameSnapshot || safeWorkout.name || '',
+    status: 'in_progress',
+    startedAt: toIsoString(startedAt),
+    completedAt: null,
+    elapsedSeconds: 0,
+    notes: '',
+    perceivedDifficulty: null,
+    activeRestTimer: null,
+    exercises,
+  });
+}
+
 export function createWorkoutSessionFromTemplate(workoutTemplate) {
   return {
     id: workoutTemplate.id,
@@ -145,32 +238,41 @@ export function updateExerciseStatuses(session) {
 }
 
 export function completeWorkoutSessionSet(session, exerciseId, setId) {
+  return completeWorkoutSet({ session, exerciseId, setId });
+}
+
+export function completeWorkoutSet({ session, exerciseId, setId, actuals = {}, completedAt } = {}) {
   const updatedSession = {
     ...session,
     activeRestTimer: null,
-    exercises: session.exercises.map((exercise) => {
+    exercises: (session.exercises || []).map((exercise) => {
       if (exercise.id !== exerciseId) return exercise;
 
       return {
         ...exercise,
-        sets: exercise.sets.map((set) => {
+        sets: (exercise.sets || []).map((set) => {
           if (set.id !== setId || set.isCompleted) return set;
-          return completeSessionSet(set);
+          const withActuals = {
+            ...set,
+            ...actuals,
+            completedAt: completedAt ? toIsoString(completedAt) : set.completedAt,
+          };
+          return completeSessionSet(withActuals);
         })
       };
     })
   };
 
-  const sessionWithStatuses = updateExerciseStatuses(updatedSession);
+  const sessionWithStatuses = applySessionProgress(updateExerciseStatuses(updatedSession));
   const completedSet = findSessionSet(sessionWithStatuses, exerciseId, setId);
 
   if (!completedSet || !completedSet.isCompleted) return sessionWithStatuses;
 
-  return startRestTimer(sessionWithStatuses, {
+  return applySessionProgress(startRestTimer(sessionWithStatuses, {
     exerciseId,
     setId,
     remainingSeconds: completedSet.actualRestSeconds ?? completedSet.prescribedRestSeconds ?? 0
-  });
+  }));
 }
 
 export function startRestTimer(session, timerInput) {
@@ -212,11 +314,17 @@ export function findSessionSet(session, exerciseId, setId) {
   return exercise.sets.find((set) => set.id === setId) || null;
 }
 
-export function finishWorkoutSession(session) {
-  return {
+export function finishWorkoutSession(sessionOrInput) {
+  const session = sessionOrInput?.session || sessionOrInput;
+  const completedAt = sessionOrInput?.completedAt;
+  const elapsedSeconds = sessionOrInput?.elapsedSeconds;
+  const nextSession = applySessionProgress(updateExerciseStatuses({
     ...session,
     status: 'completed',
-    completedAt: new Date().toISOString(),
+    completedAt: toIsoString(completedAt),
+    elapsedSeconds: elapsedSeconds ?? session.elapsedSeconds ?? 0,
     activeRestTimer: null
-  };
+  }));
+
+  return nextSession;
 }
