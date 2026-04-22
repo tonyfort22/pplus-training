@@ -39,6 +39,12 @@ export const styles = {
     alignItems: 'center',
     justifyContent: 'center',
   },
+  brandLogoWrap: {
+    width: 110,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   brandWordmark: {
     color: '#5b6cff',
     fontSize: 28,

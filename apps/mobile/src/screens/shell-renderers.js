@@ -1,4 +1,6 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { SvgXml } from 'react-native-svg';
+import { logoPphtGreenSvg } from '../assets/logo-ppht-green.js';
 import { getAppScreenViewModel } from './shell-view-models.js';
 
 function renderProfileHeaderIcon(styles) {
@@ -135,7 +137,9 @@ export function renderAppShell({
             <Pressable style={styles.brandIconButton}>{renderProfileHeaderIcon(styles)}</Pressable>
           </View>
           <View style={styles.brandHeaderCenter}>
-            <Text style={styles.brandWordmark}>PPLUS</Text>
+            <View style={styles.brandLogoWrap}>
+              <SvgXml xml={logoPphtGreenSvg} width="110" height="36" />
+            </View>
           </View>
           <View style={[styles.brandHeaderSide, styles.brandHeaderSideRight]}>
             <Pressable style={styles.brandIconButton}>{renderUtilityHeaderIcon(styles)}</Pressable>
