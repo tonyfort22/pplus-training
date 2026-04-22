@@ -1,6 +1,6 @@
 import { Check, ChevronLeft, RotateCcw, X } from 'lucide-react-native';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function WeekBadge({ label }) {
   return (
@@ -53,6 +53,8 @@ function TrainingCalendarDayRow({ day }) {
 }
 
 export function renderTrainingCalendarSheet({ isVisible, onClose, model }) {
+  const insets = useSafeAreaInsets()
+
   if (!model) {
     return null
   }
@@ -60,7 +62,7 @@ export function renderTrainingCalendarSheet({ isVisible, onClose, model }) {
   return (
     <Modal visible={isVisible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaView className="flex-1 bg-[#0b1220]">
-        <View className="border-b border-[#243041] px-5 pb-4 pt-2">
+        <View className="border-b border-[#243041] px-5 pb-4" style={{ paddingTop: Math.max(insets.top, 16) }}>
           <View className="flex-row items-center justify-between">
             <Pressable className="flex-row items-center gap-2 rounded-[14px] border border-[#243041] bg-[#111827] px-3 py-2 focus:outline-none" onPress={onClose}>
               <ChevronLeft color="#ffffff" size={24} strokeWidth={2.4} />
