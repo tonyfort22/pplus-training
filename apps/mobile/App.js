@@ -17,6 +17,7 @@ import {
   trainTabs,
 } from './src/train/index.js';
 import { getActiveSessionSurfaceModel } from './src/train/active-session-models.js';
+import { getTrainSurfaceModel } from './src/train/train-screen-models.js';
 import { getPlaceholderSurfaceModel, getProgressSurfaceModel } from './src/progress/index.js';
 
 function SurfaceCard({ title, body, actionLabel, onAction }) {
@@ -67,6 +68,17 @@ export default function App() {
   const activeSessionModel = useMemo(
     () => getActiveSessionSurfaceModel(session, elapsedSeconds, selectedSet),
     [elapsedSeconds, selectedSet, session]
+  );
+  const trainSurfaceModel = useMemo(
+    () =>
+      getTrainSurfaceModel({
+        trainTabs,
+        activeTrainTab,
+        todayModel,
+        workoutModel,
+        activeSessionModel,
+      }),
+    [activeSessionModel, activeTrainTab, todayModel, workoutModel]
   );
 
   function handleCompleteSet(exerciseId, setId) {
@@ -208,58 +220,55 @@ export default function App() {
     return (
       <>
         <View style={styles.trainTabsRow}>
-          {trainTabs.map((tab) => (
+          {trainSurfaceModel.tabs.map((tab) => (
             <Pressable
               key={tab.key}
-              style={[styles.trainTabButton, activeTrainTab === tab.key && styles.trainTabButtonActive]}
+              style={[styles.trainTabButton, tab.isActive && styles.trainTabButtonActive]}
               onPress={() => setActiveTrainTab(tab.key)}
             >
-              <Text style={[styles.trainTabLabel, activeTrainTab === tab.key && styles.trainTabLabelActive]}>{tab.label}</Text>
+              <Text style={[styles.trainTabLabel, tab.isActive && styles.trainTabLabelActive]}>{tab.label}</Text>
             </Pressable>
           ))}
         </View>
 
-        {activeTrainTab === 'today' && (
+        {trainSurfaceModel.surface.type === 'today' && (
           <>
-            <SurfaceCard
-              title={todayModel.heroTitle}
-              body={`You have ${todayModel.workoutName} ${todayModel.scheduledLabel.toLowerCase()}. ${todayModel.quickSummary}`}
-              actionLabel={todayModel.primaryActionLabel}
-              onAction={() => setActiveTrainTab('workout')}
-            />
-            <SurfaceCard
-              title="Program snapshot"
-              body={`${todayModel.programName}, ${todayModel.programWeekLabel}. ${todayModel.completionLabel}.`}
-              actionLabel="View program"
-              onAction={() => setActiveTrainTab('program')}
-            />
+            {trainSurfaceModel.surface.cards.map((card) => (
+              <SurfaceCard
+                key={card.title}
+                title={card.title}
+                body={card.body}
+                actionLabel={card.actionLabel}
+                onAction={() => setActiveTrainTab(card.targetTab)}
+              />
+            ))}
           </>
         )}
 
-        {activeTrainTab === 'program' && (
+        {trainSurfaceModel.surface.type === 'program' && (
           <SurfaceCard
-            title="Program overview"
-            body={`${todayModel.programName} is currently in ${todayModel.programWeekLabel}. ${todayModel.completionLabel}. This area should hold the weekly structure, training calendar, and scheduled workout progression.`}
-            actionLabel="See today’s workout"
-            onAction={() => setActiveTrainTab('workout')}
+            title={trainSurfaceModel.surface.card.title}
+            body={trainSurfaceModel.surface.card.body}
+            actionLabel={trainSurfaceModel.surface.card.actionLabel}
+            onAction={() => setActiveTrainTab(trainSurfaceModel.surface.card.targetTab)}
           />
         )}
 
-        {activeTrainTab === 'workout' && (
+        {trainSurfaceModel.surface.type === 'workout' && (
           <>
             <SurfaceCard
-              title="Workout detail"
-              body={`${workoutModel.workoutName} contains ${workoutModel.exerciseCount} exercises in this scaffold, with prescribed sets, loads, reps, and planned rest. This is the preview before starting or continuing the session.`}
-              actionLabel="Go to session"
-              onAction={() => setActiveTrainTab('session')}
+              title={trainSurfaceModel.surface.detailCard.title}
+              body={trainSurfaceModel.surface.detailCard.body}
+              actionLabel={trainSurfaceModel.surface.detailCard.actionLabel}
+              onAction={() => setActiveTrainTab(trainSurfaceModel.surface.detailCard.targetTab)}
             />
             <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Planned exercises</Text>
-              {workoutModel.exercises.map((exercise) => (
+              <Text style={styles.sectionTitle}>{trainSurfaceModel.surface.exerciseSectionTitle}</Text>
+              {trainSurfaceModel.surface.exercises.map((exercise) => (
                 <View key={exercise.id} style={styles.listRow}>
                   <View>
                     <Text style={styles.listRowTitle}>{exercise.name}</Text>
-                    <Text style={styles.listRowBody}>{exercise.setCount} sets, default rest {exercise.defaultRestLabel}</Text>
+                    <Text style={styles.listRowBody}>{exercise.setCount} sets, default rest {exercise.restLabel}</Text>
                   </View>
                 </View>
               ))}
@@ -267,7 +276,7 @@ export default function App() {
           </>
         )}
 
-        {activeTrainTab === 'session' && renderSessionSurface()}
+        {trainSurfaceModel.surface.type === 'session' && renderSessionSurface()}
       </>
     );
   }
