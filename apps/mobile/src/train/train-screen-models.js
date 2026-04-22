@@ -1,10 +1,8 @@
 import { getProgramSurfaceModel, getTodayCardsModel, getWorkoutDetailCardModel } from './surface-models.js'
+import { getTabButtonModels } from '../ui/tab-models.js'
 
 export function getTrainSurfaceModel({ trainTabs, activeTrainTab, todayModel, workoutModel, activeSessionModel }) {
-  const tabs = trainTabs.map((tab) => ({
-    ...tab,
-    isActive: tab.key === activeTrainTab,
-  }))
+  const tabs = getTabButtonModels({ tabs: trainTabs, activeKey: activeTrainTab })
 
   if (activeTrainTab === 'today') {
     const cards = getTodayCardsModel(todayModel)

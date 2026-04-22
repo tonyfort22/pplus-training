@@ -21,6 +21,7 @@ import { getTrainSurfaceModel } from './src/train/train-screen-models.js';
 import { getPlaceholderSurfaceModel, getProgressSurfaceModel } from './src/progress/index.js';
 import { getPlaceholderSections, getProgressSections } from './src/screens/surface-sections.js';
 import { getSessionSections } from './src/screens/session-sections.js';
+import { getTabButtonModels } from './src/ui/tab-models.js';
 
 function SurfaceCard({ title, body, actionLabel, onAction }) {
   return (
@@ -64,6 +65,7 @@ export default function App() {
   const inboxSections = useMemo(() => getPlaceholderSections(inboxPlaceholder), [inboxPlaceholder]);
   const [activeTab, setActiveTab] = useState('train');
   const [activeTrainTab, setActiveTrainTab] = useState('today');
+  const bottomTabModels = useMemo(() => getTabButtonModels({ tabs: mobileTabs, activeKey: activeTab }), [activeTab]);
   const [session, setSession] = useState(() => demoTrainState.session);
   const [elapsedSeconds] = useState(35);
 
@@ -341,13 +343,13 @@ export default function App() {
         </ScrollView>
 
         <View style={styles.tabBar}>
-          {mobileTabs.map((tab) => (
+          {bottomTabModels.map((tab) => (
             <Pressable
               key={tab.key}
-              style={[styles.tabButton, activeTab === tab.key && styles.tabButtonActive]}
+              style={[styles.tabButton, tab.isActive && styles.tabButtonActive]}
               onPress={() => setActiveTab(tab.key)}
             >
-              <Text style={[styles.tabLabel, activeTab === tab.key && styles.tabLabelActive]}>{tab.label}</Text>
+              <Text style={[styles.tabLabel, tab.isActive && styles.tabLabelActive]}>{tab.label}</Text>
             </Pressable>
           ))}
         </View>
