@@ -102,7 +102,30 @@ function WorkoutSheetContent({ model, onClose, onStartWorkout, onEditWorkout }) 
       </View>
 
       <View className="absolute inset-x-0 bottom-0 px-5 pb-6" style={{ paddingBottom: Math.max(insets.bottom, 24) }}>
-        <Pressable className="items-center justify-center rounded-[18px] border border-[#34D399]/70 bg-[#0A564B] py-4 shadow-2xl shadow-black/35" onPress={onStartWorkout}>
+        <Pressable
+          className="items-center justify-center overflow-hidden rounded-[18px] py-4"
+          onPress={onStartWorkout}
+          style={{
+            backgroundColor: 'rgba(5, 46, 43, 0.48)',
+            borderWidth: 1,
+            borderColor: 'rgba(52, 211, 153, 0.5)',
+            shadowColor: '#000000',
+            shadowOpacity: 0.28,
+            shadowRadius: 18,
+            shadowOffset: { width: 0, height: 10 },
+            elevation: 10,
+          }}
+        >
+          <View
+            pointerEvents="none"
+            className="absolute inset-x-0 top-0 h-[1px]"
+            style={{ backgroundColor: 'rgba(255, 255, 255, 0.38)' }}
+          />
+          <View
+            pointerEvents="none"
+            className="absolute inset-x-3 top-[1px] h-10 rounded-full"
+            style={{ backgroundColor: 'rgba(167, 243, 208, 0.12)' }}
+          />
           <Text className="text-[18px] font-semibold text-[#34D399]">{model.ctaLabel || 'Start Workout'}</Text>
         </Pressable>
       </View>
