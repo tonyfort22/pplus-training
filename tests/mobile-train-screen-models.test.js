@@ -5,54 +5,7 @@ import { createDemoProgramWorkout, createTrainDemoState, getCalendarSurfaceModel
 import { getActiveSessionSurfaceModel } from '../apps/mobile/src/train/active-session-models.js'
 import { getTrainSurfaceModel } from '../apps/mobile/src/train/train-screen-models.js'
 
-test('getTrainSurfaceModel builds Today surface cards and tab state', () => {
-  const trainState = createTrainDemoState({
-    programWorkout: createDemoProgramWorkout(),
-    startedAt: '2026-04-21T20:00:00.000Z',
-  })
-
-  const model = getTrainSurfaceModel({
-    trainTabs,
-    activeTrainTab: 'today',
-    todayModel: getTodaySurfaceModel(trainState),
-    calendarModel: getCalendarSurfaceModel(trainState),
-    workoutModel: getWorkoutSurfaceModel(trainState),
-    activeSessionModel: getActiveSessionSurfaceModel(trainState.session, 35, null),
-  })
-
-  assert.equal(model.tabs.length, 5)
-  assert.equal(model.tabs.find((tab) => tab.key === 'today').isActive, true)
-  assert.equal(model.surface.type, 'today')
-  assert.equal(model.surface.cards[0].title, 'Today')
-  assert.equal(model.surface.cards[0].targetKey, 'workout')
-  assert.equal(model.surface.cards[1].targetKey, 'program')
-})
-
-test('getTrainSurfaceModel routes Today directly to session when a workout is already in progress', () => {
-  const trainState = createTrainDemoState({
-    programWorkout: createDemoProgramWorkout(),
-    startedAt: '2026-04-21T20:00:00.000Z',
-  })
-  const startedSession = completeWorkoutSet({
-    session: trainState.session,
-    exerciseId: trainState.session.exercises[0].id,
-    setId: trainState.session.exercises[0].sets[0].id,
-  })
-
-  const model = getTrainSurfaceModel({
-    trainTabs,
-    activeTrainTab: 'today',
-    todayModel: getTodaySurfaceModel({ ...trainState, session: startedSession }),
-    calendarModel: getCalendarSurfaceModel({ ...trainState, session: startedSession }),
-    workoutModel: getWorkoutSurfaceModel({ ...trainState, session: startedSession }),
-    activeSessionModel: getActiveSessionSurfaceModel(startedSession, 35, null),
-  })
-
-  assert.equal(model.surface.cards[0].actionLabel, 'Resume session')
-  assert.equal(model.surface.cards[0].targetKey, 'session')
-})
-
-test('getTrainSurfaceModel builds the calendar preview surface', () => {
+test('getTrainSurfaceModel builds one stacked train-home surface for the barbell view', () => {
   const trainState = createTrainDemoState({
     programWorkout: createDemoProgramWorkout(),
     startedAt: '2026-04-21T20:00:00.000Z',
@@ -67,20 +20,25 @@ test('getTrainSurfaceModel builds the calendar preview surface', () => {
     activeSessionModel: getActiveSessionSurfaceModel(trainState.session, 35, null),
   })
 
-  assert.equal(model.surface.type, 'calendar')
-  assert.equal(model.surface.detailCard.title, 'Weekly schedule')
-  assert.equal(model.surface.detailCard.targetKey, 'workout')
-  assert.equal(model.surface.detailCard.actionPayload.selectedDayId, 'thu')
+  assert.equal(model.tabs.length, 5)
+  assert.equal(model.tabs.find((tab) => tab.key === 'calendar').isActive, true)
+  assert.equal(model.surface.type, 'train-home')
   assert.equal(model.surface.calendarStripTitle, 'This week')
-  assert.equal(model.surface.selectedDayPlanTitle, 'Selected day plan')
-  assert.equal(model.surface.selectedDayPlanRows[0].title, 'Primary focus')
   assert.equal(model.surface.calendarStripDays[3].weekdayLabel, 'THU')
   assert.equal(model.surface.calendarStripDays[3].dateNumber, '23')
   assert.equal(model.surface.calendarStripDays[3].isSelected, true)
-  assert.equal(model.surface.calendarStripDays[3].actionPayload.selectedDayId, 'thu')
+  assert.equal(model.surface.selectedWorkoutCard.variant, 'today-summary')
+  assert.equal(model.surface.selectedWorkoutCard.title, 'Thu • Apr 23')
+  assert.equal(model.surface.selectedWorkoutCard.workoutName, 'Upper B')
+  assert.equal(model.surface.selectedWorkoutCard.targetKey, 'workout')
+  assert.equal(model.surface.programCard.variant, 'program-summary')
+  assert.equal(model.surface.programCard.programName, 'Spring Hypertrophy')
+  assert.equal(model.surface.workoutListTitle, 'Program workouts')
+  assert.equal(model.surface.workoutListRows[0].title, 'Upper A')
+  assert.match(model.surface.workoutListRows[0].body, /Mon • Apr 20/)
 })
 
-test('getTrainSurfaceModel routes selected today directly to session when it is already in progress', () => {
+test('getTrainSurfaceModel keeps the selected-date workout card aligned with the current session state', () => {
   const trainState = createTrainDemoState({
     programWorkout: createDemoProgramWorkout(),
     startedAt: '2026-04-21T20:00:00.000Z',
@@ -93,20 +51,21 @@ test('getTrainSurfaceModel routes selected today directly to session when it is 
 
   const model = getTrainSurfaceModel({
     trainTabs,
-    activeTrainTab: 'calendar',
+    activeTrainTab: 'today',
     todayModel: getTodaySurfaceModel({ ...trainState, session: startedSession }),
     calendarModel: getCalendarSurfaceModel({ ...trainState, session: startedSession }, 'tue'),
     workoutModel: getWorkoutSurfaceModel({ ...trainState, session: startedSession }, 'tue'),
     activeSessionModel: getActiveSessionSurfaceModel(startedSession, 35, null),
   })
 
-  assert.equal(model.surface.detailCard.actionLabel, 'Resume Tue session')
-  assert.equal(model.surface.detailCard.targetKey, 'session')
+  assert.equal(model.surface.type, 'train-home')
+  assert.equal(model.surface.selectedWorkoutCard.actionLabel, 'Resume session')
+  assert.equal(model.surface.selectedWorkoutCard.targetKey, 'session')
   assert.equal(model.surface.calendarStripDays[1].targetKey, 'session')
   assert.equal(model.surface.calendarStripDays[1].indicatorTone, 'active')
 })
 
-test('getTrainSurfaceModel routes completed today to the completed session summary', () => {
+test('getTrainSurfaceModel keeps completed today inside the train-home view while exposing the session summary action', () => {
   const trainState = createTrainDemoState({
     programWorkout: createDemoProgramWorkout(),
     startedAt: '2026-04-21T20:00:00.000Z',
@@ -122,11 +81,12 @@ test('getTrainSurfaceModel routes completed today to the completed session summa
     activeSessionModel: getActiveSessionSurfaceModel(finishedSession, 35, null),
   })
 
-  assert.equal(model.surface.detailCard.actionLabel, 'View Tue summary')
-  assert.equal(model.surface.detailCard.targetKey, 'session')
+  assert.equal(model.surface.type, 'train-home')
+  assert.equal(model.surface.selectedWorkoutCard.actionLabel, 'View completed session')
+  assert.equal(model.surface.selectedWorkoutCard.targetKey, 'session')
 })
 
-test('getTrainSurfaceModel builds the workout preview surface', () => {
+test('getTrainSurfaceModel keeps the workout tab inside the same train-home surface', () => {
   const trainState = createTrainDemoState({
     programWorkout: createDemoProgramWorkout(),
     startedAt: '2026-04-21T20:00:00.000Z',
@@ -141,13 +101,10 @@ test('getTrainSurfaceModel builds the workout preview surface', () => {
     activeSessionModel: getActiveSessionSurfaceModel(trainState.session, 35, null),
   })
 
-  assert.equal(model.surface.type, 'workout')
-  assert.equal(model.surface.detailCard.title, 'Workout detail')
-  assert.equal(model.surface.detailCard.targetKey, 'session')
-  assert.equal(model.surface.previewSectionTitle, 'Preview snapshot')
-  assert.equal(model.surface.previewHighlights[0].title, 'Primary focus')
-  assert.equal(model.surface.exerciseSectionTitle, 'Planned exercises')
-  assert.equal(model.surface.exercises[0].restLabel, '3:00')
+  assert.equal(model.surface.type, 'train-home')
+  assert.equal(model.surface.selectedWorkoutCard.variant, 'today-summary')
+  assert.equal(model.surface.programCard.variant, 'program-summary')
+  assert.equal(model.surface.workoutListRows[0].title, 'Upper A')
 })
 
 test('getTrainSurfaceModel passes through the active session surface', () => {

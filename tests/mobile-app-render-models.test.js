@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createDemoProgramWorkout, createTrainDemoState, getTodaySurfaceModel, getWorkoutSurfaceModel, mobileTabs, trainTabs } from '../apps/mobile/src/train/index.js'
+import { createDemoProgramWorkout, createTrainDemoState, getCalendarSurfaceModel, getTodaySurfaceModel, getWorkoutSurfaceModel, mobileTabs, trainTabs } from '../apps/mobile/src/train/index.js'
 import { getActiveSessionSurfaceModel } from '../apps/mobile/src/train/active-session-models.js'
 import { getTrainSurfaceModel } from '../apps/mobile/src/train/train-screen-models.js'
 import { getTrainRenderModel } from '../apps/mobile/src/train/train-render-models.js'
@@ -20,6 +20,7 @@ test('getAppRenderModel returns the active train screen and grouped bottom tabs'
     trainTabs,
     activeTrainTab: 'today',
     todayModel: getTodaySurfaceModel(trainState),
+    calendarModel: getCalendarSurfaceModel(trainState),
     workoutModel: getWorkoutSurfaceModel(trainState),
     activeSessionModel,
   })

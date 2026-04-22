@@ -273,19 +273,21 @@ export function renderSessionSections({
 export function renderTrainSurface({ trainRenderModel, sessionRenderModel, styles, onTrainTabPress, onActionTarget, renderSections, renderSessionSections }) {
   return (
     <>
-      <View style={styles.trainTabsRow}>
-        <View style={styles.trainTabsPill}>
-          {trainRenderModel.tabs.map((tab) => (
-            <Pressable
-              key={tab.key}
-              style={[styles.trainTabButton, tab.isActive && styles.trainTabButtonActive]}
-              onPress={() => onTrainTabPress(tab.key)}
-            >
-              <Text style={[styles.trainTabLabel, tab.isActive && styles.trainTabLabelActive]}>{tab.label}</Text>
-            </Pressable>
-          ))}
+      {trainRenderModel.showTabs ? (
+        <View style={styles.trainTabsRow}>
+          <View style={styles.trainTabsPill}>
+            {trainRenderModel.tabs.map((tab) => (
+              <Pressable
+                key={tab.key}
+                style={[styles.trainTabButton, tab.isActive && styles.trainTabButtonActive]}
+                onPress={() => onTrainTabPress(tab.key)}
+              >
+                <Text style={[styles.trainTabLabel, tab.isActive && styles.trainTabLabelActive]}>{tab.label}</Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
-      </View>
+      ) : null}
 
       {trainRenderModel.content.type === 'sections' && renderSections(trainRenderModel.content.sections, onActionTarget)}
       {trainRenderModel.content.type === 'session-sections' && renderSessionSections(sessionRenderModel)}

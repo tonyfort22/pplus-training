@@ -6,35 +6,7 @@ import { getTrainSurfaceModel } from '../apps/mobile/src/train/train-screen-mode
 import { getSessionSections } from '../apps/mobile/src/screens/session-sections.js'
 import { getTrainRenderModel } from '../apps/mobile/src/train/train-render-models.js'
 
-test('getTrainRenderModel builds action-card sections for Today', () => {
-  const trainState = createTrainDemoState({
-    programWorkout: createDemoProgramWorkout(),
-    startedAt: '2026-04-21T20:00:00.000Z',
-  })
-  const trainSurfaceModel = getTrainSurfaceModel({
-    trainTabs,
-    activeTrainTab: 'today',
-    todayModel: getTodaySurfaceModel(trainState),
-    calendarModel: getCalendarSurfaceModel(trainState),
-    workoutModel: getWorkoutSurfaceModel(trainState),
-    activeSessionModel: getActiveSessionSurfaceModel(trainState.session, 35, null),
-  })
-
-  const renderModel = getTrainRenderModel({
-    trainSurfaceModel,
-    sessionSections: getSessionSections(getActiveSessionSurfaceModel(trainState.session, 35, null)),
-  })
-
-  assert.equal(renderModel.tabs.length, 5)
-  assert.equal(renderModel.content.type, 'sections')
-  assert.equal(renderModel.content.sections.length, 2)
-  assert.equal(renderModel.content.sections[0].type, 'action-card')
-  assert.equal(renderModel.content.sections[0].variant, 'today-summary')
-  assert.equal(renderModel.content.sections[0].workoutName, 'Lower A')
-  assert.equal(renderModel.content.sections[0].targetKey, 'workout')
-})
-
-test('getTrainRenderModel builds a dedicated calendar-strip section for the weekly calendar', () => {
+test('getTrainRenderModel builds the stacked train-home sections for the barbell view', () => {
   const trainState = createTrainDemoState({
     programWorkout: createDemoProgramWorkout(),
     startedAt: '2026-04-21T20:00:00.000Z',
@@ -52,47 +24,49 @@ test('getTrainRenderModel builds a dedicated calendar-strip section for the week
     trainSurfaceModel,
     sessionSections: getSessionSections(getActiveSessionSurfaceModel(trainState.session, 35, null)),
   })
+
+  assert.equal(renderModel.tabs.length, 5)
+  assert.equal(renderModel.showTabs, false)
   assert.equal(renderModel.content.type, 'sections')
-  assert.equal(renderModel.content.sections[0].type, 'action-card')
-  assert.equal(renderModel.content.sections[0].title, 'Weekly schedule')
-  assert.equal(renderModel.content.sections[1].type, 'calendar-strip')
-  assert.equal(renderModel.content.sections[1].title, 'This week')
-  assert.equal(renderModel.content.sections[1].days.length, 7)
-  assert.equal(renderModel.content.sections[1].days[2].weekdayLabel, 'WED')
-  assert.equal(renderModel.content.sections[1].days[2].dateNumber, '22')
-  assert.equal(renderModel.content.sections[1].days[2].isSelected, true)
-  assert.equal(renderModel.content.sections[1].days[2].actionPayload.selectedDayId, 'wed')
-  assert.equal(renderModel.content.sections[2].type, 'body-list')
-  assert.equal(renderModel.content.sections[2].title, 'Selected day plan')
-  assert.equal(renderModel.content.sections[2].rows[0].title, 'Primary focus')
+  assert.equal(renderModel.content.sections.length, 4)
+  assert.equal(renderModel.content.sections[0].type, 'calendar-strip')
+  assert.equal(renderModel.content.sections[0].title, 'This week')
+  assert.equal(renderModel.content.sections[0].days[2].weekdayLabel, 'WED')
+  assert.equal(renderModel.content.sections[0].days[2].isSelected, true)
+  assert.equal(renderModel.content.sections[1].type, 'action-card')
+  assert.equal(renderModel.content.sections[1].variant, 'today-summary')
+  assert.equal(renderModel.content.sections[1].workoutName, 'Recovery + mobility')
+  assert.equal(renderModel.content.sections[2].type, 'action-card')
+  assert.equal(renderModel.content.sections[2].variant, 'program-summary')
+  assert.equal(renderModel.content.sections[3].type, 'body-list')
+  assert.equal(renderModel.content.sections[3].title, 'Program workouts')
+  assert.equal(renderModel.content.sections[3].rows[0].title, 'Upper A')
 })
 
-test('getTrainRenderModel includes preview and exercise list sections for Workout', () => {
+test('getTrainRenderModel keeps the selected-date workout card in sync with the active session state', () => {
   const trainState = createTrainDemoState({
     programWorkout: createDemoProgramWorkout(),
     startedAt: '2026-04-21T20:00:00.000Z',
   })
+  const activeSessionModel = getActiveSessionSurfaceModel(trainState.session, 35, null)
   const trainSurfaceModel = getTrainSurfaceModel({
     trainTabs,
-    activeTrainTab: 'workout',
+    activeTrainTab: 'today',
     todayModel: getTodaySurfaceModel(trainState),
-    calendarModel: getCalendarSurfaceModel(trainState),
-    workoutModel: getWorkoutSurfaceModel(trainState),
-    activeSessionModel: getActiveSessionSurfaceModel(trainState.session, 35, null),
+    calendarModel: getCalendarSurfaceModel(trainState, 'tue'),
+    workoutModel: getWorkoutSurfaceModel(trainState, 'tue'),
+    activeSessionModel,
   })
 
   const renderModel = getTrainRenderModel({
     trainSurfaceModel,
-    sessionSections: getSessionSections(getActiveSessionSurfaceModel(trainState.session, 35, null)),
+    sessionSections: getSessionSections(activeSessionModel),
   })
 
-  assert.equal(renderModel.content.sections[0].type, 'action-card')
-  assert.equal(renderModel.content.sections[1].type, 'body-list')
-  assert.equal(renderModel.content.sections[1].title, 'Preview snapshot')
-  assert.equal(renderModel.content.sections[1].rows[0].title, 'Primary focus')
-  assert.equal(renderModel.content.sections[2].type, 'body-list')
-  assert.equal(renderModel.content.sections[2].title, 'Planned exercises')
-  assert.equal(renderModel.content.sections[2].rows[0].title, 'Barbell Back Squat')
+  assert.equal(renderModel.content.sections[1].type, 'action-card')
+  assert.equal(renderModel.content.sections[1].variant, 'today-summary')
+  assert.equal(renderModel.content.sections[1].workoutName, 'Lower A')
+  assert.equal(renderModel.content.sections[1].targetKey, 'session')
 })
 
 test('getTrainRenderModel passes through session sections for the session tab', () => {
@@ -113,6 +87,7 @@ test('getTrainRenderModel passes through session sections for the session tab', 
 
   const renderModel = getTrainRenderModel({ trainSurfaceModel, sessionSections })
 
+  assert.equal(renderModel.showTabs, true)
   assert.equal(renderModel.content.type, 'session-sections')
   assert.equal(renderModel.content.sections, sessionSections)
 })
