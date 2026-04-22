@@ -19,6 +19,7 @@ import {
   mobileTabs,
   trainTabs,
 } from './src/train/index.js';
+import { getPlaceholderSurfaceModel, getProgressSurfaceModel } from './src/progress/index.js';
 
 function SurfaceCard({ title, body, actionLabel, onAction }) {
   return (
@@ -48,6 +49,15 @@ export default function App() {
   const demoTrainState = useMemo(() => createTrainDemoState(), []);
   const todayModel = useMemo(() => getTodaySurfaceModel(demoTrainState), [demoTrainState]);
   const workoutModel = useMemo(() => getWorkoutSurfaceModel(demoTrainState), [demoTrainState]);
+  const progressModel = useMemo(() => getProgressSurfaceModel(), []);
+  const teamPlaceholder = useMemo(
+    () => getPlaceholderSurfaceModel('Team', 'This surface will hold coach context, team relationships, and collaboration later.'),
+    []
+  );
+  const inboxPlaceholder = useMemo(
+    () => getPlaceholderSurfaceModel('Inbox', 'This surface will hold communication, reminders, and support flows later.'),
+    []
+  );
   const [activeTab, setActiveTab] = useState('train');
   const [activeTrainTab, setActiveTrainTab] = useState('today');
   const [session, setSession] = useState(() => demoTrainState.session);
@@ -273,60 +283,54 @@ export default function App() {
     return (
       <>
         <View style={styles.headerCard}>
-          <Text style={styles.eyebrow}>Progress</Text>
-          <Text style={styles.title}>Performance & recovery</Text>
+          <Text style={styles.eyebrow}>{progressModel.header.eyebrow}</Text>
+          <Text style={styles.title}>{progressModel.header.title}</Text>
           <Text style={styles.sectionBody}>
-            This is where the athlete should see results from training, not just the workouts themselves.
+            {progressModel.header.body}
           </Text>
         </View>
 
         <View style={styles.metricsGrid}>
-          <MetricCard label="Back Squat est. 1RM" value="205 lb" detail="Up 10 lb over the last 4 weeks" />
-          <MetricCard label="Weekly load" value="78" detail="Current training load score based on completed sessions" />
-          <MetricCard label="Readiness" value="Moderate" detail="Good to train, but lower body fatigue is accumulating" />
+          {progressModel.metrics.map((metric) => (
+            <MetricCard key={metric.label} label={metric.label} value={metric.value} detail={metric.detail} />
+          ))}
         </View>
 
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Training load</Text>
+          <Text style={styles.sectionTitle}>{progressModel.trainingLoad.title}</Text>
           <Text style={styles.sectionBody}>
-            The app should summarize completed session load across the week and connect it to muscles and sub-muscles through the analytics domain.
+            {progressModel.trainingLoad.body}
           </Text>
         </View>
 
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Muscle fatigue</Text>
+          <Text style={styles.sectionTitle}>{progressModel.muscleFatigue.title}</Text>
           <Text style={styles.sectionBody}>
-            This surface will show fatigue and recovery signals per muscle group once analytics are wired from the completed session data.
+            {progressModel.muscleFatigue.body}
           </Text>
-          <View style={styles.listRow}>
-            <Text style={styles.listRowTitle}>Quads</Text>
-            <Text style={styles.listRowBody}>High fatigue</Text>
-          </View>
-          <View style={styles.listRow}>
-            <Text style={styles.listRowTitle}>Hamstrings</Text>
-            <Text style={styles.listRowBody}>Moderate fatigue</Text>
-          </View>
-          <View style={styles.listRow}>
-            <Text style={styles.listRowTitle}>Glutes</Text>
-            <Text style={styles.listRowBody}>Moderate fatigue</Text>
-          </View>
+          {progressModel.muscleFatigue.rows.map((row) => (
+            <View key={row.title} style={styles.listRow}>
+              <Text style={styles.listRowTitle}>{row.title}</Text>
+              <Text style={styles.listRowBody}>{row.body}</Text>
+            </View>
+          ))}
         </View>
 
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Performance snapshots</Text>
+          <Text style={styles.sectionTitle}>{progressModel.performanceSnapshots.title}</Text>
           <Text style={styles.sectionBody}>
-            This area should hold lift progress, compliance, and trend summaries over time.
+            {progressModel.performanceSnapshots.body}
           </Text>
         </View>
       </>
     );
   }
 
-  function renderPlaceholderSurface(title, copy) {
+  function renderPlaceholderSurface(model) {
     return (
       <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        <Text style={styles.sectionBody}>{copy}</Text>
+        <Text style={styles.sectionTitle}>{model.title}</Text>
+        <Text style={styles.sectionBody}>{model.body}</Text>
       </View>
     );
   }
@@ -337,8 +341,8 @@ export default function App() {
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {activeTab === 'train' && renderTrainSurface()}
           {activeTab === 'progress' && renderProgressSurface()}
-          {activeTab === 'team' && renderPlaceholderSurface('Team', 'This surface will hold coach context, team relationships, and collaboration later.')}
-          {activeTab === 'inbox' && renderPlaceholderSurface('Inbox', 'This surface will hold communication, reminders, and support flows later.')}
+          {activeTab === 'team' && renderPlaceholderSurface(teamPlaceholder)}
+          {activeTab === 'inbox' && renderPlaceholderSurface(inboxPlaceholder)}
         </ScrollView>
 
         <View style={styles.tabBar}>
