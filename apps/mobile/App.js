@@ -21,6 +21,7 @@ import { getTrainRenderModel } from './src/train/train-render-models.js';
 import { getTrainSurfaceModel } from './src/train/train-screen-models.js';
 import { getQuickActualUpdatePayload } from './src/train/session-actions.js';
 import { getPlaceholderSurfaceModel, getProgressSurfaceModel } from './src/progress/index.js';
+import { getAppRenderModel } from './src/screens/app-render-models.js';
 import { getPlaceholderSections, getProgressSections } from './src/screens/surface-sections.js';
 import { getSessionSections } from './src/screens/session-sections.js';
 import { getTabButtonModels } from './src/ui/tab-models.js';
@@ -93,6 +94,18 @@ export default function App() {
   const trainRenderModel = useMemo(
     () => getTrainRenderModel({ trainSurfaceModel, sessionSections }),
     [sessionSections, trainSurfaceModel]
+  );
+  const appRenderModel = useMemo(
+    () =>
+      getAppRenderModel({
+        activeTab,
+        bottomTabModels,
+        trainRenderModel,
+        progressSections,
+        teamSections,
+        inboxSections,
+      }),
+    [activeTab, bottomTabModels, inboxSections, progressSections, teamSections, trainRenderModel]
   );
 
   function handleCompleteSet(exerciseId, setId) {
@@ -325,14 +338,14 @@ export default function App() {
     <SafeAreaView style={styles.container}>
       <View style={styles.appShell}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          {activeTab === 'train' && renderTrainSurface()}
-          {activeTab === 'progress' && renderSections(progressSections, null)}
-          {activeTab === 'team' && renderSections(teamSections, null)}
-          {activeTab === 'inbox' && renderSections(inboxSections, null)}
+          {appRenderModel.screen.type === 'train' && renderTrainSurface()}
+          {appRenderModel.screen.type === 'progress' && renderSections(appRenderModel.screen.sections, null)}
+          {appRenderModel.screen.type === 'team' && renderSections(appRenderModel.screen.sections, null)}
+          {appRenderModel.screen.type === 'inbox' && renderSections(appRenderModel.screen.sections, null)}
         </ScrollView>
 
         <View style={styles.tabBar}>
-          {bottomTabModels.map((tab) => (
+          {appRenderModel.bottomTabs.map((tab) => (
             <Pressable
               key={tab.key}
               style={[styles.tabButton, tab.isActive && styles.tabButtonActive]}
