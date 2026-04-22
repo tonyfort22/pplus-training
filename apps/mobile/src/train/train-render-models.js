@@ -90,6 +90,11 @@ export function getTrainRenderModel({ trainSurfaceModel, sessionSections }) {
           },
           {
             type: 'body-list',
+            title: trainSurfaceModel.surface.selectedDayPlanTitle,
+            rows: trainSurfaceModel.surface.selectedDayPlanRows,
+          },
+          {
+            type: 'body-list',
             title: trainSurfaceModel.surface.daysSectionTitle,
             rows: trainSurfaceModel.surface.days,
           },

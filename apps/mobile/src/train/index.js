@@ -218,6 +218,7 @@ export function getCalendarSurfaceModel(trainState, selectedCalendarDayId = trai
       title: `${selectedDay.dayLabel} • ${selectedDay.workoutName}`,
       body: `${selectedDay.dateLabel} · ${formatCalendarStatus(selectedDay.status)}`,
     },
+    selectedDayPlan: getCalendarSelectedDayPlan({ day: selectedDay, trainState }),
     actionPayload: { selectedDayId: selectedDay.id },
     days: trainState.program.calendarWeek.map((day) => ({
       id: day.id,
@@ -271,6 +272,29 @@ function getCalendarActionLabel({ day, targetKey, trainState }) {
   }
 
   return `Open ${day.dayLabel} workout`
+}
+
+function getCalendarSelectedDayPlan({ day, trainState }) {
+  if (!day.workoutPreview) {
+    return {
+      title: 'Selected day plan',
+      rows: [
+        {
+          title: 'Recovery cue',
+          body: 'No workout is scheduled here. Keep recovery simple and stay ready for the next training day.',
+        },
+      ],
+    }
+  }
+
+  return {
+    title: 'Selected day plan',
+    rows: getWorkoutPreviewHighlights({
+      workoutPreview: day.workoutPreview,
+      selectedDay: day,
+      canOpenSession: getCalendarDayTarget({ trainState, day }) === 'session',
+    }),
+  }
 }
 
 function getSessionProgressCopy(session) {

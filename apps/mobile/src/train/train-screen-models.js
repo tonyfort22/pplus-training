@@ -53,6 +53,12 @@ export function getTrainSurfaceModel({
           ...detailCardModel,
           targetKey: detailCardModel.actionTargetKey || 'workout',
         }),
+        selectedDayPlanTitle: calendarModel.selectedDayPlan.title,
+        selectedDayPlanRows: calendarModel.selectedDayPlan.rows.map((row) => ({
+          id: row.id,
+          title: row.title,
+          body: row.body,
+        })),
         daysSectionTitle: 'This week',
         days: calendarModel.days.map((day) => ({
           id: day.id,

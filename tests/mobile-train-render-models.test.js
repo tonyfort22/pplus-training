@@ -50,14 +50,17 @@ test('getTrainRenderModel builds a list section for the weekly calendar', () => 
     trainSurfaceModel,
     sessionSections: getSessionSections(getActiveSessionSurfaceModel(trainState.session, 35, null)),
   })
-
+  assert.equal(renderModel.content.type, 'sections')
   assert.equal(renderModel.content.sections[0].type, 'action-card')
-  assert.equal(renderModel.content.sections[0].actionPayload.selectedDayId, 'thu')
+  assert.equal(renderModel.content.sections[0].title, 'Weekly schedule')
   assert.equal(renderModel.content.sections[1].type, 'body-list')
-  assert.equal(renderModel.content.sections[1].title, 'This week')
-  assert.equal(renderModel.content.sections[1].rows[3].title, 'Thu • Upper B')
-  assert.equal(renderModel.content.sections[1].rows[3].isSelected, true)
-  assert.equal(renderModel.content.sections[1].rows[3].actionPayload.selectedDayId, 'thu')
+  assert.equal(renderModel.content.sections[1].title, 'Selected day plan')
+  assert.equal(renderModel.content.sections[1].rows[0].title, 'Primary focus')
+  assert.equal(renderModel.content.sections[2].type, 'body-list')
+  assert.equal(renderModel.content.sections[2].title, 'This week')
+  assert.equal(renderModel.content.sections[2].rows[0].title, 'Mon • Upper A')
+
+  assert.equal(renderModel.content.sections[2].rows[3].actionPayload.selectedDayId, 'thu')
 })
 
 test('getTrainRenderModel includes preview and exercise list sections for Workout', () => {
