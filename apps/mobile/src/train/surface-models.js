@@ -22,9 +22,11 @@ export function getTodayCardsModel(todayModel) {
 }
 
 export function getWorkoutDetailCardModel(workoutModel) {
+  const progressCopy = workoutModel.sessionProgressSummary ? ` ${workoutModel.sessionProgressSummary}` : ''
+
   return {
     title: 'Workout detail',
-    body: `${workoutModel.dayLabel} · ${workoutModel.scheduleStatusLabel}. ${workoutModel.workoutName} contains ${workoutModel.exerciseCount} exercises in this scaffold, with prescribed sets, loads, reps, and planned rest. This is the preview before starting or continuing the session.`,
+    body: `${workoutModel.dayLabel} · ${workoutModel.scheduleStatusLabel}. ${workoutModel.workoutName} contains ${workoutModel.exerciseCount} exercises in this scaffold, with prescribed sets, loads, reps, and planned rest.${progressCopy} This is the preview before starting or continuing the session.`,
     actionLabel: workoutModel.primaryActionLabel || 'Go to session',
     actionPayload: workoutModel.actionPayload || null,
   }

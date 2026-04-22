@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { completeWorkoutSet } from '../packages/core/src/index.js'
 import { createDemoProgramWorkout, createTrainDemoState, getCalendarSurfaceModel, getTodaySurfaceModel, getWorkoutSurfaceModel } from '../apps/mobile/src/train/index.js'
 import { getCalendarDetailCardModel, getProgramSurfaceModel, getTodayCardsModel, getWorkoutDetailCardModel } from '../apps/mobile/src/train/surface-models.js'
 
@@ -16,6 +17,23 @@ test('getTodayCardsModel creates the two top-level Today cards', () => {
   assert.match(cards.todayCard.body, /Lower A/)
   assert.equal(cards.programCard.title, 'Program snapshot')
   assert.match(cards.programCard.body, /Spring Hypertrophy/)
+})
+
+test('getTodayCardsModel switches to a resume action once the live session has started', () => {
+  const trainState = createTrainDemoState({
+    programWorkout: createDemoProgramWorkout(),
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+  const startedSession = completeWorkoutSet({
+    session: trainState.session,
+    exerciseId: trainState.session.exercises[0].id,
+    setId: trainState.session.exercises[0].sets[0].id,
+  })
+
+  const cards = getTodayCardsModel(getTodaySurfaceModel({ ...trainState, session: startedSession }))
+
+  assert.equal(cards.todayCard.actionLabel, 'Resume session')
+  assert.match(cards.todayCard.body, /1 of 7 sets logged/)
 })
 
 test('getProgramSurfaceModel creates the program overview copy from today state', () => {
@@ -44,6 +62,23 @@ test('getWorkoutDetailCardModel creates the workout preview card copy', () => {
   assert.equal(model.actionLabel, 'Go to session')
   assert.match(model.body, /2 exercises/)
   assert.match(model.body, /planned rest/)
+})
+
+test('getWorkoutDetailCardModel switches to resume when today session has started', () => {
+  const trainState = createTrainDemoState({
+    programWorkout: createDemoProgramWorkout(),
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+  const startedSession = completeWorkoutSet({
+    session: trainState.session,
+    exerciseId: trainState.session.exercises[0].id,
+    setId: trainState.session.exercises[0].sets[0].id,
+  })
+
+  const model = getWorkoutDetailCardModel(getWorkoutSurfaceModel({ ...trainState, session: startedSession }))
+
+  assert.equal(model.actionLabel, 'Resume session')
+  assert.match(model.body, /1 of 7 sets logged/)
 })
 
 test('getCalendarDetailCardModel creates the weekly schedule copy and rows', () => {

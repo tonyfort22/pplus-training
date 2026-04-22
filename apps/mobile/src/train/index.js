@@ -93,22 +93,26 @@ export function createDemoCompletedSessions(programWorkout = createDemoProgramWo
 }
 
 export function getTodaySurfaceModel(trainState) {
+  const sessionProgress = getSessionProgressCopy(trainState.session)
+
   return {
     heroTitle: trainState.today.title,
     workoutName: trainState.today.workoutName,
     scheduledLabel: trainState.today.scheduledLabel,
-    quickSummary: trainState.today.quickSummary,
+    quickSummary: sessionProgress ? sessionProgress.summary : trainState.today.quickSummary,
     programName: trainState.program.name,
     programWeekLabel: trainState.program.weekLabel,
     completionLabel: trainState.program.completionLabel,
-    primaryActionLabel: 'Open workout',
+    primaryActionLabel: sessionProgress ? 'Resume session' : 'Open workout',
   }
 }
 
 export function getWorkoutSurfaceModel(trainState, selectedCalendarDayId = trainState.program.selectedCalendarDayId) {
   const selectedDay = getSelectedCalendarDay(trainState, selectedCalendarDayId)
   const workoutPreview = selectedDay.workoutPreview || createWorkoutPreviewFromSession(trainState.session)
-  const canOpenSession = selectedDay.id === 'tue'
+  const isTodayWorkout = selectedDay.id === 'tue'
+  const sessionProgress = isTodayWorkout ? getSessionProgressCopy(trainState.session) : null
+  const canOpenSession = isTodayWorkout
 
   return {
     dayId: selectedDay.id,
@@ -116,7 +120,8 @@ export function getWorkoutSurfaceModel(trainState, selectedCalendarDayId = train
     scheduleStatusLabel: formatCalendarStatus(selectedDay.status),
     workoutName: workoutPreview.workoutName,
     exerciseCount: workoutPreview.exercises.length,
-    primaryActionLabel: canOpenSession ? 'Go to session' : 'Back to calendar',
+    sessionProgressSummary: sessionProgress?.summary || null,
+    primaryActionLabel: canOpenSession ? (sessionProgress ? 'Resume session' : 'Go to session') : 'Back to calendar',
     primaryTargetKey: canOpenSession ? 'session' : 'calendar',
     actionPayload: { selectedDayId: selectedDay.id },
     exercises: workoutPreview.exercises.map((exercise) => ({
@@ -157,6 +162,16 @@ export function getCalendarSurfaceModel(trainState, selectedCalendarDayId = trai
 
 export function getSelectedCalendarDay(trainState, selectedCalendarDayId = trainState.program.selectedCalendarDayId) {
   return trainState.program.calendarWeek.find((day) => day.id === selectedCalendarDayId) || trainState.program.calendarWeek[0]
+}
+
+function getSessionProgressCopy(session) {
+  if (!session || session.status !== 'in_progress' || session.completedSetsCount === 0) {
+    return null
+  }
+
+  return {
+    summary: `${session.completedSetsCount} of ${session.totalSetsCount} sets logged. Pick up where you left off and keep the rest timer moving.`,
+  }
 }
 
 function formatCalendarStatus(status) {
