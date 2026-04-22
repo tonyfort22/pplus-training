@@ -37,9 +37,16 @@ import { getTabButtonModels } from './src/ui/tab-models.js';
 
 export default function App() {
   const demoTrainState = useMemo(() => createTrainDemoState(), []);
+  const [activeTab, setActiveTab] = useState('train');
+  const [activeTrainTab, setActiveTrainTab] = useState('today');
+  const [selectedCalendarDayId, setSelectedCalendarDayId] = useState(() => demoTrainState.program.selectedCalendarDayId);
+  const bottomTabModels = useMemo(() => getTabButtonModels({ tabs: mobileTabs, activeKey: activeTab }), [activeTab]);
+  const [session, setSession] = useState(() => demoTrainState.session);
+  const [elapsedSeconds] = useState(35);
+
   const todayModel = useMemo(() => getTodaySurfaceModel(demoTrainState), [demoTrainState]);
-  const workoutModel = useMemo(() => getWorkoutSurfaceModel(demoTrainState), [demoTrainState]);
-  const calendarModel = useMemo(() => getCalendarSurfaceModel(demoTrainState), [demoTrainState]);
+  const workoutModel = useMemo(() => getWorkoutSurfaceModel(demoTrainState, selectedCalendarDayId), [demoTrainState, selectedCalendarDayId]);
+  const calendarModel = useMemo(() => getCalendarSurfaceModel(demoTrainState, selectedCalendarDayId), [demoTrainState, selectedCalendarDayId]);
   const teamPlaceholder = useMemo(
     () => getPlaceholderSurfaceModel('Team', 'This surface will hold coach context, team relationships, and collaboration later.'),
     []
@@ -52,11 +59,7 @@ export default function App() {
   );
   const inboxSections = useMemo(() => getPlaceholderSections(inboxPlaceholder), [inboxPlaceholder]);
   const inboxRenderPlan = useMemo(() => getGenericSectionRenderPlan(inboxSections), [inboxSections]);
-  const [activeTab, setActiveTab] = useState('train');
-  const [activeTrainTab, setActiveTrainTab] = useState('today');
-  const bottomTabModels = useMemo(() => getTabButtonModels({ tabs: mobileTabs, activeKey: activeTab }), [activeTab]);
-  const [session, setSession] = useState(() => demoTrainState.session);
-  const [elapsedSeconds] = useState(35);
+
   const progressSessions = useMemo(() => {
     if (session.status === 'completed') {
       return [...demoTrainState.completedSessions, session]
@@ -166,6 +169,15 @@ export default function App() {
     setSession((currentSession) => adjustRestTimer(currentSession, delta));
   }
 
+  function handleTrainNavigation(targetKey, payload = null) {
+    if (payload?.selectedDayId) {
+      setSelectedCalendarDayId(payload.selectedDayId)
+    }
+
+    if (targetKey) {
+      setActiveTrainTab(targetKey)
+    }
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -182,7 +194,7 @@ export default function App() {
             sessionRenderModel,
             styles,
             onTrainTabPress: setActiveTrainTab,
-            onActionTarget: setActiveTrainTab,
+            onActionTarget: handleTrainNavigation,
             renderSections: (sections, onActionTarget) => renderGenericSections({ sections, styles, onActionTarget }),
             renderSessionSections: (sections) =>
               renderSessionSections({

@@ -41,8 +41,8 @@ test('getTrainRenderModel builds a list section for the weekly calendar', () => 
     trainTabs,
     activeTrainTab: 'calendar',
     todayModel: getTodaySurfaceModel(trainState),
-    calendarModel: getCalendarSurfaceModel(trainState),
-    workoutModel: getWorkoutSurfaceModel(trainState),
+    calendarModel: getCalendarSurfaceModel(trainState, 'thu'),
+    workoutModel: getWorkoutSurfaceModel(trainState, 'thu'),
     activeSessionModel: getActiveSessionSurfaceModel(trainState.session, 35, null),
   })
 
@@ -52,9 +52,12 @@ test('getTrainRenderModel builds a list section for the weekly calendar', () => 
   })
 
   assert.equal(renderModel.content.sections[0].type, 'action-card')
+  assert.equal(renderModel.content.sections[0].actionPayload.selectedDayId, 'thu')
   assert.equal(renderModel.content.sections[1].type, 'body-list')
   assert.equal(renderModel.content.sections[1].title, 'This week')
-  assert.equal(renderModel.content.sections[1].rows[1].title, 'Tue • Lower A')
+  assert.equal(renderModel.content.sections[1].rows[3].title, 'Thu • Upper B')
+  assert.equal(renderModel.content.sections[1].rows[3].isSelected, true)
+  assert.equal(renderModel.content.sections[1].rows[3].actionPayload.selectedDayId, 'thu')
 })
 
 test('getTrainRenderModel includes a list section for Workout', () => {

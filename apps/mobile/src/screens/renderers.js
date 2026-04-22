@@ -12,7 +12,7 @@ export function renderGenericSections({ sections, styles, onActionTarget }) {
           title={section.title}
           body={section.body}
           actionLabel={section.actionLabel}
-          onAction={onActionTarget ? () => onActionTarget(section.targetKey) : undefined}
+          onAction={onActionTarget ? () => onActionTarget(section.targetKey, section.actionPayload) : undefined}
         />
       )
     }
@@ -31,14 +31,26 @@ export function renderGenericSections({ sections, styles, onActionTarget }) {
       return (
         <View key={section.key} style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>{section.title}</Text>
-          {section.rows.map((row) => (
-            <View key={row.id || row.title} style={styles.listRow}>
-              <View>
-                <Text style={styles.listRowTitle}>{row.title}</Text>
-                <Text style={styles.listRowBody}>{row.body}</Text>
+          {section.rows.map((row) => {
+            const rowBody = (
+              <View style={[styles.listRow, row.isSelected && styles.listRowSelected]}>
+                <View>
+                  <Text style={styles.listRowTitle}>{row.title}</Text>
+                  <Text style={styles.listRowBody}>{row.body}</Text>
+                </View>
               </View>
-            </View>
-          ))}
+            )
+
+            if (!row.targetKey || !onActionTarget) {
+              return <View key={row.id || row.title}>{rowBody}</View>
+            }
+
+            return (
+              <Pressable key={row.id || row.title} onPress={() => onActionTarget(row.targetKey, row.actionPayload)}>
+                {rowBody}
+              </Pressable>
+            )
+          })}
         </View>
       )
     }

@@ -1,9 +1,10 @@
-export function createActionCardModel({ title, body, actionLabel, targetKey }) {
+export function createActionCardModel({ title, body, actionLabel, targetKey, actionPayload = null }) {
   return {
     title,
     body,
     actionLabel,
     targetKey,
+    actionPayload,
   }
 }
 

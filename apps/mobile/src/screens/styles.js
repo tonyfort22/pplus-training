@@ -303,6 +303,11 @@ export const styles = {
     padding: 14,
     marginTop: 10,
   },
+  listRowSelected: {
+    borderWidth: 1,
+    borderColor: '#60a5fa',
+    backgroundColor: '#172554',
+  },
   listRowTitle: {
     color: '#ffffff',
     fontWeight: '700',

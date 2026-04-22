@@ -55,8 +55,23 @@ test('getCalendarDetailCardModel creates the weekly schedule copy and rows', () 
   const model = getCalendarDetailCardModel(calendarModel)
 
   assert.equal(model.title, 'Weekly schedule')
-  assert.equal(model.actionLabel, 'Open today')
+  assert.equal(model.actionLabel, 'Open Tue workout')
   assert.equal(model.rows.length, 7)
   assert.equal(model.rows[1].title, 'Tue • Lower A')
-  assert.match(model.rows[1].body, /Today/) 
+  assert.match(model.rows[1].body, /Today/)
+  assert.equal(model.rows[1].isSelected, true)
+})
+
+test('getCalendarSurfaceModel tracks the selected day and where it should route next', () => {
+  const trainState = createTrainDemoState({
+    programWorkout: createDemoProgramWorkout(),
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+  const calendarModel = getCalendarSurfaceModel(trainState, 'thu')
+
+  assert.equal(calendarModel.selectedDayId, 'thu')
+  assert.equal(calendarModel.selectedDay.title, 'Thu • Upper B')
+  assert.equal(calendarModel.actionLabel, 'Open Thu workout')
+  assert.equal(calendarModel.days[3].targetKey, 'workout')
+  assert.equal(calendarModel.days[3].actionPayload.selectedDayId, 'thu')
 })

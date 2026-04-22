@@ -77,15 +77,8 @@ export function createTrainDemoState({ programWorkout = createDemoProgramWorkout
       name: 'Spring Hypertrophy',
       weekLabel: 'Week 3 of 8',
       completionLabel: '6 of 39 workouts completed',
-      calendarWeek: [
-        { id: 'mon', dayLabel: 'Mon', dateLabel: 'Apr 20', workoutName: 'Upper A', status: 'completed' },
-        { id: 'tue', dayLabel: 'Tue', dateLabel: 'Apr 21', workoutName: programWorkout.nameSnapshot, status: 'today' },
-        { id: 'wed', dayLabel: 'Wed', dateLabel: 'Apr 22', workoutName: 'Recovery + mobility', status: 'upcoming' },
-        { id: 'thu', dayLabel: 'Thu', dateLabel: 'Apr 23', workoutName: 'Upper B', status: 'upcoming' },
-        { id: 'fri', dayLabel: 'Fri', dateLabel: 'Apr 24', workoutName: 'Lower B', status: 'upcoming' },
-        { id: 'sat', dayLabel: 'Sat', dateLabel: 'Apr 25', workoutName: 'Speed + jumps', status: 'optional' },
-        { id: 'sun', dayLabel: 'Sun', dateLabel: 'Apr 26', workoutName: 'Off', status: 'off' },
-      ],
+      selectedCalendarDayId: 'tue',
+      calendarWeek: createDemoCalendarWeek(programWorkout),
     },
     session,
     completedSessions: createDemoCompletedSessions(programWorkout),
@@ -112,34 +105,58 @@ export function getTodaySurfaceModel(trainState) {
   }
 }
 
-export function getWorkoutSurfaceModel(trainState) {
-  const session = trainState.session
+export function getWorkoutSurfaceModel(trainState, selectedCalendarDayId = trainState.program.selectedCalendarDayId) {
+  const selectedDay = getSelectedCalendarDay(trainState, selectedCalendarDayId)
+  const workoutPreview = selectedDay.workoutPreview || createWorkoutPreviewFromSession(trainState.session)
+  const canOpenSession = selectedDay.id === 'tue'
 
   return {
-    workoutName: session.nameSnapshot,
-    exerciseCount: session.exercises.length,
-    exercises: session.exercises.map((exercise) => ({
+    dayId: selectedDay.id,
+    dayLabel: `${selectedDay.dayLabel} • ${selectedDay.dateLabel}`,
+    scheduleStatusLabel: formatCalendarStatus(selectedDay.status),
+    workoutName: workoutPreview.workoutName,
+    exerciseCount: workoutPreview.exercises.length,
+    primaryActionLabel: canOpenSession ? 'Go to session' : 'Back to calendar',
+    primaryTargetKey: canOpenSession ? 'session' : 'calendar',
+    actionPayload: { selectedDayId: selectedDay.id },
+    exercises: workoutPreview.exercises.map((exercise) => ({
       id: exercise.id,
-      name: exercise.nameSnapshot,
-      setCount: exercise.sets.length,
+      name: exercise.name,
+      setCount: exercise.setCount,
       defaultRestSeconds: exercise.defaultRestSeconds,
       defaultRestLabel: formatRestLabel(exercise.defaultRestSeconds),
     })),
   }
 }
 
-export function getCalendarSurfaceModel(trainState) {
+export function getCalendarSurfaceModel(trainState, selectedCalendarDayId = trainState.program.selectedCalendarDayId) {
+  const selectedDay = getSelectedCalendarDay(trainState, selectedCalendarDayId)
+
   return {
     title: 'Weekly schedule',
-    body: `${trainState.program.name}, ${trainState.program.weekLabel}. Review the training rhythm before jumping into the next session.`,
-    actionLabel: 'Open today',
+    body: `${trainState.program.name}, ${trainState.program.weekLabel}. ${selectedDay.dayLabel} is ${formatCalendarStatus(selectedDay.status).toLowerCase()} with ${selectedDay.workoutName}.`,
+    actionLabel: selectedDay.workoutPreview ? `Open ${selectedDay.dayLabel} workout` : 'Stay on calendar',
+    selectedDayId: selectedDay.id,
+    selectedDay: {
+      id: selectedDay.id,
+      title: `${selectedDay.dayLabel} • ${selectedDay.workoutName}`,
+      body: `${selectedDay.dateLabel} · ${formatCalendarStatus(selectedDay.status)}`,
+    },
+    actionPayload: { selectedDayId: selectedDay.id },
     days: trainState.program.calendarWeek.map((day) => ({
       id: day.id,
       title: `${day.dayLabel} • ${day.workoutName}`,
       body: `${day.dateLabel} · ${formatCalendarStatus(day.status)}`,
       status: day.status,
+      isSelected: day.id === selectedDay.id,
+      targetKey: day.workoutPreview ? 'workout' : undefined,
+      actionPayload: day.workoutPreview ? { selectedDayId: day.id } : null,
     })),
   }
+}
+
+export function getSelectedCalendarDay(trainState, selectedCalendarDayId = trainState.program.selectedCalendarDayId) {
+  return trainState.program.calendarWeek.find((day) => day.id === selectedCalendarDayId) || trainState.program.calendarWeek[0]
 }
 
 function formatCalendarStatus(status) {
@@ -148,6 +165,128 @@ function formatCalendarStatus(status) {
   if (status === 'optional') return 'Optional'
   if (status === 'off') return 'Off day'
   return 'Upcoming'
+}
+
+function createDemoCalendarWeek(programWorkout) {
+  return [
+    {
+      id: 'mon',
+      dayLabel: 'Mon',
+      dateLabel: 'Apr 20',
+      workoutName: 'Upper A',
+      status: 'completed',
+      workoutPreview: createWorkoutPreview({
+        workoutName: 'Upper A',
+        exercises: [
+          { id: 'upper-a-bench', name: 'Bench Press', setCount: 4, defaultRestSeconds: 150 },
+          { id: 'upper-a-row', name: 'Chest Supported Row', setCount: 4, defaultRestSeconds: 120 },
+        ],
+      }),
+    },
+    {
+      id: 'tue',
+      dayLabel: 'Tue',
+      dateLabel: 'Apr 21',
+      workoutName: programWorkout.nameSnapshot,
+      status: 'today',
+      workoutPreview: createWorkoutPreviewFromProgramWorkout(programWorkout),
+    },
+    {
+      id: 'wed',
+      dayLabel: 'Wed',
+      dateLabel: 'Apr 22',
+      workoutName: 'Recovery + mobility',
+      status: 'upcoming',
+      workoutPreview: createWorkoutPreview({
+        workoutName: 'Recovery + mobility',
+        exercises: [
+          { id: 'recovery-flow', name: 'Mobility Flow', setCount: 3, defaultRestSeconds: 60 },
+          { id: 'bike-zone-2', name: 'Bike Tempo', setCount: 1, defaultRestSeconds: 0 },
+        ],
+      }),
+    },
+    {
+      id: 'thu',
+      dayLabel: 'Thu',
+      dateLabel: 'Apr 23',
+      workoutName: 'Upper B',
+      status: 'upcoming',
+      workoutPreview: createWorkoutPreview({
+        workoutName: 'Upper B',
+        exercises: [
+          { id: 'upper-b-bench', name: 'Bench Press', setCount: 4, defaultRestSeconds: 150 },
+          { id: 'upper-b-pullup', name: 'Pull-Up', setCount: 4, defaultRestSeconds: 120 },
+        ],
+      }),
+    },
+    {
+      id: 'fri',
+      dayLabel: 'Fri',
+      dateLabel: 'Apr 24',
+      workoutName: 'Lower B',
+      status: 'upcoming',
+      workoutPreview: createWorkoutPreview({
+        workoutName: 'Lower B',
+        exercises: [
+          { id: 'lower-b-trapbar', name: 'Trap Bar Deadlift', setCount: 4, defaultRestSeconds: 180 },
+          { id: 'lower-b-split-squat', name: 'Rear Foot Elevated Split Squat', setCount: 3, defaultRestSeconds: 120 },
+        ],
+      }),
+    },
+    {
+      id: 'sat',
+      dayLabel: 'Sat',
+      dateLabel: 'Apr 25',
+      workoutName: 'Speed + jumps',
+      status: 'optional',
+      workoutPreview: createWorkoutPreview({
+        workoutName: 'Speed + jumps',
+        exercises: [
+          { id: 'speed-jumps', name: 'Box Jump', setCount: 5, defaultRestSeconds: 90 },
+          { id: 'speed-sprint', name: '10m Sprint', setCount: 6, defaultRestSeconds: 75 },
+        ],
+      }),
+    },
+    {
+      id: 'sun',
+      dayLabel: 'Sun',
+      dateLabel: 'Apr 26',
+      workoutName: 'Off',
+      status: 'off',
+      workoutPreview: null,
+    },
+  ]
+}
+
+function createWorkoutPreviewFromProgramWorkout(programWorkout) {
+  return createWorkoutPreview({
+    workoutName: programWorkout.nameSnapshot,
+    exercises: programWorkout.exercises.map((exercise) => ({
+      id: exercise.id,
+      name: exercise.nameSnapshot,
+      setCount: exercise.sets.length,
+      defaultRestSeconds: exercise.defaultRestSeconds,
+    })),
+  })
+}
+
+function createWorkoutPreviewFromSession(session) {
+  return createWorkoutPreview({
+    workoutName: session.nameSnapshot,
+    exercises: session.exercises.map((exercise) => ({
+      id: exercise.id,
+      name: exercise.nameSnapshot,
+      setCount: exercise.sets.length,
+      defaultRestSeconds: exercise.defaultRestSeconds,
+    })),
+  })
+}
+
+function createWorkoutPreview({ workoutName, exercises }) {
+  return {
+    workoutName,
+    exercises,
+  }
 }
 
 function buildDemoCompletedSession({ programWorkout, completedAt, squatLoad, rdlLoad }) {

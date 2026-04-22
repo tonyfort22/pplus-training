@@ -24,8 +24,9 @@ export function getTodayCardsModel(todayModel) {
 export function getWorkoutDetailCardModel(workoutModel) {
   return {
     title: 'Workout detail',
-    body: `${workoutModel.workoutName} contains ${workoutModel.exerciseCount} exercises in this scaffold, with prescribed sets, loads, reps, and planned rest. This is the preview before starting or continuing the session.`,
-    actionLabel: 'Go to session',
+    body: `${workoutModel.dayLabel} · ${workoutModel.scheduleStatusLabel}. ${workoutModel.workoutName} contains ${workoutModel.exerciseCount} exercises in this scaffold, with prescribed sets, loads, reps, and planned rest. This is the preview before starting or continuing the session.`,
+    actionLabel: workoutModel.primaryActionLabel || 'Go to session',
+    actionPayload: workoutModel.actionPayload || null,
   }
 }
 
@@ -34,6 +35,7 @@ export function getCalendarDetailCardModel(calendarModel) {
     title: calendarModel.title,
     body: calendarModel.body,
     actionLabel: calendarModel.actionLabel,
+    actionPayload: calendarModel.actionPayload || null,
     rows: calendarModel.days,
   }
 }

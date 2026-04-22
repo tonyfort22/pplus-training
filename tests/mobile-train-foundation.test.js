@@ -29,6 +29,8 @@ test('createTrainDemoState builds a Spotr-style today flow from planned workout 
 
   assert.equal(trainState.program.name, 'Spring Hypertrophy')
   assert.equal(trainState.program.weekLabel, 'Week 3 of 8')
+  assert.equal(trainState.program.selectedCalendarDayId, 'tue')
+  assert.equal(trainState.program.calendarWeek.length, 7)
   assert.equal(trainState.today.workoutName, 'Lower A')
   assert.equal(trainState.today.scheduledLabel, 'Scheduled for today')
   assert.equal(trainState.session.programWorkoutId, 'pw-lower-a')
@@ -60,4 +62,18 @@ test('getWorkoutSurfaceModel summarizes planned exercises before the live sessio
   assert.equal(model.exercises[0].name, 'Barbell Back Squat')
   assert.equal(model.exercises[0].setCount, 4)
   assert.equal(model.exercises[1].defaultRestLabel, '2:30')
+})
+
+test('getWorkoutSurfaceModel can switch to the selected calendar day workout preview', () => {
+  const trainState = createTrainDemoState({
+    programWorkout: createDemoProgramWorkout(),
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+
+  const model = getWorkoutSurfaceModel(trainState, 'thu')
+
+  assert.equal(model.workoutName, 'Upper B')
+  assert.equal(model.dayLabel, 'Thu • Apr 23')
+  assert.equal(model.exercises[0].name, 'Bench Press')
+  assert.equal(model.exercises[0].setCount, 4)
 })

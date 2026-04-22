@@ -37,15 +37,18 @@ test('getTrainSurfaceModel builds the calendar preview surface', () => {
     trainTabs,
     activeTrainTab: 'calendar',
     todayModel: getTodaySurfaceModel(trainState),
-    calendarModel: getCalendarSurfaceModel(trainState),
-    workoutModel: getWorkoutSurfaceModel(trainState),
+    calendarModel: getCalendarSurfaceModel(trainState, 'thu'),
+    workoutModel: getWorkoutSurfaceModel(trainState, 'thu'),
     activeSessionModel: getActiveSessionSurfaceModel(trainState.session, 35, null),
   })
 
   assert.equal(model.surface.type, 'calendar')
   assert.equal(model.surface.detailCard.title, 'Weekly schedule')
   assert.equal(model.surface.detailCard.targetKey, 'workout')
-  assert.equal(model.surface.days[1].title, 'Tue • Lower A')
+  assert.equal(model.surface.detailCard.actionPayload.selectedDayId, 'thu')
+  assert.equal(model.surface.days[3].title, 'Thu • Upper B')
+  assert.equal(model.surface.days[3].isSelected, true)
+  assert.equal(model.surface.days[3].actionPayload.selectedDayId, 'thu')
 })
 
 test('getTrainSurfaceModel builds the workout preview surface', () => {

@@ -56,6 +56,9 @@ export function getTrainSurfaceModel({
           id: day.id,
           title: day.title,
           body: day.body,
+          isSelected: day.isSelected,
+          targetKey: day.targetKey,
+          actionPayload: day.actionPayload,
         })),
       },
     }
@@ -68,7 +71,7 @@ export function getTrainSurfaceModel({
         type: 'workout',
         detailCard: createActionCardModel({
           ...getWorkoutDetailCardModel(workoutModel),
-          targetKey: 'session',
+          targetKey: workoutModel.primaryTargetKey,
         }),
         exerciseSectionTitle: 'Planned exercises',
         exercises: workoutModel.exercises.map((exercise) => ({
