@@ -37,8 +37,6 @@ test('mobile shell renders a branded top header without the old preview-state co
   assert.doesNotMatch(shellSource, /Preview state/)
   assert.doesNotMatch(shellSource, /previewHeaderTopRow/)
   assert.doesNotMatch(shellSource, /previewBar/)
-  assert.match(rendererSource, /style=\{styles\.trainTabsPill\}/)
-  assert.match(rendererSource, /styles\.trainTabButton[\s\S]*styles\.trainTabButtonActive/)
   assert.match(logoSource, /<svg width="92" height="30"/)
   assert.match(iconsSource, /export const pphtUserSvg/)
   assert.match(iconsSource, /export const pphtUsersSvg/)

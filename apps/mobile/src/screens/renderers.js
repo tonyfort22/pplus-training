@@ -1,3 +1,4 @@
+import { ChevronRight } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 import { getGenericSectionViewItems, getSessionViewItems } from './view-items.js';
 import { MetricCard, SurfaceCard } from '../ui/cards.js';
@@ -39,25 +40,27 @@ export function renderGenericSections({ sections, styles, onActionTarget }) {
         <View key={section.key} style={section.title ? styles.sectionCard : styles.sectionListOnly}>
           {section.title ? <Text style={styles.sectionTitle}>{section.title}</Text> : null}
           {section.rows.map((row) => {
+            const isActionable = !!(row.targetKey && onActionTarget)
+            const RowWrapper = isActionable ? Pressable : View
+
             const rowBody = (
-              <View style={styles.workoutListCard}>
-                <View style={styles.workoutListAccentRail} />
-                <View style={styles.workoutListCardContent}>
-                  <Text style={styles.listRowTitle}>{row.title}</Text>
-                  <Text style={styles.listRowBody}>{row.body}</Text>
+              <RowWrapper
+                key={row.id || row.title}
+                className="flex-row items-center overflow-hidden rounded-[22px] bg-slate-900"
+                onPress={isActionable ? () => onActionTarget(row.targetKey, row.actionPayload) : undefined}
+              >
+                <View className="w-1 self-stretch bg-emerald-400" />
+                <View className="flex-1 flex-row items-center gap-3 px-4 py-[14px]">
+                  <View className="flex-1 gap-1">
+                    <Text className="text-[18px] font-bold text-white">{row.title}</Text>
+                    <Text className="text-sm text-slate-400">{row.body}</Text>
+                  </View>
+                  {isActionable ? <ChevronRight color="#94a3b8" size={18} strokeWidth={2.4} /> : null}
                 </View>
-              </View>
+              </RowWrapper>
             )
 
-            if (!row.targetKey || !onActionTarget) {
-              return <View key={row.id || row.title}>{rowBody}</View>
-            }
-
-            return (
-              <Pressable key={row.id || row.title} onPress={() => onActionTarget(row.targetKey, row.actionPayload)}>
-                {rowBody}
-              </Pressable>
-            )
+            return rowBody
           })}
         </View>
       )
@@ -129,6 +132,31 @@ export function renderGenericSections({ sections, styles, onActionTarget }) {
       </View>
     )
   })
+}
+
+export function renderTrainSurface({ trainRenderModel, sessionRenderModel, styles, onTrainTabPress, onActionTarget, renderSections, renderSessionSections }) {
+  return (
+    <>
+      {trainRenderModel.showTabs ? (
+        <View style={styles.trainTabsRow}>
+          <View style={styles.trainTabsPill}>
+            {trainRenderModel.tabs.map((tab) => (
+              <Pressable
+                key={tab.key}
+                style={[styles.trainTabButton, tab.isActive && styles.trainTabButtonActive]}
+                onPress={() => onTrainTabPress(tab.key)}
+              >
+                <Text style={[styles.trainTabLabel, tab.isActive && styles.trainTabLabelActive]}>{tab.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      {trainRenderModel.content.type === 'sections' && renderSections(trainRenderModel.content.sections, onActionTarget)}
+      {trainRenderModel.content.type === 'session-sections' && renderSessionSections(sessionRenderModel)}
+    </>
+  )
 }
 
 export function renderSessionSections({
@@ -276,29 +304,4 @@ export function renderSessionSections({
       </View>
     )
   })
-}
-
-export function renderTrainSurface({ trainRenderModel, sessionRenderModel, styles, onTrainTabPress, onActionTarget, renderSections, renderSessionSections }) {
-  return (
-    <>
-      {trainRenderModel.showTabs ? (
-        <View style={styles.trainTabsRow}>
-          <View style={styles.trainTabsPill}>
-            {trainRenderModel.tabs.map((tab) => (
-              <Pressable
-                key={tab.key}
-                style={[styles.trainTabButton, tab.isActive && styles.trainTabButtonActive]}
-                onPress={() => onTrainTabPress(tab.key)}
-              >
-                <Text style={[styles.trainTabLabel, tab.isActive && styles.trainTabLabelActive]}>{tab.label}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-      ) : null}
-
-      {trainRenderModel.content.type === 'sections' && renderSections(trainRenderModel.content.sections, onActionTarget)}
-      {trainRenderModel.content.type === 'session-sections' && renderSessionSections(sessionRenderModel)}
-    </>
-  )
 }

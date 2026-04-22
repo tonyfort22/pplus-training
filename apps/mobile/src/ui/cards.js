@@ -1,4 +1,62 @@
+import { Check } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
+
+function ProgramSummaryCard({ onAction, title, programName, dateRangeLabel, body, weekLabel, completionLabel, progressSegments }) {
+  const CardWrapper = onAction ? Pressable : View
+
+  return (
+    <CardWrapper className="flex-row overflow-hidden rounded-[22px] bg-slate-900" onPress={onAction}>
+      <View className="w-1 self-stretch bg-emerald-400" />
+      <View className="flex-1 gap-3 px-4 py-[18px]">
+        {title ? <Text className="text-[11px] font-semibold uppercase tracking-[1px] text-slate-400">{title}</Text> : null}
+        <Text className="text-[18px] font-bold text-white">{programName || title}</Text>
+        <Text className="text-sm text-slate-400">{dateRangeLabel || body}</Text>
+        <View className="flex-row gap-1.5">
+          {progressSegments.map((segment) => {
+            const stateClass = segment.isCurrent
+              ? 'bg-violet-700'
+              : segment.isComplete
+                ? 'bg-violet-500'
+                : 'bg-slate-700'
+
+            return <View key={segment.id} className={`h-2 flex-1 rounded-full ${stateClass}`} />
+          })}
+        </View>
+        <View className="flex-row items-center justify-between gap-3">
+          <Text className="text-[12px] font-semibold text-slate-300">{weekLabel}</Text>
+          <Text className="text-[12px] font-semibold text-slate-300">{completionLabel}</Text>
+        </View>
+      </View>
+    </CardWrapper>
+  )
+}
+
+function TodaySummaryCard({ onAction, title, workoutName, summaryLabel, scheduledLabel, quickSummary, body, statusLabel, completionTone }) {
+  const CardWrapper = onAction ? Pressable : View
+  const isDone = completionTone === 'done'
+  const metaLine = summaryLabel || scheduledLabel || quickSummary || body
+
+  return (
+    <CardWrapper className="flex-row items-stretch gap-3 rounded-[18px] bg-slate-900 p-[14px]" onPress={onAction}>
+      <View className="flex-1 gap-2">
+        <View className="gap-0.5">
+          {title ? <Text className="text-[11px] font-semibold uppercase tracking-[1px] text-slate-400">{title}</Text> : null}
+          <Text className="text-[18px] font-bold text-white">{workoutName || title}</Text>
+        </View>
+        <Text className="text-xs font-medium text-slate-400">{metaLine}</Text>
+        {statusLabel ? <Text className="text-xs font-semibold text-slate-500">{statusLabel}</Text> : null}
+      </View>
+      <View
+        className={[
+          'h-7 w-7 items-center justify-center self-center rounded-lg border',
+          isDone ? 'border-emerald-500 bg-emerald-950' : 'border-slate-600 bg-slate-800',
+        ].join(' ')}
+      >
+        <Check color={isDone ? '#34d399' : '#94a3b8'} size={15} strokeWidth={2.8} />
+      </View>
+    </CardWrapper>
+  )
+}
 
 export function SurfaceCard({
   styles,
@@ -20,55 +78,33 @@ export function SurfaceCard({
   completionTone,
 }) {
   if (variant === 'program-summary') {
-    const CardWrapper = onAction ? Pressable : View
-
     return (
-      <CardWrapper style={styles.programCard} onPress={onAction}>
-        <View style={styles.programAccentRail} />
-        <View style={styles.programCardContent}>
-          {title ? <Text style={styles.programCardLabel}>{title}</Text> : null}
-          <Text style={styles.programCardTitle}>{programName || title}</Text>
-          <Text style={styles.programCardDateRange}>{dateRangeLabel || body}</Text>
-          <View style={styles.programProgressRow}>
-            {progressSegments.map((segment) => (
-              <View
-                key={segment.id}
-                style={[
-                  styles.programProgressSegment,
-                  segment.isComplete && styles.programProgressSegmentComplete,
-                  segment.isCurrent && styles.programProgressSegmentCurrent,
-                ]}
-              />
-            ))}
-          </View>
-          <View style={styles.programMetaRow}>
-            <Text style={styles.programMetaText}>{weekLabel}</Text>
-            <Text style={styles.programMetaText}>{completionLabel}</Text>
-          </View>
-        </View>
-      </CardWrapper>
+      <ProgramSummaryCard
+        onAction={onAction}
+        title={title}
+        programName={programName}
+        dateRangeLabel={dateRangeLabel}
+        body={body}
+        weekLabel={weekLabel}
+        completionLabel={completionLabel}
+        progressSegments={progressSegments}
+      />
     )
   }
 
   if (variant === 'today-summary') {
-    const CardWrapper = onAction ? Pressable : View
-    const isDone = completionTone === 'done'
-    const metaLine = summaryLabel || scheduledLabel || quickSummary || body
-
     return (
-      <CardWrapper style={styles.todayCard} onPress={onAction}>
-        <View style={styles.todayCardContent}>
-          <View style={styles.todayCardTitleBlock}>
-            {title ? <Text style={styles.todayCardLabel}>{title}</Text> : null}
-            <Text style={styles.todayCardWorkoutName}>{workoutName || title}</Text>
-          </View>
-          <Text style={styles.todayCardSummary}>{metaLine}</Text>
-          {statusLabel ? <Text style={styles.todayCardFooterStatus}>{statusLabel}</Text> : null}
-        </View>
-        <View style={[styles.todayCardCheckWrap, isDone && styles.todayCardCheckWrapDone]}>
-          <Text style={[styles.todayCardCheckIcon, isDone && styles.todayCardCheckIconDone]}>✓</Text>
-        </View>
-      </CardWrapper>
+      <TodaySummaryCard
+        onAction={onAction}
+        title={title}
+        workoutName={workoutName}
+        summaryLabel={summaryLabel}
+        scheduledLabel={scheduledLabel}
+        quickSummary={quickSummary}
+        body={body}
+        statusLabel={statusLabel}
+        completionTone={completionTone}
+      />
     )
   }
 
