@@ -1,7 +1,7 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SvgXml } from 'react-native-svg';
 import { logoPphtGreenSvg } from '../assets/logo-ppht-green.js';
-import { pphtBarbellSvg, pphtCalendarDotsSvg, pphtChartBarSvg, pphtUserSvg, pphtUsersSvg } from '../assets/ppht-icons.js';
+import { pphtBarbellSvg, pphtCalendarDotsSvg, pphtChartBarSvg, pphtChatTextSvg, pphtUserSvg, pphtUsersSvg } from '../assets/ppht-icons.js';
 import { getAppScreenViewModel } from './shell-view-models.js';
 
 function tintSvg(svg, color) {
@@ -31,12 +31,7 @@ function BottomNavIcon({ tabKey, styles, isActive }) {
     return <SvgXml xml={tintSvg(pphtUsersSvg, iconColor)} width="22" height="22" />
   }
 
-  return (
-    <View style={styles.bottomNavIconCanvas}>
-      <View style={[styles.bottomNavIconChatBubble, styles.bottomNavIconStroke, isActive && styles.bottomNavIconStrokeActive]} />
-      <View style={[styles.bottomNavIconChatTail, styles.bottomNavIconStroke, isActive && styles.bottomNavIconStrokeActive]} />
-    </View>
-  )
+  return <SvgXml xml={tintSvg(pphtChatTextSvg, iconColor)} width="22" height="22" />
 }
 
 export function renderAppScreen({ screen, trainRenderModel, sessionRenderModel, styles, renderTrainSurface, renderGenericSections }) {
