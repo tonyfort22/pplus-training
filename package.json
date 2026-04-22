@@ -1,11 +1,13 @@
 {
   "name": "pplus-training",
   "private": true,
+  "type": "module",
   "version": "0.1.0",
   "packageManager": "pnpm@10.0.0",
   "scripts": {
     "dev:mobile": "pnpm --dir apps/mobile dev",
     "dev:web": "pnpm --dir apps/web dev",
-    "lint": "pnpm -r lint"
+    "lint": "pnpm -r lint",
+    "test": "node --test"
   }
 }

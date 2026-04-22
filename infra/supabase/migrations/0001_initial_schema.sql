@@ -191,6 +191,39 @@ create table if not exists program_workouts (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists program_workout_exercises (
+  id uuid primary key,
+  program_workout_id uuid not null references program_workouts(id) on delete cascade,
+  workout_template_exercise_id uuid references workout_template_exercises(id),
+  exercise_id uuid not null references exercises(id),
+  name_snapshot text,
+  sort_order integer not null,
+  notes text,
+  default_rest_seconds integer,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists program_workout_sets (
+  id uuid primary key,
+  program_workout_exercise_id uuid not null references program_workout_exercises(id) on delete cascade,
+  workout_template_set_id uuid references workout_template_sets(id),
+  sort_order integer not null,
+  set_type text,
+  target_reps integer,
+  target_load numeric,
+  target_load_unit text,
+  target_duration_seconds integer,
+  target_distance numeric,
+  target_distance_unit text,
+  target_rpe numeric,
+  target_rir numeric,
+  target_rest_seconds integer,
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists workout_sessions (
   id uuid primary key,
   athlete_id uuid not null references athlete_profiles(id),
@@ -217,6 +250,7 @@ create table if not exists workout_sessions (
 create table if not exists workout_session_exercises (
   id uuid primary key,
   workout_session_id uuid not null references workout_sessions(id) on delete cascade,
+  program_workout_exercise_id uuid references program_workout_exercises(id),
   exercise_id uuid not null references exercises(id),
   name_snapshot text,
   sort_order integer not null,
@@ -230,6 +264,7 @@ create table if not exists workout_session_exercises (
 create table if not exists workout_session_sets (
   id uuid primary key,
   workout_session_exercise_id uuid not null references workout_session_exercises(id) on delete cascade,
+  program_workout_set_id uuid references program_workout_sets(id),
   sort_order integer not null,
   set_type text,
   prescribed_reps integer,
@@ -253,6 +288,20 @@ create table if not exists workout_session_sets (
   completed_at timestamptz,
   is_completed boolean not null default false,
   notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists rest_timer_states (
+  id uuid primary key,
+  workout_session_id uuid not null references workout_sessions(id) on delete cascade,
+  workout_session_set_id uuid references workout_session_sets(id) on delete cascade,
+  mode text not null,
+  duration_seconds integer,
+  remaining_seconds integer,
+  started_at timestamptz,
+  ended_at timestamptz,
+  is_running boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -297,5 +346,53 @@ create table if not exists session_sub_muscle_load_summaries (
   score numeric,
   cap numeric,
   level text,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists exercise_performance_snapshots (
+  id uuid primary key,
+  athlete_id uuid not null references athlete_profiles(id),
+  exercise_id uuid not null references exercises(id),
+  workout_session_id uuid not null references workout_sessions(id) on delete cascade,
+  workout_session_exercise_id uuid references workout_session_exercises(id) on delete cascade,
+  metric_type text,
+  load numeric,
+  reps integer,
+  sets integer,
+  duration_seconds integer,
+  distance numeric,
+  unit text,
+  body_region text,
+  log_date date,
+  notes text,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists body_metric_logs (
+  id uuid primary key,
+  athlete_id uuid not null references athlete_profiles(id),
+  coach_id uuid references coach_profiles(id),
+  log_date date not null,
+  weight_lb numeric,
+  sleep_hours numeric,
+  recovery_score numeric,
+  energy_score numeric,
+  mood_score numeric,
+  training_compliance numeric,
+  nutrition_compliance numeric,
+  notes text,
+  progress_photo_url text,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists recovery_snapshots (
+  id uuid primary key,
+  athlete_id uuid not null references athlete_profiles(id),
+  snapshot_date date not null,
+  muscle_id uuid references muscles(id),
+  sub_muscle_id uuid references sub_muscles(id),
+  fatigue_score numeric,
+  recovery_score numeric,
+  readiness_level text,
   created_at timestamptz not null default now()
 );

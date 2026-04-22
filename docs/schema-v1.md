@@ -4,6 +4,12 @@
 This schema is the first clean relational model for PPLUS Training.
 It preserves what mattered from the PPHT Bubble work while removing the planning and execution overlap.
 
+This document is also the contract for the SQL foundation in:
+- `infra/supabase/schema-v1.sql`
+- `infra/supabase/migrations/0001_initial_schema.sql`
+
+For the fresh-start foundation, those SQL files should stay aligned with this document.
+
 ## Main design rules
 - content, planning, execution, and analytics are separate layers
 - execution rows are snapshots of planned data at session start
