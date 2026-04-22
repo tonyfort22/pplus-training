@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { getAppScreenViewModel, getBottomTabViewItems } from '../apps/mobile/src/screens/shell-view-models.js'
 import { getProgressSurfaceModel } from '../apps/mobile/src/progress/index.js'
 import { getProgressSections } from '../apps/mobile/src/screens/surface-sections.js'
 import { getGenericSectionRenderPlan } from '../apps/mobile/src/screens/render-plans.js'
@@ -9,6 +10,24 @@ import { getSessionSections } from '../apps/mobile/src/screens/session-sections.
 import { getSessionSectionRenderPlan } from '../apps/mobile/src/screens/render-plans.js'
 import { getSessionRenderModel } from '../apps/mobile/src/screens/session-render-models.js'
 import { getGenericSectionViewItems, getSessionViewItems } from '../apps/mobile/src/screens/view-items.js'
+
+const bottomTabs = [
+  { key: 'train', label: 'Train', isActive: true },
+  { key: 'progress', label: 'Progress', isActive: false },
+  { key: 'team', label: 'Team', isActive: false },
+  { key: 'inbox', label: 'Inbox', isActive: false },
+]
+
+test('getBottomTabViewItems groups primary tabs and detached utility tab for shell rendering', () => {
+  const items = getBottomTabViewItems(bottomTabs)
+
+  assert.equal(items.primaryTabs.length, 3)
+  assert.equal(items.primaryTabs[0].icon, '🏋️')
+  assert.equal(items.primaryTabs[1].icon, '📊')
+  assert.equal(items.primaryTabs[2].icon, '👥')
+  assert.equal(items.utilityTab.key, 'inbox')
+  assert.equal(items.utilityTab.icon, '💬')
+})
 
 test('getGenericSectionViewItems adds stable keys to generic section items', () => {
   const sections = getGenericSectionRenderPlan(getProgressSections(getProgressSurfaceModel()))

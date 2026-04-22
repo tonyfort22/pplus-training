@@ -1,3 +1,5 @@
+import { getBottomTabViewItems } from './shell-view-models.js'
+
 export function getAppRenderModel({
   activeTab,
   bottomTabModels,
@@ -6,9 +8,11 @@ export function getAppRenderModel({
   teamSections,
   inboxSections,
 }) {
+  const bottomTabViewItems = getBottomTabViewItems(bottomTabModels)
+
   if (activeTab === 'train') {
     return {
-      bottomTabs: bottomTabModels,
+      bottomTabs: bottomTabViewItems,
       screen: {
         type: 'train',
         content: trainRenderModel.content,
@@ -19,7 +23,7 @@ export function getAppRenderModel({
 
   if (activeTab === 'progress') {
     return {
-      bottomTabs: bottomTabModels,
+      bottomTabs: bottomTabViewItems,
       screen: {
         type: 'progress',
         sections: progressSections,
@@ -29,7 +33,7 @@ export function getAppRenderModel({
 
   if (activeTab === 'team') {
     return {
-      bottomTabs: bottomTabModels,
+      bottomTabs: bottomTabViewItems,
       screen: {
         type: 'team',
         sections: teamSections,
@@ -38,7 +42,7 @@ export function getAppRenderModel({
   }
 
   return {
-    bottomTabs: bottomTabModels,
+    bottomTabs: bottomTabViewItems,
     screen: {
       type: 'inbox',
       sections: inboxSections,

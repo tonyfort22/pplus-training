@@ -25,12 +25,13 @@ test('getAppScreenViewModel normalizes train and generic screens for shell rende
   assert.equal(progressScreen.sections[0].title, 'Performance & recovery')
 })
 
-test('getBottomTabViewItems keeps stable keys and active flags for shell tabs', () => {
+test('getBottomTabViewItems keeps stable grouped shell tabs', () => {
   const tabs = getTabButtonModels({
     tabs: [
       { key: 'train', label: 'Train' },
       { key: 'progress', label: 'Progress' },
       { key: 'team', label: 'Team' },
+      { key: 'inbox', label: 'Inbox' },
     ],
     activeKey: 'progress',
   })
@@ -38,11 +39,14 @@ test('getBottomTabViewItems keeps stable keys and active flags for shell tabs', 
   const viewItems = getBottomTabViewItems(tabs)
 
   assert.deepEqual(
-    viewItems.map((tab) => ({ key: tab.key, label: tab.label, isActive: tab.isActive })),
+    viewItems.primaryTabs.map((tab) => ({ key: tab.key, isActive: tab.isActive })),
     [
-      { key: 'train', label: 'Train', isActive: false },
-      { key: 'progress', label: 'Progress', isActive: true },
-      { key: 'team', label: 'Team', isActive: false },
+      { key: 'train', isActive: false },
+      { key: 'progress', isActive: true },
+      { key: 'team', isActive: false },
     ]
   )
+  assert.equal(viewItems.primaryTabs[1].icon, '📊')
+  assert.equal(viewItems.utilityTab.key, 'inbox')
+  assert.equal(viewItems.utilityTab.isActive, false)
 })

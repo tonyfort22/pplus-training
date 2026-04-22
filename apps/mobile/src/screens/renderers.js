@@ -5,11 +5,12 @@ import { MetricCard, SurfaceCard } from '../ui/cards.js';
 export function renderGenericSections({ sections, styles, onActionTarget }) {
   return getGenericSectionViewItems(sections).map((section) => {
     if (section.type === 'action-card') {
+      const { key, ...cardProps } = section
       return (
         <SurfaceCard
-          key={section.key}
+          key={key}
           styles={styles}
-          {...section}
+          {...cardProps}
           onAction={onActionTarget ? () => onActionTarget(section.targetKey, section.actionPayload) : undefined}
         />
       )

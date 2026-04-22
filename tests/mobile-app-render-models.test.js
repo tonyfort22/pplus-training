@@ -10,7 +10,7 @@ import { getProgressSections, getPlaceholderSections } from '../apps/mobile/src/
 import { getTabButtonModels } from '../apps/mobile/src/ui/tab-models.js'
 import { getAppRenderModel } from '../apps/mobile/src/screens/app-render-models.js'
 
-test('getAppRenderModel returns the active train screen and bottom tabs', () => {
+test('getAppRenderModel returns the active train screen and grouped bottom tabs', () => {
   const trainState = createTrainDemoState({
     programWorkout: createDemoProgramWorkout(),
     startedAt: '2026-04-21T20:00:00.000Z',
@@ -39,7 +39,9 @@ test('getAppRenderModel returns the active train screen and bottom tabs', () => 
 
   assert.equal(model.screen.type, 'train')
   assert.equal(model.screen.content.type, 'sections')
-  assert.equal(model.bottomTabs.find((tab) => tab.key === 'train').isActive, true)
+  assert.equal(model.bottomTabs.primaryTabs.length, 3)
+  assert.equal(model.bottomTabs.utilityTab.key, 'inbox')
+  assert.equal(model.bottomTabs.primaryTabs[0].isActive, true)
 })
 
 test('getAppRenderModel switches to progress and placeholder surfaces by active tab', () => {
@@ -54,5 +56,5 @@ test('getAppRenderModel switches to progress and placeholder surfaces by active 
 
   assert.equal(model.screen.type, 'inbox')
   assert.equal(model.screen.sections[0].title, 'Inbox')
-  assert.equal(model.bottomTabs.find((tab) => tab.key === 'inbox').isActive, true)
+  assert.equal(model.bottomTabs.utilityTab.isActive, true)
 })

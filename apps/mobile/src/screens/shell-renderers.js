@@ -1,5 +1,46 @@
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import { getAppScreenViewModel, getBottomTabViewItems } from './shell-view-models.js';
+import { getAppScreenViewModel } from './shell-view-models.js';
+
+function BottomNavIcon({ tabKey, styles, isActive }) {
+  const strokeStyle = [styles.bottomNavIconStroke, isActive && styles.bottomNavIconStrokeActive]
+
+  if (tabKey === 'train') {
+    return (
+      <View style={styles.bottomNavIconCanvas}>
+        <View style={[styles.bottomNavIconBarbell, strokeStyle]} />
+        <View style={[styles.bottomNavIconWeightLeft, strokeStyle]} />
+        <View style={[styles.bottomNavIconWeightRight, strokeStyle]} />
+      </View>
+    )
+  }
+
+  if (tabKey === 'progress') {
+    return (
+      <View style={styles.bottomNavIconCanvas}>
+        <View style={[styles.bottomNavIconChartBarShort, strokeStyle]} />
+        <View style={[styles.bottomNavIconChartBarMid, strokeStyle]} />
+        <View style={[styles.bottomNavIconChartBarTall, strokeStyle]} />
+      </View>
+    )
+  }
+
+  if (tabKey === 'team') {
+    return (
+      <View style={styles.bottomNavIconCanvas}>
+        <View style={[styles.bottomNavIconHeadLeft, strokeStyle]} />
+        <View style={[styles.bottomNavIconHeadRight, strokeStyle]} />
+        <View style={[styles.bottomNavIconShoulders, strokeStyle]} />
+      </View>
+    )
+  }
+
+  return (
+    <View style={styles.bottomNavIconCanvas}>
+      <View style={[styles.bottomNavIconChatBubble, strokeStyle]} />
+      <View style={[styles.bottomNavIconChatTail, strokeStyle]} />
+    </View>
+  )
+}
 
 export function renderAppScreen({ screen, trainRenderModel, sessionRenderModel, styles, renderTrainSurface, renderGenericSections }) {
   const screenViewModel = getAppScreenViewModel({ screen })
@@ -19,15 +60,26 @@ export function renderAppScreen({ screen, trainRenderModel, sessionRenderModel, 
 }
 
 export function renderBottomTabBar({ bottomTabs, styles, onTabPress }) {
-  const tabViewItems = getBottomTabViewItems(bottomTabs)
+  const tabViewItems = bottomTabs
 
   return (
-    <View style={styles.tabBar}>
-      {tabViewItems.map((tab) => (
-        <Pressable key={tab.key} style={[styles.tabButton, tab.isActive && styles.tabButtonActive]} onPress={() => onTabPress(tab.key)}>
-          <Text style={[styles.tabLabel, tab.isActive && styles.tabLabelActive]}>{tab.label}</Text>
+    <View style={styles.bottomNavWrap}>
+      <View style={styles.bottomNavMainPill}>
+        {tabViewItems.primaryTabs.map((tab) => (
+          <Pressable key={tab.key} style={[styles.bottomNavTab, tab.isActive && styles.bottomNavTabActive]} onPress={() => onTabPress(tab.key)}>
+            <BottomNavIcon tabKey={tab.key} styles={styles} isActive={tab.isActive} />
+          </Pressable>
+        ))}
+      </View>
+
+      {tabViewItems.utilityTab ? (
+        <Pressable
+          style={[styles.bottomNavUtilityButton, tabViewItems.utilityTab.isActive && styles.bottomNavUtilityButtonActive]}
+          onPress={() => onTabPress(tabViewItems.utilityTab.key)}
+        >
+          <BottomNavIcon tabKey={tabViewItems.utilityTab.key} styles={styles} isActive={tabViewItems.utilityTab.isActive} />
         </Pressable>
-      ))}
+      ) : null}
     </View>
   )
 }
