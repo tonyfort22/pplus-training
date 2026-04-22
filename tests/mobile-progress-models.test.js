@@ -55,6 +55,11 @@ test('getProgressSurfaceModel derives athlete metrics from completed sessions', 
   assert.equal(model.muscleFatigue.rows[0].title, 'Quads')
   assert.equal(model.performanceSnapshots.title, 'Performance snapshots')
   assert.match(model.performanceSnapshots.body, /100% adherence/i)
+  assert.equal(model.recentMomentum.title, 'Recent momentum')
+  assert.equal(model.recentMomentum.rows.length, 2)
+  assert.match(model.recentMomentum.rows[0].title, /Apr 20/)
+  assert.match(model.recentMomentum.rows[0].title, /Lower A/)
+  assert.match(model.recentMomentum.rows[0].body, /171 lb est\. 1RM/)
 })
 
 test('getProgressSurfaceModel falls back cleanly when no completed sessions exist', () => {
@@ -64,6 +69,9 @@ test('getProgressSurfaceModel falls back cleanly when no completed sessions exis
   assert.equal(model.metrics[1].value, '0')
   assert.equal(model.metrics[2].value, 'Low')
   assert.match(model.performanceSnapshots.body, /No completed sessions yet/i)
+  assert.equal(model.recentMomentum.title, 'Recent momentum')
+  assert.equal(model.recentMomentum.rows.length, 1)
+  assert.match(model.recentMomentum.rows[0].body, /Finish a workout to start building recent momentum/i)
 })
 
 test('getPlaceholderSurfaceModel keeps placeholder screens consistent', () => {

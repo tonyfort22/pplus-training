@@ -19,6 +19,7 @@ test('getGenericSectionViewItems adds stable keys to generic section items', () 
   assert.equal(viewItems[2].key, 'Training load')
   assert.equal(viewItems[3].key, 'Muscle fatigue')
   assert.equal(viewItems[4].key, 'Performance snapshots')
+  assert.equal(viewItems[5].key, 'Recent momentum')
 })
 
 test('getSessionViewItems adds stable keys to session sections, exercises, and sets', () => {

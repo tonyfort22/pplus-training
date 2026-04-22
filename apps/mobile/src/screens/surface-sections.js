@@ -31,6 +31,14 @@ export function getProgressSections(progressModel) {
       title: progressModel.performanceSnapshots.title,
       body: progressModel.performanceSnapshots.body,
     },
+    {
+      type: 'body-with-rows',
+      title: progressModel.recentMomentum.title,
+      rows: progressModel.recentMomentum.rows.map((row) => ({
+        title: row.title,
+        body: row.body,
+      })),
+    },
   ]
 }
 

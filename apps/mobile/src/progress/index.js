@@ -51,6 +51,10 @@ export function getProgressSurfaceModel({ sessions = [] } = {}) {
         ? `${adherence} across the current sample, with progress driven only by completed actual work.`
         : 'No completed sessions yet. Finish a workout to start building adherence and performance snapshots.',
     },
+    recentMomentum: {
+      title: 'Recent momentum',
+      rows: buildRecentMomentumRows(completedSessions),
+    },
   }
 }
 
@@ -131,6 +135,67 @@ function buildFatigueRows(sessions) {
     title,
     body: getFatigueLabel(volume),
   }))
+}
+
+function buildRecentMomentumRows(sessions) {
+  if (sessions.length === 0) {
+    return [
+      {
+        title: 'No completed work yet',
+        body: 'Finish a workout to start building recent momentum from actual completed sessions.',
+      },
+    ]
+  }
+
+  return [...sessions]
+    .sort((left, right) => new Date(right.completedAt || 0).getTime() - new Date(left.completedAt || 0).getTime())
+    .slice(0, 3)
+    .map((session) => {
+      const bestSet = getSessionBestSet(session)
+      const bestSetCopy = bestSet
+        ? `${estimateOneRepMax(bestSet.actualLoad, bestSet.actualReps)} lb est. 1RM from ${bestSet.exerciseName} (${bestSet.actualLoad} x ${bestSet.actualReps})`
+        : 'Completed session logged with no usable strength set yet.'
+
+      return {
+        title: `${formatSessionDate(session.completedAt)} • ${session.nameSnapshot || session.workoutName || 'Completed session'}`,
+        body: `${session.completedSetsCount} of ${session.totalSetsCount} sets completed. ${bestSetCopy}`,
+      }
+    })
+}
+
+function getSessionBestSet(session) {
+  let bestSet = null
+
+  for (const exercise of session.exercises || []) {
+    for (const set of exercise.sets || []) {
+      if (!set.isCompleted || set.actualLoad == null || set.actualReps == null) continue
+
+      const estimate = estimateOneRepMax(set.actualLoad, set.actualReps)
+      if (!bestSet || estimate > bestSet.estimate) {
+        bestSet = {
+          exerciseName: exercise.nameSnapshot || exercise.name || 'Exercise',
+          actualLoad: set.actualLoad,
+          actualReps: set.actualReps,
+          estimate,
+        }
+      }
+    }
+  }
+
+  return bestSet
+}
+
+function formatSessionDate(value) {
+  if (!value) return 'Recent session'
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Recent session'
+
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'America/Toronto',
+  })
 }
 
 function getFatigueLabel(volume) {
