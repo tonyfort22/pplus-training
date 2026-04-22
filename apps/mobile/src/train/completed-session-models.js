@@ -5,6 +5,7 @@ import { getSessionExerciseModels } from './session-models.js'
 export function getCompletedSessionSurfaceModel(session) {
   const progress = getSessionProgress(session)
   const exerciseModels = getSessionExerciseModels(session)
+  const strongestSet = getStrongestCompletedSet(session)
 
   return {
     header: {
@@ -42,6 +43,13 @@ export function getCompletedSessionSurfaceModel(session) {
           title: 'Work completed',
           body: `${progress.completedSets}/${progress.totalSets} sets across ${progress.completedExercises}/${progress.totalExercises} exercises were logged as actual work.`,
         },
+        {
+          id: 'completed-strongest-set',
+          title: 'Strongest set',
+          body: strongestSet
+            ? `${strongestSet.exerciseTitle} ${strongestSet.setTitle} hit ${strongestSet.loadLabel} x ${strongestSet.repsLabel}.`
+            : 'No strongest set available from the completed work.',
+        },
       ],
     },
     exerciseResults: {
@@ -72,4 +80,32 @@ function buildExerciseResultBody(exercise) {
   }
 
   return `${completedCount}/${totalCount} sets completed. Final set: ${lastCompletedSet.actualLabel}`
+}
+
+function getStrongestCompletedSet(session) {
+  let strongestSet = null
+
+  for (const exercise of getSessionExerciseModels(session)) {
+    for (const set of exercise.sets) {
+      if (!set.isCompleted) continue
+
+      const load = Number(set.actualLoadValue || 0)
+      if (!strongestSet || load > strongestSet.loadValue) {
+        strongestSet = {
+          exerciseTitle: exercise.title,
+          setTitle: set.title,
+          loadLabel: `${set.actualLoadValue} ${extractLoadUnit(set.actualLabel)}`,
+          repsLabel: `${set.actualRepsValue}`,
+          loadValue: load,
+        }
+      }
+    }
+  }
+
+  return strongestSet
+}
+
+function extractLoadUnit(actualLabel) {
+  const match = actualLabel.match(/Actual:\s+[-\d.]+\s+(\w+)\s+x/)
+  return match ? match[1] : 'lb'
 }
