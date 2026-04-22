@@ -77,7 +77,7 @@ test('getTrainRenderModel keeps the selected-date workout card in sync with the 
   assert.equal(renderModel.content.sections[2].type, 'action-card')
   assert.equal(renderModel.content.sections[2].variant, 'today-summary')
   assert.equal(renderModel.content.sections[2].workoutName, 'Lower A')
-  assert.equal(renderModel.content.sections[2].targetKey, 'session')
+  assert.equal(renderModel.content.sections[2].targetKey, 'workout')
 })
 
 test('getTrainRenderModel passes through session sections for the session tab', () => {

@@ -80,14 +80,16 @@ function getTrainHomeSurface({ todayModel, calendarModel, workoutModel }) {
         id: day.id,
         title: getWorkoutNameFromCalendarTitle(day.title),
         body: `${getDayLabelFromCalendarTitle(day.title)} • ${getDateLabelFromCalendarBody(day.body)} · ${getStatusLabelFromCalendarBody(day.body)}`,
+        targetKey: 'workout',
+        actionPayload: { selectedDayId: day.id },
       })),
   }
 }
 
 function getSelectedWorkoutCardModel(workoutModel) {
   const totalSets = workoutModel.exercises.reduce((sum, exercise) => sum + exercise.setCount, 0)
-  const targetKey = workoutModel.primaryTargetKey === 'calendar' ? 'workout' : workoutModel.primaryTargetKey
-  const actionLabel = workoutModel.primaryTargetKey === 'calendar' ? 'Open workout' : workoutModel.primaryActionLabel
+  const targetKey = 'workout'
+  const actionLabel = 'Open workout'
 
   return {
     title: undefined,

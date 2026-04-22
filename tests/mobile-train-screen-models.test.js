@@ -66,11 +66,11 @@ test('getTrainSurfaceModel keeps the selected-date workout card aligned with the
   })
 
   assert.equal(model.surface.type, 'train-home')
-  assert.equal(model.surface.selectedWorkoutCard.actionLabel, 'Resume session')
+  assert.equal(model.surface.selectedWorkoutCard.actionLabel, 'Open workout')
   assert.equal(model.surface.selectedWorkoutCard.scheduledLabel, 'Scheduled for today')
   assert.equal(model.surface.selectedWorkoutCard.summaryLabel, 'Scheduled for today')
   assert.equal(model.surface.selectedWorkoutCard.statusLabel, undefined)
-  assert.equal(model.surface.selectedWorkoutCard.targetKey, 'session')
+  assert.equal(model.surface.selectedWorkoutCard.targetKey, 'workout')
   assert.equal(model.surface.calendarStripDays[2].targetKey, 'session')
   assert.equal(model.surface.calendarStripDays[2].indicatorTone, 'active')
 })
@@ -92,8 +92,8 @@ test('getTrainSurfaceModel keeps completed today inside the train-home view whil
   })
 
   assert.equal(model.surface.type, 'train-home')
-  assert.equal(model.surface.selectedWorkoutCard.actionLabel, 'View completed session')
-  assert.equal(model.surface.selectedWorkoutCard.targetKey, 'session')
+  assert.equal(model.surface.selectedWorkoutCard.actionLabel, 'Open workout')
+  assert.equal(model.surface.selectedWorkoutCard.targetKey, 'workout')
 })
 
 test('getTrainSurfaceModel keeps the workout tab inside the same train-home surface', () => {

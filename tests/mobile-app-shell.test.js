@@ -78,3 +78,14 @@ test('mobile app shell also owns a dedicated training calendar screen state from
   assert.match(appSource, /const trainingCalendarModel = useMemo\(/)
   assert.match(appSource, /<TrainingCalendarSheet[\s\S]*isVisible=\{isTrainingCalendarOpen\}/)
 })
+
+test('mobile app shell also owns a dedicated workout sheet state for workout previews', () => {
+  const appSource = readFileSync(
+    resolve(process.cwd(), 'apps/mobile/App.js'),
+    'utf8'
+  )
+
+  assert.match(appSource, /const \[isWorkoutSheetOpen, setIsWorkoutSheetOpen\] = useState\(false\);/)
+  assert.match(appSource, /const workoutSheetModel = useMemo\(/)
+  assert.match(appSource, /<WorkoutSheet[\s\S]*isVisible=\{isWorkoutSheetOpen\}/)
+})
