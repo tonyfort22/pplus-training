@@ -1,3 +1,5 @@
+import { createMetricCardModel } from '../ui/card-models.js'
+
 export function getProgressSections(progressModel) {
   return [
     {
@@ -8,11 +10,7 @@ export function getProgressSections(progressModel) {
     },
     {
       type: 'metrics-grid',
-      items: progressModel.metrics.map((metric) => ({
-        label: metric.label,
-        value: metric.value,
-        detail: metric.detail,
-      })),
+      items: progressModel.metrics.map((metric) => createMetricCardModel(metric)),
     },
     {
       type: 'body',

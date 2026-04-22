@@ -1,4 +1,5 @@
 import { getProgramSurfaceModel, getTodayCardsModel, getWorkoutDetailCardModel } from './surface-models.js'
+import { createActionCardModel } from '../ui/card-models.js'
 import { getTabButtonModels } from '../ui/tab-models.js'
 
 export function getTrainSurfaceModel({ trainTabs, activeTrainTab, todayModel, workoutModel, activeSessionModel }) {
@@ -12,8 +13,8 @@ export function getTrainSurfaceModel({ trainTabs, activeTrainTab, todayModel, wo
       surface: {
         type: 'today',
         cards: [
-          { ...cards.todayCard, targetTab: 'workout' },
-          { ...cards.programCard, targetTab: 'program' },
+          createActionCardModel({ ...cards.todayCard, targetKey: 'workout' }),
+          createActionCardModel({ ...cards.programCard, targetKey: 'program' }),
         ],
       },
     }
@@ -24,10 +25,10 @@ export function getTrainSurfaceModel({ trainTabs, activeTrainTab, todayModel, wo
       tabs,
       surface: {
         type: 'program',
-        card: {
+        card: createActionCardModel({
           ...getProgramSurfaceModel(todayModel),
-          targetTab: 'workout',
-        },
+          targetKey: 'workout',
+        }),
       },
     }
   }
@@ -37,10 +38,10 @@ export function getTrainSurfaceModel({ trainTabs, activeTrainTab, todayModel, wo
       tabs,
       surface: {
         type: 'workout',
-        detailCard: {
+        detailCard: createActionCardModel({
           ...getWorkoutDetailCardModel(workoutModel),
-          targetTab: 'session',
-        },
+          targetKey: 'session',
+        }),
         exerciseSectionTitle: 'Planned exercises',
         exercises: workoutModel.exercises.map((exercise) => ({
           id: exercise.id,

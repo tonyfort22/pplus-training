@@ -253,7 +253,7 @@ export default function App() {
                 title={card.title}
                 body={card.body}
                 actionLabel={card.actionLabel}
-                onAction={() => setActiveTrainTab(card.targetTab)}
+                onAction={() => setActiveTrainTab(card.targetKey)}
               />
             ))}
           </>
@@ -264,7 +264,7 @@ export default function App() {
             title={trainSurfaceModel.surface.card.title}
             body={trainSurfaceModel.surface.card.body}
             actionLabel={trainSurfaceModel.surface.card.actionLabel}
-            onAction={() => setActiveTrainTab(trainSurfaceModel.surface.card.targetTab)}
+            onAction={() => setActiveTrainTab(trainSurfaceModel.surface.card.targetKey)}
           />
         )}
 
@@ -274,7 +274,7 @@ export default function App() {
               title={trainSurfaceModel.surface.detailCard.title}
               body={trainSurfaceModel.surface.detailCard.body}
               actionLabel={trainSurfaceModel.surface.detailCard.actionLabel}
-              onAction={() => setActiveTrainTab(trainSurfaceModel.surface.detailCard.targetTab)}
+              onAction={() => setActiveTrainTab(trainSurfaceModel.surface.detailCard.targetKey)}
             />
             <View style={styles.sectionCard}>
               <Text style={styles.sectionTitle}>{trainSurfaceModel.surface.exerciseSectionTitle}</Text>

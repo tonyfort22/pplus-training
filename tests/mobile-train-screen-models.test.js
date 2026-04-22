@@ -22,8 +22,8 @@ test('getTrainSurfaceModel builds Today surface cards and tab state', () => {
   assert.equal(model.tabs.find((tab) => tab.key === 'today').isActive, true)
   assert.equal(model.surface.type, 'today')
   assert.equal(model.surface.cards[0].title, 'Today')
-  assert.equal(model.surface.cards[0].targetTab, 'workout')
-  assert.equal(model.surface.cards[1].targetTab, 'program')
+  assert.equal(model.surface.cards[0].targetKey, 'workout')
+  assert.equal(model.surface.cards[1].targetKey, 'program')
 })
 
 test('getTrainSurfaceModel builds the workout preview surface', () => {
@@ -42,7 +42,7 @@ test('getTrainSurfaceModel builds the workout preview surface', () => {
 
   assert.equal(model.surface.type, 'workout')
   assert.equal(model.surface.detailCard.title, 'Workout detail')
-  assert.equal(model.surface.detailCard.targetTab, 'session')
+  assert.equal(model.surface.detailCard.targetKey, 'session')
   assert.equal(model.surface.exerciseSectionTitle, 'Planned exercises')
   assert.equal(model.surface.exercises[0].restLabel, '3:00')
 })
