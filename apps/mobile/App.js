@@ -7,9 +7,6 @@ import {
   completeWorkoutSessionSet,
   findSessionSet,
   finishWorkoutSession,
-  formatClock,
-  formatWorkoutTimer,
-  getSessionProgress,
   updateSessionSetActuals,
 } from '@pplus/core';
 import {
@@ -19,6 +16,7 @@ import {
   mobileTabs,
   trainTabs,
 } from './src/train/index.js';
+import { getActiveSessionSurfaceModel } from './src/train/active-session-models.js';
 import { getPlaceholderSurfaceModel, getProgressSurfaceModel } from './src/progress/index.js';
 
 function SurfaceCard({ title, body, actionLabel, onAction }) {
@@ -63,10 +61,13 @@ export default function App() {
   const [session, setSession] = useState(() => demoTrainState.session);
   const [elapsedSeconds] = useState(35);
 
-  const progress = useMemo(() => getSessionProgress(session), [session]);
   const selectedSet = session.activeRestTimer
     ? findSessionSet(session, session.activeRestTimer.exerciseId, session.activeRestTimer.setId)
     : null;
+  const activeSessionModel = useMemo(
+    () => getActiveSessionSurfaceModel(session, elapsedSeconds, selectedSet),
+    [elapsedSeconds, selectedSet, session]
+  );
 
   function handleCompleteSet(exerciseId, setId) {
     if (session.status === 'completed') return;
@@ -100,59 +101,55 @@ export default function App() {
         <View style={styles.headerCard}>
           <View style={styles.headerTopRow}>
             <View>
-              <Text style={styles.eyebrow}>Train / Session</Text>
-              <Text style={styles.title}>{session.name}</Text>
+              <Text style={styles.eyebrow}>{activeSessionModel.header.eyebrow}</Text>
+              <Text style={styles.title}>{activeSessionModel.header.title}</Text>
             </View>
             <Pressable
               onPress={handleFinishWorkout}
               style={[styles.finishButton, session.status === 'completed' && styles.finishButtonDone]}
             >
-              <Text style={styles.finishButtonText}>
-                {session.status === 'completed' ? 'Completed' : 'Finish'}
-              </Text>
+              <Text style={styles.finishButtonText}>{activeSessionModel.header.finishLabel}</Text>
             </Pressable>
           </View>
 
-          <Text style={styles.summary}>{formatWorkoutTimer(elapsedSeconds)}</Text>
+          <Text style={styles.summary}>{activeSessionModel.header.workoutTimerLabel}</Text>
           <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${progress.completionPercent}%` }]} />
+            <View style={[styles.progressFill, { width: `${activeSessionModel.header.progressPercent}%` }]} />
           </View>
-          <Text style={styles.progressLabel}>
-            {progress.completedSets}/{progress.totalSets} sets, {progress.completedExercises}/{progress.totalExercises} exercises
-          </Text>
+          <Text style={styles.progressLabel}>{activeSessionModel.header.progressLabel}</Text>
         </View>
 
-        {session.activeRestTimer ? (
+        {activeSessionModel.restTimer ? (
           <View style={styles.restCard}>
             <View style={styles.restHeaderRow}>
               <View>
-                <Text style={styles.restEyebrow}>Rest timer</Text>
-                <Text style={styles.restTitle}>{selectedSet ? 'Between completed sets' : 'Active rest block'}</Text>
+                <Text style={styles.restEyebrow}>{activeSessionModel.restTimer.eyebrow}</Text>
+                <Text style={styles.restTitle}>{activeSessionModel.restTimer.title}</Text>
               </View>
               <Pressable onPress={() => setSession((currentSession) => clearRestTimer(currentSession))}>
-                <Text style={styles.dismissText}>Dismiss</Text>
+                <Text style={styles.dismissText}>{activeSessionModel.restTimer.dismissLabel}</Text>
               </Pressable>
             </View>
-            <Text style={styles.restClock}>{formatClock(session.activeRestTimer.remainingSeconds)}</Text>
+            <Text style={styles.restClock}>{activeSessionModel.restTimer.clockLabel}</Text>
             <View style={styles.restActions}>
               <Pressable style={styles.restActionButton} onPress={() => setSession((currentSession) => adjustRestTimer(currentSession, -15))}>
-                <Text style={styles.restActionText}>-15s</Text>
+                <Text style={styles.restActionText}>{activeSessionModel.restTimer.minusLabel}</Text>
               </Pressable>
               <Pressable style={styles.restActionButton} onPress={() => setSession((currentSession) => adjustRestTimer(currentSession, 15))}>
-                <Text style={styles.restActionText}>+15s</Text>
+                <Text style={styles.restActionText}>{activeSessionModel.restTimer.plusLabel}</Text>
               </Pressable>
             </View>
           </View>
         ) : null}
 
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Active workout session</Text>
-          {session.exercises.map((exercise) => (
+          <Text style={styles.sectionTitle}>{activeSessionModel.sectionTitle}</Text>
+          {activeSessionModel.exercises.map((exercise) => (
             <View key={exercise.id} style={styles.exerciseCard}>
               <View style={styles.exerciseHeader}>
                 <View>
-                  <Text style={styles.exerciseTitle}>{exercise.nameSnapshot || exercise.name}</Text>
-                  <Text style={styles.exerciseMeta}>Rest {Math.floor(exercise.defaultRestSeconds / 60)}:{String(exercise.defaultRestSeconds % 60).padStart(2, '0')}</Text>
+                  <Text style={styles.exerciseTitle}>{exercise.title}</Text>
+                  <Text style={styles.exerciseMeta}>Rest {exercise.restLabel}</Text>
                 </View>
                 <View style={[styles.exerciseStatusBadge, statusStyles[exercise.status]]}>
                   <Text style={styles.exerciseStatusText}>{exercise.status.replace('_', ' ')}</Text>
@@ -162,44 +159,40 @@ export default function App() {
               {exercise.sets.map((set, index) => (
                 <View key={set.id} style={[styles.setRow, set.isCompleted && styles.setRowCompleted]}>
                   <Pressable style={styles.setCopy} onPress={() => handleCompleteSet(exercise.id, set.id)}>
-                    <Text style={styles.setTitle}>Set {index + 1}</Text>
-                    <Text style={styles.setMeta}>
-                      Prescribed: {set.prescribedLoad ?? '-'} lb x {set.prescribedReps ?? '-'} reps, RPE {set.prescribedRpe ?? '-'}
-                    </Text>
-                    <Text style={styles.setMeta}>
-                      Actual: {set.actualLoad ?? '-'} lb x {set.actualReps ?? '-'} reps, RPE {set.actualRpe ?? '-'}
-                    </Text>
+                    <Text style={styles.setTitle}>{set.title}</Text>
+                    <Text style={styles.setMeta}>{set.prescribedLabel}</Text>
+                    <Text style={styles.setMeta}>{set.actualLabel}</Text>
                   </Pressable>
 
                   <View style={styles.setControlsColumn}>
                     <View style={styles.actualControl}>
-                      <Text style={styles.actualControlLabel}>Load</Text>
+                      <Text style={styles.actualControlLabel}>{set.loadControl.label}</Text>
                       <View style={styles.actualControlButtons}>
                         <Pressable style={styles.stepButton} onPress={() => handleQuickActualUpdate(exercise.id, set.id, 'actualLoad', -5)}>
-                          <Text style={styles.stepButtonText}>-</Text>
+                          <Text style={styles.stepButtonText}>{set.loadControl.decrementLabel}</Text>
                         </Pressable>
-                        <Text style={styles.actualValue}>{set.actualLoad ?? set.prescribedLoad ?? 0}</Text>
+                        <Text style={styles.actualValue}>{set.loadControl.value}</Text>
                         <Pressable style={styles.stepButton} onPress={() => handleQuickActualUpdate(exercise.id, set.id, 'actualLoad', 5)}>
-                          <Text style={styles.stepButtonText}>+</Text>
+                          <Text style={styles.stepButtonText}>{set.loadControl.incrementLabel}</Text>
                         </Pressable>
                       </View>
                     </View>
 
                     <View style={styles.actualControl}>
-                      <Text style={styles.actualControlLabel}>Reps</Text>
+                      <Text style={styles.actualControlLabel}>{set.repsControl.label}</Text>
                       <View style={styles.actualControlButtons}>
                         <Pressable style={styles.stepButton} onPress={() => handleQuickActualUpdate(exercise.id, set.id, 'actualReps', -1)}>
-                          <Text style={styles.stepButtonText}>-</Text>
+                          <Text style={styles.stepButtonText}>{set.repsControl.decrementLabel}</Text>
                         </Pressable>
-                        <Text style={styles.actualValue}>{set.actualReps ?? set.prescribedReps ?? 0}</Text>
+                        <Text style={styles.actualValue}>{set.repsControl.value}</Text>
                         <Pressable style={styles.stepButton} onPress={() => handleQuickActualUpdate(exercise.id, set.id, 'actualReps', 1)}>
-                          <Text style={styles.stepButtonText}>+</Text>
+                          <Text style={styles.stepButtonText}>{set.repsControl.incrementLabel}</Text>
                         </Pressable>
                       </View>
                     </View>
 
                     <View style={[styles.badge, set.isCompleted ? styles.badgeDone : styles.badgeTodo]}>
-                      <Text style={styles.badgeText}>{set.isCompleted ? 'Done' : 'Tap left side to complete'}</Text>
+                      <Text style={styles.badgeText}>{set.completionLabel}</Text>
                     </View>
                   </View>
                 </View>
