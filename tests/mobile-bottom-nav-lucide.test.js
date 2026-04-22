@@ -11,8 +11,6 @@ test('mobile bottom navigation uses Lucide icons while header keeps branded SVG 
   assert.match(shellSource, /BarChart3/)
   assert.match(shellSource, /Users/)
   assert.match(shellSource, /MessageCircle/)
-  assert.match(shellSource, /pphtUserSvg/)
-  assert.match(shellSource, /pphtCalendarDotsSvg/)
   assert.doesNotMatch(shellSource, /pphtBarbellSvg/)
   assert.doesNotMatch(shellSource, /pphtChartBarSvg/)
   assert.doesNotMatch(shellSource, /pphtUsersSvg/)

@@ -1,8 +1,7 @@
-import { BarChart3, Dumbbell, MessageCircle, Users } from 'lucide-react-native';
+import { BarChart3, CalendarDays, CircleUserRound, Dumbbell, MessageCircle, Users } from 'lucide-react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SvgXml } from 'react-native-svg';
 import { logoPphtGreenSvg } from '../assets/logo-ppht-green.js';
-import { pphtCalendarDotsSvg, pphtUserSvg } from '../assets/ppht-icons.js';
 import { getAppScreenViewModel } from './shell-view-models.js';
 
 function tintSvg(svg, color) {
@@ -10,11 +9,11 @@ function tintSvg(svg, color) {
 }
 
 function renderProfileHeaderIcon(styles) {
-  return <SvgXml xml={tintSvg(pphtUserSvg, '#ffffff')} width="26" height="26" />
+  return <CircleUserRound color="#ffffff" size={26} strokeWidth={2.1} />
 }
 
 function renderUtilityHeaderIcon(styles) {
-  return <SvgXml xml={tintSvg(pphtCalendarDotsSvg, '#ffffff')} width="24" height="24" />
+  return <CalendarDays color="#ffffff" size={24} strokeWidth={2.1} />
 }
 
 function BottomNavIcon({ tabKey, styles, isActive }) {
