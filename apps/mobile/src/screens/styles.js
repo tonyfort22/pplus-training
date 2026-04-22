@@ -358,12 +358,12 @@ export const styles = {
   },
   calendarDayButton: {
     minWidth: 40,
-    minHeight: 54,
+    minHeight: 42,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 6,
-    paddingBottom: 6,
+    paddingTop: 4,
+    paddingBottom: 4,
     paddingHorizontal: 8,
   },
   calendarDaySelected: {
