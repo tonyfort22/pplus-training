@@ -1,7 +1,7 @@
 import { ChevronRight } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 import { getGenericSectionViewItems, getSessionViewItems } from './view-items.js';
-import { MetricCard, SurfaceCard } from '../ui/cards.js';
+import { MetricCard, SurfaceCard, EmptyCard, CreateWorkoutCard } from '../ui/cards.js';
 
 export function renderGenericSections({ sections, styles, onActionTarget }) {
   return getGenericSectionViewItems(sections).map((section) => {
@@ -20,7 +20,7 @@ export function renderGenericSections({ sections, styles, onActionTarget }) {
     if (section.type === 'section-heading') {
       return (
         <View key={section.key} style={styles.sectionHeadingWrap}>
-          <Text className="text-[22px] font-bold text-white">{section.title}</Text>
+          <Text className="text-[24px] font-bold" style={{ color: styles.theme.text }}>{section.title}</Text>
         </View>
       )
     }
@@ -28,17 +28,40 @@ export function renderGenericSections({ sections, styles, onActionTarget }) {
     if (section.type === 'header-card') {
       return (
         <View key={section.key} style={styles.headerCard}>
-          <Text className="text-sm font-medium uppercase tracking-[1px] text-emerald-200">{section.eyebrow}</Text>
-          <Text className="text-[32px] font-bold text-white">{section.title}</Text>
-          <Text className="text-[15px] leading-[22px] text-slate-300">{section.body}</Text>
+          <Text className="text-sm font-medium uppercase tracking-[1px]" style={{ color: styles.theme.accentText }}>{section.eyebrow}</Text>
+          <Text className="text-[32px] font-bold" style={{ color: styles.theme.text }}>{section.title}</Text>
+          <Text className="text-[15px] leading-[22px]" style={{ color: styles.theme.textMuted }}>{section.body}</Text>
         </View>
+      )
+    }
+
+    if (section.type === 'empty-state-card') {
+      const { key, ...cardProps } = section
+      return (
+        <EmptyCard
+          key={key}
+          styles={styles}
+          {...cardProps}
+        />
+      )
+    }
+
+    if (section.type === 'create-workout-card') {
+      const { key, ...cardProps } = section
+      return (
+        <CreateWorkoutCard
+          key={key}
+          styles={styles}
+          {...cardProps}
+          onAction={onActionTarget ? () => onActionTarget(section.targetKey, section.actionPayload) : undefined}
+        />
       )
     }
 
     if (section.type === 'body-list') {
       return (
         <View key={section.key} style={section.title ? styles.sectionCard : styles.sectionListOnly}>
-          {section.title ? <Text className="text-[20px] font-bold text-white">{section.title}</Text> : null}
+          {section.title ? <Text className="text-[20px] font-bold" style={{ color: styles.theme.text }}>{section.title}</Text> : null}
           {section.rows.map((row) => {
             const isActionable = !!(row.targetKey && onActionTarget)
             const RowWrapper = isActionable ? Pressable : View
@@ -46,16 +69,26 @@ export function renderGenericSections({ sections, styles, onActionTarget }) {
             const rowBody = (
               <RowWrapper
                 key={row.id || row.title}
-                className="flex-row items-center overflow-hidden rounded-[22px] bg-slate-900"
+                className="flex-row items-center overflow-hidden rounded-[24px]" style={{ backgroundColor: styles.theme.surface, borderWidth: 1, borderColor: styles.theme.border }}
                 onPress={isActionable ? () => onActionTarget(row.targetKey, row.actionPayload) : undefined}
               >
-                <View className="w-1 self-stretch bg-emerald-400" />
-                <View className="flex-1 flex-row items-center gap-3 px-4 py-[14px]">
+                <View className="w-1 self-stretch" style={{ backgroundColor: styles.theme.accent }} />
+                <View className="flex-1 flex-row items-center gap-3 px-5 py-4">
                   <View className="flex-1 gap-1">
-                    <Text className="text-[18px] font-bold text-white">{row.title}</Text>
-                    <Text className="text-sm text-slate-400">{row.body}</Text>
+                    <View className="flex-row items-center justify-between gap-3">
+                      <Text className="flex-1 text-[18px] font-bold" style={{ color: styles.theme.text }}>{row.title}</Text>
+                      {row.badgeLabel ? (
+                        <View className="rounded-full px-3 py-1" style={{ backgroundColor: styles.theme.accent }}>
+                          <Text className="text-[11px] font-bold uppercase tracking-[1px]" style={{ color: styles.theme.accentText }}>{row.badgeLabel}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                    <Text className="text-[15px]" style={{ color: styles.theme.textSoft }}>{row.body}</Text>
+                    {row.actionLabel ? (
+                      <Text className="text-[12px] font-bold uppercase tracking-[1px]" style={{ color: styles.theme.accentText }}>{row.actionLabel}</Text>
+                    ) : null}
                   </View>
-                  {isActionable ? <ChevronRight color="#94a3b8" size={18} strokeWidth={2.4} /> : null}
+                  {isActionable ? <ChevronRight color={styles.theme.iconMuted} size={18} strokeWidth={2.4} /> : null}
                 </View>
               </RowWrapper>
             )
@@ -69,34 +102,34 @@ export function renderGenericSections({ sections, styles, onActionTarget }) {
     if (section.type === 'calendar-strip') {
       return (
         <View key={section.key} style={styles.calendarStripCard}>
-          <View className="flex-row items-start justify-between gap-0.5">
+          <View className="flex-row items-start justify-between gap-3">
             {section.days.map((day) => {
               const columnClassName = 'flex-1 items-center'
               const weekdayClassName = [
-                'mb-2.5 text-[11px] font-bold uppercase tracking-[1px]',
-                day.isSelected ? 'text-slate-300' : 'text-slate-400',
+                'mb-2 text-[10px] font-bold uppercase tracking-[1.2px]',
+                '',
               ].join(' ')
               const dayButtonClassName = [
                 'min-h-[42px] min-w-[40px] items-center justify-between rounded-[14px] px-2 pt-1 pb-1',
-                day.isSelected ? 'border-2 border-emerald-400 bg-slate-950' : 'border border-transparent bg-transparent',
+                '',
               ].join(' ')
               const dayNumberClassName = [
                 'text-base font-medium',
-                day.isSelected ? 'font-bold text-emerald-400' : 'text-slate-50',
+                '',
               ].join(' ')
               const indicatorClassName = day.indicatorTone === 'none'
                 ? 'h-1 w-3'
                 : [
                     'h-1 w-3 rounded-full',
-                    day.indicatorTone === 'active' ? 'bg-emerald-400' : 'bg-slate-600',
+                    '',
                   ].join(' ')
 
               const dayContent = (
                 <>
-                  <Text className={weekdayClassName}>{day.weekdayLabel}</Text>
-                  <View className={dayButtonClassName}>
-                    <Text className={dayNumberClassName}>{day.dateNumber}</Text>
-                    <View className={indicatorClassName} />
+                  <Text className={weekdayClassName} style={{ color: day.isSelected ? styles.theme.textMuted : styles.theme.textSoft }}>{day.weekdayLabel}</Text>
+                  <View className="min-h-[44px] min-w-[40px] items-center justify-between rounded-[14px] px-1.5 pt-1.5 pb-1" style={day.isSelected ? { borderWidth: 2, borderColor: styles.theme.accent, backgroundColor: styles.theme.surface } : { borderWidth: 1, borderColor: 'transparent', backgroundColor: 'transparent' }}>
+                    <Text className="text-[14px]" style={{ fontWeight: day.isSelected ? '700' : '500', color: styles.theme.text }}>{day.dateNumber}</Text>
+                    <View className={day.indicatorTone === 'none' ? 'h-1 w-4' : 'h-1 w-4 rounded-full'} style={day.indicatorTone === 'none' ? null : { backgroundColor: day.indicatorTone === 'active' ? styles.theme.accent : styles.theme.borderStrong }} />
                   </View>
                 </>
               )
@@ -132,12 +165,12 @@ export function renderGenericSections({ sections, styles, onActionTarget }) {
 
     return (
       <View key={section.key} style={styles.sectionCard}>
-        <Text className="text-[20px] font-bold text-white">{section.title}</Text>
-        <Text className="text-[15px] leading-[22px] text-slate-300">{section.body}</Text>
+        <Text className="text-[20px] font-bold" style={{ color: styles.theme.text }}>{section.title}</Text>
+        <Text className="text-[15px] leading-[22px]" style={{ color: styles.theme.textMuted }}>{section.body}</Text>
         {section.rows?.map((row) => (
           <View key={row.title} style={styles.listRow}>
-            <Text className="text-base font-bold text-white">{row.title}</Text>
-            <Text className="mt-1 text-slate-300">{row.body}</Text>
+            <Text className="text-base font-bold" style={{ color: styles.theme.text }}>{row.title}</Text>
+            <Text className="mt-1" style={{ color: styles.theme.textMuted }}>{row.body}</Text>
           </View>
         ))}
       </View>
@@ -157,7 +190,7 @@ export function renderTrainSurface({ trainRenderModel, sessionRenderModel, style
                 style={[styles.trainTabButton, tab.isActive && styles.trainTabButtonActive]}
                 onPress={() => onTrainTabPress(tab.key)}
               >
-                <Text className={tab.isActive ? 'font-bold text-white' : 'font-bold text-slate-400'}>{tab.label}</Text>
+                <Text className="font-bold" style={{ color: tab.isActive ? styles.theme.text : styles.theme.textSoft }}>{tab.label}</Text>
               </Pressable>
             ))}
           </View>
@@ -187,27 +220,27 @@ export function renderSessionSections({
         <View key={section.key} style={styles.headerCard}>
           <View style={styles.headerTopRow}>
             <View>
-              <Text className="text-sm font-medium uppercase tracking-[1px] text-emerald-200">{section.eyebrow}</Text>
-              <Text className="text-[32px] font-bold text-white">{section.title}</Text>
+              <Text className="text-sm font-medium uppercase tracking-[1px]" style={{ color: styles.theme.accentText }}>{section.eyebrow}</Text>
+              <Text className="text-[32px] font-bold" style={{ color: styles.theme.text }}>{section.title}</Text>
             </View>
             <View style={styles.headerActionsRow}>
               {section.discardLabel && !section.isCompleted && !section.isDiscarded ? (
                 <Pressable onPress={onDiscardWorkout} style={styles.discardButton}>
-                  <Text className="font-bold text-red-200">{section.discardLabel}</Text>
+                  <Text className="font-bold" style={{ color: styles.theme.dangerText }}>{section.discardLabel}</Text>
                 </Pressable>
               ) : null}
               <Pressable onPress={onFinishWorkout} style={[styles.finishButton, section.isCompleted && styles.finishButtonDone]}>
-                <Text className="font-bold text-white">{section.finishLabel}</Text>
+                <Text className="font-bold" style={{ color: styles.theme.text }}>{section.finishLabel}</Text>
               </Pressable>
             </View>
           </View>
 
-          <Text className="text-[18px] font-semibold text-slate-300">{section.workoutTimerLabel}</Text>
-          <Text className="text-[13px] text-slate-400">{section.nextUpLabel}</Text>
+          <Text className="text-[18px] font-semibold" style={{ color: styles.theme.textMuted }}>{section.workoutTimerLabel}</Text>
+          <Text className="text-[13px]" style={{ color: styles.theme.textSoft }}>{section.nextUpLabel}</Text>
           <View style={styles.progressTrack}>
             <View style={[styles.progressFill, { width: `${section.progressPercent}%` }]} />
           </View>
-          <Text className="text-[13px] text-slate-400">{section.progressLabel}</Text>
+          <Text className="text-[13px]" style={{ color: styles.theme.textSoft }}>{section.progressLabel}</Text>
         </View>
       )
     }
@@ -217,21 +250,21 @@ export function renderSessionSections({
         <View key={section.key} style={styles.restCard}>
           <View style={styles.restHeaderRow}>
             <View>
-              <Text className="text-xs font-medium uppercase tracking-[1px] text-emerald-200">{section.eyebrow}</Text>
-              <Text className="text-[18px] font-bold text-white">{section.title}</Text>
+              <Text className="text-xs font-medium uppercase tracking-[1px]" style={{ color: styles.theme.accentText }}>{section.eyebrow}</Text>
+              <Text className="text-[18px] font-bold" style={{ color: styles.theme.text }}>{section.title}</Text>
             </View>
             <Pressable onPress={onDismissRestTimer}>
-              <Text className="font-bold text-emerald-200">{section.dismissLabel}</Text>
+              <Text className="font-bold" style={{ color: styles.theme.accentText }}>{section.dismissLabel}</Text>
             </Pressable>
           </View>
-          <Text className="text-[42px] font-bold text-white">{section.clockLabel}</Text>
-          <Text className="text-[15px] leading-[22px] text-slate-300">{section.body}</Text>
+          <Text className="text-[42px] font-bold" style={{ color: styles.theme.text }}>{section.clockLabel}</Text>
+          <Text className="text-[15px] leading-[22px]" style={{ color: styles.theme.textMuted }}>{section.body}</Text>
           <View style={styles.restActions}>
             <Pressable style={styles.restActionButton} onPress={() => onAdjustRestTimer(-15)}>
-              <Text className="font-bold text-white">{section.minusLabel}</Text>
+              <Text className="font-bold" style={{ color: styles.theme.text }}>{section.minusLabel}</Text>
             </Pressable>
             <Pressable style={styles.restActionButton} onPress={() => onAdjustRestTimer(15)}>
-              <Text className="font-bold text-white">{section.plusLabel}</Text>
+              <Text className="font-bold" style={{ color: styles.theme.text }}>{section.plusLabel}</Text>
             </Pressable>
           </View>
         </View>
@@ -240,16 +273,16 @@ export function renderSessionSections({
 
     return (
       <View key={section.key} style={styles.sectionCard}>
-        <Text className="text-[20px] font-bold text-white">{section.title}</Text>
+        <Text className="text-[20px] font-bold" style={{ color: styles.theme.text }}>{section.title}</Text>
         {section.exercises.map((exercise) => (
           <View key={exercise.key} style={styles.exerciseCard}>
             <View style={styles.exerciseHeader}>
               <View>
-                <Text className="text-[18px] font-bold text-white">{exercise.title}</Text>
-                <Text className="text-sm text-slate-400">Rest {exercise.restLabel}</Text>
+                <Text className="text-[18px] font-bold" style={{ color: styles.theme.text }}>{exercise.title}</Text>
+                <Text className="text-sm" style={{ color: styles.theme.textSoft }}>Rest {exercise.restLabel}</Text>
               </View>
               <View style={[styles.exerciseStatusBadge, statusStyles[exercise.status]]}>
-                <Text className="text-xs font-bold text-white">{exercise.status.replace('_', ' ')}</Text>
+                <Text className="text-xs font-bold" style={{ color: styles.theme.text }}>{exercise.status.replace('_', ' ')}</Text>
               </View>
             </View>
 
@@ -263,34 +296,34 @@ export function renderSessionSections({
                 ]}
               >
                 <Pressable style={styles.setCopy} onPress={() => onCompleteSet(exercise.id, set.id)}>
-                  <Text className="text-base font-semibold text-white">{set.title}</Text>
-                  <Text className="mt-0.5 text-[13px] text-slate-300">{set.prescribedLabel}</Text>
-                  <Text className="mt-0.5 text-[13px] text-slate-300">{set.actualLabel}</Text>
+                  <Text className="text-base font-semibold" style={{ color: styles.theme.text }}>{set.title}</Text>
+                  <Text className="mt-0.5 text-[13px]" style={{ color: styles.theme.textMuted }}>{set.prescribedLabel}</Text>
+                  <Text className="mt-0.5 text-[13px]" style={{ color: styles.theme.textMuted }}>{set.actualLabel}</Text>
                 </Pressable>
 
                 <View style={styles.setControlsColumn}>
                   <View style={styles.actualControl}>
-                    <Text className="text-xs font-bold text-emerald-200">{set.loadControl.label}</Text>
+                    <Text className="text-xs font-bold" style={{ color: styles.theme.accentText }}>{set.loadControl.label}</Text>
                     <View style={styles.actualControlButtons}>
                       <Pressable style={styles.stepButton} onPress={() => onQuickActualUpdate(exercise.id, set.id, 'actualLoad', -5)}>
-                        <Text className="font-bold text-white">{set.loadControl.decrementLabel}</Text>
+                        <Text className="font-bold" style={{ color: styles.theme.text }}>{set.loadControl.decrementLabel}</Text>
                       </Pressable>
-                      <Text className="min-w-[28px] text-center font-bold text-white">{set.loadControl.value}</Text>
+                      <Text className="min-w-[28px] text-center font-bold" style={{ color: styles.theme.text }}>{set.loadControl.value}</Text>
                       <Pressable style={styles.stepButton} onPress={() => onQuickActualUpdate(exercise.id, set.id, 'actualLoad', 5)}>
-                        <Text className="font-bold text-white">{set.loadControl.incrementLabel}</Text>
+                        <Text className="font-bold" style={{ color: styles.theme.text }}>{set.loadControl.incrementLabel}</Text>
                       </Pressable>
                     </View>
                   </View>
 
                   <View style={styles.actualControl}>
-                    <Text className="text-xs font-bold text-emerald-200">{set.repsControl.label}</Text>
+                    <Text className="text-xs font-bold" style={{ color: styles.theme.accentText }}>{set.repsControl.label}</Text>
                     <View style={styles.actualControlButtons}>
                       <Pressable style={styles.stepButton} onPress={() => onQuickActualUpdate(exercise.id, set.id, 'actualReps', -1)}>
-                        <Text className="font-bold text-white">{set.repsControl.decrementLabel}</Text>
+                        <Text className="font-bold" style={{ color: styles.theme.text }}>{set.repsControl.decrementLabel}</Text>
                       </Pressable>
-                      <Text className="min-w-[28px] text-center font-bold text-white">{set.repsControl.value}</Text>
+                      <Text className="min-w-[28px] text-center font-bold" style={{ color: styles.theme.text }}>{set.repsControl.value}</Text>
                       <Pressable style={styles.stepButton} onPress={() => onQuickActualUpdate(exercise.id, set.id, 'actualReps', 1)}>
-                        <Text className="font-bold text-white">{set.repsControl.incrementLabel}</Text>
+                        <Text className="font-bold" style={{ color: styles.theme.text }}>{set.repsControl.incrementLabel}</Text>
                       </Pressable>
                     </View>
                   </View>
@@ -305,7 +338,7 @@ export function renderSessionSections({
                           : styles.badgeTodo,
                     ]}
                   >
-                    <Text className="text-center text-[11px] font-bold text-white">{set.completionLabel}</Text>
+                    <Text className="text-center text-[11px] font-bold" style={{ color: styles.theme.text }}>{set.completionLabel}</Text>
                   </View>
                 </View>
               </View>

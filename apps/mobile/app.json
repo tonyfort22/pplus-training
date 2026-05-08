@@ -4,7 +4,16 @@
     "slug": "pplus-training",
     "version": "0.1.0",
     "orientation": "portrait",
-    "platforms": ["ios", "android", "web"],
-    "userInterfaceStyle": "automatic"
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "userInterfaceStyle": "automatic",
+    "plugins": [
+      "expo-video",
+      "@react-native-community/datetimepicker",
+      "expo-secure-store"
+    ]
   }
 }

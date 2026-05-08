@@ -4,11 +4,20 @@ export function getAppRenderModel({
   activeTab,
   bottomTabModels,
   trainRenderModel,
+  analyticsScreen,
   progressSections,
   teamSections,
   inboxSections,
+  overrideScreen = null,
 }) {
   const bottomTabViewItems = getBottomTabViewItems(bottomTabModels)
+
+  if (overrideScreen) {
+    return {
+      bottomTabs: bottomTabViewItems,
+      screen: overrideScreen,
+    }
+  }
 
   if (activeTab === 'train') {
     return {
@@ -25,8 +34,8 @@ export function getAppRenderModel({
     return {
       bottomTabs: bottomTabViewItems,
       screen: {
-        type: 'progress',
-        sections: progressSections,
+        type: 'analytics',
+        ...(analyticsScreen || {}),
       },
     }
   }

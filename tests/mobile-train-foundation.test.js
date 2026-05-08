@@ -77,6 +77,9 @@ test('getWorkoutSurfaceModel can switch to the selected calendar day workout pre
   assert.equal(model.dayLabel, 'Thu • Apr 23')
   assert.equal(model.exercises[0].name, 'Bench Press')
   assert.equal(model.exercises[0].setCount, 4)
+  assert.equal(model.primaryTargetKey, 'workout')
+  assert.equal(model.actionPayload.selectedDayId, 'thu')
+  assert.equal(model.actionPayload.programWorkoutId, 'pw-upper-b')
 })
 
 test('createTrainDemoState can seed simulator preview states across the athlete session lifecycle', () => {
@@ -86,7 +89,8 @@ test('createTrainDemoState can seed simulator preview states across the athlete 
   const discardedState = createTrainDemoState({ previewState: 'discarded' })
 
   assert.deepEqual(demoPreviewStates.map((state) => state.key), ['planned', 'active', 'completed', 'discarded'])
-  assert.equal(plannedState.session.status, 'in_progress')
+  assert.equal(plannedState.session.status, 'planned')
+  assert.equal(plannedState.session.startedAt, null)
   assert.equal(plannedState.session.completedSetsCount, 0)
   assert.equal(activeState.session.status, 'in_progress')
   assert.equal(activeState.session.completedSetsCount, 1)

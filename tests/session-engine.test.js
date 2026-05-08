@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   createWorkoutSession,
   completeWorkoutSet,
+  canFinishWorkoutSession,
   finishWorkoutSession,
   discardWorkoutSession,
 } from '../packages/core/src/index.js'
@@ -75,6 +76,26 @@ test('createWorkoutSession snapshots a planned workout into execution rows', () 
   assert.equal(session.exercises[0].sets[0].isCompleted, false)
 })
 
+test('createWorkoutSession seeds session-level workout settings from planned workout defaults with sane fallbacks', () => {
+  const session = createWorkoutSession({
+    programWorkout: {
+      ...buildProgramWorkout(),
+      defaultRestSeconds: 180,
+      autoProgressEnabled: true,
+      adjustEffortAfterSet: true,
+      keepAwake: null,
+    },
+      startedAt: '2026-04-21T20:00:00.000Z',
+  })
+
+  assert.deepEqual(session.settings, {
+    defaultRestSeconds: 180,
+    autoProgressEnabled: true,
+    keepAwake: false,
+    adjustEffortAfterSet: true,
+  })
+})
+
 test('completeWorkoutSet keeps prescribed values intact and defaults actuals from plan when blank', () => {
   const session = createWorkoutSession({
     programWorkout: buildProgramWorkout(),
@@ -130,6 +151,115 @@ test('completeWorkoutSet respects provided actual values instead of overwriting 
   assert.equal(updated.activeRestTimer.remainingSeconds, 180)
 })
 
+test('completeWorkoutSet falls back to exercise and session default rest when set rest is blank', () => {
+  const baseWorkout = buildProgramWorkout()
+  const sessionWithExerciseFallback = createWorkoutSession({
+    programWorkout: {
+      ...baseWorkout,
+      exercises: [
+        {
+          ...baseWorkout.exercises[0],
+          defaultRestSeconds: 75,
+          sets: [
+            {
+              ...baseWorkout.exercises[0].sets[0],
+              targetRestSeconds: null,
+            },
+          ],
+        },
+      ],
+    },
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+
+  const exerciseFallbackSession = completeWorkoutSet({
+    session: sessionWithExerciseFallback,
+    exerciseId: 'pwe-1',
+    setId: 'pws-1',
+  })
+
+  assert.equal(exerciseFallbackSession.activeRestTimer.remainingSeconds, 75)
+
+  const sessionWithWorkoutFallback = createWorkoutSession({
+    programWorkout: {
+      ...baseWorkout,
+      defaultRestSeconds: 45,
+      exercises: [
+        {
+          ...baseWorkout.exercises[0],
+          defaultRestSeconds: null,
+          sets: [
+            {
+              ...baseWorkout.exercises[0].sets[0],
+              targetRestSeconds: null,
+            },
+          ],
+        },
+      ],
+    },
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+
+  const workoutFallbackSession = completeWorkoutSet({
+    session: sessionWithWorkoutFallback,
+    exerciseId: 'pwe-1',
+    setId: 'pws-1',
+  })
+
+  assert.equal(workoutFallbackSession.activeRestTimer.remainingSeconds, 45)
+})
+
+test('canFinishWorkoutSession returns false for an empty session', () => {
+  const session = createWorkoutSession({
+    programWorkout: buildProgramWorkout(),
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+
+  assert.equal(canFinishWorkoutSession(session), false)
+})
+
+test('completeWorkoutSet toggles a completed set back to not completed and clears the active rest timer for that set', () => {
+  let session = createWorkoutSession({
+    programWorkout: buildProgramWorkout(),
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+
+  session = completeWorkoutSet({
+    session,
+    exerciseId: 'pwe-1',
+    setId: 'pws-1',
+    completedAt: '2026-04-21T20:10:00.000Z',
+  })
+
+  const toggledSession = completeWorkoutSet({
+    session,
+    exerciseId: 'pwe-1',
+    setId: 'pws-1',
+  })
+
+  assert.equal(toggledSession.completedSetsCount, 0)
+  assert.equal(toggledSession.completedExercisesCount, 0)
+  assert.equal(toggledSession.exercises[0].sets[0].isCompleted, false)
+  assert.equal(toggledSession.exercises[0].sets[0].completedAt, null)
+  assert.equal(toggledSession.activeRestTimer, null)
+})
+
+test('canFinishWorkoutSession returns true once at least one set is completed', () => {
+  let session = createWorkoutSession({
+    programWorkout: buildProgramWorkout(),
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+
+  session = completeWorkoutSet({
+    session,
+    exerciseId: 'pwe-1',
+    setId: 'pws-1',
+    completedAt: '2026-04-21T20:10:00.000Z',
+  })
+
+  assert.equal(canFinishWorkoutSession(session), true)
+})
+
 test('discardWorkoutSession abandons the in-progress session and clears active timer state', () => {
   let session = createWorkoutSession({
     programWorkout: buildProgramWorkout(),
@@ -157,7 +287,7 @@ test('discardWorkoutSession abandons the in-progress session and clears active t
   assert.equal(discarded.exercises[0].sets[0].isCompleted, true)
 })
 
-test('finishWorkoutSession finalizes counts and clears active timer', () => {
+test('finishWorkoutSession finalizes counts, clears active timer, and accepts completion payload fields', () => {
   let session = createWorkoutSession({
     programWorkout: buildProgramWorkout(),
     startedAt: '2026-04-21T20:00:00.000Z',
@@ -181,11 +311,15 @@ test('finishWorkoutSession finalizes counts and clears active timer', () => {
     session,
     completedAt: '2026-04-21T20:30:00.000Z',
     elapsedSeconds: 1800,
+    perceivedDifficulty: 7,
+    notes: 'Great session',
   })
 
   assert.equal(finished.status, 'completed')
   assert.equal(finished.completedAt, '2026-04-21T20:30:00.000Z')
   assert.equal(finished.elapsedSeconds, 1800)
+  assert.equal(finished.perceivedDifficulty, 7)
+  assert.equal(finished.notes, 'Great session')
   assert.equal(finished.completedSetsCount, 2)
   assert.equal(finished.completedExercisesCount, 1)
   assert.equal(finished.activeRestTimer, null)

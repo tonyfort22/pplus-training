@@ -27,6 +27,7 @@ test('getTodayCardsModel creates the two top-level Today cards', () => {
   assert.equal(cards.todayCard.summaryLabel, '2 exercises, 7 total sets')
   assert.match(cards.todayCard.statusLabel, /Open today/)
   assert.equal(cards.todayCard.actionLabel, 'Open workout')
+  assert.equal(cards.todayCard.variant, 'today-summary')
   assert.match(cards.todayCard.body, /Lower A/)
   assert.equal(cards.programCard.title, 'Program snapshot')
   assert.equal(cards.programCard.variant, 'program-summary')
@@ -44,7 +45,11 @@ test('getTodayCardsModel switches to a resume action once the live session has s
     startedAt: '2026-04-21T20:00:00.000Z',
   })
   const startedSession = completeWorkoutSet({
-    session: trainState.session,
+    session: {
+      ...trainState.session,
+      status: 'in_progress',
+      startedAt: '2026-04-21T20:00:00.000Z',
+    },
     exerciseId: trainState.session.exercises[0].id,
     setId: trainState.session.exercises[0].sets[0].id,
   })
@@ -53,6 +58,24 @@ test('getTodayCardsModel switches to a resume action once the live session has s
 
   assert.equal(cards.todayCard.actionLabel, 'Resume session')
   assert.match(cards.todayCard.body, /1 of 7 sets logged/)
+})
+
+test('getTodayCardsModel shows an in-progress tag even before any sets are logged', () => {
+  const trainState = createTrainDemoState({
+    programWorkout: createDemoProgramWorkout(),
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+  const inProgressSession = {
+    ...trainState.session,
+    status: 'in_progress',
+    startedAt: '2026-04-21T20:00:00.000Z',
+  }
+
+  const cards = getTodayCardsModel(getTodaySurfaceModel({ ...trainState, session: inProgressSession }))
+
+  assert.equal(cards.todayCard.actionLabel, 'Resume session')
+  assert.match(cards.todayCard.statusLabel, /In progress/)
+  assert.match(cards.todayCard.body, /Workout in progress/)
 })
 
 test('getProgramSurfaceModel creates the program overview copy from today state', () => {
@@ -78,7 +101,7 @@ test('getWorkoutDetailCardModel creates the workout preview card copy', () => {
   const model = getWorkoutDetailCardModel(workoutModel)
 
   assert.equal(model.title, 'Workout detail')
-  assert.equal(model.actionLabel, 'Go to session')
+  assert.equal(model.actionLabel, 'Open workout')
   assert.match(model.body, /2 exercises/)
   assert.match(model.body, /planned rest/)
   assert.match(model.body, /Barbell Back Squat/)
@@ -90,14 +113,18 @@ test('getWorkoutDetailCardModel switches to resume when today session has starte
     startedAt: '2026-04-21T20:00:00.000Z',
   })
   const startedSession = completeWorkoutSet({
-    session: trainState.session,
+    session: {
+      ...trainState.session,
+      status: 'in_progress',
+      startedAt: '2026-04-21T20:00:00.000Z',
+    },
     exerciseId: trainState.session.exercises[0].id,
     setId: trainState.session.exercises[0].sets[0].id,
   })
 
   const model = getWorkoutDetailCardModel(getWorkoutSurfaceModel({ ...trainState, session: startedSession }))
 
-  assert.equal(model.actionLabel, 'Resume session')
+  assert.equal(model.actionLabel, 'Open workout')
   assert.match(model.body, /1 of 7 sets logged/)
 })
 
@@ -144,7 +171,7 @@ test('getWorkoutDetailCardModel switches to discarded summary once today session
 
   const model = getWorkoutDetailCardModel(getWorkoutSurfaceModel({ ...trainState, session: discardedSession }))
 
-  assert.equal(model.actionLabel, 'View discarded session')
+  assert.equal(model.actionLabel, 'Open workout')
   assert.match(model.body, /Workout discarded/)
 })
 
@@ -174,7 +201,7 @@ test('getCalendarSurfaceModel tracks the selected day and where it should route 
   assert.equal(calendarModel.selectedDayId, 'thu')
   assert.equal(calendarModel.selectedDay.title, 'Thu • Upper B')
   assert.equal(calendarModel.actionLabel, 'Open Thu workout')
-  assert.equal(calendarModel.actionTargetKey, 'workout')
+  assert.equal(calendarModel.actionTargetKey, 'calendar-day-select')
   assert.equal(calendarModel.selectedDayPlan.title, 'Selected day plan')
   assert.equal(calendarModel.selectedDayPlan.rows.length, 3)
   assert.equal(calendarModel.selectedDayPlan.rows[0].title, 'Primary focus')
@@ -183,7 +210,7 @@ test('getCalendarSurfaceModel tracks the selected day and where it should route 
   assert.match(calendarModel.selectedDayPlan.rows[1].body, /2 exercises, 8 total sets/)
   assert.equal(calendarModel.selectedDayPlan.rows[2].title, 'Session cue')
   assert.match(calendarModel.selectedDayPlan.rows[2].body, /Preview the plan here/)
-  assert.equal(calendarModel.days[4].targetKey, 'workout')
+  assert.equal(calendarModel.days[4].targetKey, 'calendar-day-select')
   assert.equal(calendarModel.days[4].actionPayload.selectedDayId, 'thu')
 })
 
@@ -193,15 +220,58 @@ test('getCalendarSurfaceModel routes today directly to session once the workout 
     startedAt: '2026-04-21T20:00:00.000Z',
   })
   const startedSession = completeWorkoutSet({
-    session: trainState.session,
+    session: {
+      ...trainState.session,
+      status: 'in_progress',
+      startedAt: '2026-04-21T20:00:00.000Z',
+    },
     exerciseId: trainState.session.exercises[0].id,
     setId: trainState.session.exercises[0].sets[0].id,
   })
   const calendarModel = getCalendarSurfaceModel({ ...trainState, session: startedSession }, 'tue')
 
-  assert.equal(calendarModel.actionLabel, 'Resume Tue session')
-  assert.equal(calendarModel.actionTargetKey, 'session')
-  assert.equal(calendarModel.days[2].targetKey, 'session')
+  assert.equal(calendarModel.actionLabel, 'Open Tue workout')
+  assert.equal(calendarModel.actionTargetKey, 'calendar-day-select')
+  assert.equal(calendarModel.days[2].targetKey, 'calendar-day-select')
+})
+
+test('getWorkoutSurfaceModel only applies in-progress session copy to the matching workout', () => {
+  const trainState = createTrainDemoState({
+    programWorkout: createDemoProgramWorkout(),
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+  const startedSession = completeWorkoutSet({
+    session: {
+      ...trainState.session,
+      status: 'in_progress',
+      startedAt: '2026-04-21T20:00:00.000Z',
+    },
+    exerciseId: trainState.session.exercises[0].id,
+    setId: trainState.session.exercises[0].sets[0].id,
+  })
+
+  const todayWorkoutModel = getWorkoutSurfaceModel({ ...trainState, session: startedSession }, 'tue')
+  const otherWorkoutModel = getWorkoutSurfaceModel({ ...trainState, session: startedSession }, 'thu')
+
+  assert.match(todayWorkoutModel.sessionProgressSummary, /1 of 7 sets logged/)
+  assert.equal(otherWorkoutModel.sessionProgressSummary, null)
+  assert.equal(otherWorkoutModel.primaryActionLabel, 'Open workout')
+})
+
+test('getWorkoutSurfaceModel preserves the open-workout seam for the matching in-progress workout instead of rewriting the workflow', () => {
+  const trainState = createTrainDemoState({
+    programWorkout: createDemoProgramWorkout(),
+    startedAt: '2026-04-21T20:00:00.000Z',
+    previewState: 'active',
+  })
+
+  const todayWorkoutModel = getWorkoutSurfaceModel(trainState, 'tue')
+
+  assert.equal(todayWorkoutModel.primaryTargetKey, 'workout')
+  assert.equal(todayWorkoutModel.primaryActionLabel, 'Open workout')
+  assert.equal(todayWorkoutModel.actionPayload.selectedDayId, 'tue')
+  assert.equal(todayWorkoutModel.actionPayload.programWorkoutId, 'pw-lower-a')
+  assert.match(todayWorkoutModel.sessionProgressSummary, /Workout in progress|sets logged/)
 })
 
 test('getCalendarSurfaceModel routes completed today to the session summary', () => {
@@ -212,12 +282,12 @@ test('getCalendarSurfaceModel routes completed today to the session summary', ()
   const finishedSession = finishWorkoutSession({ session: trainState.session, completedAt: '2026-04-21T21:00:00.000Z', elapsedSeconds: 1800 })
   const calendarModel = getCalendarSurfaceModel({ ...trainState, session: finishedSession }, 'tue')
 
-  assert.equal(calendarModel.actionLabel, 'View Tue summary')
-  assert.equal(calendarModel.actionTargetKey, 'session')
-  assert.equal(calendarModel.days[2].targetKey, 'session')
+  assert.equal(calendarModel.actionLabel, 'Open Tue workout')
+  assert.equal(calendarModel.actionTargetKey, 'calendar-day-select')
+  assert.equal(calendarModel.days[2].targetKey, 'calendar-day-select')
 })
 
-test('getCalendarSurfaceModel builds calendar-strip metadata for weekday labels, dates, and indicators', () => {
+test('getCalendarSurfaceModel builds calendar-strip metadata with workout-only indicator visibility', () => {
   const trainState = createTrainDemoState({
     programWorkout: createDemoProgramWorkout(),
     startedAt: '2026-04-21T20:00:00.000Z',
@@ -230,11 +300,11 @@ test('getCalendarSurfaceModel builds calendar-strip metadata for weekday labels,
   assert.equal(calendarModel.days[0].dateNumber, '19')
   assert.equal(calendarModel.days[0].indicatorTone, 'none')
   assert.equal(calendarModel.days[1].weekdayLabel, 'MON')
-  assert.equal(calendarModel.days[1].indicatorTone, 'muted')
+  assert.equal(calendarModel.days[1].indicatorTone, 'active')
   assert.equal(calendarModel.days[3].weekdayLabel, 'WED')
   assert.equal(calendarModel.days[3].dateNumber, '22')
   assert.equal(calendarModel.days[3].isSelected, true)
   assert.equal(calendarModel.days[3].indicatorTone, 'active')
   assert.equal(calendarModel.days[6].weekdayLabel, 'SAT')
-  assert.equal(calendarModel.days[6].indicatorTone, 'none')
+  assert.equal(calendarModel.days[6].indicatorTone, 'active')
 })

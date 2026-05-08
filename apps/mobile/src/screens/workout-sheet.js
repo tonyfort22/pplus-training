@@ -1,34 +1,36 @@
 import { ArrowDown, ArrowUp, ArrowUpDown, Clock3, Dumbbell, X, Zap } from 'lucide-react-native';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getAppTheme } from '../theme/app-theme.js';
+import { AppButton, AppSurfaceCard } from '../ui/primitives.js';
 
-function WorkoutThumbnailIcon({ icon }) {
-  if (icon === 'arrow-up') return <ArrowUp color="#94a3b8" size={20} strokeWidth={2.2} />
-  if (icon === 'arrow-down') return <ArrowDown color="#94a3b8" size={20} strokeWidth={2.2} />
-  if (icon === 'zap') return <Zap color="#94a3b8" size={20} strokeWidth={2.2} />
-  return <Dumbbell color="#94a3b8" size={20} strokeWidth={2.2} />
+function WorkoutThumbnailIcon({ icon, theme }) {
+  if (icon === 'arrow-up') return <ArrowUp color={theme.iconMuted} size={20} strokeWidth={2.2} />
+  if (icon === 'arrow-down') return <ArrowDown color={theme.iconMuted} size={20} strokeWidth={2.2} />
+  if (icon === 'zap') return <Zap color={theme.iconMuted} size={20} strokeWidth={2.2} />
+  return <Dumbbell color={theme.iconMuted} size={20} strokeWidth={2.2} />
 }
 
-function WorkoutSheetSetTable({ exercise }) {
+function WorkoutSheetSetTable({ exercise, theme }) {
   return (
     <View className="gap-3">
-      <View className="flex-row items-center border-b border-[#243041] pb-2">
-        <Text className="w-8 text-[11px] font-semibold uppercase tracking-[1px] text-slate-400">#</Text>
-        <Text className="flex-1 text-[11px] font-semibold uppercase tracking-[1px] text-slate-400">EFFORT</Text>
-        <View className="w-[72px] flex-row items-center gap-1">
-          <Text className="text-[11px] font-semibold uppercase tracking-[1px] text-slate-400">{exercise.weightHeader}</Text>
-          <ArrowUpDown color="#94a3b8" size={12} strokeWidth={2.2} />
+      <View className="flex-row items-center pb-3" style={{ borderBottomWidth: 1, borderBottomColor: theme.border }}>
+        <Text className="w-24 text-center text-[11px] font-semibold uppercase tracking-[1px]" style={{ color: theme.textSoft }}>#</Text>
+        <Text className="flex-1 text-center text-[11px] font-semibold uppercase tracking-[1px]" style={{ color: theme.textSoft }}>EFFORT</Text>
+        <View className="flex-1 flex-row items-center justify-center gap-1">
+          <Text className="text-center text-[11px] font-semibold uppercase tracking-[1px]" style={{ color: theme.textSoft }}>{exercise.weightHeader}</Text>
+          <ArrowUpDown color={theme.iconMuted} size={12} strokeWidth={2.2} />
         </View>
-        <Text className="w-12 text-right text-[11px] font-semibold uppercase tracking-[1px] text-slate-400">REPS</Text>
+        <Text className="flex-1 text-center text-[11px] font-semibold uppercase tracking-[1px]" style={{ color: theme.textSoft }}>REPS</Text>
       </View>
 
-      <View className="gap-3">
+      <View className="gap-2">
         {exercise.sets.map((set) => (
-          <View key={set.id} className="flex-row items-center">
-            <Text className="w-8 text-[15px] text-white">{set.setNumber}</Text>
-            <Text className="flex-1 text-[15px] text-white">{set.effort}</Text>
-            <Text className="w-[72px] text-[15px] text-white">{set.load}</Text>
-            <Text className="w-12 text-right text-[15px] text-white">{set.reps}</Text>
+          <View key={set.id} className="min-h-[50px] flex-row items-center">
+            <Text className="w-24 text-center text-[15px]" style={{ color: theme.text }}>{set.setNumber}</Text>
+            <Text className="flex-1 text-center text-[15px]" style={{ color: theme.text }}>{set.effort}</Text>
+            <Text className="flex-1 text-center text-[15px]" style={{ color: theme.text }}>{set.load}</Text>
+            <Text className="flex-1 text-center text-[15px]" style={{ color: theme.text }}>{set.reps}</Text>
           </View>
         ))}
       </View>
@@ -36,57 +38,83 @@ function WorkoutSheetSetTable({ exercise }) {
   )
 }
 
-function WorkoutSheetExerciseBlock({ exercise }) {
+function WorkoutSheetExerciseBlock({ exercise, onOpenExerciseDetail, theme }) {
   return (
     <View className="gap-4">
       <View className="flex-row items-center gap-3">
-        <View className="h-12 w-12 items-center justify-center rounded-[14px] border border-[#243041] bg-[#111827]">
-          <WorkoutThumbnailIcon icon={exercise.thumbnailIcon} />
-        </View>
-        <Text className="flex-1 text-[24px] font-semibold text-white">{exercise.name}</Text>
+        <AppSurfaceCard
+          theme={theme}
+          containerClassName="h-12 w-12 rounded-[14px] overflow-hidden"
+          contentClassName="h-full items-center justify-center"
+        >
+          <WorkoutThumbnailIcon icon={exercise.thumbnailIcon} theme={theme} />
+        </AppSurfaceCard>
+        <Pressable onPress={() => onOpenExerciseDetail?.(exercise)}>
+          <Text className="flex-1 text-[22px] font-semibold leading-[28px]" style={{ color: theme.text }}>{exercise.name}</Text>
+        </Pressable>
       </View>
 
-      <WorkoutSheetSetTable exercise={exercise} />
+      <WorkoutSheetSetTable exercise={exercise} theme={theme} />
 
       <View className="flex-row justify-end gap-2">
-        <View className="flex-row items-center gap-1.5 rounded-[14px] border border-[#243041] bg-[#111827] px-3 py-2">
-          <Clock3 color="#94a3b8" size={15} strokeWidth={2.2} />
-          <Text className="text-[14px] font-medium text-slate-300">{exercise.restLabel}</Text>
-        </View>
-        <View className="items-center justify-center rounded-[14px] border border-[#243041] bg-[#111827] px-3 py-2">
-          <ArrowUpDown color="#94a3b8" size={16} strokeWidth={2.2} />
-        </View>
+        <AppSurfaceCard theme={theme} containerClassName="rounded-[14px] overflow-hidden" contentClassName="flex-row items-center gap-1.5 px-3 py-2">
+          <Clock3 color={theme.iconMuted} size={15} strokeWidth={2.2} />
+          <Text className="text-[14px] font-medium" style={{ color: theme.textMuted }}>{exercise.restLabel}</Text>
+        </AppSurfaceCard>
+        <AppSurfaceCard theme={theme} containerClassName="rounded-[14px] overflow-hidden" contentClassName="items-center justify-center px-3 py-2">
+          <ArrowUpDown color={theme.iconMuted} size={16} strokeWidth={2.2} />
+        </AppSurfaceCard>
       </View>
     </View>
   )
 }
 
-function WorkoutSheetContent({ model, onClose, onStartWorkout, onEditWorkout }) {
+function WorkoutSheetContent({ model, theme, onClose, onStartWorkout, onEditWorkout, onOpenExerciseDetail, isStartingWorkout = false }) {
   const insets = useSafeAreaInsets()
+  const resolvedTheme = theme || getAppTheme('dark')
 
   if (!model) return null
 
   return (
-    <SafeAreaView className="flex-1 bg-[#0b1220]">
+    <SafeAreaView className="flex-1" style={{ backgroundColor: resolvedTheme.background }}>
       <View className="px-5 pb-6" style={{ paddingTop: Math.max(insets.top, 16) }}>
         <View className="mb-7 flex-row items-center justify-between">
-          <Pressable className="h-10 w-10 items-center justify-center rounded-[14px] border border-[#243041] bg-[#111827]" onPress={onClose}>
-            <X color="#ffffff" size={20} strokeWidth={2.4} />
-          </Pressable>
+          <AppSurfaceCard
+            theme={resolvedTheme}
+            onPress={onClose}
+            containerClassName="h-10 w-10 rounded-[14px] overflow-hidden"
+            contentClassName="h-full items-center justify-center"
+          >
+            <X color={resolvedTheme.icon} size={20} strokeWidth={2.4} />
+          </AppSurfaceCard>
           <Pressable onPress={onEditWorkout}>
-            <Text className="text-[17px] font-semibold text-emerald-300">{model.editLabel || 'Edit'}</Text>
+            <Text className="text-[17px] font-semibold" style={{ color: resolvedTheme.accentText }}>{model.editLabel || 'Edit'}</Text>
           </Pressable>
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140 }}>
           <View className="gap-8">
             <View className="gap-3">
-              <Text className="text-[34px] font-bold text-white">{model.title}</Text>
+              <Text className="text-[26px] font-bold leading-[30px]" style={{ color: resolvedTheme.text }}>{model.title}</Text>
+              {model.resumeNotice ? (
+                <View
+                  className="self-start rounded-full px-3 py-1"
+                  style={{
+                    backgroundColor: resolvedTheme.accentSurface,
+                    borderWidth: 1,
+                    borderColor: resolvedTheme.accentBorder,
+                  }}
+                >
+                  <Text className="text-[12px] font-semibold uppercase tracking-[1px]" style={{ color: resolvedTheme.accentText }}>
+                    {model.resumeNotice}
+                  </Text>
+                </View>
+              ) : null}
               <View className="flex-row flex-wrap items-center gap-3">
                 {model.summaryItems.map((item, index) => (
                   <View key={item.id} className="flex-row items-center gap-3">
-                    <Text className="text-[15px] text-slate-400">{item.label}</Text>
-                    {index < model.summaryItems.length - 1 ? <View className="h-4 w-px bg-[#243041]" /> : null}
+                    <Text className="text-[15px]" style={{ color: resolvedTheme.textSoft }}>{item.label}</Text>
+                    {index < model.summaryItems.length - 1 ? <View className="h-4 w-px" style={{ backgroundColor: resolvedTheme.border }} /> : null}
                   </View>
                 ))}
               </View>
@@ -94,7 +122,7 @@ function WorkoutSheetContent({ model, onClose, onStartWorkout, onEditWorkout }) 
 
             <View className="gap-8">
               {model.exercises.map((exercise) => (
-                <WorkoutSheetExerciseBlock key={exercise.id} exercise={exercise} />
+                <WorkoutSheetExerciseBlock key={exercise.id} exercise={exercise} onOpenExerciseDetail={onOpenExerciseDetail} theme={resolvedTheme} />
               ))}
             </View>
           </View>
@@ -102,42 +130,37 @@ function WorkoutSheetContent({ model, onClose, onStartWorkout, onEditWorkout }) 
       </View>
 
       <View className="absolute inset-x-0 bottom-0 px-5 pb-6" style={{ paddingBottom: Math.max(insets.bottom, 24) }}>
-        <Pressable
-          className="items-center justify-center overflow-hidden rounded-[18px] py-4"
+        <AppButton
+          theme={resolvedTheme}
+          label={isStartingWorkout ? 'Starting...' : (model.ctaLabel || 'Start Workout')}
+          disabled={isStartingWorkout}
           onPress={onStartWorkout}
           style={{
-            backgroundColor: 'rgba(5, 46, 43, 0.48)',
-            borderWidth: 1,
-            borderColor: 'rgba(52, 211, 153, 0.5)',
-            shadowColor: '#000000',
+            shadowColor: theme.cardShadow,
             shadowOpacity: 0.28,
             shadowRadius: 18,
             shadowOffset: { width: 0, height: 10 },
             elevation: 10,
           }}
-        >
-          <View
-            pointerEvents="none"
-            className="absolute inset-x-0 top-0 h-[1px]"
-            style={{ backgroundColor: 'rgba(255, 255, 255, 0.38)' }}
-          />
-          <View
-            pointerEvents="none"
-            className="absolute inset-x-3 top-[1px] h-10 rounded-full"
-            style={{ backgroundColor: 'rgba(167, 243, 208, 0.12)' }}
-          />
-          <Text className="text-[18px] font-semibold text-[#34D399]">{model.ctaLabel || 'Start Workout'}</Text>
-        </Pressable>
+        />
       </View>
     </SafeAreaView>
   )
 }
 
-export function WorkoutSheet({ isVisible, model, onClose, onStartWorkout, onEditWorkout }) {
+export function WorkoutSheet({ isVisible, model, theme, onClose, onStartWorkout, onEditWorkout, onOpenExerciseDetail, isStartingWorkout = false }) {
   return (
     <Modal visible={isVisible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaProvider>
-        <WorkoutSheetContent model={model} onClose={onClose} onStartWorkout={onStartWorkout} onEditWorkout={onEditWorkout} />
+        <WorkoutSheetContent
+          model={model}
+          theme={theme}
+          onClose={onClose}
+          onStartWorkout={onStartWorkout}
+          onEditWorkout={onEditWorkout}
+          onOpenExerciseDetail={onOpenExerciseDetail}
+          isStartingWorkout={isStartingWorkout}
+        />
       </SafeAreaProvider>
     </Modal>
   )

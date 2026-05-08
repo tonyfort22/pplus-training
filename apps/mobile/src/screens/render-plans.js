@@ -34,6 +34,23 @@ export function getGenericSectionRenderPlan(sections) {
       }
     }
 
+    if (section.type === 'empty-state-card') {
+      return {
+        type: 'empty-state-card',
+        title: section.title,
+        body: section.body,
+      }
+    }
+
+    if (section.type === 'create-workout-card') {
+      return {
+        type: 'create-workout-card',
+        title: section.title,
+        subtitle: section.subtitle,
+        targetKey: section.targetKey,
+      }
+    }
+
     return {
       type: 'body-card',
       title: section.title,

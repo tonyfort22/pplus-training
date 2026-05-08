@@ -8,10 +8,10 @@ test('mobile program sheet inner cards use the same dark card background family 
 
   assert.match(sheetSource, /ProgramSheetWeekCard/)
   assert.match(sheetSource, /model\.routines\.map/)
+  assert.match(sheetSource, /AppSurfaceCard theme=\{theme\} contentClassName="gap-3\.5 px-\[18px\] py-\[18px\]" containerClassName="rounded-3xl overflow-hidden"/)
+  assert.match(sheetSource, /AppSurfaceCard theme=\{resolvedTheme\} contentClassName="gap-2\.5 px-4 py-4"/)
   assert.doesNotMatch(sheetSource, /bg-slate-800 p-\[18px\]/)
   assert.doesNotMatch(sheetSource, /bg-slate-800 px-4/)
   assert.doesNotMatch(sheetSource, /bg-slate-900 p-\[18px\]/)
   assert.doesNotMatch(sheetSource, /bg-slate-900 px-4/)
-  assert.match(sheetSource, /bg-\[#111827\] p-\[18px\]/)
-  assert.match(sheetSource, /bg-\[#111827\] px-4/)
 })

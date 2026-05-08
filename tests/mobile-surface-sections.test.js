@@ -30,3 +30,21 @@ test('getPlaceholderSections creates a single simple section for placeholder tab
   assert.equal(sections[0].title, 'Inbox')
   assert.equal(sections[0].body, 'Messages and reminders will live here later.')
 })
+
+test('getPlaceholderSections can promote a placeholder into a single action card when a real next-step action is provided', () => {
+  const sections = getPlaceholderSections({
+    title: 'No workout scheduled',
+    body: 'This athlete has no workout scheduled today yet.',
+    actionLabel: 'Open athlete workspace',
+    targetKey: 'coach-athlete-workspace-open',
+    actionPayload: { sourceSurface: 'coach-no-workout' },
+  })
+
+  assert.equal(sections.length, 1)
+  assert.equal(sections[0].type, 'action-card')
+  assert.equal(sections[0].title, 'No workout scheduled')
+  assert.equal(sections[0].body, 'This athlete has no workout scheduled today yet.')
+  assert.equal(sections[0].actionLabel, 'Open athlete workspace')
+  assert.equal(sections[0].targetKey, 'coach-athlete-workspace-open')
+  assert.deepEqual(sections[0].actionPayload, { sourceSurface: 'coach-no-workout' })
+})

@@ -1,0 +1,1131 @@
+import { useEffect, useMemo, useState } from 'react'
+import * as data from '../../../../packages/data/src/index.js'
+import { Check, ChevronDown, ChevronLeft, Clock3, Heart, SlidersHorizontal, Waves } from 'lucide-react-native'
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { SafeAreaProvider } from 'react-native-safe-area-context'
+import { SvgXml } from 'react-native-svg'
+import { BarChart } from 'react-native-gifted-charts'
+import { placeholderMuscleImg1Svg } from '../assets/placeholder-muscle-img1.js'
+import { getAnalyticsViewModel } from '../progress/index.js'
+import { getAppTheme } from '../theme/app-theme.js'
+import { ExerciseLibraryView } from './exercise-library-view.js'
+import { buildStrengthExerciseOptions, buildVisibleStrengthCards, normalizeStrengthExerciseName, getInitialStrengthSelectionIds, getInitialStrengthSelectionState, copyAppliedToDraft, toggleStrengthExerciseDraft, applyStrengthExerciseDraft, getDefaultSyncedStrengthSelection, reconcileStrengthExerciseSelectionIds, reconcileAppliedStrengthExerciseSelectionIds, resolveStrengthSelectionStorage, readStoredStrengthSelectionState, writeStoredStrengthSelectionState } from './analytics-strength-state.js'
+
+
+function createMobileExerciseLibraryClient({ env = process.env, fetchImpl = globalThis.fetch } = {}) {
+  if (!env?.EXPO_PUBLIC_SUPABASE_URL || !env?.EXPO_PUBLIC_SUPABASE_ANON_KEY) {
+    return null
+  }
+
+  return data.exercises.createSupabaseRestExerciseRepository({
+    url: env.EXPO_PUBLIC_SUPABASE_URL,
+    anonKey: env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+    fetchImpl,
+  })
+}
+
+function AnalyticsDropdown({ label, onPress, theme, styles }) {
+  return (
+    <Pressable style={styles.dropdownButton} onPress={onPress}>
+      <Text style={styles.dropdownLabel}>{label}</Text>
+      <ChevronDown color={theme.iconMuted} size={16} strokeWidth={2.4} />
+    </Pressable>
+  )
+}
+
+function AnalyticsOptionSheet({ title, options, activeOptionId, onClose, onSelect, theme, styles }) {
+  return (
+    <Modal transparent animationType="fade" visible onRequestClose={onClose}>
+      <View style={styles.optionSheetWrap}>
+        <Pressable style={styles.optionSheetBackdrop} onPress={onClose} />
+        <View style={styles.optionSheet}>
+          <View style={styles.optionSheetHandle} />
+          <Text style={styles.optionSheetTitle}>{title}</Text>
+          <View style={styles.optionSheetDivider} />
+          {options.map((option) => {
+            const isSelected = option.id === activeOptionId
+            return (
+              <Pressable key={option.id} style={styles.optionSheetRow} onPress={() => onSelect(option.id)}>
+                <Text style={[styles.optionSheetLabel, isSelected && styles.optionSheetLabelSelected]}>
+                  {option.sheetLabel || option.label}
+                </Text>
+                {isSelected ? <Check color={theme.accentText} size={18} strokeWidth={2.6} /> : null}
+              </Pressable>
+            )
+          })}
+        </View>
+      </View>
+    </Modal>
+  )
+}
+
+function ConsistencyBarChart({ chart, theme, styles }) {
+  const chartData = chart.bars.map((bar) => ({
+    value: bar.value,
+    label: bar.label,
+    frontColor: bar.frontColor,
+  }))
+
+  return (
+    <View style={styles.consistencyCardContent}>
+      <Text style={styles.consistencyChartTitle}>WORKOUTS PER WEEK</Text>
+
+      <View style={styles.consistencyChartWrap}>
+        <View style={[styles.consistencyGridline, styles.consistencyGridlineTop]} />
+        <View style={[styles.consistencyGridline, styles.consistencyGridlineMiddle]} />
+        <View style={[styles.consistencyGridline, styles.consistencyGridlineBottom]} />
+
+        <View style={styles.consistencyYAxisLabels}>
+          {chart.yAxisLabels.map((label) => (
+            <Text key={label} style={styles.consistencyYAxisLabel}>
+              {label}
+            </Text>
+          ))}
+        </View>
+
+        <View style={styles.consistencyBarsWrap}>
+          <BarChart
+            data={chartData}
+            barWidth={22}
+            spacing={20}
+            initialSpacing={70}
+            endSpacing={28}
+            noOfSections={3}
+            maxValue={6}
+            height={156}
+            width={220}
+            hideYAxisText
+            yAxisThickness={0}
+            xAxisThickness={0}
+            hideRules
+            disableScroll
+            isAnimated={false}
+            roundedTop
+            roundedBottom={false}
+            frontColor={theme.accentText}
+            xAxisLabelTextStyle={styles.consistencyAxisLabel}
+            yAxisTextStyle={styles.consistencyAxisLabel}
+            showValuesAsTopLabel={false}
+          />
+        </View>
+
+        <View style={styles.consistencyXAxisLabels}>
+          {chart.xAxisLabels.map((label) => (
+            <Text key={label} style={styles.consistencyXAxisLabel}>
+              {label}
+            </Text>
+          ))}
+        </View>
+      </View>
+    </View>
+  )
+}
+
+function RecoveryFigure({ styles }) {
+  return (
+    <View style={styles.recoveryFigureWrap}>
+      <SvgXml xml={placeholderMuscleImg1Svg} width="100%" height="100%" />
+    </View>
+  )
+}
+
+function RecoveryCard({ row, onPress, isCompact = false, isBackCard = false, children, styles }) {
+  const cardStyle = [
+    styles.recoveryCard,
+    isCompact ? styles.recoveryCardCompact : null,
+    isBackCard ? styles.recoveryBackCard : null,
+  ]
+
+  if (children) {
+    return (
+      <Pressable style={cardStyle} onPress={onPress}>
+        {children}
+      </Pressable>
+    )
+  }
+
+  return (
+    <Pressable style={cardStyle} onPress={onPress}>
+      <Text style={styles.recoveryCardLabel}>{row.label}</Text>
+      <View style={styles.recoveryBarTrack}>
+        <View style={[styles.recoveryBarFill, { width: row.barWidth }]} />
+      </View>
+      <Text style={styles.recoveryCardValue}>{row.percentageLabel}</Text>
+    </Pressable>
+  )
+}
+
+function RecoveryBackButton({ theme, styles }) {
+  return (
+    <View style={styles.recoveryBackButton}>
+      <ChevronLeft color={theme.accentText} size={18} strokeWidth={2.4} />
+    </View>
+  )
+}
+
+function RecoveryOverview({ rows, onSelectMuscle, styles }) {
+  return (
+    <View style={styles.trainingLoadContent}>
+      <RecoveryFigure styles={styles} />
+      <View style={styles.recoveryGridColumn}>
+        <View style={styles.recoveryGridRow}>
+          <RecoveryCard row={rows[0]} onPress={() => onSelectMuscle(rows[0])} styles={styles} />
+          <RecoveryCard row={rows[1]} onPress={() => onSelectMuscle(rows[1])} styles={styles} />
+        </View>
+        <View style={styles.recoveryGridRow}>
+          <RecoveryCard row={rows[2]} onPress={() => onSelectMuscle(rows[2])} styles={styles} />
+          <RecoveryCard row={rows[3]} onPress={() => onSelectMuscle(rows[3])} styles={styles} />
+        </View>
+        <View style={styles.recoveryGridRow}>
+          <RecoveryCard row={rows[4]} onPress={() => onSelectMuscle(rows[4])} styles={styles} />
+          <RecoveryCard row={rows[5]} onPress={() => onSelectMuscle(rows[5])} styles={styles} />
+        </View>
+      </View>
+    </View>
+  )
+}
+
+function RecoveryDetailView({ muscleGroup, onBack, theme, styles }) {
+  return (
+    <View style={styles.trainingLoadContent}>
+      <RecoveryFigure styles={styles} />
+      <View style={styles.recoveryDetailColumn}>
+        <View style={styles.recoveryDetailTopRow}>
+          <RecoveryCard isBackCard onPress={onBack} styles={styles}>
+            <RecoveryBackButton theme={theme} styles={styles} />
+          </RecoveryCard>
+          <RecoveryCard row={muscleGroup.subMuscles[0]} isCompact styles={styles} />
+        </View>
+        <View style={styles.recoveryDetailBottomRow}>
+          <RecoveryCard row={muscleGroup.subMuscles[1]} isCompact styles={styles} />
+          <RecoveryCard row={muscleGroup.subMuscles[2]} isCompact styles={styles} />
+        </View>
+      </View>
+    </View>
+  )
+}
+
+function ActivityCard({ row, onPress, isCompact = false, isBackCard = false, children, styles }) {
+  const cardStyle = [
+    styles.recoveryCard,
+    isCompact ? styles.recoveryCardCompact : null,
+    isBackCard ? styles.recoveryBackCard : null,
+  ]
+
+  if (children) {
+    return (
+      <Pressable style={cardStyle} onPress={onPress}>
+        {children}
+      </Pressable>
+    )
+  }
+
+  return (
+    <Pressable style={cardStyle} onPress={onPress}>
+      <Text style={styles.recoveryCardLabel}>{row.label}</Text>
+      <Text style={styles.activityCardValue}>{row.setCountLabel}</Text>
+    </Pressable>
+  )
+}
+
+function ActivityOverview({ rows, onSelectMuscle, styles }) {
+  return (
+    <View style={styles.trainingLoadContent}>
+      <RecoveryFigure styles={styles} />
+      <View style={styles.recoveryGridColumn}>
+        <View style={styles.recoveryGridRow}>
+          <ActivityCard row={rows[0]} onPress={() => onSelectMuscle(rows[0])} styles={styles} />
+          <ActivityCard row={rows[1]} onPress={() => onSelectMuscle(rows[1])} styles={styles} />
+        </View>
+        <View style={styles.recoveryGridRow}>
+          <ActivityCard row={rows[2]} onPress={() => onSelectMuscle(rows[2])} styles={styles} />
+          <ActivityCard row={rows[3]} onPress={() => onSelectMuscle(rows[3])} styles={styles} />
+        </View>
+        <View style={styles.recoveryGridRow}>
+          <ActivityCard row={rows[4]} onPress={() => onSelectMuscle(rows[4])} styles={styles} />
+          <ActivityCard row={rows[5]} onPress={() => onSelectMuscle(rows[5])} styles={styles} />
+        </View>
+      </View>
+    </View>
+  )
+}
+
+function ActivityDetailView({ muscleGroup, onBack, theme, styles }) {
+  return (
+    <View style={styles.trainingLoadContent}>
+      <RecoveryFigure styles={styles} />
+      <View style={styles.recoveryDetailColumn}>
+        <View style={styles.recoveryDetailTopRow}>
+          <ActivityCard isBackCard onPress={onBack} styles={styles}>
+            <RecoveryBackButton theme={theme} styles={styles} />
+          </ActivityCard>
+          <ActivityCard row={muscleGroup.subMuscles[0]} isCompact styles={styles} />
+        </View>
+        <View style={styles.recoveryDetailBottomRow}>
+          <ActivityCard row={muscleGroup.subMuscles[1]} isCompact styles={styles} />
+          <ActivityCard row={muscleGroup.subMuscles[2]} isCompact styles={styles} />
+        </View>
+      </View>
+    </View>
+  )
+}
+
+function HealthMetricCard({ metric, theme, styles }) {
+  return (
+    <View style={styles.healthMetricCard}>
+      <View style={styles.healthMetricIconWrap}>
+        {metric.icon === 'sleep' ? <Clock3 color={theme.iconMuted} size={16} strokeWidth={2.2} /> : null}
+        {metric.icon === 'heart' ? <Heart color={theme.iconMuted} size={16} strokeWidth={2.2} /> : null}
+        {metric.icon === 'waves' ? <Waves color={theme.iconMuted} size={16} strokeWidth={2.2} /> : null}
+      </View>
+      <Text style={styles.healthMetricLabel}>{metric.label}</Text>
+      <Text style={styles.healthMetricValue}>--</Text>
+    </View>
+  )
+}
+
+function StrengthMetricRow({ card, styles, onOpenExerciseDetail }) {
+  return (
+    <Pressable
+      onPress={() => onOpenExerciseDetail?.({
+        id: card.exerciseId || card.id,
+        exerciseId: card.exerciseId || card.id,
+        name: card.exerciseName,
+        videoUrl: card.videoUrl || null,
+        thumbnailUrl: card.thumbnailUrl || null,
+        sourceSurface: 'metrics-strength',
+      })}
+      style={styles.progressStrengthRow}
+    >
+      <Text style={styles.progressExerciseLabel}>{card.exerciseName}</Text>
+      <View style={styles.progressStrengthValueRow}>
+        <Text style={styles.progressStrengthValueText}>{card.oneRepMaxValueLabel}</Text>
+
+        <View style={styles.progressSetPill}>
+          <Text style={styles.progressSetPillText}>{card.sourcePerformanceTagLabel}</Text>
+        </View>
+      </View>
+    </Pressable>
+  )
+}
+
+function StrengthMetricsCard({ cards, theme, styles, metricLabel, onOpenFilter, onOpenExerciseDetail }) {
+  return (
+    <View style={styles.progressStrengthCard}>
+      <View style={styles.progressStrengthCardHeader}>
+        <Text style={styles.progressStrengthMetricLabel}>{metricLabel}</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="Open Strength exercise filter" hitSlop={20} onPress={onOpenFilter} style={styles.progressStrengthFilterButton}>
+          <SlidersHorizontal color={theme.iconMuted} size={16} strokeWidth={2.2} />
+        </Pressable>
+      </View>
+
+      <View style={styles.progressStrengthRows}>
+        {cards.map((card, index) => (
+          <View key={card.id} style={index > 0 ? styles.progressStrengthRowDivider : null}>
+            <StrengthMetricRow key={card.id} card={card} styles={styles} onOpenExerciseDetail={onOpenExerciseDetail} />
+          </View>
+        ))}
+      </View>
+    </View>
+  )
+}
+
+function StrengthExerciseFilterView({
+  isVisible,
+  theme,
+  exercises = [],
+  selectedExercises = [],
+  selectedExerciseIds = [],
+  onToggleExercise,
+  onApply,
+  onClose,
+  isLoading = false,
+  error = '',
+  searchQuery = '',
+  onSearchChange,
+}) {
+  if (!isVisible) return null
+
+  const maxStrengthSelectionReached = selectedExerciseIds.length >= 4
+
+  return (
+    <ExerciseLibraryView
+      title="Exercises"
+      searchPlaceholder="Search or Create Exercises"
+      onBack={onClose}
+      exercises={exercises}
+      isLoading={isLoading}
+      error={error}
+      searchQuery={searchQuery}
+      onSearchChange={onSearchChange}
+      theme={theme}
+      selectedExercises={selectedExercises}
+      showSelectedSection
+      selectedSectionTitle=""
+      selectedSectionHelperText={maxStrengthSelectionReached ? 'Select up to 4 exercises maximum' : ''}
+      selectable
+      selectedExerciseIds={selectedExerciseIds}
+      onToggleExercise={onToggleExercise}
+      primaryActionLabel="Update Chart"
+      onPrimaryAction={onApply}
+      primaryActionDisabled={selectedExerciseIds.length === 0}
+    />
+  )
+}
+
+export function AnalyticsView({ model = getAnalyticsViewModel(), theme, onOpenExerciseDetail = null }) {
+  const resolvedTheme = theme || getAppTheme('dark')
+  const styles = createAnalyticsStyles(resolvedTheme)
+  const [activeSheet, setActiveSheet] = useState(null)
+  const [activeProgressOptionId, setActiveProgressOptionId] = useState(model.activeProgressOptionId)
+  const [activeTrainingLoadOptionId, setActiveTrainingLoadOptionId] = useState(model.activeTrainingLoadOptionId)
+  const [activeRecoveryMuscleId, setActiveRecoveryMuscleId] = useState(null)
+  const [activeActivityMuscleId, setActiveActivityMuscleId] = useState(null)
+  const [isStrengthFilterViewOpen, setIsStrengthFilterViewOpen] = useState(false)
+  const strengthSelectionPersistenceKey = model.strengthSelectionPersistenceKey || 'analytics-strength:default'
+  const initialStrengthSelectionState = useMemo(() => getInitialStrengthSelectionState({
+    defaultStrengthExerciseIds: getInitialStrengthSelectionIds({
+      defaultStrengthExerciseIds: model.defaultStrengthExerciseIds,
+      strengthCards: model.strengthCards,
+    }),
+  }), [model.defaultStrengthExerciseIds, model.strengthCards])
+  const [appliedStrengthExerciseIds, setAppliedStrengthExerciseIds] = useState(initialStrengthSelectionState.appliedStrengthExerciseIds)
+  const [draftStrengthExerciseIds, setDraftStrengthExerciseIds] = useState(initialStrengthSelectionState.draftStrengthExerciseIds)
+  const [appliedStrengthExercises, setAppliedStrengthExercises] = useState(initialStrengthSelectionState.appliedStrengthExercises)
+  const [hasAppliedCustomStrengthFilter, setHasAppliedCustomStrengthFilter] = useState(initialStrengthSelectionState.hasAppliedCustomStrengthFilter)
+  const [resolvedStrengthSelectionStorage, setResolvedStrengthSelectionStorage] = useState(null)
+  const [isStrengthSelectionHydrated, setIsStrengthSelectionHydrated] = useState(false)
+  const [strengthExerciseSearchQuery, setStrengthExerciseSearchQuery] = useState('')
+  const [strengthExerciseLibraryState, setStrengthExerciseLibraryState] = useState({ items: [], isLoading: false, error: '' })
+  const activeProgressOption = model.progressOptions.find((option) => option.id === activeProgressOptionId)?.label || 'Strength'
+  const activeTrainingLoadOption = model.trainingLoadOptions.find((option) => option.id === activeTrainingLoadOptionId)?.label || 'Recovery'
+  const recoveryMuscleGroups = model.recoveryMuscleGroups || model.recoveryRows || []
+  const activeRecoveryMuscle = recoveryMuscleGroups.find((row) => row.id === activeRecoveryMuscleId) || null
+  const activityMuscleGroups = model.activityMuscleGroups || []
+  const activeActivityMuscle = activityMuscleGroups.find((row) => row.id === activeActivityMuscleId) || null
+  const metricCardByLibraryId = useMemo(() => new Map(model.strengthCards.map((card) => [card.exerciseId || card.id, card])), [model.strengthCards])
+  const metricCardByExerciseName = useMemo(() => new Map(model.strengthCards.map((card) => [normalizeStrengthExerciseName(card.exerciseName), card])), [model.strengthCards])
+  const strengthExerciseOptions = useMemo(() => buildStrengthExerciseOptions({
+    strengthExerciseLibraryItems: strengthExerciseLibraryState.items,
+    strengthCards: model.strengthCards,
+  }), [model.strengthCards, strengthExerciseLibraryState.items])
+  const strengthExerciseOptionById = useMemo(() => new Map(strengthExerciseOptions.map((exercise) => [exercise.id, exercise])), [strengthExerciseOptions])
+  const strengthExerciseOptionByMetricExerciseId = useMemo(() => new Map(
+    strengthExerciseOptions
+      .filter((exercise) => exercise.metricExerciseId)
+      .map((exercise) => [exercise.metricExerciseId, exercise])
+  ), [strengthExerciseOptions])
+  const strengthExerciseOptionByName = useMemo(() => new Map(strengthExerciseOptions.map((exercise) => [normalizeStrengthExerciseName(exercise.name), exercise])), [strengthExerciseOptions])
+  const defaultAppliedStrengthExerciseIds = useMemo(() => reconcileAppliedStrengthExerciseSelectionIds(getInitialStrengthSelectionIds({
+    defaultStrengthExerciseIds: model.defaultStrengthExerciseIds,
+    strengthCards: model.strengthCards,
+  }), {
+    strengthExerciseOptionById,
+    strengthExerciseOptionByMetricExerciseId,
+    metricCardByLibraryId,
+    metricCardByExerciseName,
+  }), [metricCardByExerciseName, metricCardByLibraryId, model.defaultStrengthExerciseIds, model.strengthCards, strengthExerciseOptionById, strengthExerciseOptionByMetricExerciseId])
+  const defaultDraftStrengthExerciseIds = useMemo(() => reconcileStrengthExerciseSelectionIds(getInitialStrengthSelectionIds({
+    defaultStrengthExerciseIds: model.defaultStrengthExerciseIds,
+    strengthCards: model.strengthCards,
+  }), {
+    strengthExerciseOptionById,
+    strengthExerciseOptionByMetricExerciseId,
+    metricCardByLibraryId,
+    metricCardByExerciseName,
+    strengthExerciseOptionByName,
+  }), [metricCardByExerciseName, metricCardByLibraryId, model.defaultStrengthExerciseIds, model.strengthCards, strengthExerciseOptionById, strengthExerciseOptionByMetricExerciseId, strengthExerciseOptionByName])
+
+  function resolveStrengthExerciseOption(exerciseId) {
+    const exactExercise = strengthExerciseOptionById.get(exerciseId)
+    if (exactExercise) return exactExercise
+
+    const metricCard = metricCardByLibraryId.get(exerciseId) || null
+    const metricExerciseName = normalizeStrengthExerciseName(metricCard?.exerciseName)
+    if (!metricExerciseName) return null
+
+    return strengthExerciseOptionByName.get(metricExerciseName)
+      || strengthExerciseOptions.find((exercise) => exercise.metricExerciseId === (metricCard.exerciseId || metricCard.id))
+      || null
+  }
+
+  const visibleStrengthCards = useMemo(() => buildVisibleStrengthCards({
+    appliedStrengthExerciseIds,
+    strengthExerciseOptions,
+    strengthCards: model.strengthCards,
+    appliedStrengthExercises,
+  }), [appliedStrengthExerciseIds, appliedStrengthExercises, model.strengthCards, strengthExerciseOptions])
+  const selectedStrengthExerciseOptions = useMemo(() => draftStrengthExerciseIds
+    .map((exerciseId) => resolveStrengthExerciseOption(exerciseId))
+    .filter(Boolean), [draftStrengthExerciseIds, strengthExerciseOptionById, strengthExerciseOptionByName, strengthExerciseOptions, metricCardByLibraryId])
+  const shouldHydratePersistedStrengthExercises = isStrengthSelectionHydrated && hasAppliedCustomStrengthFilter && !appliedStrengthExercises.length
+  const visibleStrengthExerciseOptions = useMemo(() => strengthExerciseOptions.filter((exercise) => {
+    const query = String(strengthExerciseSearchQuery || '').trim().toLowerCase()
+    if (!query) return true
+    return String(exercise.name || '').toLowerCase().includes(query)
+  }), [strengthExerciseOptions, strengthExerciseSearchQuery])
+
+  useEffect(() => {
+    let isActive = true
+    setIsStrengthSelectionHydrated(false)
+
+    async function hydrateStrengthSelectionState() {
+      const nextStorage = await resolveStrengthSelectionStorage()
+      if (!isActive) return
+      setResolvedStrengthSelectionStorage(nextStorage)
+
+      const persistedSelectionState = await readStoredStrengthSelectionState({
+        storage: nextStorage,
+        selectionKey: strengthSelectionPersistenceKey,
+        defaultStrengthExerciseIds: defaultAppliedStrengthExerciseIds,
+      })
+      if (!isActive) return
+
+      setAppliedStrengthExerciseIds(persistedSelectionState.appliedStrengthExerciseIds)
+      setAppliedStrengthExercises(persistedSelectionState.appliedStrengthExercises || [])
+      setDraftStrengthExerciseIds(reconcileStrengthExerciseSelectionIds(persistedSelectionState.appliedStrengthExerciseIds, {
+        strengthExerciseOptionById,
+        strengthExerciseOptionByMetricExerciseId,
+        metricCardByLibraryId,
+        metricCardByExerciseName,
+        strengthExerciseOptionByName,
+      }))
+      setHasAppliedCustomStrengthFilter(persistedSelectionState.hasAppliedCustomStrengthFilter)
+      setIsStrengthSelectionHydrated(true)
+    }
+
+    hydrateStrengthSelectionState()
+
+    return () => {
+      isActive = false
+    }
+  }, [defaultAppliedStrengthExerciseIds, strengthSelectionPersistenceKey])
+
+  useEffect(() => {
+    if (!isStrengthSelectionHydrated) return
+
+    const nextDefaultSelection = getDefaultSyncedStrengthSelection({
+      hasAppliedCustomStrengthFilter,
+      defaultStrengthExerciseIds: defaultAppliedStrengthExerciseIds,
+    })
+    if (!nextDefaultSelection) return
+    setAppliedStrengthExerciseIds(nextDefaultSelection.appliedStrengthExerciseIds)
+    setAppliedStrengthExercises([])
+    setDraftStrengthExerciseIds(defaultDraftStrengthExerciseIds)
+  }, [defaultAppliedStrengthExerciseIds, defaultDraftStrengthExerciseIds, hasAppliedCustomStrengthFilter, isStrengthSelectionHydrated])
+
+  useEffect(() => {
+    if (!isStrengthSelectionHydrated || !resolvedStrengthSelectionStorage) return
+
+    writeStoredStrengthSelectionState({
+      storage: resolvedStrengthSelectionStorage,
+      selectionKey: strengthSelectionPersistenceKey,
+      appliedStrengthExerciseIds,
+      appliedStrengthExercises,
+      hasAppliedCustomStrengthFilter,
+    })
+  }, [appliedStrengthExerciseIds, appliedStrengthExercises, hasAppliedCustomStrengthFilter, isStrengthSelectionHydrated, resolvedStrengthSelectionStorage, strengthSelectionPersistenceKey])
+
+  useEffect(() => {
+    setAppliedStrengthExerciseIds((current) => reconcileAppliedStrengthExerciseSelectionIds(current, {
+      strengthExerciseOptionById,
+      strengthExerciseOptionByMetricExerciseId,
+      metricCardByLibraryId,
+      metricCardByExerciseName,
+    }))
+    setDraftStrengthExerciseIds((current) => reconcileStrengthExerciseSelectionIds(current, {
+      strengthExerciseOptionById,
+      strengthExerciseOptionByMetricExerciseId,
+      metricCardByLibraryId,
+      metricCardByExerciseName,
+      strengthExerciseOptionByName,
+    }))
+  }, [strengthExerciseOptionById, strengthExerciseOptionByMetricExerciseId, strengthExerciseOptionByName, metricCardByExerciseName, metricCardByLibraryId])
+
+  useEffect(() => {
+    const shouldLoadStrengthExerciseLibrary = isStrengthFilterViewOpen || shouldHydratePersistedStrengthExercises
+    if (!shouldLoadStrengthExerciseLibrary) return
+
+    const exerciseClient = createMobileExerciseLibraryClient()
+    if (!exerciseClient) {
+      setStrengthExerciseLibraryState({ items: [], isLoading: false, error: 'Exercise library is unavailable right now.' })
+      return
+    }
+
+    let isActive = true
+    setStrengthExerciseLibraryState((current) => ({ ...current, isLoading: true, error: '' }))
+
+    exerciseClient.listExercises()
+      .then((items) => {
+        if (!isActive) return
+        const nextStrengthExerciseOptions = buildStrengthExerciseOptions({
+          strengthExerciseLibraryItems: items,
+          strengthCards: model.strengthCards,
+        })
+        const nextStrengthExerciseOptionById = new Map(nextStrengthExerciseOptions.map((exercise) => [exercise.id, exercise]))
+        const nextStrengthExerciseOptionByMetricExerciseId = new Map(
+          nextStrengthExerciseOptions
+            .filter((exercise) => exercise.metricExerciseId)
+            .map((exercise) => [exercise.metricExerciseId, exercise])
+        )
+        const nextStrengthExerciseOptionByName = new Map(nextStrengthExerciseOptions.map((exercise) => [normalizeStrengthExerciseName(exercise.name), exercise]))
+        setStrengthExerciseLibraryState({ items, isLoading: false, error: '' })
+        setAppliedStrengthExercises((current) => current.length ? current : reconcileStrengthExerciseSelectionIds(appliedStrengthExerciseIds, {
+          strengthExerciseOptionById: nextStrengthExerciseOptionById,
+          strengthExerciseOptionByMetricExerciseId: nextStrengthExerciseOptionByMetricExerciseId,
+          metricCardByLibraryId,
+          metricCardByExerciseName,
+          strengthExerciseOptionByName: nextStrengthExerciseOptionByName,
+        }).map((exerciseId) => nextStrengthExerciseOptionById.get(exerciseId)).filter(Boolean))
+      })
+      .catch((error) => {
+        if (!isActive) return
+        setStrengthExerciseLibraryState({ items: [], isLoading: false, error: error?.message || 'Unable to load exercises.' })
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [isStrengthFilterViewOpen, shouldHydratePersistedStrengthExercises])
+
+  function handleOpenStrengthExerciseFilter() {
+    setDraftStrengthExerciseIds(reconcileStrengthExerciseSelectionIds(appliedStrengthExerciseIds, {
+      strengthExerciseOptionById,
+      strengthExerciseOptionByMetricExerciseId,
+      metricCardByLibraryId,
+      metricCardByExerciseName,
+      strengthExerciseOptionByName,
+    }))
+    setStrengthExerciseSearchQuery('')
+    setIsStrengthFilterViewOpen(true)
+  }
+
+  function handleCloseStrengthExerciseFilter() {
+    setDraftStrengthExerciseIds(reconcileStrengthExerciseSelectionIds(appliedStrengthExerciseIds, {
+      strengthExerciseOptionById,
+      strengthExerciseOptionByMetricExerciseId,
+      metricCardByLibraryId,
+      metricCardByExerciseName,
+      strengthExerciseOptionByName,
+    }))
+    setStrengthExerciseSearchQuery('')
+    setIsStrengthFilterViewOpen(false)
+  }
+
+  function handleToggleStrengthExercise(exerciseId) {
+    setDraftStrengthExerciseIds((current) => toggleStrengthExerciseDraft({
+      draftStrengthExerciseIds: current,
+      exerciseId,
+      maxSelections: 4,
+    }))
+  }
+
+  function handleApplyStrengthExerciseFilter() {
+    const nextAppliedStrengthExercises = draftStrengthExerciseIds.map((exerciseId) => resolveStrengthExerciseOption(exerciseId)).filter(Boolean)
+    const nextAppliedStrengthExerciseIds = applyStrengthExerciseDraft(draftStrengthExerciseIds.map((exerciseId) => {
+      const option = strengthExerciseOptionById.get(exerciseId)
+      return option?.metricExerciseId || option?.id || exerciseId
+    }))
+    setAppliedStrengthExerciseIds(nextAppliedStrengthExerciseIds)
+    setAppliedStrengthExercises(nextAppliedStrengthExercises)
+    setHasAppliedCustomStrengthFilter(true)
+    setStrengthExerciseSearchQuery('')
+    setIsStrengthFilterViewOpen(false)
+  }
+
+  return (
+    <View style={styles.screen}>
+      <View style={styles.analyticsHeaderWrap}>
+        <Text style={styles.analyticsEyebrow}>{model.title}</Text>
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>{model.progressLabel}</Text>
+          <AnalyticsDropdown label={activeProgressOption} theme={resolvedTheme} styles={styles} onPress={() => setActiveSheet('progress')} />
+        </View>
+
+        {activeProgressOptionId === 'consistency' ? (
+          <View style={styles.primaryCard}>
+            <ConsistencyBarChart chart={model.consistencyChart} theme={resolvedTheme} styles={styles} />
+          </View>
+        ) : (
+          <View style={styles.progressStrengthList}>
+            <StrengthMetricsCard cards={visibleStrengthCards} theme={resolvedTheme} styles={styles} metricLabel={model.oneRepMaxLabel} onOpenFilter={handleOpenStrengthExerciseFilter} onOpenExerciseDetail={onOpenExerciseDetail} />
+          </View>
+        )}
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>{model.trainingLoadLabel}</Text>
+          <AnalyticsDropdown label={activeTrainingLoadOption} theme={resolvedTheme} styles={styles} onPress={() => setActiveSheet('training-load')} />
+        </View>
+
+        {activeTrainingLoadOptionId === 'recovery' ? (
+          activeRecoveryMuscleId ? (
+            <RecoveryDetailView muscleGroup={activeRecoveryMuscle} onBack={() => setActiveRecoveryMuscleId(null)} theme={resolvedTheme} styles={styles} />
+          ) : (
+            <RecoveryOverview rows={recoveryMuscleGroups} onSelectMuscle={(row) => setActiveRecoveryMuscleId(row.id)} styles={styles} />
+          )
+        ) : activeActivityMuscleId ? (
+          <ActivityDetailView muscleGroup={activeActivityMuscle} onBack={() => setActiveActivityMuscleId(null)} theme={resolvedTheme} styles={styles} />
+        ) : (
+          <ActivityOverview rows={activityMuscleGroups} onSelectMuscle={(row) => setActiveActivityMuscleId(row.id)} styles={styles} />
+        )}
+      </View>
+
+      <View style={styles.healthMetricsSection}>
+        <Text style={styles.sectionTitle}>{model.healthMetricsTitle}</Text>
+        <View style={styles.healthMetricsRow}>
+          {model.healthMetrics.map((metric) => (
+            <HealthMetricCard key={metric.id} metric={metric} theme={resolvedTheme} styles={styles} />
+          ))}
+        </View>
+      </View>
+
+      {activeSheet === 'progress' ? (
+        <AnalyticsOptionSheet
+          styles={styles}
+          theme={resolvedTheme}
+          title="Progress"
+          options={model.progressOptions.map((option) => ({
+            ...option,
+            sheetLabel: option.id === 'consistency' ? 'Consistency' : 'Strength',
+          }))}
+          activeOptionId={activeProgressOptionId}
+          onClose={() => setActiveSheet(null)}
+          onSelect={(optionId) => {
+            setActiveProgressOptionId(optionId)
+            setActiveSheet(null)
+          }}
+        />
+      ) : null}
+
+      {activeSheet === 'training-load' ? (
+        <AnalyticsOptionSheet
+          styles={styles}
+          theme={resolvedTheme}
+          title="Training Load"
+          options={model.trainingLoadOptions.map((option) => ({
+            ...option,
+            sheetLabel: option.id === 'seven-day-activity' ? '7d Activity' : option.label,
+          }))}
+          activeOptionId={activeTrainingLoadOptionId}
+          onClose={() => setActiveSheet(null)}
+          onSelect={(optionId) => {
+            setActiveTrainingLoadOptionId(optionId)
+            setActiveRecoveryMuscleId(null)
+            setActiveActivityMuscleId(null)
+            setActiveSheet(null)
+          }}
+        />
+      ) : null}
+
+      <Modal visible={isStrengthFilterViewOpen} animationType="slide" onRequestClose={handleCloseStrengthExerciseFilter}>
+        <SafeAreaProvider>
+          <StrengthExerciseFilterView
+            isVisible={isStrengthFilterViewOpen}
+            theme={resolvedTheme}
+            exercises={visibleStrengthExerciseOptions}
+            selectedExercises={selectedStrengthExerciseOptions}
+            selectedExerciseIds={draftStrengthExerciseIds}
+            onToggleExercise={handleToggleStrengthExercise}
+            onApply={handleApplyStrengthExerciseFilter}
+            onClose={handleCloseStrengthExerciseFilter}
+            isLoading={strengthExerciseLibraryState.isLoading}
+            error={strengthExerciseLibraryState.error}
+            searchQuery={strengthExerciseSearchQuery}
+            onSearchChange={setStrengthExerciseSearchQuery}
+          />
+        </SafeAreaProvider>
+      </Modal>
+    </View>
+  )
+}
+
+function createAnalyticsStyles(theme) {
+  return StyleSheet.create({
+  screen: {
+    gap: 24,
+  },
+  analyticsHeaderWrap: {
+    gap: 4,
+  },
+  analyticsEyebrow: {
+    fontSize: 12,
+    fontWeight: '600',
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    color: theme.textSoft,
+  },
+  section: {
+    gap: 16,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  sectionTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: theme.text,
+  },
+  dropdownButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.border,
+    backgroundColor: theme.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  dropdownLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.textMuted,
+  },
+  optionSheetWrap: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: theme.overlay,
+  },
+  optionSheetBackdrop: {
+    flex: 1,
+  },
+  optionSheet: {
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderWidth: 1,
+    borderColor: theme.border,
+    backgroundColor: theme.background,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 28,
+    gap: 2,
+  },
+  optionSheetHandle: {
+    alignSelf: 'center',
+    marginBottom: 14,
+    width: 44,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: theme.borderStrong,
+  },
+  optionSheetTitle: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: theme.text,
+  },
+  optionSheetDivider: {
+    marginTop: 14,
+    marginBottom: 6,
+    height: 1,
+    backgroundColor: theme.borderStrong,
+  },
+  optionSheetRow: {
+    minHeight: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  optionSheetLabel: {
+    fontSize: 17,
+    color: theme.textMuted,
+  },
+  optionSheetLabelSelected: {
+    color: theme.text,
+    fontWeight: '600',
+  },
+  primaryCard: {
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: theme.border,
+    backgroundColor: theme.surface,
+    padding: 16,
+  },
+  progressCardContent: {
+    gap: 16,
+  },
+  progressStrengthList: {
+    gap: 16,
+  },
+  progressStrengthCard: {
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: theme.border,
+    backgroundColor: theme.surface,
+    padding: 16,
+    gap: 12,
+  },
+  progressStrengthCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  progressStrengthRows: {
+    gap: 14,
+  },
+  progressStrengthRowDivider: {
+    borderTopWidth: 1,
+    borderTopColor: theme.border,
+    paddingTop: 14,
+  },
+  progressStrengthRow: {
+    gap: 10,
+  },
+  progressStrengthMetricLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: theme.text,
+  },
+  progressStrengthFilterButton: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  consistencyCardContent: {
+    gap: 16,
+  },
+  consistencyChartTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    color: theme.textSoft,
+  },
+  consistencyChartWrap: {
+    position: 'relative',
+    height: 256,
+    borderRadius: 24,
+    backgroundColor: 'transparent',
+    overflow: 'hidden',
+    paddingTop: 22,
+    paddingBottom: 28,
+    paddingHorizontal: 18,
+  },
+  consistencyGridline: {
+    position: 'absolute',
+    left: 18,
+    right: 18,
+    height: 1,
+    backgroundColor: theme.borderStrong,
+  },
+  consistencyGridlineTop: {
+    top: 70,
+  },
+  consistencyGridlineMiddle: {
+    top: 116,
+  },
+  consistencyGridlineBottom: {
+    top: 162,
+  },
+  consistencyYAxisLabels: {
+    position: 'absolute',
+    top: 56,
+    right: 18,
+    bottom: 66,
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  consistencyYAxisLabel: {
+    fontSize: 12,
+    color: theme.textSoft,
+  },
+  consistencyBarsWrap: {
+    marginTop: 14,
+    marginRight: 52,
+    marginBottom: 26,
+  },
+  consistencyXAxisLabels: {
+    position: 'absolute',
+    left: 18,
+    right: 24,
+    bottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  consistencyXAxisLabel: {
+    fontSize: 12,
+    color: theme.textSoft,
+  },
+  consistencyAxisLabel: {
+    fontSize: 12,
+    color: theme.textSoft,
+  },
+  progressExerciseLabel: {
+    fontSize: 14,
+    color: theme.textSoft,
+  },
+  progressStrengthValueText: {
+    fontSize: 30,
+    fontWeight: '600',
+    color: theme.text,
+  },
+  progressStrengthValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'nowrap',
+    gap: 10,
+  },
+  progressSetPill: {
+    alignSelf: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.border,
+    backgroundColor: theme.backgroundMuted,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  progressSetPillText: {
+    fontSize: 12,
+    lineHeight: 12,
+    fontWeight: '500',
+    color: theme.textMuted,
+  },
+  trainingLoadContent: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 12,
+    minHeight: 228,
+  },
+  recoveryFigureWrap: {
+    width: 118,
+    height: 228,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recoveryGridColumn: {
+    flex: 1,
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  recoveryGridRow: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 12,
+  },
+  recoveryDetailColumn: {
+    flex: 1,
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  recoveryDetailTopRow: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'stretch',
+  },
+  recoveryDetailBottomRow: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 12,
+  },
+  recoveryCard: {
+    flex: 1,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.border,
+    backgroundColor: theme.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    justifyContent: 'space-between',
+  },
+  recoveryCardCompact: {
+    minHeight: 108,
+  },
+  recoveryBackCard: {
+    flex: 1,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.accentBorder,
+    backgroundColor: theme.accentSurface,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  recoveryBackButton: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recoveryCardLabel: {
+    fontSize: 13,
+    color: theme.textSoft,
+  },
+  recoveryBarTrack: {
+    marginTop: 12,
+    height: 8,
+    overflow: 'hidden',
+    borderRadius: 999,
+    backgroundColor: theme.backgroundMuted,
+  },
+  recoveryBarFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: theme.accent,
+  },
+  recoveryCardValue: {
+    marginTop: 12,
+    fontSize: 16,
+    fontWeight: '600',
+    color: theme.text,
+  },
+  activityCardValue: {
+    marginTop: 18,
+    fontSize: 18,
+    fontWeight: '600',
+    color: theme.text,
+  },
+  healthMetricsSection: {
+    gap: 16,
+  },
+  healthMetricsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  healthMetricCard: {
+    minWidth: 110,
+    flex: 1,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.border,
+    backgroundColor: theme.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  healthMetricIconWrap: {
+    marginBottom: 16,
+    height: 36,
+    width: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.border,
+    backgroundColor: theme.backgroundMuted,
+  },
+  healthMetricLabel: {
+    fontSize: 13,
+    color: theme.textSoft,
+  },
+  healthMetricValue: {
+    marginTop: 8,
+    fontSize: 22,
+    fontWeight: '600',
+    color: theme.text,
+  },
+  })
+}
