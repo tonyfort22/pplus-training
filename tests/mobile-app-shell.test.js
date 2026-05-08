@@ -115,8 +115,8 @@ test('mobile app shell can hydrate a selected program into the shared program sh
    resolve(process.cwd(), 'apps/mobile/App.js'),
    'utf8'
  )
- const detailHandler = appSource.match(/function handleOpenProgramDetail\(program, sourceSurface = null\) \{[\s\S]*?\n\s+\}/)?.[0] || ''
- const closeHandler = appSource.match(/function handleCloseProgramSheet\(\) \{[\s\S]*?\n\s+\}/)?.[0] || ''
+ const detailHandler = extractFunctionBlock(appSource, 'function handleOpenProgramDetail(program, sourceSurface = null)')
+ const closeHandler = extractFunctionBlock(appSource, 'function handleCloseProgramSheet()')
 
  assert.match(appSource, /const \[selectedProgramPreview, setSelectedProgramPreview\] = useState\(null\);/)
  assert.match(appSource, /const \[programSheetReturnSurface, setProgramSheetReturnSurface\] = useState\(null\);/)
@@ -416,7 +416,7 @@ test('mobile app shell closes the active workout cleanly without reopening the w
    resolve(process.cwd(), 'apps/mobile/App.js'),
    'utf8'
  )
- const closeHandler = appSource.match(/async function handleCloseActiveWorkout\(\) \{[\s\S]*?\n\s+\}/)?.[0] || ''
+ const closeHandler = extractFunctionBlock(appSource, 'async function handleCloseActiveWorkout()')
 
  assert.match(appSource, /<ActiveWorkoutView[\s\S]*onClose=\{handleCloseActiveWorkout\}/)
  assert.match(closeHandler, /orchestrateCloseActiveWorkout\(\{/)
@@ -694,7 +694,7 @@ test('mobile coach workspace does not duplicate the assigned-program open action
  const appSource = readFileSync(resolve(process.cwd(), 'apps/mobile/App.js'), 'utf8')
  const workspaceSheetSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/coach-athlete-workspace-sheet.js'), 'utf8')
 
- const closeHandler = appSource.match(/function handleCloseProgramSheet\(\) \{[\s\S]*?\n\s+\}/)?.[0] || ''
+ const closeHandler = extractFunctionBlock(appSource, 'function handleCloseProgramSheet()')
 
  assert.match(appSource, /function handleOpenProgramDetail\(program, sourceSurface = null\) \{[\s\S]*orchestrateOpenProgramSheet\(\{[\s\S]*program,[\s\S]*sourceSurface,[\s\S]*programSheetClient,[\s\S]*setProgramSheetReturnSurface,[\s\S]*setSelectedProgramPreview,[\s\S]*setIsProgramSheetOpen,[\s\S]*\}\);[\s\S]*\}/)
  assert.doesNotMatch(appSource, /const coachWorkspaceProgram = useMemo\(\(\) => trainState\?\.program\?\.id \? trainState\.program : null, \[trainState\]\);/)
