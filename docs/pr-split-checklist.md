@@ -99,6 +99,10 @@ If not, fix the branch or fix the PR story.
 
 ---
 
+## Related
+
+- [Branch and PR Workflow](./branch-pr-workflow.md)
+
 ## Quick reusable template
 
 ```md

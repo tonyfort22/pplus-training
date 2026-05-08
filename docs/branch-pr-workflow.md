@@ -246,5 +246,5 @@ Stop and split if
 ```
 
 ## Related
-- [[pr-split-checklist]]
+- [PR Split Checklist](./pr-split-checklist.md)
 - Repo checklist: `docs/pr-split-checklist.md`
