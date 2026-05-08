@@ -25,4 +25,4 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Run Semgrep with repo rules
-        run: semgrep scan --config semgrep.yml --error --exclude .github
+        run: semgrep scan --config semgrep.yml --error --severity ERROR --exclude .github

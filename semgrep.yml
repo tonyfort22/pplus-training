@@ -5,12 +5,11 @@ rules:
     languages: [javascript, typescript]
     paths:
       include:
-        - apps/mobile/src/**/*.js
-    patterns:
-      - pattern-either:
-          - pattern: "No logged strength sets yet"
-          - pattern: "149 lb"
-          - pattern: "120 lb x 8"
+        - /apps/mobile/src/**/*.js
+    pattern-either:
+      - pattern-regex: 'No logged strength sets yet'
+      - pattern-regex: '149 lb'
+      - pattern-regex: '120 lb x 8'
     metadata:
       category: correctness
       rationale: Real analytics surfaces should not silently fall back to canned placeholder strength values.
@@ -23,12 +22,11 @@ rules:
       include:
         - '**/*'
       exclude:
-        - .github/**
-        - docs/**
-    patterns:
-      - pattern-either:
-          - pattern-regex: 'cliclick\s'
-          - pattern-regex: 'CGEvent'
+        - /.github/**
+        - /docs/**
+    pattern-either:
+      - pattern-regex: 'cliclick\s'
+      - pattern-regex: 'CGEvent'
     metadata:
       category: policy
       rationale: Anthony explicitly does not want raw desktop click automation fallbacks.
@@ -39,8 +37,9 @@ rules:
     languages: [javascript, typescript]
     paths:
       include:
-        - apps/mobile/src/train/exercise-detail-view-models.js
+        - /apps/mobile/src/train/exercise-detail-view-models.js
     patterns:
+      - pattern-regex: '.'
       - pattern-not-regex: 'metricProfileId'
     metadata:
       category: architecture
