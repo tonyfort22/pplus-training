@@ -3,6 +3,24 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
+function extractFunctionBlock(source, signature) {
+ const start = source.indexOf(signature)
+ assert.notEqual(start, -1, `Expected to find function signature: ${signature}`)
+
+ const bodyStart = source.indexOf('{', start + signature.length)
+ assert.notEqual(bodyStart, -1, `Expected to find function body for: ${signature}`)
+
+ let depth = 0
+ for (let index = bodyStart; index < source.length; index += 1) {
+   const char = source[index]
+   if (char === '{') depth += 1
+   if (char === '}') depth -= 1
+   if (depth === 0) return source.slice(start, index + 1)
+ }
+
+ assert.fail(`Expected to find closing brace for: ${signature}`)
+}
+
 test('mobile app shell routes unconnected entry state to auth instead of demo train home scaffolding', () => {
  const appSource = readFileSync(
    resolve(process.cwd(), 'apps/mobile/App.js'),
@@ -140,21 +158,21 @@ test('mobile app shell can open the selected-date workout into the workout detai
  assert.match(appSource, /const canFinishActiveWorkout = useMemo\(\(\) => canFinishWorkoutSession\(session\), \[session\]\);/)
  assert.doesNotMatch(appSource, /function persistSessionDeletionOptimistic\(nextSession, \{ setId = null, exerciseId = null \} = \{\}\) \{/)
 
- const completeHandler = appSource.match(/async function handleCompleteSet\(exerciseId, setId\) \{[\s\S]*?\n\s+\}/)?.[0] || ''
- const postSetEffortHandler = appSource.match(/async function handlePostSetEffortChange\(nextEffort\) \{[\s\S]*?\n\s+\}/)?.[0] || ''
- const closeEffortHandler = appSource.match(/function handleClosePostSetEffortAdjustment\(\) \{[\s\S]*?\n\s+\}/)?.[0] || ''
- const setValueHandler = appSource.match(/async function handleSessionSetValueChange\(exerciseId, setId, field, nextValue\) \{[\s\S]*?\n\s+\}/)?.[0] || ''
- const addSetHandler = appSource.match(/async function handleAddSessionSet\(exerciseId\) \{[\s\S]*?\n\s+\}/)?.[0] || ''
- const deleteSetHandler = appSource.match(/async function handleDeleteSessionSet\(exerciseId, setId\) \{[\s\S]*?\n\s+\}/)?.[0] || ''
- const deleteExerciseHandler = appSource.match(/async function handleDeleteSessionExercise\(exerciseId\) \{[\s\S]*?\n\s+\}/)?.[0] || ''
- const moveExerciseHandler = appSource.match(/async function handleMoveActiveWorkoutExercise\(exerciseId, direction\) \{[\s\S]*?\n\s+\}/)?.[0] || ''
- const restTimeHandler = appSource.match(/async function handleExerciseRestTimeChange\(exerciseId, nextRestSeconds\) \{[\s\S]*?\n\s+\}/)?.[0] || ''
- const removeRestHandler = appSource.match(/async function handleRemoveExerciseRestTime\(exerciseId\) \{[\s\S]*?\n\s+\}/)?.[0] || ''
- const addExercisesHandler = appSource.match(/async function handleAddExercisesToSession\(exerciseIds\) \{[\s\S]*?\n\s+\}/)?.[0] || ''
- const notesHandler = appSource.match(/async function handleWorkoutNotesChange\(nextNotes\) \{[\s\S]*?\n\s+\}/)?.[0] || ''
- const settingsHandler = appSource.match(/async function handleWorkoutSettingsChange\(settingsPatch\) \{[\s\S]*?\n\s+\}/)?.[0] || ''
- const finishWorkoutHandler = appSource.match(/async function handleFinishWorkout\(completionPayload = \{\}\) \{[\s\S]*?\n\s+\}/)?.[0] || ''
- const discardWorkoutHandler = appSource.match(/async function handleDiscardWorkout\(\) \{[\s\S]*?\n\s+\}/)?.[0] || ''
+ const completeHandler = extractFunctionBlock(appSource, 'async function handleCompleteSet(exerciseId, setId)')
+ const postSetEffortHandler = extractFunctionBlock(appSource, 'async function handlePostSetEffortChange(nextEffort)')
+ const closeEffortHandler = extractFunctionBlock(appSource, 'function handleClosePostSetEffortAdjustment()')
+ const setValueHandler = extractFunctionBlock(appSource, 'async function handleSessionSetValueChange(exerciseId, setId, field, nextValue)')
+ const addSetHandler = extractFunctionBlock(appSource, 'async function handleAddSessionSet(exerciseId)')
+ const deleteSetHandler = extractFunctionBlock(appSource, 'async function handleDeleteSessionSet(exerciseId, setId)')
+ const deleteExerciseHandler = extractFunctionBlock(appSource, 'async function handleDeleteSessionExercise(exerciseId)')
+ const moveExerciseHandler = extractFunctionBlock(appSource, 'async function handleMoveActiveWorkoutExercise(exerciseId, direction)')
+ const restTimeHandler = extractFunctionBlock(appSource, 'async function handleExerciseRestTimeChange(exerciseId, nextRestSeconds)')
+ const removeRestHandler = extractFunctionBlock(appSource, 'async function handleRemoveExerciseRestTime(exerciseId)')
+ const addExercisesHandler = extractFunctionBlock(appSource, 'async function handleAddExercisesToSession(exerciseIds)')
+ const notesHandler = extractFunctionBlock(appSource, 'async function handleWorkoutNotesChange(nextNotes)')
+ const settingsHandler = extractFunctionBlock(appSource, 'async function handleWorkoutSettingsChange(settingsPatch)')
+ const finishWorkoutHandler = extractFunctionBlock(appSource, 'async function handleFinishWorkout(completionPayload = {})')
+ const discardWorkoutHandler = extractFunctionBlock(appSource, 'async function handleDiscardWorkout()')
 
  assert.match(completeHandler, /orchestrateCompleteSet\(\{/)
  assert.doesNotMatch(completeHandler, /completeWorkoutSessionSet\(/)
