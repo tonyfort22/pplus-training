@@ -230,6 +230,158 @@ test('getAnalyticsViewModel does not classify trap bar deadlift as full hamstrin
   assert.equal(hamstringsSubMuscle?.barWidth, '100%')
 })
 
+test('getAnalyticsViewModel keeps 7 day activity set counts honest across mapped groups and includes completed sets inside in-progress workouts', () => {
+  const completedStrengthSession = {
+    status: 'completed',
+    exercises: [
+      {
+        nameSnapshot: 'Barbell Bench Press',
+        sets: [
+          { isCompleted: true, actualLoad: 135, actualReps: 5 },
+          { isCompleted: true, actualLoad: 135, actualReps: 5 },
+        ],
+      },
+      {
+        nameSnapshot: 'Barbell Row',
+        sets: [
+          { isCompleted: true, actualLoad: 95, actualReps: 8 },
+        ],
+      },
+      {
+        nameSnapshot: 'DB Bicep Curl',
+        sets: [
+          { isCompleted: true, actualLoad: 25, actualReps: 10 },
+        ],
+      },
+    ],
+  }
+  const inProgressSession = {
+    status: 'in_progress',
+    exercises: [
+      {
+        nameSnapshot: 'Seated Dumbbell Shoulder Press',
+        sets: [
+          { isCompleted: true, actualLoad: 40, actualReps: 8 },
+          { isCompleted: false, actualLoad: 40, actualReps: 8 },
+        ],
+      },
+      {
+        nameSnapshot: 'Plank',
+        sets: [
+          { isCompleted: true, actualLoad: null, actualReps: null },
+        ],
+      },
+    ],
+  }
+
+  const analyticsViewModel = getAnalyticsViewModel({
+    sessions: [completedStrengthSession, inProgressSession],
+  })
+
+  const armsGroup = analyticsViewModel.activityMuscleGroups.find((row) => row.id === 'arms')
+  const shouldersGroup = analyticsViewModel.activityMuscleGroups.find((row) => row.id === 'shoulders')
+  const chestGroup = analyticsViewModel.activityMuscleGroups.find((row) => row.id === 'chest')
+  const backGroup = analyticsViewModel.activityMuscleGroups.find((row) => row.id === 'back')
+  const absGroup = analyticsViewModel.activityMuscleGroups.find((row) => row.id === 'abs')
+
+  assert.equal(armsGroup?.setCountLabel, '1 sets')
+  assert.equal(armsGroup?.subMuscles.find((row) => row.id === 'biceps')?.setCountLabel, '1 sets')
+  assert.equal(shouldersGroup?.setCountLabel, '1 sets')
+  assert.equal(shouldersGroup?.subMuscles.find((row) => row.id === 'front-delts')?.setCountLabel, '1 sets')
+  assert.equal(chestGroup?.setCountLabel, '2 sets')
+  assert.equal(chestGroup?.subMuscles.find((row) => row.id === 'mid-chest')?.setCountLabel, '2 sets')
+  assert.equal(backGroup?.setCountLabel, '1 sets')
+  assert.equal(backGroup?.subMuscles.find((row) => row.id === 'lats')?.setCountLabel, '1 sets')
+  assert.equal(absGroup?.setCountLabel, '1 sets')
+  assert.equal(absGroup?.subMuscles.find((row) => row.id === 'upper-abs')?.setCountLabel, '1 sets')
+})
+
+test('getAnalyticsViewModel does not double count incline bench press across chest submuscles in 7 day activity', () => {
+  const analyticsViewModel = getAnalyticsViewModel({
+    sessions: [
+      {
+        status: 'completed',
+        exercises: [
+          {
+            nameSnapshot: 'Incline Bench Press',
+            sets: [
+              { isCompleted: true, actualLoad: 135, actualReps: 8 },
+              { isCompleted: true, actualLoad: 135, actualReps: 8 },
+            ],
+          },
+        ],
+      },
+    ],
+  })
+
+  const chestGroup = analyticsViewModel.activityMuscleGroups.find((row) => row.id === 'chest')
+
+  assert.equal(chestGroup?.setCountLabel, '2 sets')
+  assert.equal(chestGroup?.subMuscles.find((row) => row.id === 'upper-chest')?.setCountLabel, '2 sets')
+  assert.equal(chestGroup?.subMuscles.find((row) => row.id === 'mid-chest')?.setCountLabel, '0 sets')
+  assert.equal(chestGroup?.subMuscles.find((row) => row.id === 'lower-chest')?.setCountLabel, '0 sets')
+})
+
+test('getAnalyticsViewModel does not classify leg curl variations as biceps activity', () => {
+  const analyticsViewModel = getAnalyticsViewModel({
+    sessions: [
+      {
+        status: 'completed',
+        exercises: [
+          {
+            nameSnapshot: 'Seated Leg Curl',
+            sets: [
+              { isCompleted: true, actualLoad: 70, actualReps: 10 },
+              { isCompleted: true, actualLoad: 70, actualReps: 10 },
+            ],
+          },
+        ],
+      },
+    ],
+  })
+
+  const armsGroup = analyticsViewModel.activityMuscleGroups.find((row) => row.id === 'arms')
+  const legsGroup = analyticsViewModel.activityMuscleGroups.find((row) => row.id === 'legs')
+
+  assert.equal(armsGroup?.setCountLabel, '0 sets')
+  assert.equal(armsGroup?.subMuscles.find((row) => row.id === 'biceps')?.setCountLabel, '0 sets')
+  assert.equal(legsGroup?.setCountLabel, '2 sets')
+  assert.equal(legsGroup?.subMuscles.find((row) => row.id === 'hamstrings')?.setCountLabel, '2 sets')
+})
+
+test('getAnalyticsViewModel keeps wrist curl in forearms and forearm plank in abs for 7 day activity', () => {
+  const analyticsViewModel = getAnalyticsViewModel({
+    sessions: [
+      {
+        status: 'completed',
+        exercises: [
+          {
+            nameSnapshot: 'Wrist Curl',
+            sets: [
+              { isCompleted: true, actualLoad: 20, actualReps: 12 },
+            ],
+          },
+          {
+            nameSnapshot: 'Forearm Plank',
+            sets: [
+              { isCompleted: true, actualLoad: null, actualReps: null },
+            ],
+          },
+        ],
+      },
+    ],
+  })
+
+  const armsGroup = analyticsViewModel.activityMuscleGroups.find((row) => row.id === 'arms')
+  const absGroup = analyticsViewModel.activityMuscleGroups.find((row) => row.id === 'abs')
+
+  assert.equal(armsGroup?.setCountLabel, '1 sets')
+  assert.equal(armsGroup?.subMuscles.find((row) => row.id === 'biceps')?.setCountLabel, '0 sets')
+  assert.equal(armsGroup?.subMuscles.find((row) => row.id === 'forearms')?.setCountLabel, '1 sets')
+  assert.equal(absGroup?.setCountLabel, '1 sets')
+  assert.equal(absGroup?.subMuscles.find((row) => row.id === 'upper-abs')?.setCountLabel, '1 sets')
+})
+
 test('getAnalyticsViewModel keeps the Strength persistence key stable for one athlete even when completed session ids change', () => {
   const firstCompletedSession = {
     id: 'session-1',

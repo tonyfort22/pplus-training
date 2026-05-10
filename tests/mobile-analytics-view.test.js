@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { buildStrengthExerciseOptions, buildVisibleStrengthCards, getInitialStrengthSelectionIds, getInitialStrengthSelectionState, copyAppliedToDraft, toggleStrengthExerciseDraft, applyStrengthExerciseDraft, getDefaultSyncedStrengthSelection, reconcileStrengthExerciseSelectionIds, reconcileAppliedStrengthExerciseSelectionIds, resolveStrengthSelectionStorage, readStoredStrengthSelectionState, writeStoredStrengthSelectionState, clearStoredStrengthSelectionState } from '../apps/mobile/src/screens/analytics-strength-state.js'
 import { getAnalyticsViewModel } from '../apps/mobile/src/progress/index.js'
-import { RECOVERY_COLOR_SCALE, RECOVERY_BASE_NEUTRAL, RECOVERY_DIMMED, getRecoveryColorForPercent, applyRecoveryColorsToSvg, applyFocusedRecoveryColorsToSvg } from '../apps/mobile/src/assets/recovery-muscle-map.js'
+import { RECOVERY_COLOR_SCALE, RECOVERY_BASE_NEUTRAL, RECOVERY_DIMMED, getRecoveryColorForPercent, applyRecoveryColorsToSvg, applyFocusedRecoveryColorsToSvg, ACTIVITY_COLOR_SCALE, getActivityColorForSetCount, applyActivityColorsToSvg, applyFocusedActivityColorsToSvg } from '../apps/mobile/src/assets/recovery-muscle-map.js'
 
 test('mobile analytics Strength pure state helpers keep one consistent draft/applied id universe', () => {
   assert.deepEqual(getInitialStrengthSelectionIds({
@@ -346,8 +346,8 @@ test('mobile analytics view maps the first-pass Progress and Training Load struc
   assert.match(analyticsSource, /function HealthMetricCard\({ metric, theme, styles }\)/)
   assert.match(analyticsSource, /<RecoveryDetailView muscleGroup=\{activeRecoveryMuscle\} onBack=\{\(\) => setActiveRecoveryMuscleId\(null\)\} theme=\{resolvedTheme\} styles=\{styles\} svg=\{recoveryFigureSvg\} \/>/)
   assert.match(analyticsSource, /<RecoveryOverview rows=\{recoveryMuscleGroups\} onSelectMuscle=\{\(row\) => setActiveRecoveryMuscleId\(row.id\)\} styles=\{styles\} svg=\{recoveryFigureSvg\} \/>/)
-  assert.match(analyticsSource, /<ActivityDetailView muscleGroup=\{activeActivityMuscle\} onBack=\{\(\) => setActiveActivityMuscleId\(null\)\} theme=\{resolvedTheme\} styles=\{styles\} svg=\{recoveryFigureSvg\} \/>/)
-  assert.match(analyticsSource, /<ActivityOverview rows=\{activityMuscleGroups\} onSelectMuscle=\{\(row\) => setActiveActivityMuscleId\(row.id\)\} styles=\{styles\} svg=\{recoveryFigureSvg\} \/>/)
+  assert.match(analyticsSource, /<ActivityDetailView muscleGroup=\{activeActivityMuscle\} onBack=\{\(\) => setActiveActivityMuscleId\(null\)\} theme=\{resolvedTheme\} styles=\{styles\} svg=\{activityFigureSvg\} \/>/)
+  assert.match(analyticsSource, /<ActivityOverview rows=\{activityMuscleGroups\} onSelectMuscle=\{\(row\) => setActiveActivityMuscleId\(row.id\)\} styles=\{styles\} svg=\{activityFigureSvg\} \/>/)
   assert.match(analyticsSource, /<HealthMetricCard key=\{metric.id\} metric=\{metric\} theme=\{resolvedTheme\} styles=\{styles\} \/>/)
   assert.match(analyticsSource, /<StrengthMetricsCard cards=\{visibleStrengthCards\} theme=\{resolvedTheme\} styles=\{styles\} metricLabel=\{activeMetricLabel\} filterLabel=\{activeProgressOption\} emptyMessage=\{activeMetricEmptyMessage\} sourceSurface=\{activeMetricSourceSurface\} onOpenFilter=\{handleOpenStrengthExerciseFilter\} onOpenExerciseDetail=\{onOpenExerciseDetail\} \/>/)
   assert.match(analyticsSource, /HealthMetricCard/)
@@ -1411,15 +1411,26 @@ test('mobile analytics recovery view supports borderless figure art and muscle d
   assert.match(progressSource, /label: 'Forearms'/)
 })
 
-test('mobile analytics 7 day activity uses set counts with muscle drilldown and the same green back card treatment', () => {
+test('mobile analytics 7 day activity uses set counts with muscle drilldown, a dedicated activity-colored svg, and the same green back card treatment', () => {
   const analyticsSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/analytics-view.js'), 'utf8')
   const progressSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/progress/index.js'), 'utf8')
+  const recoveryMapSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/assets/recovery-muscle-map.js'), 'utf8')
+  const activityDetailViewBlock = analyticsSource.match(/function ActivityDetailView\([\s\S]*?\n}\n\nfunction HealthMetricCard/)
 
-  assert.match(analyticsSource, /const \[activeActivityMuscleId, setActiveActivityMuscleId\] = useState\(null\)/)
+  assert.ok(activityDetailViewBlock)
+  assert.match(analyticsSource, /import \{[^}]*getActivityColorForSetCount[^}]*applyActivityColorsToSvg[^}]*applyFocusedActivityColorsToSvg[^}]*\} from '\.\.\/assets\/recovery-muscle-map\.js'/)
+  assert.match(analyticsSource, /const activityMuscleGroups = model\.activityMuscleGroups \|\| \[\]/)
+  assert.match(analyticsSource, /const activitySvgColorMap = useMemo\(/)
+  assert.match(analyticsSource, /const focusedActivitySvgIds = useMemo\(/)
+  assert.match(analyticsSource, /activeActivityMuscle \? RECOVERY_GROUP_TO_SVG_IDS\[activeActivityMuscle\.id\] \|\| \[\] : \[\]/)
+  assert.match(analyticsSource, /const activityFigureSvg = useMemo\(/)
+  assert.match(analyticsSource, /getActivityColorForSetCount\(/)
+  assert.match(analyticsSource, /applyFocusedActivityColorsToSvg\(recoveryMuscleMapSvg, activitySvgColorMap, focusedActivitySvgIds\)/)
+  assert.match(analyticsSource, /applyActivityColorsToSvg\(recoveryMuscleMapSvg, activitySvgColorMap\)/)
   assert.match(analyticsSource, /function ActivityOverview\(/)
   assert.match(analyticsSource, /function ActivityDetailView\(\{ muscleGroup, onBack, theme, styles, svg \}\)/)
-  assert.match(analyticsSource, /<ActivityDetailView muscleGroup=\{activeActivityMuscle\} onBack=\{\(\) => setActiveActivityMuscleId\(null\)\} theme=\{resolvedTheme\} styles=\{styles\} svg=\{recoveryFigureSvg\} \/>/)
-  assert.match(analyticsSource, /<ActivityOverview rows=\{activityMuscleGroups\} onSelectMuscle=\{\(row\) => setActiveActivityMuscleId\(row\.id\)\} styles=\{styles\} svg=\{recoveryFigureSvg\} \/>/)
+  assert.match(analyticsSource, /<ActivityDetailView muscleGroup=\{activeActivityMuscle\} onBack=\{\(\) => setActiveActivityMuscleId\(null\)\} theme=\{resolvedTheme\} styles=\{styles\} svg=\{activityFigureSvg\} \/>/)
+  assert.match(analyticsSource, /<ActivityOverview rows=\{activityMuscleGroups\} onSelectMuscle=\{\(row\) => setActiveActivityMuscleId\(row\.id\)\} styles=\{styles\} svg=\{activityFigureSvg\} \/>/)
   assert.match(analyticsSource, /setActiveActivityMuscleId\(row\.id\)/)
   assert.match(analyticsSource, /setActiveActivityMuscleId\(null\)/)
   assert.match(analyticsSource, /setCountLabel/)
@@ -1428,11 +1439,47 @@ test('mobile analytics 7 day activity uses set counts with muscle drilldown and 
   assert.match(analyticsSource, /<RecoveryBackButton theme=\{theme\} styles=\{styles\} \/>/)
   assert.match(analyticsSource, /recoveryBackCard:[\s\S]*backgroundColor: theme\.accentSurface/)
   assert.match(analyticsSource, /recoveryBackCard:[\s\S]*borderColor: theme\.accentBorder/)
+  assert.match(analyticsSource, /const detailSubMuscles = muscleGroup\.subMuscles \|\| \[\]/)
+  assert.match(analyticsSource, /const primaryDetailMuscle = detailSubMuscles\[0\] \|\| null/)
+  assert.match(analyticsSource, /const secondaryDetailMuscles = detailSubMuscles\.slice\(1, 3\)/)
+  assert.match(analyticsSource, /secondaryDetailMuscles\.map\(\(row\) => \(/)
+  assert.doesNotMatch(activityDetailViewBlock[0], /muscleGroup\.subMuscles\[1\]/)
+  assert.doesNotMatch(activityDetailViewBlock[0], /muscleGroup\.subMuscles\[2\]/)
+
+  assert.match(recoveryMapSource, /export const ACTIVITY_COLOR_SCALE = /)
+  assert.match(recoveryMapSource, /export function getActivityColorForSetCount\(/)
+  assert.match(recoveryMapSource, /export function applyActivityColorsToSvg\(/)
+  assert.match(recoveryMapSource, /export function applyFocusedActivityColorsToSvg\(/)
+  assert.equal(ACTIVITY_COLOR_SCALE[0], '#06D6A0')
+  assert.equal(ACTIVITY_COLOR_SCALE[50], '#FFD166')
+  assert.equal(ACTIVITY_COLOR_SCALE[100], '#EF476F')
+  assert.equal(getActivityColorForSetCount(0, 10), '#06D6A0')
+  assert.equal(getActivityColorForSetCount(5, 10), '#FFD166')
+  assert.equal(getActivityColorForSetCount(10, 10), '#EF476F')
+
+  const activitySvg = [
+    '<svg>',
+    '<g id="biceps-front"><path fill="#06D6A0"/><path fill="#06D6A0"/></g>',
+    '<g id="triceps-back"><path fill="#06D6A0"/><path fill="#06D6A0"/></g>',
+    '<g id="front-delts"><path fill="#06D6A0"/><path fill="#06D6A0"/></g>',
+    '<path id="base" fill="#9CA3AF"/>',
+    '</svg>',
+  ].join('')
+
+  const recoloredActivitySvg = applyActivityColorsToSvg(activitySvg, {
+    'biceps-front': '#EF476F',
+  })
+  assert.match(recoloredActivitySvg, /<g id="biceps-front"><path fill="#EF476F" fill-opacity="0\.8"\/><path fill="#EF476F" fill-opacity="0\.8"\/><\/g>/)
+  assert.match(recoloredActivitySvg, /<path id="base" fill="#9CA3AF"\/>/)
+
+  const focusedActivitySvg = applyFocusedActivityColorsToSvg(activitySvg, {
+    'biceps-front': '#EF476F',
+    'triceps-back': '#FFD166',
+    'front-delts': '#82D483',
+  }, ['biceps-front'])
+  assert.match(focusedActivitySvg, /<g id="biceps-front"><path fill="#EF476F" fill-opacity="0\.8"\/><path fill="#EF476F" fill-opacity="0\.8"\/><\/g>/)
+  assert.match(focusedActivitySvg, /<g id="triceps-back"><path fill="#6B7280" fill-opacity="0\.35"\/><path fill="#6B7280" fill-opacity="0\.35"\/><\/g>/)
 
   assert.match(progressSource, /activityMuscleGroups:/)
-  assert.match(progressSource, /setCountLabel: '0 sets'/)
-  assert.match(progressSource, /setCountLabel: '6 sets'/)
-  assert.match(progressSource, /label: 'Biceps'/)
-  assert.match(progressSource, /label: 'Triceps'/)
-  assert.match(progressSource, /label: 'Forearms'/)
+  assert.match(progressSource, /buildAnalyticsActivityMuscleGroups\(sessions\)/)
 })

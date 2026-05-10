@@ -241,6 +241,27 @@ export const RECOVERY_COLOR_SCALE = {
 export const RECOVERY_BASE_NEUTRAL = '#9CA3AF'
 export const RECOVERY_DIMMED = '#6B7280'
 
+export const ACTIVITY_COLOR_SCALE = {
+  0: '#06D6A0',
+  25: '#82D483',
+  50: '#FFD166',
+  75: '#F78C6A',
+  100: '#EF476F',
+}
+
+export function getActivityColorForSetCount(setCount, maxSetCount) {
+  if (!Number.isFinite(Number(setCount)) || Number(setCount) <= 0 || !Number.isFinite(Number(maxSetCount)) || Number(maxSetCount) <= 0) {
+    return ACTIVITY_COLOR_SCALE[0]
+  }
+
+  const activityPercent = Math.round((Number(setCount) / Number(maxSetCount)) * 100)
+  if (activityPercent >= 88) return ACTIVITY_COLOR_SCALE[100]
+  if (activityPercent >= 63) return ACTIVITY_COLOR_SCALE[75]
+  if (activityPercent >= 38) return ACTIVITY_COLOR_SCALE[50]
+  if (activityPercent >= 13) return ACTIVITY_COLOR_SCALE[25]
+  return ACTIVITY_COLOR_SCALE[0]
+}
+
 export function getRecoveryColorForPercent(percent) {
   if (percent >= 88) return RECOVERY_COLOR_SCALE[100]
   if (percent >= 63) return RECOVERY_COLOR_SCALE[75]
@@ -270,6 +291,38 @@ export function applyRecoveryColorsToSvg(svg, colorMap = {}) {
 export function applyFocusedRecoveryColorsToSvg(svg, colorMap = {}, focusedIds = []) {
   if (!Array.isArray(focusedIds) || focusedIds.length === 0) {
     return applyRecoveryColorsToSvg(svg, colorMap)
+  }
+
+  const focusedIdSet = new Set(focusedIds)
+  const trackedSvgIds = new Set(Object.values(RECOVERY_GROUP_TO_SVG_IDS).flat())
+  let nextSvg = String(svg)
+
+  for (const trackedId of trackedSvgIds) {
+    if (focusedIdSet.has(trackedId)) continue
+    nextSvg = rewriteRecoveryGroupPaths(nextSvg, trackedId, RECOVERY_DIMMED, '0.35')
+  }
+
+  for (const focusedId of focusedIds) {
+    const focusedColor = colorMap[focusedId] || RECOVERY_BASE_NEUTRAL
+    nextSvg = rewriteRecoveryGroupPaths(nextSvg, focusedId, focusedColor, '0.8')
+  }
+
+  return nextSvg
+}
+
+export function applyActivityColorsToSvg(svg, colorMap = {}) {
+  let nextSvg = String(svg)
+
+  for (const [groupId, color] of Object.entries(colorMap)) {
+    nextSvg = rewriteRecoveryGroupPaths(nextSvg, groupId, color, '0.8')
+  }
+
+  return nextSvg
+}
+
+export function applyFocusedActivityColorsToSvg(svg, colorMap = {}, focusedIds = []) {
+  if (!Array.isArray(focusedIds) || focusedIds.length === 0) {
+    return applyActivityColorsToSvg(svg, colorMap)
   }
 
   const focusedIdSet = new Set(focusedIds)
