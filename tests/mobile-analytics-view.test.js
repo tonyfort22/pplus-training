@@ -906,6 +906,41 @@ test('mobile analytics Speed cards normalize mixed distance units before compari
   })
 })
 
+test('mobile analytics Bodyweight filter options include valid bodyweight library exercises even when they have no result-backed metric card yet', () => {
+  const bodyweightExerciseOptions = buildStrengthExerciseOptions({
+    strengthExerciseLibraryItems: [
+      {
+        id: 'exercise-chin-up',
+        name: 'Chin Up',
+        thumbnailUrl: null,
+        videoUrl: null,
+        metricProfileId: 'bodyweight_reps',
+      },
+      {
+        id: 'exercise-knee-drive',
+        name: 'Feet Elevated Hand Plank w/ Knee Drive',
+        thumbnailUrl: null,
+        videoUrl: null,
+        metricProfileId: 'bodyweight_reps',
+      },
+    ],
+    strengthCards: [],
+  })
+
+  const visibleBodyweightCards = buildVisibleStrengthCards({
+    appliedStrengthExerciseIds: bodyweightExerciseOptions.map((exercise) => exercise.metricExerciseId || exercise.id),
+    strengthExerciseOptions: bodyweightExerciseOptions,
+    strengthCards: [],
+    emptyMetricMessage: 'No logged bodyweight sets yet',
+    emptyMetricLabel: 'REPS',
+  })
+
+  assert.deepEqual(visibleBodyweightCards.map((card) => card.exerciseName), ['Chin Up', 'Feet Elevated Hand Plank w/ Knee Drive'])
+  assert.equal(visibleBodyweightCards[0].oneRepMaxValueLabel, '--')
+  assert.equal(visibleBodyweightCards[0].sourcePerformanceTagLabel, 'No logged bodyweight sets yet')
+  assert.equal(visibleBodyweightCards[0].metricLabel, 'REPS')
+})
+
 test('mobile analytics Loaded Carry can default to real filtered library exercises when there are no result-backed metric cards yet', () => {
   const analyticsSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/analytics-view.js'), 'utf8')
   const loadedCarryExerciseOptions = buildStrengthExerciseOptions({
@@ -1016,7 +1051,8 @@ test('mobile analytics view includes the requested dropdown labels for Progress 
   assert.match(progressSource, /label: 'Consistency'/)
   assert.match(progressSource, /id: 'loaded-carry'/)
   assert.match(progressSource, /label: 'Loaded Carry'/)
-  assert.doesNotMatch(progressSource, /label: 'Bodyweight'/)
+  assert.match(progressSource, /id: 'bodyweight'/)
+  assert.match(progressSource, /label: 'Bodyweight'/)
   assert.doesNotMatch(progressSource, /label: 'Holds'/)
   assert.match(progressSource, /activeProgressOptionId: 'strength'/)
   assert.match(progressSource, /trainingLoadOptions: \[/)
@@ -1030,11 +1066,11 @@ test('mobile analytics view includes the requested dropdown labels for Progress 
   assert.doesNotMatch(analyticsSource, /react-native-reanimated/)
 })
 
-test('mobile analytics Loaded Carry option keeps a TIME lane and renders an honest empty row instead of a blank shell when no carry results exist yet', () => {
+test('mobile analytics Bodyweight option keeps a REPS lane and renders an honest empty row when no bodyweight results exist yet', () => {
   const analyticsSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/analytics-view.js'), 'utf8')
 
-  assert.match(analyticsSource, /activeProgressOptionId === 'speed' \|\| activeProgressOptionId === 'loaded-carry' \? 'TIME' : model\.oneRepMaxLabel/)
-  assert.match(analyticsSource, /activeProgressOptionId === 'loaded-carry' \? 'No logged loaded carry sets yet' : activeProgressOptionId === 'speed' \? 'No logged speed sets yet' : 'No logged strength sets yet'/)
+  assert.match(analyticsSource, /activeProgressOptionId === 'speed' \|\| activeProgressOptionId === 'loaded-carry' \? 'TIME' : activeProgressOptionId === 'bodyweight' \? 'REPS' : model\.oneRepMaxLabel/)
+  assert.match(analyticsSource, /activeProgressOptionId === 'loaded-carry' \? 'No logged loaded carry sets yet' : activeProgressOptionId === 'speed' \? 'No logged speed sets yet' : activeProgressOptionId === 'bodyweight' \? 'No logged bodyweight sets yet' : 'No logged strength sets yet'/)
   assert.match(analyticsSource, /function StrengthMetricsCard\([\s\S]*cards\.length === 0[\s\S]*sourcePerformanceTagLabel: emptyMessage/)
 })
 
@@ -1048,7 +1084,7 @@ test('mobile analytics recovery bars do not use a generic `.value` member in inl
   assert.match(progressSource, /barWidth:/)
 })
 
-test('mobile analytics progress dropdown opens a real bottom sheet with Strength, Speed, Consistency, and Loaded Carry options', () => {
+test('mobile analytics progress dropdown opens a real bottom sheet with Strength, Speed, Consistency, Loaded Carry, and Bodyweight options', () => {
   const analyticsSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/analytics-view.js'), 'utf8')
   const progressSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/progress/index.js'), 'utf8')
 
@@ -1056,6 +1092,7 @@ test('mobile analytics progress dropdown opens a real bottom sheet with Strength
   assert.match(progressSource, /label: 'Speed'/)
   assert.match(progressSource, /label: 'Consistency'/)
   assert.match(progressSource, /label: 'Loaded Carry'/)
+  assert.match(progressSource, /label: 'Bodyweight'/)
   assert.match(analyticsSource, /sheetLabel: option\.label/)
   assert.doesNotMatch(analyticsSource, /sheetLabel: option\.id === 'consistency' \? 'Consistency' : 'Strength'/)
   assert.match(analyticsSource, /useState\(/)

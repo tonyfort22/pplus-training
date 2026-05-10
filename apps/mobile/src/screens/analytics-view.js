@@ -423,8 +423,8 @@ export function AnalyticsView({ model = getAnalyticsViewModel(), theme, onOpenEx
   const [isStrengthFilterViewOpen, setIsStrengthFilterViewOpen] = useState(false)
   const strengthSelectionPersistenceKey = model.strengthSelectionPersistenceKey || 'analytics-strength:default'
   const activeMetricCards = useMemo(() => model.progressMetricCardsByOptionId?.[activeProgressOptionId] || [], [activeProgressOptionId, model.progressMetricCardsByOptionId])
-  const activeMetricLabel = useMemo(() => activeMetricCards[0]?.metricLabel || (activeProgressOptionId === 'speed' || activeProgressOptionId === 'loaded-carry' ? 'TIME' : model.oneRepMaxLabel), [activeMetricCards, activeProgressOptionId, model.oneRepMaxLabel])
-  const activeMetricEmptyMessage = useMemo(() => activeProgressOptionId === 'loaded-carry' ? 'No logged loaded carry sets yet' : activeProgressOptionId === 'speed' ? 'No logged speed sets yet' : 'No logged strength sets yet', [activeProgressOptionId])
+  const activeMetricLabel = useMemo(() => activeMetricCards[0]?.metricLabel || (activeProgressOptionId === 'speed' || activeProgressOptionId === 'loaded-carry' ? 'TIME' : activeProgressOptionId === 'bodyweight' ? 'REPS' : model.oneRepMaxLabel), [activeMetricCards, activeProgressOptionId, model.oneRepMaxLabel])
+  const activeMetricEmptyMessage = useMemo(() => activeProgressOptionId === 'loaded-carry' ? 'No logged loaded carry sets yet' : activeProgressOptionId === 'speed' ? 'No logged speed sets yet' : activeProgressOptionId === 'bodyweight' ? 'No logged bodyweight sets yet' : 'No logged strength sets yet', [activeProgressOptionId])
   const activeMetricSourceSurface = useMemo(() => `metrics-${activeProgressOptionId}`, [activeProgressOptionId])
   const activeMetricSelectionStorageKey = useMemo(() => `${strengthSelectionPersistenceKey}:${activeProgressOptionId}`, [activeProgressOptionId, strengthSelectionPersistenceKey])
   const activeMetricCardsKey = useMemo(() => activeMetricCards.map((card) => card.exerciseId || card.id).join('|'), [activeMetricCards])

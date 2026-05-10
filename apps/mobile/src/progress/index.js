@@ -10,6 +10,7 @@ const DEFAULT_ANALYTICS_VIEW_MODEL = {
     { id: 'speed', label: 'Speed' },
     { id: 'consistency', label: 'Consistency' },
     { id: 'loaded-carry', label: 'Loaded Carry' },
+    { id: 'bodyweight', label: 'Bodyweight' },
   ],
   activeProgressOptionId: 'strength',
   progressMetricCardsByOptionId: {
