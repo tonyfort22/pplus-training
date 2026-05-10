@@ -9,6 +9,7 @@ const DEFAULT_ANALYTICS_VIEW_MODEL = {
     { id: 'strength', label: 'Strength' },
     { id: 'speed', label: 'Speed' },
     { id: 'consistency', label: 'Consistency' },
+    { id: 'loaded-carry', label: 'Loaded Carry' },
   ],
   activeProgressOptionId: 'strength',
   progressMetricCardsByOptionId: {
@@ -439,7 +440,8 @@ function buildAnalyticsMetricCardsByOptionId(sessions) {
           }
         } else if (metricProfileId === 'distance_load') {
           if (distance == null || durationSeconds == null) continue
-          nextSortValue = -Number(durationSeconds)
+          nextSortValue = getPaceSortValue(durationSeconds, distance, distanceUnit)
+          if (nextSortValue == null) continue
           nextCard = {
             id: mapKey,
             exerciseId,

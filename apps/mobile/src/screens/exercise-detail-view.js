@@ -236,7 +236,7 @@ function ExerciseDetailViewContent({ model, onClose, theme }) {
           <View>
             <View className="relative overflow-hidden" style={{ backgroundColor: resolvedTheme.surface }}>
               <VideoView
-                allowsFullscreen
+                fullscreenOptions={{ enable: true }}
                 contentFit="cover"
                 nativeControls
                 player={player}

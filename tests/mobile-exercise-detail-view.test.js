@@ -43,7 +43,7 @@ test('mobile workout sheet, edit view, active workout, and completed recap hand 
   assert.match(activeWorkoutSource, /onOpenExerciseDetail/)
   assert.match(activeWorkoutSource, /<Pressable onPress=\{\(\) => onOpenExerciseDetail\?\.\(exercise\)\}>/)
   assert.match(analyticsSource, /onOpenExerciseDetail/)
-  assert.match(analyticsSource, /onPress=\{\(\) => onOpenExerciseDetail\?\.\(\{[\s\S]*metricProfileId:[\s\S]*stimulusType:[\s\S]*movementPattern:[\s\S]*sourceSurface,/)
+  assert.match(analyticsSource, /onPress=\{canOpenExerciseDetail \? \(\) => onOpenExerciseDetail\?\.\(\{[\s\S]*id: card\.exerciseId \|\| card\.id,[\s\S]*exerciseId: card\.exerciseId \|\| card\.id,[\s\S]*name: card\.exerciseName,[\s\S]*metricProfileId: card\.metricProfileId \|\| null,[\s\S]*stimulusType: card\.stimulusType \|\| null,[\s\S]*movementPattern: card\.movementPattern \|\| null,[\s\S]*sourceSurface,[\s\S]*\}\) : undefined\}/)
 })
 
 test('mobile exercise detail view opens PR-driven recap rows with best-history context and a new-record callout', () => {

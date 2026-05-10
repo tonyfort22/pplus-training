@@ -183,6 +183,22 @@ function parseStoredStrengthSelectionSnapshot(rawValue) {
   }
 }
 
+function normalizeStoredStrengthSelectionSnapshot(rawValue) {
+  const snapshotBySelectionKey = parseStoredStrengthSelectionSnapshot(rawValue)
+  const normalizedSnapshotBySelectionKey = {}
+
+  for (const [selectionKey, persistedSelectionState] of Object.entries(snapshotBySelectionKey)) {
+    const normalizedSelectionKey = String(selectionKey || '').trim()
+    if (!normalizedSelectionKey || !persistedSelectionState || typeof persistedSelectionState !== 'object') continue
+    normalizedSnapshotBySelectionKey[normalizedSelectionKey] = {
+      appliedStrengthExerciseIds: applyStrengthExerciseDraft(persistedSelectionState.appliedStrengthExerciseIds || []),
+      hasAppliedCustomStrengthFilter: Boolean(persistedSelectionState.hasAppliedCustomStrengthFilter),
+    }
+  }
+
+  return normalizedSnapshotBySelectionKey
+}
+
 export async function readStoredStrengthSelectionState({ storage, selectionKey, defaultStrengthExerciseIds = [] } = {}) {
   const normalizedSelectionKey = String(selectionKey || '').trim()
   if (!normalizedSelectionKey) {
@@ -190,13 +206,17 @@ export async function readStoredStrengthSelectionState({ storage, selectionKey, 
   }
 
   const rawValue = await storage?.getItem?.()
-  const snapshotBySelectionKey = parseStoredStrengthSelectionSnapshot(rawValue)
+  const snapshotBySelectionKey = normalizeStoredStrengthSelectionSnapshot(rawValue)
   const persistedSelectionState = snapshotBySelectionKey[normalizedSelectionKey] || null
   if (!persistedSelectionState) {
     return getInitialStrengthSelectionState({ defaultStrengthExerciseIds })
   }
 
   const nextAppliedStrengthExerciseIds = applyStrengthExerciseDraft(persistedSelectionState.appliedStrengthExerciseIds || [])
+  if (persistedSelectionState.hasAppliedCustomStrengthFilter && nextAppliedStrengthExerciseIds.length === 0) {
+    return getInitialStrengthSelectionState({ defaultStrengthExerciseIds })
+  }
+
   return {
     appliedStrengthExerciseIds: nextAppliedStrengthExerciseIds,
     draftStrengthExerciseIds: copyAppliedToDraft(nextAppliedStrengthExerciseIds),
@@ -205,15 +225,14 @@ export async function readStoredStrengthSelectionState({ storage, selectionKey, 
   }
 }
 
-export async function writeStoredStrengthSelectionState({ storage, selectionKey, appliedStrengthExerciseIds = [], appliedStrengthExercises = [], hasAppliedCustomStrengthFilter = false } = {}) {
+export async function writeStoredStrengthSelectionState({ storage, selectionKey, appliedStrengthExerciseIds = [], hasAppliedCustomStrengthFilter = false } = {}) {
   const normalizedSelectionKey = String(selectionKey || '').trim()
   if (!normalizedSelectionKey || !storage?.setItem) return
 
   const rawValue = await storage.getItem()
-  const snapshotBySelectionKey = parseStoredStrengthSelectionSnapshot(rawValue)
+  const snapshotBySelectionKey = normalizeStoredStrengthSelectionSnapshot(rawValue)
   snapshotBySelectionKey[normalizedSelectionKey] = {
     appliedStrengthExerciseIds: applyStrengthExerciseDraft(appliedStrengthExerciseIds),
-    appliedStrengthExercises: sanitizeAppliedStrengthExercises(appliedStrengthExercises),
     hasAppliedCustomStrengthFilter: Boolean(hasAppliedCustomStrengthFilter),
   }
 
@@ -225,7 +244,7 @@ export async function clearStoredStrengthSelectionState({ storage, selectionKey 
   if (!normalizedSelectionKey || !storage?.setItem) return
 
   const rawValue = await storage.getItem()
-  const snapshotBySelectionKey = parseStoredStrengthSelectionSnapshot(rawValue)
+  const snapshotBySelectionKey = normalizeStoredStrengthSelectionSnapshot(rawValue)
   delete snapshotBySelectionKey[normalizedSelectionKey]
 
   if (Object.keys(snapshotBySelectionKey).length === 0) {
@@ -296,6 +315,8 @@ export function reconcileAppliedStrengthExerciseSelectionIds(exerciseIds, {
       || linkedMetricExercise?.metricExerciseId
       || metricCard?.exerciseId
       || metricCard?.id
+      || exactExercise?.id
+      || linkedMetricExercise?.id
       || null
 
     if (!matchedMetricExerciseId || seenExerciseIds.has(matchedMetricExerciseId)) continue
