@@ -12,6 +12,8 @@ function mapExerciseRow(row) {
     name: row.name ?? '',
     thumbnailUrl: row.thumbnail_url ?? null,
     videoUrl: row.video_url ?? null,
+    stimulusType: row.stimulus_type ?? null,
+    movementPattern: row.movement_pattern ?? null,
   }
 }
 
@@ -133,7 +135,7 @@ export function createSupabaseRestExerciseRepository(config) {
       const rows = await request({
         table: 'exercises',
         query: {
-          select: 'id,name,thumbnail_url,video_url',
+          select: 'id,name,thumbnail_url,video_url,stimulus_type,movement_pattern',
           order: 'name.asc',
         },
       })
@@ -146,7 +148,7 @@ export function createSupabaseRestExerciseRepository(config) {
       const rows = await request({
         table: 'exercises',
         query: {
-          select: 'id,name,thumbnail_url,video_url',
+          select: 'id,name,thumbnail_url,video_url,stimulus_type,movement_pattern',
           id: `eq.${exerciseId}`,
           limit: '1',
         },
@@ -161,7 +163,7 @@ export function createSupabaseRestExerciseRepository(config) {
       const rows = await request({
         table: 'exercises',
         query: {
-          select: 'id,name,thumbnail_url,video_url',
+          select: 'id,name,thumbnail_url,video_url,stimulus_type,movement_pattern',
           name: `eq.${exerciseName}`,
           limit: '1',
         },

@@ -164,6 +164,10 @@ function sanitizeAppliedStrengthExercises(appliedStrengthExercises = []) {
       name: String(exercise?.name || '').trim(),
       thumbnailUrl: exercise?.thumbnailUrl || null,
       metricExerciseId: exercise?.metricExerciseId || null,
+      metricProfileId: exercise?.metricProfileId || null,
+      stimulusType: exercise?.stimulusType || null,
+      movementPattern: exercise?.movementPattern || null,
+      videoUrl: exercise?.videoUrl || null,
     }))
     .filter((exercise) => exercise.id && exercise.name)
 }
@@ -334,6 +338,10 @@ export function buildStrengthExerciseOptions({ strengthExerciseLibraryItems = []
       name: card.exerciseName,
       thumbnailUrl: card.thumbnailUrl || null,
       metricExerciseId: card.exerciseId || card.id,
+      metricProfileId: card.metricProfileId || null,
+      stimulusType: card.stimulusType || null,
+      movementPattern: card.movementPattern || null,
+      videoUrl: card.videoUrl || null,
     }))
   }
 
@@ -354,6 +362,10 @@ export function buildStrengthExerciseOptions({ strengthExerciseLibraryItems = []
       name: card.exerciseName,
       thumbnailUrl: card.thumbnailUrl || null,
       metricExerciseId: card.exerciseId || card.id,
+      metricProfileId: card.metricProfileId || null,
+      stimulusType: card.stimulusType || null,
+      movementPattern: card.movementPattern || null,
+      videoUrl: card.videoUrl || null,
     }))
     .filter((exercise) => !seenMetricExerciseIds.has(exercise.metricExerciseId)
       && !seenExerciseIds.has(exercise.id)
@@ -367,6 +379,8 @@ export function buildVisibleStrengthCards({
   strengthExerciseOptions = [],
   strengthCards = [],
   appliedStrengthExercises = [],
+  emptyMetricMessage = 'No logged strength sets yet',
+  emptyMetricLabel = '1RM',
 } = {}) {
   const fallbackAppliedStrengthExercises = sanitizeAppliedStrengthExercises(appliedStrengthExercises)
   const mergedStrengthExerciseOptions = [...strengthExerciseOptions]
@@ -408,9 +422,12 @@ export function buildVisibleStrengthCards({
           exerciseName: selectedExercise.name,
           videoUrl: selectedExercise.videoUrl || null,
           thumbnailUrl: selectedExercise.thumbnailUrl || null,
+          metricProfileId: selectedExercise.metricProfileId || null,
+          stimulusType: selectedExercise.stimulusType || null,
+          movementPattern: selectedExercise.movementPattern || null,
           oneRepMaxValueLabel: '--',
-          sourcePerformanceTagLabel: 'No logged strength sets yet',
-          metricLabel: '1RM',
+          sourcePerformanceTagLabel: emptyMetricMessage,
+          metricLabel: emptyMetricLabel,
           isMetricMissing: true,
         }
       }
@@ -421,6 +438,9 @@ export function buildVisibleStrengthCards({
         exerciseName: selectedExercise.name || resolvedMetricCard.exerciseName,
         videoUrl: selectedExercise.videoUrl || resolvedMetricCard.videoUrl || null,
         thumbnailUrl: selectedExercise.thumbnailUrl || resolvedMetricCard.thumbnailUrl || null,
+        metricProfileId: selectedExercise.metricProfileId || resolvedMetricCard.metricProfileId || null,
+        stimulusType: selectedExercise.stimulusType || resolvedMetricCard.stimulusType || null,
+        movementPattern: selectedExercise.movementPattern || resolvedMetricCard.movementPattern || null,
       }
     })
     .filter(Boolean)

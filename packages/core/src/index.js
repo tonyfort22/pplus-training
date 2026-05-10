@@ -82,6 +82,8 @@ export function createWorkoutSession({ programWorkout, startedAt } = {}) {
     axialFatigueMultiplier: exercise.axialFatigueMultiplier ?? null,
     skillFatigueMultiplier: exercise.skillFatigueMultiplier ?? null,
     bodyRegion: exercise.bodyRegion ?? null,
+    stimulusType: exercise.stimulusType ?? null,
+    movementPattern: exercise.movementPattern ?? null,
     muscleTargets: Array.isArray(exercise.muscleTargets) ? exercise.muscleTargets.map((target) => ({ ...target })) : [],
     status: 'not_started',
     sets: (exercise.sets || []).map((set) => ({

@@ -1,11 +1,30 @@
+import {
+  resolveMetricProfileIdFromExercise,
+} from '../train/exercise-metric-profile-resolution.js'
+
 const DEFAULT_ANALYTICS_VIEW_MODEL = {
   title: 'ANALYTICS',
   progressLabel: 'Progress',
   progressOptions: [
     { id: 'strength', label: 'Strength' },
+    { id: 'speed', label: 'Speed' },
     { id: 'consistency', label: 'Consistency' },
   ],
   activeProgressOptionId: 'strength',
+  progressMetricCardsByOptionId: {
+    strength: [],
+    speed: [],
+    'loaded-carry': [],
+    bodyweight: [],
+    holds: [],
+  },
+  defaultMetricExerciseIdsByOptionId: {
+    strength: [],
+    speed: [],
+    'loaded-carry': [],
+    bodyweight: [],
+    holds: [],
+  },
   oneRepMaxLabel: '1RM',
   consistencyLabel: 'Consistency',
   consistencyChart: {
@@ -277,6 +296,8 @@ export function getPlaceholderSurfaceModel(title, body) {
 
 export function getAnalyticsViewModel({ sessions = [], progressModel = null, strengthSelectionContextId = null } = {}) {
   const completedSessions = sessions.filter((session) => session.status === 'completed')
+  const progressMetricCardsByOptionId = buildAnalyticsMetricCardsByOptionId(completedSessions)
+  const defaultMetricExerciseIdsByOptionId = buildDefaultMetricExerciseIdsByOptionId(completedSessions)
 
   return {
     ...DEFAULT_ANALYTICS_VIEW_MODEL,
@@ -284,8 +305,10 @@ export function getAnalyticsViewModel({ sessions = [], progressModel = null, str
       sessions: completedSessions,
       strengthSelectionContextId,
     }),
-    strengthCards: buildAnalyticsStrengthCards(completedSessions),
-    defaultStrengthExerciseIds: buildDefaultStrengthExerciseIds(completedSessions),
+    progressMetricCardsByOptionId,
+    defaultMetricExerciseIdsByOptionId,
+    strengthCards: progressMetricCardsByOptionId.strength,
+    defaultStrengthExerciseIds: defaultMetricExerciseIdsByOptionId.strength,
     consistencyChart: buildConsistencyChart(completedSessions),
     recoveryMuscleGroups: buildAnalyticsRecoveryMuscleGroups(completedSessions),
     recoveryRows: buildAnalyticsRecoveryRows(completedSessions),
@@ -310,6 +333,46 @@ function buildStrengthSelectionPersistenceKey(input = {}) {
 }
 
 function buildAnalyticsStrengthCards(sessions) {
+  return buildAnalyticsMetricCardsByOptionId(sessions).strength
+}
+
+function getProgressMetricOptionId(metricProfileId) {
+  if (metricProfileId === 'speed_time') return 'speed'
+  if (metricProfileId === 'distance_load') return 'loaded-carry'
+  if (metricProfileId === 'bodyweight_reps') return 'bodyweight'
+  if (metricProfileId === 'duration_hold') return 'holds'
+  return 'strength'
+}
+
+function getProgressMetricLabel(metricProfileId) {
+  if (metricProfileId === 'speed_time') return 'TIME'
+  if (metricProfileId === 'distance_load') return 'TIME'
+  if (metricProfileId === 'bodyweight_reps') return 'REPS'
+  if (metricProfileId === 'duration_hold') return 'DURATION'
+  return DEFAULT_ANALYTICS_VIEW_MODEL.oneRepMaxLabel
+}
+
+function resolveMetricProfileIdForAnalyticsSet(exercise, set) {
+  const resolvedMetricProfileId = resolveMetricProfileIdFromExercise(exercise)
+  if (resolvedMetricProfileId) return resolvedMetricProfileId
+
+  const load = set.actualLoad ?? set.prescribedLoad
+  const reps = set.actualReps ?? set.prescribedReps
+  const durationSeconds = set.actualDurationSeconds ?? set.prescribedDurationSeconds
+  const distance = set.actualDistance ?? set.prescribedDistance
+
+  if (load != null && Number(load) > 0 && reps != null && Number(reps) > 0) return 'strength_1rm'
+  if (load != null && Number(load) > 0 && distance != null && Number(distance) > 0 && durationSeconds != null && Number(durationSeconds) > 0) return 'distance_load'
+  if (distance != null && Number(distance) > 0 && durationSeconds != null && Number(durationSeconds) > 0) return 'speed_time'
+  if (reps != null && Number(reps) > 0 && !(load != null && Number(load) > 0)) return 'bodyweight_reps'
+  if (durationSeconds != null && Number(durationSeconds) > 0) return 'duration_hold'
+
+  return null
+}
+
+function buildAnalyticsMetricCardsByOptionId(sessions) {
+  const bestCardByOptionAndExerciseId = new Map()
+
   const bestSetByExercise = new Map()
 
   for (const session of sessions) {
@@ -320,42 +383,155 @@ function buildAnalyticsStrengthCards(sessions) {
 
       for (const set of exercise.sets || []) {
         if (!set.isCompleted) continue
+        const metricProfileId = resolveMetricProfileIdForAnalyticsSet(exercise, set)
+        if (!metricProfileId) continue
+
+        const optionId = getProgressMetricOptionId(metricProfileId)
         const load = set.actualLoad ?? set.prescribedLoad
         const reps = set.actualReps ?? set.prescribedReps
-        if (load == null || reps == null) continue
+        const durationSeconds = set.actualDurationSeconds ?? set.prescribedDurationSeconds
+        const distance = set.actualDistance ?? set.prescribedDistance
+        const loadUnit = set.actualLoadUnit ?? set.prescribedLoadUnit ?? null
+        const distanceUnit = set.actualDistanceUnit ?? set.prescribedDistanceUnit ?? null
+        const mapKey = `${optionId}:${exerciseId}`
 
-        const estimatedOneRepMax = estimateOneRepMax(load, reps)
-        const existing = bestSetByExercise.get(exerciseId)
-        if (!existing || estimatedOneRepMax > existing.estimatedOneRepMax) {
-          bestSetByExercise.set(exerciseId, {
-            id: exerciseId,
+        let nextCard = null
+        let nextSortValue = null
+
+        if (metricProfileId === 'strength_1rm') {
+          if (load == null || reps == null) continue
+          const estimatedOneRepMax = estimateOneRepMax(load, reps)
+          nextSortValue = estimatedOneRepMax
+          nextCard = {
+            id: mapKey,
             exerciseId,
             exerciseName,
-            metricLabel: DEFAULT_ANALYTICS_VIEW_MODEL.oneRepMaxLabel,
+            metricProfileId,
+            metricLabel: getProgressMetricLabel(metricProfileId),
             estimatedOneRepMax,
             strongestLoad: load,
             strongestReps: reps,
-            loadUnit: set.actualLoadUnit ?? set.prescribedLoadUnit ?? null,
-          })
+            loadUnit,
+            stimulusType: exercise?.stimulusType || null,
+            movementPattern: exercise?.movementPattern || null,
+            videoUrl: exercise?.videoUrl || null,
+            thumbnailUrl: exercise?.thumbnailUrl || null,
+            oneRepMaxValueLabel: formatStrengthValue(estimatedOneRepMax, loadUnit),
+            sourcePerformanceTagLabel: `${formatStrengthValue(load, loadUnit)} x ${reps}`,
+          }
+        } else if (metricProfileId === 'speed_time') {
+          if (distance == null || durationSeconds == null) continue
+          nextSortValue = getPaceSortValue(durationSeconds, distance, distanceUnit)
+          if (nextSortValue == null) continue
+          nextCard = {
+            id: mapKey,
+            exerciseId,
+            exerciseName,
+            metricProfileId,
+            metricLabel: getProgressMetricLabel(metricProfileId),
+            stimulusType: exercise?.stimulusType || null,
+            movementPattern: exercise?.movementPattern || null,
+            videoUrl: exercise?.videoUrl || null,
+            thumbnailUrl: exercise?.thumbnailUrl || null,
+            oneRepMaxValueLabel: formatDurationLabel(durationSeconds),
+            sourcePerformanceTagLabel: formatDistanceLabel(distance, distanceUnit),
+            sortValue: nextSortValue,
+          }
+        } else if (metricProfileId === 'distance_load') {
+          if (distance == null || durationSeconds == null) continue
+          nextSortValue = -Number(durationSeconds)
+          nextCard = {
+            id: mapKey,
+            exerciseId,
+            exerciseName,
+            metricProfileId,
+            metricLabel: getProgressMetricLabel(metricProfileId),
+            stimulusType: exercise?.stimulusType || null,
+            movementPattern: exercise?.movementPattern || null,
+            videoUrl: exercise?.videoUrl || null,
+            thumbnailUrl: exercise?.thumbnailUrl || null,
+            oneRepMaxValueLabel: formatDurationLabel(durationSeconds),
+            sourcePerformanceTagLabel: [load != null && Number(load) > 0 ? formatStrengthValue(load, loadUnit) : null, formatDistanceLabel(distance, distanceUnit)].filter(Boolean).join(' • '),
+            sortValue: nextSortValue,
+          }
+        } else if (metricProfileId === 'bodyweight_reps') {
+          if (reps == null) continue
+          nextSortValue = Number(reps)
+          nextCard = {
+            id: mapKey,
+            exerciseId,
+            exerciseName,
+            metricProfileId,
+            metricLabel: getProgressMetricLabel(metricProfileId),
+            stimulusType: exercise?.stimulusType || null,
+            movementPattern: exercise?.movementPattern || null,
+            videoUrl: exercise?.videoUrl || null,
+            thumbnailUrl: exercise?.thumbnailUrl || null,
+            oneRepMaxValueLabel: `${Math.round(Number(reps))}`,
+            sourcePerformanceTagLabel: durationSeconds != null && Number(durationSeconds) > 0 ? formatDurationLabel(durationSeconds) : `${Math.round(Number(reps))} reps`,
+            sortValue: nextSortValue,
+          }
+        } else if (metricProfileId === 'duration_hold') {
+          if (durationSeconds == null) continue
+          nextSortValue = Number(durationSeconds)
+          nextCard = {
+            id: mapKey,
+            exerciseId,
+            exerciseName,
+            metricProfileId,
+            metricLabel: getProgressMetricLabel(metricProfileId),
+            stimulusType: exercise?.stimulusType || null,
+            movementPattern: exercise?.movementPattern || null,
+            videoUrl: exercise?.videoUrl || null,
+            thumbnailUrl: exercise?.thumbnailUrl || null,
+            oneRepMaxValueLabel: formatDurationLabel(durationSeconds),
+            sourcePerformanceTagLabel: 'Best hold',
+            sortValue: nextSortValue,
+          }
+        }
+
+        if (!nextCard) continue
+        const existing = bestCardByOptionAndExerciseId.get(mapKey)
+        if (!existing || nextSortValue > existing.sortValue) {
+          bestCardByOptionAndExerciseId.set(mapKey, { ...nextCard, sortValue: nextSortValue })
         }
       }
     }
   }
 
-  if (!bestSetByExercise.size) {
-    return DEFAULT_ANALYTICS_VIEW_MODEL.strengthCards
+  const byOption = {
+    strength: [],
+    speed: [],
+    'loaded-carry': [],
+    bodyweight: [],
+    holds: [],
   }
 
-  return [...bestSetByExercise.values()]
-    .sort((left, right) => right.estimatedOneRepMax - left.estimatedOneRepMax)
-    .map((card) => ({
-      ...card,
-      oneRepMaxValueLabel: formatStrengthValue(card.estimatedOneRepMax, card.loadUnit),
-      sourcePerformanceTagLabel: `${formatStrengthValue(card.strongestLoad, card.loadUnit)} x ${card.strongestReps}`,
-    }))
+  for (const card of bestCardByOptionAndExerciseId.values()) {
+    const optionId = getProgressMetricOptionId(card.metricProfileId)
+    byOption[optionId].push(card)
+  }
+
+  for (const optionId of Object.keys(byOption)) {
+    byOption[optionId] = byOption[optionId]
+      .sort((left, right) => right.sortValue - left.sortValue || left.exerciseName.localeCompare(right.exerciseName))
+      .map(({ sortValue, ...card }) => card)
+  }
+
+  if (!byOption.strength.length) {
+    byOption.strength = DEFAULT_ANALYTICS_VIEW_MODEL.strengthCards
+  }
+
+  return byOption
 }
 
 function buildDefaultStrengthExerciseIds(sessions) {
+  return buildDefaultMetricExerciseIdsByOptionId(sessions).strength
+}
+
+function buildDefaultMetricExerciseIdsByOptionId(sessions) {
+  const countsByOptionAndExerciseId = new Map()
+
   const exerciseCountById = new Map()
 
   for (const session of sessions) {
@@ -365,44 +541,79 @@ function buildDefaultStrengthExerciseIds(sessions) {
       if (!exerciseName || !exerciseId) continue
 
       let hasMetricCompletedSet = false
+      let resolvedOptionId = null
       for (const set of exercise.sets || []) {
         if (!set.isCompleted) continue
-        const load = set.actualLoad ?? set.prescribedLoad
-        const reps = set.actualReps ?? set.prescribedReps
-        if (load == null || reps == null) continue
+        const metricProfileId = resolveMetricProfileIdForAnalyticsSet(exercise, set)
+        if (!metricProfileId) continue
+        resolvedOptionId = getProgressMetricOptionId(metricProfileId)
         hasMetricCompletedSet = true
         break
       }
 
       if (!hasMetricCompletedSet) continue
 
-      const existing = exerciseCountById.get(exerciseId)
-      if (existing) {
-        existing.count += 1
-        continue
-      }
-
-      exerciseCountById.set(exerciseId, {
-        exerciseId,
-        exerciseName,
-        count: 1,
-      })
+      const mapKey = `${resolvedOptionId}:${exerciseId}`
+      const existing = countsByOptionAndExerciseId.get(mapKey)
+      if (existing) existing.count += 1
+      else countsByOptionAndExerciseId.set(mapKey, { optionId: resolvedOptionId, exerciseId, exerciseName, count: 1 })
     }
   }
 
-  if (!exerciseCountById.size) {
-    return DEFAULT_ANALYTICS_VIEW_MODEL.defaultStrengthExerciseIds
+  const byOption = {
+    strength: [],
+    speed: [],
+    'loaded-carry': [],
+    bodyweight: [],
+    holds: [],
   }
-
-  return [...exerciseCountById.values()]
-    .sort((left, right) => right.count - left.count || left.exerciseName.localeCompare(right.exerciseName))
-    .slice(0, 2)
-    .map((entry) => entry.exerciseId)
+  for (const entry of countsByOptionAndExerciseId.values()) {
+    byOption[entry.optionId].push(entry)
+  }
+  for (const optionId of Object.keys(byOption)) {
+    byOption[optionId] = byOption[optionId]
+      .sort((left, right) => right.count - left.count || left.exerciseName.localeCompare(right.exerciseName))
+      .slice(0, 2)
+      .map((entry) => entry.exerciseId)
+  }
+  if (!byOption.strength.length) byOption.strength = DEFAULT_ANALYTICS_VIEW_MODEL.defaultStrengthExerciseIds
+  return byOption
 }
 
 function formatStrengthValue(value, unit) {
   const roundedValue = Number.isFinite(Number(value)) ? Math.round(Number(value)) : 0
   return unit ? `${roundedValue} ${unit}` : String(roundedValue)
+}
+
+function formatDurationLabel(durationSeconds) {
+  if (!Number.isFinite(Number(durationSeconds)) || Number(durationSeconds) <= 0) return '--'
+  return `${Number(durationSeconds).toFixed(1).replace(/\.0$/, '')} s`
+}
+
+function formatDistanceLabel(distance, unit = null) {
+  if (!Number.isFinite(Number(distance)) || Number(distance) <= 0) return '--'
+  const value = Number.isInteger(Number(distance)) ? String(Number(distance)) : Number(distance).toFixed(1).replace(/\.0$/, '')
+  return unit ? `${value} ${unit}` : value
+}
+
+function normalizeDistanceToMeters(distance, distanceUnit = null) {
+  if (!Number.isFinite(Number(distance)) || Number(distance) <= 0) return null
+  const normalizedUnit = String(distanceUnit || '').trim().toLowerCase()
+  const numericDistance = Number(distance)
+
+  if (!normalizedUnit || normalizedUnit === 'm' || normalizedUnit === 'meter' || normalizedUnit === 'meters') return numericDistance
+  if (normalizedUnit === 'km' || normalizedUnit === 'kilometer' || normalizedUnit === 'kilometers') return numericDistance * 1000
+  if (normalizedUnit === 'yd' || normalizedUnit === 'yard' || normalizedUnit === 'yards') return numericDistance * 0.9144
+  if (normalizedUnit === 'mi' || normalizedUnit === 'mile' || normalizedUnit === 'miles') return numericDistance * 1609.344
+  if (normalizedUnit === 'ft' || normalizedUnit === 'foot' || normalizedUnit === 'feet') return numericDistance * 0.3048
+  return numericDistance
+}
+
+function getPaceSortValue(durationSeconds, distance, distanceUnit = null) {
+  if (!Number.isFinite(Number(durationSeconds)) || Number(durationSeconds) <= 0) return null
+  const normalizedDistance = normalizeDistanceToMeters(distance, distanceUnit)
+  if (!Number.isFinite(normalizedDistance) || normalizedDistance <= 0) return null
+  return -(Number(durationSeconds) / normalizedDistance)
 }
 
 function buildConsistencyChart(sessions) {
