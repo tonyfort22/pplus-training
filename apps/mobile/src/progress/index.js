@@ -32,11 +32,11 @@ const DEFAULT_ANALYTICS_VIEW_MODEL = {
     yAxisLabels: ['6', '4', '2'],
     xAxisLabels: [],
     bars: [
-      { id: 'consistency-week-1', label: '', value: 0, frontColor: 'transparent' },
-      { id: 'consistency-week-2', label: '', value: 0, frontColor: 'transparent' },
+      { id: 'consistency-week-1', label: '', value: 0, frontColor: '#34D399' },
+      { id: 'consistency-week-2', label: '', value: 0, frontColor: '#34D399' },
       { id: 'consistency-week-3', label: '', value: 0, frontColor: '#34D399' },
-      { id: 'consistency-week-4', label: '', value: 0, frontColor: 'rgba(52, 211, 153, 0.78)' },
-      { id: 'consistency-week-5', label: '', value: 0, frontColor: 'rgba(52, 211, 153, 0.48)' },
+      { id: 'consistency-week-4', label: '', value: 0, frontColor: '#34D399' },
+      { id: 'consistency-week-5', label: '', value: 0, frontColor: '#34D399' },
     ],
   },
   strengthCards: [

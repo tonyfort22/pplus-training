@@ -120,7 +120,7 @@ function ConsistencyBarChart({ chart, theme, styles }) {
                           {
                             height: barHeight,
                             minHeight: 8,
-                            backgroundColor: bar.frontColor || theme.accentText,
+                            backgroundColor: theme.accentText,
                           },
                         ]}
                       />
