@@ -58,6 +58,13 @@ test('exercise metric profile resolver falls back to grounded exercise-name cues
   assert.equal(resolveMetricProfileIdFromExercise({ name: 'Feet Elevated Hand Plank w/ Knee Drive' }), 'bodyweight_reps')
 })
 
+test('exercise metric profile resolver falls back to grounded exercise-name cues for obvious holds library rows when structured classification is missing', () => {
+  assert.equal(resolveMetricProfileIdFromExercise({ name: 'Plank' }), 'duration_hold')
+  assert.equal(resolveMetricProfileIdFromExercise({ name: 'Short Side Plank w/ Leg Lift' }), 'duration_hold')
+  assert.equal(resolveMetricProfileIdFromExercise({ name: 'Split Squat Hold' }), 'duration_hold')
+  assert.equal(resolveMetricProfileIdFromExercise({ name: 'Stability Ball Rollout Hold' }), 'duration_hold')
+})
+
 test('exercise metric profile resolver falls back to grounded exercise-name cues for obvious loaded-carry library rows when structured classification is missing', () => {
   assert.equal(resolveMetricProfileIdFromExercise({ name: 'Farmer Carry' }), 'distance_load')
   assert.equal(resolveMetricProfileIdFromExercise({ name: 'Heavy Sled Push Forward' }), 'distance_load')
@@ -77,6 +84,8 @@ test('exercise metric profile resolver returns null for unknown or missing value
   assert.equal(resolveMetricProfileIdFromExercise({ name: 'Warmup Walkthrough' }), null)
   assert.equal(resolveMetricProfileIdFromExercise({ name: 'Marching A-Skip' }), null)
   assert.equal(resolveMetricProfileIdFromExercise({ name: 'Crawl Stretch' }), null)
+  assert.equal(resolveMetricProfileIdFromExercise({ name: 'Feet Elevated Hand Plank w/ Knee Drive' }), 'bodyweight_reps')
+  assert.equal(resolveMetricProfileIdFromExercise({ name: 'Hand Plank w/ T-Rotation' }), null)
   assert.equal(resolveMetricProfileIdFromExercise({}), null)
   assert.equal(resolveMetricProfileIdFromExercise(), null)
 })

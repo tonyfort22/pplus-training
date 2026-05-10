@@ -4,7 +4,7 @@ import { Check, ChevronDown, ChevronLeft, Clock3, Heart, SlidersHorizontal, Wave
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { SvgXml } from 'react-native-svg'
-import { placeholderMuscleImg1Svg } from '../assets/placeholder-muscle-img1.js'
+import { recoveryMuscleMapSvg, RECOVERY_GROUP_TO_SVG_IDS, getRecoveryColorForPercent, applyRecoveryColorsToSvg, applyFocusedRecoveryColorsToSvg } from '../assets/recovery-muscle-map.js'
 import { getAnalyticsViewModel } from '../progress/index.js'
 import { getAppTheme } from '../theme/app-theme.js'
 import { ExerciseLibraryView } from './exercise-library-view.js'
@@ -39,6 +39,12 @@ function getProgressOptionIdForExercise(exercise) {
 function filterExerciseLibraryItemsForProgressOption(exercises = [], optionId) {
   if (!optionId || optionId === 'consistency') return []
   return exercises.filter((exercise) => getProgressOptionIdForExercise(exercise) === optionId)
+}
+
+function parseRecoveryPercentageLabel(label) {
+  const match = String(label || '').match(/(\d+)/)
+  if (!match) return 100
+  return Number(match[1])
 }
 
 function AnalyticsDropdown({ label, onPress, theme, styles }) {
@@ -144,10 +150,10 @@ function ConsistencyBarChart({ chart, theme, styles }) {
   )
 }
 
-function RecoveryFigure({ styles }) {
+function RecoveryFigure({ styles, svg }) {
   return (
     <View style={styles.recoveryFigureWrap}>
-      <SvgXml xml={placeholderMuscleImg1Svg} width="100%" height="100%" />
+      <SvgXml xml={svg} width="100%" height="100%" />
     </View>
   )
 }
@@ -167,11 +173,15 @@ function RecoveryCard({ row, onPress, isCompact = false, isBackCard = false, chi
     )
   }
 
+  const recoveryPercent = parseRecoveryPercentageLabel(row.percentageLabel)
+  const recoveryBarColor = getRecoveryColorForPercent(recoveryPercent)
+  const recoveryBarMinWidth = recoveryPercent === 0 ? 6 : 0
+
   return (
     <Pressable style={cardStyle} onPress={onPress}>
       <Text style={styles.recoveryCardLabel}>{row.label}</Text>
       <View style={styles.recoveryBarTrack}>
-        <View style={[styles.recoveryBarFill, { width: row.barWidth }]} />
+        <View style={[styles.recoveryBarFill, { width: row.barWidth, minWidth: recoveryBarMinWidth, backgroundColor: recoveryBarColor }]} />
       </View>
       <Text style={styles.recoveryCardValue}>{row.percentageLabel}</Text>
     </Pressable>
@@ -186,10 +196,10 @@ function RecoveryBackButton({ theme, styles }) {
   )
 }
 
-function RecoveryOverview({ rows, onSelectMuscle, styles }) {
+function RecoveryOverview({ rows, onSelectMuscle, styles, svg }) {
   return (
     <View style={styles.trainingLoadContent}>
-      <RecoveryFigure styles={styles} />
+      <RecoveryFigure styles={styles} svg={svg} />
       <View style={styles.recoveryGridColumn}>
         <View style={styles.recoveryGridRow}>
           <RecoveryCard row={rows[0]} onPress={() => onSelectMuscle(rows[0])} styles={styles} />
@@ -208,20 +218,26 @@ function RecoveryOverview({ rows, onSelectMuscle, styles }) {
   )
 }
 
-function RecoveryDetailView({ muscleGroup, onBack, theme, styles }) {
+function RecoveryDetailView({ muscleGroup, onBack, theme, styles, svg }) {
+  const detailSubMuscles = muscleGroup.subMuscles || []
+  const primaryDetailMuscle = detailSubMuscles[0] || null
+  const secondaryDetailMuscles = detailSubMuscles.slice(1, 3)
+
   return (
     <View style={styles.trainingLoadContent}>
-      <RecoveryFigure styles={styles} />
+      <RecoveryFigure styles={styles} svg={svg} />
       <View style={styles.recoveryDetailColumn}>
         <View style={styles.recoveryDetailTopRow}>
           <RecoveryCard isBackCard onPress={onBack} styles={styles}>
             <RecoveryBackButton theme={theme} styles={styles} />
           </RecoveryCard>
-          <RecoveryCard row={muscleGroup.subMuscles[0]} isCompact styles={styles} />
+          {primaryDetailMuscle ? <RecoveryCard row={primaryDetailMuscle} isCompact styles={styles} /> : <View style={styles.recoveryDetailCardSpacer} />}
         </View>
         <View style={styles.recoveryDetailBottomRow}>
-          <RecoveryCard row={muscleGroup.subMuscles[1]} isCompact styles={styles} />
-          <RecoveryCard row={muscleGroup.subMuscles[2]} isCompact styles={styles} />
+          {secondaryDetailMuscles.map((row) => (
+            <RecoveryCard key={row.id} row={row} isCompact styles={styles} />
+          ))}
+          {secondaryDetailMuscles.length < 2 ? <View style={styles.recoveryDetailCardSpacer} /> : null}
         </View>
       </View>
     </View>
@@ -251,10 +267,10 @@ function ActivityCard({ row, onPress, isCompact = false, isBackCard = false, chi
   )
 }
 
-function ActivityOverview({ rows, onSelectMuscle, styles }) {
+function ActivityOverview({ rows, onSelectMuscle, styles, svg }) {
   return (
     <View style={styles.trainingLoadContent}>
-      <RecoveryFigure styles={styles} />
+      <RecoveryFigure styles={styles} svg={svg} />
       <View style={styles.recoveryGridColumn}>
         <View style={styles.recoveryGridRow}>
           <ActivityCard row={rows[0]} onPress={() => onSelectMuscle(rows[0])} styles={styles} />
@@ -273,10 +289,10 @@ function ActivityOverview({ rows, onSelectMuscle, styles }) {
   )
 }
 
-function ActivityDetailView({ muscleGroup, onBack, theme, styles }) {
+function ActivityDetailView({ muscleGroup, onBack, theme, styles, svg }) {
   return (
     <View style={styles.trainingLoadContent}>
-      <RecoveryFigure styles={styles} />
+      <RecoveryFigure styles={styles} svg={svg} />
       <View style={styles.recoveryDetailColumn}>
         <View style={styles.recoveryDetailTopRow}>
           <ActivityCard isBackCard onPress={onBack} styles={styles}>
@@ -423,8 +439,8 @@ export function AnalyticsView({ model = getAnalyticsViewModel(), theme, onOpenEx
   const [isStrengthFilterViewOpen, setIsStrengthFilterViewOpen] = useState(false)
   const strengthSelectionPersistenceKey = model.strengthSelectionPersistenceKey || 'analytics-strength:default'
   const activeMetricCards = useMemo(() => model.progressMetricCardsByOptionId?.[activeProgressOptionId] || [], [activeProgressOptionId, model.progressMetricCardsByOptionId])
-  const activeMetricLabel = useMemo(() => activeMetricCards[0]?.metricLabel || (activeProgressOptionId === 'speed' || activeProgressOptionId === 'loaded-carry' ? 'TIME' : activeProgressOptionId === 'bodyweight' ? 'REPS' : model.oneRepMaxLabel), [activeMetricCards, activeProgressOptionId, model.oneRepMaxLabel])
-  const activeMetricEmptyMessage = useMemo(() => activeProgressOptionId === 'loaded-carry' ? 'No logged loaded carry sets yet' : activeProgressOptionId === 'speed' ? 'No logged speed sets yet' : activeProgressOptionId === 'bodyweight' ? 'No logged bodyweight sets yet' : 'No logged strength sets yet', [activeProgressOptionId])
+  const activeMetricLabel = useMemo(() => activeMetricCards[0]?.metricLabel || (activeProgressOptionId === 'speed' || activeProgressOptionId === 'loaded-carry' ? 'TIME' : activeProgressOptionId === 'bodyweight' ? 'REPS' : activeProgressOptionId === 'holds' ? 'DURATION' : model.oneRepMaxLabel), [activeMetricCards, activeProgressOptionId, model.oneRepMaxLabel])
+  const activeMetricEmptyMessage = useMemo(() => activeProgressOptionId === 'loaded-carry' ? 'No logged loaded carry sets yet' : activeProgressOptionId === 'speed' ? 'No logged speed sets yet' : activeProgressOptionId === 'bodyweight' ? 'No logged bodyweight sets yet' : activeProgressOptionId === 'holds' ? 'No logged hold sets yet' : 'No logged strength sets yet', [activeProgressOptionId])
   const activeMetricSourceSurface = useMemo(() => `metrics-${activeProgressOptionId}`, [activeProgressOptionId])
   const activeMetricSelectionStorageKey = useMemo(() => `${strengthSelectionPersistenceKey}:${activeProgressOptionId}`, [activeProgressOptionId, strengthSelectionPersistenceKey])
   const activeMetricCardsKey = useMemo(() => activeMetricCards.map((card) => card.exerciseId || card.id).join('|'), [activeMetricCards])
@@ -447,6 +463,23 @@ export function AnalyticsView({ model = getAnalyticsViewModel(), theme, onOpenEx
   const activeTrainingLoadOption = model.trainingLoadOptions.find((option) => option.id === activeTrainingLoadOptionId)?.label || 'Recovery'
   const recoveryMuscleGroups = model.recoveryMuscleGroups || model.recoveryRows || []
   const activeRecoveryMuscle = recoveryMuscleGroups.find((row) => row.id === activeRecoveryMuscleId) || null
+  const recoverySvgColorMap = useMemo(() => {
+    return recoveryMuscleGroups.reduce((accumulator, row) => {
+      const color = getRecoveryColorForPercent(parseRecoveryPercentageLabel(row.percentageLabel))
+      for (const svgId of RECOVERY_GROUP_TO_SVG_IDS[row.id] || []) {
+        accumulator[svgId] = color
+      }
+      return accumulator
+    }, {})
+  }, [recoveryMuscleGroups])
+  const focusedRecoverySvgIds = useMemo(() => (
+    activeRecoveryMuscle ? RECOVERY_GROUP_TO_SVG_IDS[activeRecoveryMuscle.id] || [] : []
+  ), [activeRecoveryMuscle])
+  const recoveryFigureSvg = useMemo(() => {
+    return focusedRecoverySvgIds.length > 0
+      ? applyFocusedRecoveryColorsToSvg(recoveryMuscleMapSvg, recoverySvgColorMap, focusedRecoverySvgIds)
+      : applyRecoveryColorsToSvg(recoveryMuscleMapSvg, recoverySvgColorMap)
+  }, [recoveryMuscleMapSvg, recoverySvgColorMap, focusedRecoverySvgIds])
   const activityMuscleGroups = model.activityMuscleGroups || []
   const activeActivityMuscle = activityMuscleGroups.find((row) => row.id === activeActivityMuscleId) || null
   const metricCardByLibraryId = useMemo(() => new Map(activeMetricCards.map((card) => [card.exerciseId || card.id, card])), [activeMetricCards])
@@ -756,14 +789,14 @@ export function AnalyticsView({ model = getAnalyticsViewModel(), theme, onOpenEx
 
         {activeTrainingLoadOptionId === 'recovery' ? (
           activeRecoveryMuscleId ? (
-            <RecoveryDetailView muscleGroup={activeRecoveryMuscle} onBack={() => setActiveRecoveryMuscleId(null)} theme={resolvedTheme} styles={styles} />
+            <RecoveryDetailView muscleGroup={activeRecoveryMuscle} onBack={() => setActiveRecoveryMuscleId(null)} theme={resolvedTheme} styles={styles} svg={recoveryFigureSvg} />
           ) : (
-            <RecoveryOverview rows={recoveryMuscleGroups} onSelectMuscle={(row) => setActiveRecoveryMuscleId(row.id)} styles={styles} />
+            <RecoveryOverview rows={recoveryMuscleGroups} onSelectMuscle={(row) => setActiveRecoveryMuscleId(row.id)} styles={styles} svg={recoveryFigureSvg} />
           )
         ) : activeActivityMuscleId ? (
-          <ActivityDetailView muscleGroup={activeActivityMuscle} onBack={() => setActiveActivityMuscleId(null)} theme={resolvedTheme} styles={styles} />
+          <ActivityDetailView muscleGroup={activeActivityMuscle} onBack={() => setActiveActivityMuscleId(null)} theme={resolvedTheme} styles={styles} svg={recoveryFigureSvg} />
         ) : (
-          <ActivityOverview rows={activityMuscleGroups} onSelectMuscle={(row) => setActiveActivityMuscleId(row.id)} styles={styles} />
+          <ActivityOverview rows={activityMuscleGroups} onSelectMuscle={(row) => setActiveActivityMuscleId(row.id)} styles={styles} svg={recoveryFigureSvg} />
         )}
       </View>
 
@@ -1158,6 +1191,10 @@ function createAnalyticsStyles(theme) {
     justifyContent: 'space-between',
   },
   recoveryCardCompact: {
+    minHeight: 108,
+  },
+  recoveryDetailCardSpacer: {
+    flex: 1,
     minHeight: 108,
   },
   recoveryBackCard: {

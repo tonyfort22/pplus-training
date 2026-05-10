@@ -11,6 +11,7 @@ const DEFAULT_ANALYTICS_VIEW_MODEL = {
     { id: 'consistency', label: 'Consistency' },
     { id: 'loaded-carry', label: 'Loaded Carry' },
     { id: 'bodyweight', label: 'Bodyweight' },
+    { id: 'holds', label: 'Holds' },
   ],
   activeProgressOptionId: 'strength',
   progressMetricCardsByOptionId: {
@@ -689,26 +690,26 @@ function getOrderedCompletedSessionTimestamps(sessions) {
 function buildAnalyticsRecoveryMuscleGroups(sessions) {
   const totals = buildAnalyticsMuscleTotals(sessions)
   const baseRows = DEFAULT_ANALYTICS_VIEW_MODEL.recoveryMuscleGroups
-  const maxVolume = Math.max(...Object.values(totals), 0)
+  const maxVolume = Math.max(totals.quads, totals.hamstrings, totals.calves, 0)
 
   return baseRows.map((row) => {
     if (row.id !== 'legs') {
       return {
         ...row,
-        percentageLabel: maxVolume > 0 ? '0%' : '100%',
-        barWidth: maxVolume > 0 ? '0%' : '100%',
+        percentageLabel: '100%',
+        barWidth: '100%',
         subMuscles: row.subMuscles.map((subMuscle) => ({
           ...subMuscle,
-          percentageLabel: maxVolume > 0 ? '0%' : '100%',
-          barWidth: maxVolume > 0 ? '0%' : '100%',
+          percentageLabel: '100%',
+          barWidth: '100%',
         })),
       }
     }
 
-    const quads = getPercentage(totals.quads, maxVolume)
-    const hamstrings = getPercentage(totals.hamstrings, maxVolume)
-    const calves = getPercentage(totals.calves, maxVolume)
-    const legs = Math.max(quads, hamstrings, calves)
+    const quads = getRecoveryPercentage(totals.quads, maxVolume)
+    const hamstrings = getRecoveryPercentage(totals.hamstrings, maxVolume)
+    const calves = getRecoveryPercentage(totals.calves, maxVolume)
+    const legs = Math.round((quads + hamstrings + calves) / 3)
 
     return {
       ...row,
@@ -795,13 +796,13 @@ function buildAnalyticsMuscleTotals(sessions) {
         return sum + set.actualLoad * set.actualReps
       }, 0)
 
-      if (name.includes('squat')) {
+      if (name.includes('squat') && !name.includes('jump')) {
         totals.quads += completedVolume
         totals.quadsSets += completedSetCount
         totals.totalSets += completedSetCount
       }
 
-      if (name.includes('deadlift') || name.includes('rdl')) {
+      if ((name.includes('deadlift') && !name.includes('trap bar')) || /(^|[^a-z])rdl([^a-z]|$)/.test(name)) {
         totals.hamstrings += completedVolume
         totals.hamstringsSets += completedSetCount
         totals.totalSets += completedSetCount
@@ -818,12 +819,12 @@ function buildAnalyticsMuscleTotals(sessions) {
   return totals
 }
 
-function getPercentage(value, maxValue) {
+function getRecoveryPercentage(value, maxValue) {
   if (!maxValue) {
     return 100
   }
 
-  return Math.round((value / maxValue) * 100)
+  return Math.max(0, 100 - Math.round((value / maxValue) * 100))
 }
 
 function formatPercentageLabel(value, isDefaultFull = false) {
