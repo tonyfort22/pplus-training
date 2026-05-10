@@ -30,13 +30,13 @@ const DEFAULT_ANALYTICS_VIEW_MODEL = {
   consistencyChart: {
     title: 'Workouts per week',
     yAxisLabels: ['6', '4', '2'],
-    xAxisLabels: ['Mar 8', 'Mar 22', 'Apr 5', 'Apr 19'],
+    xAxisLabels: [],
     bars: [
-      { id: 'mar-8', label: '', value: 0, frontColor: 'transparent' },
-      { id: 'mar-22', label: '', value: 0, frontColor: 'transparent' },
-      { id: 'apr-5', label: '', value: 6, frontColor: '#34D399' },
-      { id: 'apr-12', label: '', value: 4, frontColor: 'rgba(52, 211, 153, 0.78)' },
-      { id: 'apr-19', label: '', value: 2, frontColor: 'rgba(52, 211, 153, 0.48)' },
+      { id: 'consistency-week-1', label: '', value: 0, frontColor: '#34D399' },
+      { id: 'consistency-week-2', label: '', value: 0, frontColor: '#34D399' },
+      { id: 'consistency-week-3', label: '', value: 0, frontColor: '#34D399' },
+      { id: 'consistency-week-4', label: '', value: 0, frontColor: '#34D399' },
+      { id: 'consistency-week-5', label: '', value: 0, frontColor: '#34D399' },
     ],
   },
   strengthCards: [
@@ -618,14 +618,18 @@ function getPaceSortValue(durationSeconds, distance, distanceUnit = null) {
 
 function buildConsistencyChart(sessions) {
   const defaultChart = DEFAULT_ANALYTICS_VIEW_MODEL.consistencyChart
-  const weekCounts = buildWeeklyCompletedSessionCounts(sessions)
+  const weekSlots = buildConsistencyWeekSlots(sessions, defaultChart.bars.length)
+  const weekCounts = buildWeeklyCompletedSessionCounts(sessions, defaultChart.bars.length)
 
   return {
     ...defaultChart,
+    xAxisLabels: weekSlots.map((slot) => slot.label),
     bars: defaultChart.bars.map((bar, index) => {
       const value = weekCounts[index] ?? 0
+      const slot = weekSlots[index]
       return {
         ...bar,
+        id: slot?.id || bar.id,
         value,
         frontColor: value > 0 ? bar.frontColor || '#34D399' : 'transparent',
       }
@@ -633,23 +637,34 @@ function buildConsistencyChart(sessions) {
   }
 }
 
-function buildWeeklyCompletedSessionCounts(sessions) {
-  if (!sessions.length) {
-    return [0, 0, 0, 0, 0]
-  }
-
-  const orderedSessions = [...sessions]
-    .map((session) => new Date(session.completedAt || session.startedAt || 0).getTime())
-    .filter((timestamp) => Number.isFinite(timestamp) && timestamp > 0)
-    .sort((left, right) => left - right)
-
+function buildConsistencyWeekSlots(sessions, count = 5) {
+  const orderedSessions = getOrderedCompletedSessionTimestamps(sessions)
   if (!orderedSessions.length) {
-    return [0, 0, 0, 0, 0]
+    return Array.from({ length: count }, (_, index) => ({
+      id: `consistency-week-${index + 1}`,
+      label: '',
+    }))
   }
 
   const latestTimestamp = orderedSessions[orderedSessions.length - 1]
   const weekMs = 7 * 24 * 60 * 60 * 1000
-  const counts = [0, 0, 0, 0, 0]
+  const oldestWindowStart = latestTimestamp - ((count - 1) * weekMs)
+
+  return Array.from({ length: count }, (_, index) => ({
+    id: `consistency-week-${index + 1}`,
+    label: formatSessionDate(oldestWindowStart + (index * weekMs)),
+  }))
+}
+
+function buildWeeklyCompletedSessionCounts(sessions, count = 5) {
+  const orderedSessions = getOrderedCompletedSessionTimestamps(sessions)
+  if (!orderedSessions.length) {
+    return Array.from({ length: count }, () => 0)
+  }
+
+  const latestTimestamp = orderedSessions[orderedSessions.length - 1]
+  const weekMs = 7 * 24 * 60 * 60 * 1000
+  const counts = Array.from({ length: count }, () => 0)
 
   for (const timestamp of orderedSessions) {
     const ageIndex = Math.floor((latestTimestamp - timestamp) / weekMs)
@@ -659,6 +674,13 @@ function buildWeeklyCompletedSessionCounts(sessions) {
   }
 
   return counts
+}
+
+function getOrderedCompletedSessionTimestamps(sessions) {
+  return [...sessions]
+    .map((session) => new Date(session.completedAt || session.startedAt || 0).getTime())
+    .filter((timestamp) => Number.isFinite(timestamp) && timestamp > 0)
+    .sort((left, right) => left - right)
 }
 
 function buildAnalyticsRecoveryMuscleGroups(sessions) {
