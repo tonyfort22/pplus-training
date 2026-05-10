@@ -4,7 +4,6 @@ import { Check, ChevronDown, ChevronLeft, Clock3, Heart, SlidersHorizontal, Wave
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { SvgXml } from 'react-native-svg'
-import { BarChart } from 'react-native-gifted-charts'
 import { placeholderMuscleImg1Svg } from '../assets/placeholder-muscle-img1.js'
 import { getAnalyticsViewModel } from '../progress/index.js'
 import { getAppTheme } from '../theme/app-theme.js'
@@ -88,11 +87,7 @@ function AnalyticsOptionSheet({ title, options, activeOptionId, onClose, onSelec
 }
 
 function ConsistencyBarChart({ chart, theme, styles }) {
-  const chartData = chart.bars.map((bar) => ({
-    value: bar.value,
-    label: bar.label,
-    frontColor: bar.frontColor,
-  }))
+  const maxChartValue = Math.max(6, ...chart.bars.map((bar) => bar.value || 0))
 
   return (
     <View style={styles.consistencyCardContent}>
@@ -112,29 +107,29 @@ function ConsistencyBarChart({ chart, theme, styles }) {
         </View>
 
         <View style={styles.consistencyBarsWrap}>
-          <BarChart
-            data={chartData}
-            barWidth={22}
-            spacing={20}
-            initialSpacing={70}
-            endSpacing={28}
-            noOfSections={3}
-            maxValue={6}
-            height={156}
-            width={220}
-            hideYAxisText
-            yAxisThickness={0}
-            xAxisThickness={0}
-            hideRules
-            disableScroll
-            isAnimated={false}
-            roundedTop
-            roundedBottom={false}
-            frontColor={theme.accentText}
-            xAxisLabelTextStyle={styles.consistencyAxisLabel}
-            yAxisTextStyle={styles.consistencyAxisLabel}
-            showValuesAsTopLabel={false}
-          />
+          <View style={styles.consistencyBarsRow}>
+            {chart.bars.map((bar) => {
+              const barHeight = maxChartValue > 0 ? `${Math.max(0, (bar.value / maxChartValue) * 100)}%` : '0%'
+              return (
+                <View key={bar.id || bar.label} style={styles.consistencyBarColumn}>
+                  <View style={styles.consistencyBarTrack}>
+                    {bar.value > 0 ? (
+                      <View
+                        style={[
+                          styles.consistencyBarFill,
+                          {
+                            height: barHeight,
+                            minHeight: 8,
+                            backgroundColor: bar.frontColor || theme.accentText,
+                          },
+                        ]}
+                      />
+                    ) : null}
+                  </View>
+                </View>
+              )
+            })}
+          </View>
         </View>
 
         <View style={styles.consistencyXAxisLabels}>
@@ -1022,6 +1017,30 @@ function createAnalyticsStyles(theme) {
     marginTop: 14,
     marginRight: 52,
     marginBottom: 26,
+    height: 156,
+  },
+  consistencyBarsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    height: '100%',
+    gap: 20,
+  },
+  consistencyBarColumn: {
+    flex: 1,
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  consistencyBarTrack: {
+    width: 22,
+    height: '100%',
+    justifyContent: 'flex-end',
+  },
+  consistencyBarFill: {
+    width: '100%',
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
   },
   consistencyXAxisLabels: {
     position: 'absolute',
