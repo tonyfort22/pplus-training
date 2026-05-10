@@ -54,6 +54,19 @@ function resolveMetricProfileIdFromExerciseName(exercise = {}) {
   if (obviousDistanceLoadCues.some((cue) => normalizedExerciseName.includes(cue))) {
     return 'distance_load'
   }
+  const obviousBodyweightCues = [
+    'push_up',
+    'chin_up',
+    'pull_up',
+    'bear_crawl',
+    'mountain_climber',
+    'body_saw',
+    'dead_bug',
+    'knee_drive',
+  ]
+  if (obviousBodyweightCues.some((cue) => normalizedExerciseName.includes(cue))) {
+    return 'bodyweight_reps'
+  }
   if (normalizedExerciseName.includes('sprint')) return 'speed_time'
   if (normalizedExerciseName === 'tempo_run' || normalizedExerciseName.endsWith('_run') || normalizedExerciseName.startsWith('run_') || normalizedExerciseName.includes('_run_')) {
     return 'speed_time'

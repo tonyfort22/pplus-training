@@ -48,6 +48,16 @@ test('exercise metric profile resolver falls back to grounded exercise-name cues
   assert.equal(resolveMetricProfileIdFromExercise({ name: 'Barbell Bench Press' }), 'strength_1rm')
 })
 
+test('exercise metric profile resolver falls back to grounded exercise-name cues for obvious bodyweight library rows when structured classification is missing', () => {
+  assert.equal(resolveMetricProfileIdFromExercise({ name: 'Chin Up' }), 'bodyweight_reps')
+  assert.equal(resolveMetricProfileIdFromExercise({ name: 'Neutral Grip Pull Up' }), 'bodyweight_reps')
+  assert.equal(resolveMetricProfileIdFromExercise({ name: 'Explosive Push Up' }), 'bodyweight_reps')
+  assert.equal(resolveMetricProfileIdFromExercise({ name: 'Band Resisted Push Up' }), 'bodyweight_reps')
+  assert.equal(resolveMetricProfileIdFromExercise({ name: 'Bear Crawl Forward Backward' }), 'bodyweight_reps')
+  assert.equal(resolveMetricProfileIdFromExercise({ name: 'Banded Slideboard Mountain Climber' }), 'bodyweight_reps')
+  assert.equal(resolveMetricProfileIdFromExercise({ name: 'Feet Elevated Hand Plank w/ Knee Drive' }), 'bodyweight_reps')
+})
+
 test('exercise metric profile resolver falls back to grounded exercise-name cues for obvious loaded-carry library rows when structured classification is missing', () => {
   assert.equal(resolveMetricProfileIdFromExercise({ name: 'Farmer Carry' }), 'distance_load')
   assert.equal(resolveMetricProfileIdFromExercise({ name: 'Heavy Sled Push Forward' }), 'distance_load')
@@ -66,6 +76,7 @@ test('exercise metric profile resolver returns null for unknown or missing value
   assert.equal(resolveMetricProfileIdFromExercise({ name: 'Wall March Hold' }), 'distance_load')
   assert.equal(resolveMetricProfileIdFromExercise({ name: 'Warmup Walkthrough' }), null)
   assert.equal(resolveMetricProfileIdFromExercise({ name: 'Marching A-Skip' }), null)
+  assert.equal(resolveMetricProfileIdFromExercise({ name: 'Crawl Stretch' }), null)
   assert.equal(resolveMetricProfileIdFromExercise({}), null)
   assert.equal(resolveMetricProfileIdFromExercise(), null)
 })
