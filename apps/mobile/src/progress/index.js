@@ -11,6 +11,7 @@ const DEFAULT_ANALYTICS_VIEW_MODEL = {
     { id: 'consistency', label: 'Consistency' },
     { id: 'loaded-carry', label: 'Loaded Carry' },
     { id: 'bodyweight', label: 'Bodyweight' },
+    { id: 'holds', label: 'Holds' },
   ],
   activeProgressOptionId: 'strength',
   progressMetricCardsByOptionId: {

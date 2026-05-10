@@ -67,6 +67,13 @@ function resolveMetricProfileIdFromExerciseName(exercise = {}) {
   if (obviousBodyweightCues.some((cue) => normalizedExerciseName.includes(cue))) {
     return 'bodyweight_reps'
   }
+  const obviousHoldCues = [
+    'side_plank',
+    'wall_sit',
+  ]
+  if (normalizedExerciseName === 'plank' || normalizedExerciseName.endsWith('_hold') || normalizedExerciseName.includes('_hold_') || obviousHoldCues.some((cue) => normalizedExerciseName.includes(cue))) {
+    return 'duration_hold'
+  }
   if (normalizedExerciseName.includes('sprint')) return 'speed_time'
   if (normalizedExerciseName === 'tempo_run' || normalizedExerciseName.endsWith('_run') || normalizedExerciseName.startsWith('run_') || normalizedExerciseName.includes('_run_')) {
     return 'speed_time'

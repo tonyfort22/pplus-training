@@ -941,6 +941,41 @@ test('mobile analytics Bodyweight filter options include valid bodyweight librar
   assert.equal(visibleBodyweightCards[0].metricLabel, 'REPS')
 })
 
+test('mobile analytics Holds filter options include valid holds library exercises even when they have no result-backed metric card yet', () => {
+  const holdsExerciseOptions = buildStrengthExerciseOptions({
+    strengthExerciseLibraryItems: [
+      {
+        id: 'exercise-plank',
+        name: 'Plank',
+        thumbnailUrl: null,
+        videoUrl: null,
+        metricProfileId: 'duration_hold',
+      },
+      {
+        id: 'exercise-split-squat-hold',
+        name: 'Split Squat Hold',
+        thumbnailUrl: null,
+        videoUrl: null,
+        metricProfileId: 'duration_hold',
+      },
+    ],
+    strengthCards: [],
+  })
+
+  const visibleHoldsCards = buildVisibleStrengthCards({
+    appliedStrengthExerciseIds: holdsExerciseOptions.map((exercise) => exercise.metricExerciseId || exercise.id),
+    strengthExerciseOptions: holdsExerciseOptions,
+    strengthCards: [],
+    emptyMetricMessage: 'No logged hold sets yet',
+    emptyMetricLabel: 'DURATION',
+  })
+
+  assert.deepEqual(visibleHoldsCards.map((card) => card.exerciseName), ['Plank', 'Split Squat Hold'])
+  assert.equal(visibleHoldsCards[0].oneRepMaxValueLabel, '--')
+  assert.equal(visibleHoldsCards[0].sourcePerformanceTagLabel, 'No logged hold sets yet')
+  assert.equal(visibleHoldsCards[0].metricLabel, 'DURATION')
+})
+
 test('mobile analytics Loaded Carry can default to real filtered library exercises when there are no result-backed metric cards yet', () => {
   const analyticsSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/analytics-view.js'), 'utf8')
   const loadedCarryExerciseOptions = buildStrengthExerciseOptions({
@@ -1053,7 +1088,8 @@ test('mobile analytics view includes the requested dropdown labels for Progress 
   assert.match(progressSource, /label: 'Loaded Carry'/)
   assert.match(progressSource, /id: 'bodyweight'/)
   assert.match(progressSource, /label: 'Bodyweight'/)
-  assert.doesNotMatch(progressSource, /label: 'Holds'/)
+  assert.match(progressSource, /id: 'holds'/)
+  assert.match(progressSource, /label: 'Holds'/)
   assert.match(progressSource, /activeProgressOptionId: 'strength'/)
   assert.match(progressSource, /trainingLoadOptions: \[/)
   assert.match(progressSource, /id: 'recovery'/)
@@ -1069,9 +1105,16 @@ test('mobile analytics view includes the requested dropdown labels for Progress 
 test('mobile analytics Bodyweight option keeps a REPS lane and renders an honest empty row when no bodyweight results exist yet', () => {
   const analyticsSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/analytics-view.js'), 'utf8')
 
-  assert.match(analyticsSource, /activeProgressOptionId === 'speed' \|\| activeProgressOptionId === 'loaded-carry' \? 'TIME' : activeProgressOptionId === 'bodyweight' \? 'REPS' : model\.oneRepMaxLabel/)
-  assert.match(analyticsSource, /activeProgressOptionId === 'loaded-carry' \? 'No logged loaded carry sets yet' : activeProgressOptionId === 'speed' \? 'No logged speed sets yet' : activeProgressOptionId === 'bodyweight' \? 'No logged bodyweight sets yet' : 'No logged strength sets yet'/)
+  assert.match(analyticsSource, /activeProgressOptionId === 'speed' \|\| activeProgressOptionId === 'loaded-carry' \? 'TIME' : activeProgressOptionId === 'bodyweight' \? 'REPS' : activeProgressOptionId === 'holds' \? 'DURATION' : model\.oneRepMaxLabel/)
+  assert.match(analyticsSource, /activeProgressOptionId === 'loaded-carry' \? 'No logged loaded carry sets yet' : activeProgressOptionId === 'speed' \? 'No logged speed sets yet' : activeProgressOptionId === 'bodyweight' \? 'No logged bodyweight sets yet' : activeProgressOptionId === 'holds' \? 'No logged hold sets yet' : 'No logged strength sets yet'/)
   assert.match(analyticsSource, /function StrengthMetricsCard\([\s\S]*cards\.length === 0[\s\S]*sourcePerformanceTagLabel: emptyMessage/)
+})
+
+test('mobile analytics Holds option keeps a DURATION lane and renders an honest empty row when no hold results exist yet', () => {
+  const analyticsSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/analytics-view.js'), 'utf8')
+
+  assert.match(analyticsSource, /activeProgressOptionId === 'speed' \|\| activeProgressOptionId === 'loaded-carry' \? 'TIME' : activeProgressOptionId === 'bodyweight' \? 'REPS' : activeProgressOptionId === 'holds' \? 'DURATION' : model\.oneRepMaxLabel/)
+  assert.match(analyticsSource, /activeProgressOptionId === 'loaded-carry' \? 'No logged loaded carry sets yet' : activeProgressOptionId === 'speed' \? 'No logged speed sets yet' : activeProgressOptionId === 'bodyweight' \? 'No logged bodyweight sets yet' : activeProgressOptionId === 'holds' \? 'No logged hold sets yet' : 'No logged strength sets yet'/)
 })
 
 test('mobile analytics recovery bars do not use a generic `.value` member in inline width styles', () => {
@@ -1084,7 +1127,7 @@ test('mobile analytics recovery bars do not use a generic `.value` member in inl
   assert.match(progressSource, /barWidth:/)
 })
 
-test('mobile analytics progress dropdown opens a real bottom sheet with Strength, Speed, Consistency, Loaded Carry, and Bodyweight options', () => {
+test('mobile analytics progress dropdown opens a real bottom sheet with Strength, Speed, Consistency, Loaded Carry, Bodyweight, and Holds options', () => {
   const analyticsSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/analytics-view.js'), 'utf8')
   const progressSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/progress/index.js'), 'utf8')
 
@@ -1093,6 +1136,7 @@ test('mobile analytics progress dropdown opens a real bottom sheet with Strength
   assert.match(progressSource, /label: 'Consistency'/)
   assert.match(progressSource, /label: 'Loaded Carry'/)
   assert.match(progressSource, /label: 'Bodyweight'/)
+  assert.match(progressSource, /label: 'Holds'/)
   assert.match(analyticsSource, /sheetLabel: option\.label/)
   assert.doesNotMatch(analyticsSource, /sheetLabel: option\.id === 'consistency' \? 'Consistency' : 'Strength'/)
   assert.match(analyticsSource, /useState\(/)
