@@ -269,6 +269,8 @@ test('mobile app shell passes completed-session history into the workout complet
  assert.match(appSource, /session\.status === 'completed'/)
  assert.match(appSource, /trainState\.completedSessions/)
  assert.match(appSource, /\.\.\.trainState\.completedSessions, session/)
+ assert.match(appSource, /const exerciseDetailViewModel = useMemo\(\(\) => getExerciseDetailViewModel\(\{ exercise: selectedExercise, sessions: progressSessions \}\), \[progressSessions, selectedExercise\]\);/)
+ assert.ok(appSource.indexOf('const progressSessions = useMemo(') < appSource.indexOf('const exerciseDetailViewModel = useMemo('))
  assert.match(appSource, /const completedSessionModel = useMemo\(/)
  assert.match(appSource, /getCompletedSessionSurfaceModel\(session, \{ completedSessions: progressSessions \}\)/)
  assert.doesNotMatch(appSource, /getCompletedSessionSurfaceModel\(session, \{ completedSessions: trainState\.completedSessions \}\)/)

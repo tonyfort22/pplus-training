@@ -14,7 +14,7 @@ function json(payload, status = 200) {
   }
 }
 
-test('createSupabaseRestExerciseRepository lists exercises with thumbnail and video fields', async () => {
+test('createSupabaseRestExerciseRepository lists exercises with thumbnail, video, and exercise classification fields', async () => {
   const calls = []
   const repo = createSupabaseRestExerciseRepository({
     url: 'https://example.supabase.co',
@@ -28,7 +28,7 @@ test('createSupabaseRestExerciseRepository lists exercises with thumbnail and vi
       })
 
       assert.equal(parsedUrl.pathname, '/rest/v1/exercises')
-      assert.equal(parsedUrl.searchParams.get('select'), 'id,name,thumbnail_url,video_url')
+      assert.equal(parsedUrl.searchParams.get('select'), 'id,name,thumbnail_url,video_url,stimulus_type,movement_pattern')
       assert.equal(parsedUrl.searchParams.get('order'), 'name.asc')
 
       return json([
@@ -37,12 +37,16 @@ test('createSupabaseRestExerciseRepository lists exercises with thumbnail and vi
           name: 'Front Squat',
           thumbnail_url: 'data:image/jpeg;base64,abc',
           video_url: 'https://www.youtube.com/watch?v=WepkDTJaBvw',
+          stimulus_type: 'strength',
+          movement_pattern: 'squat',
         },
         {
           id: 'exercise-2',
           name: 'Trap Bar Deadlift',
           thumbnail_url: null,
           video_url: null,
+          stimulus_type: 'strength',
+          movement_pattern: 'hinge',
         },
       ])
     },
@@ -56,19 +60,23 @@ test('createSupabaseRestExerciseRepository lists exercises with thumbnail and vi
       name: 'Front Squat',
       thumbnailUrl: 'data:image/jpeg;base64,abc',
       videoUrl: 'https://www.youtube.com/watch?v=WepkDTJaBvw',
+      stimulusType: 'strength',
+      movementPattern: 'squat',
     },
     {
       id: 'exercise-2',
       name: 'Trap Bar Deadlift',
       thumbnailUrl: null,
       videoUrl: null,
+      stimulusType: 'strength',
+      movementPattern: 'hinge',
     },
   ])
   assert.equal(calls.length, 1)
   assert.equal(calls[0].method, 'GET')
 })
 
-test('createSupabaseRestExerciseRepository fetches a single exercise with linked default rest and set structure by id', async () => {
+test('createSupabaseRestExerciseRepository fetches a single exercise with linked default rest, set structure, and exercise classification by id', async () => {
   const calls = []
   const repo = createSupabaseRestExerciseRepository({
     url: 'https://example.supabase.co',
@@ -82,7 +90,7 @@ test('createSupabaseRestExerciseRepository fetches a single exercise with linked
       })
 
       if (parsedUrl.pathname === '/rest/v1/exercises') {
-        assert.equal(parsedUrl.searchParams.get('select'), 'id,name,thumbnail_url,video_url')
+        assert.equal(parsedUrl.searchParams.get('select'), 'id,name,thumbnail_url,video_url,stimulus_type,movement_pattern')
         assert.equal(parsedUrl.searchParams.get('id'), 'eq.exercise-1')
         assert.equal(parsedUrl.searchParams.get('limit'), '1')
 
@@ -92,6 +100,8 @@ test('createSupabaseRestExerciseRepository fetches a single exercise with linked
             name: 'Front Squat',
             thumbnail_url: 'data:image/jpeg;base64,abc',
             video_url: 'https://cdn.example.com/front-squat.mp4',
+            stimulus_type: 'strength',
+            movement_pattern: 'squat',
           },
         ])
       }
@@ -141,6 +151,8 @@ test('createSupabaseRestExerciseRepository fetches a single exercise with linked
     name: 'Front Squat',
     thumbnailUrl: 'data:image/jpeg;base64,abc',
     videoUrl: 'https://cdn.example.com/front-squat.mp4',
+    stimulusType: 'strength',
+    movementPattern: 'squat',
     defaultRestSeconds: 150,
     sets: [
       {
@@ -177,7 +189,7 @@ test('createSupabaseRestExerciseRepository fetches a single exercise with linked
   assert.equal(calls[0].method, 'GET')
 })
 
-test('createSupabaseRestExerciseRepository fetches a single exercise with thumbnail and video fields by exact name fallback', async () => {
+test('createSupabaseRestExerciseRepository fetches a single exercise with thumbnail, video, and classification fields by exact name fallback', async () => {
   const calls = []
   const repo = createSupabaseRestExerciseRepository({
     url: 'https://example.supabase.co',
@@ -191,7 +203,7 @@ test('createSupabaseRestExerciseRepository fetches a single exercise with thumbn
       })
 
       if (parsedUrl.pathname === '/rest/v1/exercises') {
-        assert.equal(parsedUrl.searchParams.get('select'), 'id,name,thumbnail_url,video_url')
+        assert.equal(parsedUrl.searchParams.get('select'), 'id,name,thumbnail_url,video_url,stimulus_type,movement_pattern')
         assert.equal(parsedUrl.searchParams.get('name'), 'eq.Barbell Back Squat')
         assert.equal(parsedUrl.searchParams.get('limit'), '1')
 
@@ -201,6 +213,8 @@ test('createSupabaseRestExerciseRepository fetches a single exercise with thumbn
             name: 'Barbell Back Squat',
             thumbnail_url: 'data:image/jpeg;base64,xyz',
             video_url: 'https://cdn.example.com/back-squat.mp4',
+            stimulus_type: 'strength',
+            movement_pattern: 'squat',
           },
         ])
       }
@@ -220,6 +234,8 @@ test('createSupabaseRestExerciseRepository fetches a single exercise with thumbn
     name: 'Barbell Back Squat',
     thumbnailUrl: 'data:image/jpeg;base64,xyz',
     videoUrl: 'https://cdn.example.com/back-squat.mp4',
+    stimulusType: 'strength',
+    movementPattern: 'squat',
   })
   assert.equal(calls.length, 2)
   assert.equal(calls[0].method, 'GET')

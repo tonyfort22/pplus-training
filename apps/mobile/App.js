@@ -855,8 +855,21 @@ function AppShellContent() {
   const canFinishActiveWorkout = useMemo(() => canFinishWorkoutSession(session), [session]);
   const selectedExercise = useMemo(() => {
     const allExercises = [...(workoutSheetModel?.exercises || []), ...(workoutEditViewModel?.exercises || []), ...(activeWorkoutViewModel?.exercises || [])];
-    return allExercises.find((exercise) => exercise.id === selectedExerciseId || exercise.exerciseId === selectedExerciseId) || selectedExercisePreview || null;
+    const matchedExercise = allExercises.find((exercise) => exercise.id === selectedExerciseId || exercise.exerciseId === selectedExerciseId) || null;
+    if (!matchedExercise) return selectedExercisePreview || null;
+    if (!selectedExercisePreview) return matchedExercise;
+    const previewExerciseId = selectedExercisePreview.exerciseId || selectedExercisePreview.id;
+    if (previewExerciseId !== selectedExerciseId) return matchedExercise;
+    return { ...matchedExercise, ...selectedExercisePreview };
   }, [activeWorkoutViewModel, selectedExerciseId, selectedExercisePreview, workoutEditViewModel, workoutSheetModel]);
+
+  const progressSessions = useMemo(() => {
+    if (session.status === 'completed') {
+      return [...trainState.completedSessions, session];
+    }
+
+    return trainState.completedSessions;
+  }, [session, trainState.completedSessions]);
   const exerciseDetailViewModel = useMemo(() => getExerciseDetailViewModel({ exercise: selectedExercise, sessions: progressSessions }), [progressSessions, selectedExercise]);
   const calendarModel = useMemo(() => getCalendarSurfaceModel(trainState, selectedCalendarDayId), [trainState, selectedCalendarDayId]);
   const teamPlaceholder = useMemo(
@@ -871,14 +884,6 @@ function AppShellContent() {
   );
   const inboxSections = useMemo(() => getPlaceholderSections(inboxPlaceholder), [inboxPlaceholder]);
   const inboxRenderPlan = useMemo(() => getGenericSectionRenderPlan(inboxSections), [inboxSections]);
-
-  const progressSessions = useMemo(() => {
-    if (session.status === 'completed') {
-      return [...trainState.completedSessions, session];
-    }
-
-    return trainState.completedSessions;
-  }, [session, trainState.completedSessions]);
   const progressModel = useMemo(() => getProgressSurfaceModel({ sessions: progressSessions }), [progressSessions]);
   const analyticsStrengthSelectionContextId = activeCoachAthleteProfile?.id || authSession?.currentUserId || null;
   const analyticsScreen = useMemo(() => getAnalyticsViewModel({

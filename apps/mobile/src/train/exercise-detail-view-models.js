@@ -1,3 +1,7 @@
+import {
+  resolveMetricProfileIdFromExercise,
+} from './exercise-metric-profile-resolution.js'
+
 const DEFAULT_VIDEO_URL = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4'
 
 const EXERCISE_LIBRARY = {
@@ -64,12 +68,33 @@ function formatPaceLabel(durationSeconds, distance, distanceUnit = null) {
     return '--'
   }
 
-  if (distanceUnit === 'm') {
-    const secondsPerHundredMeters = Number(durationSeconds) / (Number(distance) / 100)
-    return `${formatNumber(secondsPerHundredMeters)} s / 100m`
+  const normalizedDistance = normalizeDistanceToMeters(distance, distanceUnit)
+  if (!Number.isFinite(normalizedDistance) || normalizedDistance <= 0) {
+    return '--'
   }
 
-  return `${formatNumber(durationSeconds / Number(distance))} s / unit`
+  const secondsPerHundredMeters = Number(durationSeconds) / (normalizedDistance / 100)
+  return `${formatNumber(secondsPerHundredMeters)} s / 100m`
+}
+
+function normalizeDistanceToMeters(distance, distanceUnit = null) {
+  if (!Number.isFinite(Number(distance)) || Number(distance) <= 0) return null
+  const normalizedUnit = String(distanceUnit || '').trim().toLowerCase()
+  const numericDistance = Number(distance)
+
+  if (!normalizedUnit || normalizedUnit === 'm' || normalizedUnit === 'meter' || normalizedUnit === 'meters') return numericDistance
+  if (normalizedUnit === 'km' || normalizedUnit === 'kilometer' || normalizedUnit === 'kilometers') return numericDistance * 1000
+  if (normalizedUnit === 'yd' || normalizedUnit === 'yard' || normalizedUnit === 'yards') return numericDistance * 0.9144
+  if (normalizedUnit === 'mi' || normalizedUnit === 'mile' || normalizedUnit === 'miles') return numericDistance * 1609.344
+  if (normalizedUnit === 'ft' || normalizedUnit === 'foot' || normalizedUnit === 'feet') return numericDistance * 0.3048
+  return numericDistance
+}
+
+function getPaceBestValue(durationSeconds, distance, distanceUnit = null) {
+  if (!Number.isFinite(Number(durationSeconds)) || Number(durationSeconds) <= 0) return null
+  const normalizedDistance = normalizeDistanceToMeters(distance, distanceUnit)
+  if (!Number.isFinite(normalizedDistance) || normalizedDistance <= 0) return null
+  return -(Number(durationSeconds) / normalizedDistance)
 }
 
 function isMatchingExercise(sessionExercise, selectedExercise) {
@@ -120,37 +145,32 @@ function collectExerciseObservations(exercise, sessions = []) {
   return observations.sort((left, right) => right.timestamp - left.timestamp || left.id.localeCompare(right.id))
 }
 
-function buildProgressPoints(rows = [], { direction = 'higher' } = {}) {
+function buildProgressPoints(rows = []) {
   if (!rows.length) return []
 
   const bestRowByDateLabel = new Map()
   for (const row of rows) {
+    const rowBestValue = row.bestValue ?? row.progressValue
     const existingRow = bestRowByDateLabel.get(row.dateLabel)
     if (!existingRow) {
       bestRowByDateLabel.set(row.dateLabel, row)
       continue
     }
 
-    const isBetter = direction === 'lower'
-      ? row.progressValue < existingRow.progressValue
-      : row.progressValue > existingRow.progressValue
-
-    if (isBetter) {
+    const existingBestValue = existingRow.bestValue ?? existingRow.progressValue
+    if (rowBestValue > existingBestValue) {
       bestRowByDateLabel.set(row.dateLabel, row)
     }
   }
 
-  const ascendingRows = [...bestRowByDateLabel.values()].sort((left, right) => left.timestamp - right.timestamp || left.progressValue - right.progressValue || left.id.localeCompare(right.id))
+  const ascendingRows = [...bestRowByDateLabel.values()].sort((left, right) => left.timestamp - right.timestamp || (left.bestValue ?? left.progressValue) - (right.bestValue ?? right.progressValue) || left.id.localeCompare(right.id))
   const progressPoints = []
-  let runningBest = direction === 'lower' ? Infinity : -Infinity
+  let runningBest = -Infinity
 
   for (const row of ascendingRows) {
-    const isBetter = direction === 'lower'
-      ? row.progressValue < runningBest
-      : row.progressValue > runningBest
-
-    if (!isBetter) continue
-    runningBest = row.progressValue
+    const rowBestValue = row.bestValue ?? row.progressValue
+    if (rowBestValue <= runningBest) continue
+    runningBest = rowBestValue
     progressPoints.push({
       id: `progress:${row.id}`,
       dateLabel: row.dateLabel,
@@ -191,20 +211,24 @@ function buildStrengthProfile(observations = []) {
 function buildSpeedProfile(observations = []) {
   const rows = observations
     .filter((row) => Number.isFinite(row.distance) && row.distance > 0 && Number.isFinite(row.durationSeconds) && row.durationSeconds > 0)
-    .map((row) => ({
-      id: row.id,
-      timestamp: row.timestamp,
-      dateLabel: row.dateLabel,
-      progressValue: row.durationSeconds,
-      progressDisplayValue: formatDurationLabel(row.durationSeconds),
-      bestValue: -row.durationSeconds,
-      cells: [
-        row.dateLabel,
-        formatDistanceLabel(row.distance, row.distanceUnit),
-        formatDurationLabel(row.durationSeconds),
-        formatPaceLabel(row.durationSeconds, row.distance, row.distanceUnit),
-      ],
-    }))
+    .map((row) => {
+      const bestValue = getPaceBestValue(row.durationSeconds, row.distance, row.distanceUnit)
+      return {
+        id: row.id,
+        timestamp: row.timestamp,
+        dateLabel: row.dateLabel,
+        progressValue: row.durationSeconds,
+        progressDisplayValue: formatDurationLabel(row.durationSeconds),
+        bestValue,
+        cells: [
+          row.dateLabel,
+          formatDistanceLabel(row.distance, row.distanceUnit),
+          formatDurationLabel(row.durationSeconds),
+          formatPaceLabel(row.durationSeconds, row.distance, row.distanceUnit),
+        ],
+      }
+    })
+    .filter((row) => row.bestValue != null)
 
   return {
     metricProfileId: 'speed_time',
@@ -212,7 +236,7 @@ function buildSpeedProfile(observations = []) {
     progressXAxisLabel: 'DATE',
     progressPoints: buildProgressPoints(rows, { direction: 'lower' }),
     historyHeaders: ['DATE', 'DISTANCE', 'TIME', 'PACE'],
-    historyRows: rows.sort((left, right) => right.timestamp - left.timestamp || left.progressValue - right.progressValue || left.id.localeCompare(right.id)),
+    historyRows: rows.sort((left, right) => right.timestamp - left.timestamp || right.bestValue - left.bestValue || left.id.localeCompare(right.id)),
   }
 }
 
@@ -241,7 +265,7 @@ function buildDistanceLoadProfile(observations = []) {
     progressXAxisLabel: 'DATE',
     progressPoints: buildProgressPoints(rows, { direction: 'lower' }),
     historyHeaders: ['DATE', 'LOAD', 'DISTANCE', 'TIME'],
-    historyRows: rows.sort((left, right) => right.timestamp - left.timestamp || left.progressValue - right.progressValue || left.id.localeCompare(right.id)),
+    historyRows: rows.sort((left, right) => right.timestamp - left.timestamp || right.bestValue - left.bestValue || left.id.localeCompare(right.id)),
   }
 }
 
@@ -299,7 +323,20 @@ function buildDurationHoldProfile(observations = []) {
   }
 }
 
-function buildMetricProfile(observations = []) {
+function buildMetricProfileFromId(metricProfileId, observations = []) {
+  if (metricProfileId === 'speed_time') return buildSpeedProfile(observations)
+  if (metricProfileId === 'distance_load') return buildDistanceLoadProfile(observations)
+  if (metricProfileId === 'bodyweight_reps') return buildBodyweightRepsProfile(observations)
+  if (metricProfileId === 'duration_hold') return buildDurationHoldProfile(observations)
+  return buildStrengthProfile(observations)
+}
+
+function buildMetricProfile(exercise, observations = []) {
+  const metricProfileId = resolveMetricProfileIdFromExercise(exercise)
+  if (metricProfileId) {
+    return buildMetricProfileFromId(metricProfileId, observations)
+  }
+
   const hasStrengthRows = observations.some((row) => Number.isFinite(row.load) && row.load > 0 && Number.isFinite(row.reps) && row.reps > 0)
   if (hasStrengthRows) return buildStrengthProfile(observations)
 
@@ -323,7 +360,7 @@ function getExerciseDetailRecord(exercise, sessions = []) {
 
   const libraryDetail = EXERCISE_LIBRARY[exercise.exerciseId]
   const observations = collectExerciseObservations(exercise, sessions)
-  const metricProfile = buildMetricProfile(observations)
+  const metricProfile = buildMetricProfile(exercise, observations)
 
   if (libraryDetail) {
     return {

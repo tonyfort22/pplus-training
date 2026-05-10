@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { buildStrengthExerciseOptions, buildVisibleStrengthCards, getInitialStrengthSelectionIds, getInitialStrengthSelectionState, copyAppliedToDraft, toggleStrengthExerciseDraft, applyStrengthExerciseDraft, getDefaultSyncedStrengthSelection, reconcileStrengthExerciseSelectionIds, resolveStrengthSelectionStorage, readStoredStrengthSelectionState, writeStoredStrengthSelectionState, clearStoredStrengthSelectionState } from '../apps/mobile/src/screens/analytics-strength-state.js'
+import { getAnalyticsViewModel } from '../apps/mobile/src/progress/index.js'
 
 test('mobile analytics Strength pure state helpers keep one consistent draft/applied id universe', () => {
   assert.deepEqual(getInitialStrengthSelectionIds({
@@ -258,8 +259,8 @@ test('mobile analytics view maps the first-pass Progress and Training Load struc
   const progressSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/progress/index.js'), 'utf8')
 
   assert.match(analyticsSource, /function AnalyticsView\(/)
-  assert.match(analyticsSource, /function StrengthMetricsCard\({ cards, theme, styles, metricLabel, onOpenFilter, onOpenExerciseDetail }\)/)
-  assert.match(analyticsSource, /function StrengthMetricRow\({ card, styles, onOpenExerciseDetail }\)/)
+  assert.match(analyticsSource, /function StrengthMetricsCard\({ cards, theme, styles, metricLabel, filterLabel, sourceSurface, onOpenFilter, onOpenExerciseDetail }\)/)
+  assert.match(analyticsSource, /function StrengthMetricRow\({ card, styles, sourceSurface = 'metrics-strength', onOpenExerciseDetail }\)/)
   assert.match(analyticsSource, /function RecoveryFigure\({ styles }\)/)
   assert.match(analyticsSource, /function RecoveryCard\({ row, onPress, isCompact = false, isBackCard = false, children, styles }\)/)
   assert.match(analyticsSource, /function RecoveryOverview\({ rows, onSelectMuscle, styles }\)/)
@@ -273,7 +274,7 @@ test('mobile analytics view maps the first-pass Progress and Training Load struc
   assert.match(analyticsSource, /<ActivityDetailView muscleGroup=\{activeActivityMuscle\} onBack=\{\(\) => setActiveActivityMuscleId\(null\)\} theme=\{resolvedTheme\} styles=\{styles\} \/>/)
   assert.match(analyticsSource, /<ActivityOverview rows=\{activityMuscleGroups\} onSelectMuscle=\{\(row\) => setActiveActivityMuscleId\(row.id\)\} styles=\{styles\} \/>/)
   assert.match(analyticsSource, /<HealthMetricCard key=\{metric.id\} metric=\{metric\} theme=\{resolvedTheme\} styles=\{styles\} \/>/)
-  assert.match(analyticsSource, /<StrengthMetricsCard cards=\{visibleStrengthCards\} theme=\{resolvedTheme\} styles=\{styles\} metricLabel=\{model\.oneRepMaxLabel\} onOpenFilter=\{handleOpenStrengthExerciseFilter\} onOpenExerciseDetail=\{onOpenExerciseDetail\} \/>/)
+  assert.match(analyticsSource, /<StrengthMetricsCard cards=\{visibleStrengthCards\} theme=\{resolvedTheme\} styles=\{styles\} metricLabel=\{activeMetricLabel\} filterLabel=\{activeProgressOption\} sourceSurface=\{activeMetricSourceSurface\} onOpenFilter=\{handleOpenStrengthExerciseFilter\} onOpenExerciseDetail=\{onOpenExerciseDetail\} \/>/)
   assert.match(analyticsSource, /HealthMetricCard/)
   assert.match(analyticsSource, /RecoveryFigure/)
   assert.match(analyticsSource, /RecoveryCard/)
@@ -316,26 +317,27 @@ test('mobile analytics strength cards render the 1RM label, filter icon, exercis
   assert.match(analyticsSource, /progressStrengthCardHeader/)
   assert.match(analyticsSource, /progressStrengthMetricLabel/)
   assert.match(analyticsSource, /progressStrengthValueText/)
-  assert.match(analyticsSource, /metricLabel=\{model\.oneRepMaxLabel\}/)
+  assert.match(analyticsSource, /const activeMetricLabel = useMemo\(/)
   assert.match(analyticsSource, /card\.exerciseName/)
   assert.match(analyticsSource, /card\.oneRepMaxValueLabel/)
   assert.match(analyticsSource, /card\.sourcePerformanceTagLabel/)
   assert.match(analyticsSource, /onPress=\{onOpenFilter\}/)
-  assert.match(analyticsSource, /onPress=\{\(\) => onOpenExerciseDetail\?\.\(\{[\s\S]*name: card\.exerciseName,[\s\S]*videoUrl: card\.videoUrl \|\| null,[\s\S]*sourceSurface: 'metrics-strength'/)
+  assert.match(analyticsSource, /onPress=\{\(\) => onOpenExerciseDetail\?\.\(\{[\s\S]*name: card\.exerciseName,[\s\S]*videoUrl: card\.videoUrl \|\| null,[\s\S]*sourceSurface,/)
   assert.doesNotMatch(analyticsSource, /LineChart/)
   assert.doesNotMatch(analyticsSource, /TinyTrendChart/)
 
-  assert.match(progressSource, /buildAnalyticsStrengthCards\(completedSessions\)/)
-  assert.match(progressSource, /sourcePerformanceTagLabel: `\$\{formatStrengthValue\(card\.strongestLoad, card\.loadUnit\)\} x \$\{card\.strongestReps\}`/)
+  assert.match(progressSource, /const progressMetricCardsByOptionId = buildAnalyticsMetricCardsByOptionId\(completedSessions\)/)
+  assert.match(progressSource, /strengthCards: progressMetricCardsByOptionId\.strength/)
+  assert.match(progressSource, /sourcePerformanceTagLabel: `\$\{formatStrengthValue\(load, loadUnit\)\} x \$\{reps\}`/)
 })
 
 test('mobile analytics strength list uses one shared outer container header and repeated inner rows', () => {
   const analyticsSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/analytics-view.js'), 'utf8')
 
-  assert.match(analyticsSource, /function StrengthMetricRow\({ card, styles, onOpenExerciseDetail }\)/)
-  assert.match(analyticsSource, /function StrengthMetricsCard\({ cards, theme, styles, metricLabel, onOpenFilter, onOpenExerciseDetail }\)/)
-  assert.match(analyticsSource, /metricLabel=\{model\.oneRepMaxLabel\}/)
-  assert.match(analyticsSource, /<StrengthMetricRow key=\{card.id\} card=\{card\} styles=\{styles\} onOpenExerciseDetail=\{onOpenExerciseDetail\} \/>/)
+  assert.match(analyticsSource, /function StrengthMetricRow\({ card, styles, sourceSurface = 'metrics-strength', onOpenExerciseDetail }\)/)
+  assert.match(analyticsSource, /function StrengthMetricsCard\({ cards, theme, styles, metricLabel, filterLabel, sourceSurface, onOpenFilter, onOpenExerciseDetail }\)/)
+  assert.match(analyticsSource, /metricLabel=\{activeMetricLabel\}/)
+  assert.match(analyticsSource, /<StrengthMetricRow key=\{card.id\} card=\{card\} styles=\{styles\} sourceSurface=\{sourceSurface\} onOpenExerciseDetail=\{onOpenExerciseDetail\} \/>/)
   assert.doesNotMatch(analyticsSource, /card\.metricLabel/)
   assert.doesNotMatch(analyticsSource, /<StrengthMetricCard key=\{card.id\} card=\{card\} theme=\{resolvedTheme\} styles=\{styles\} \/>/)
 })
@@ -400,9 +402,9 @@ test('mobile analytics strength filter keeps draft and applied selection truth i
 test('mobile analytics strength filter keeps the selected preview chips tied to the current draft ids and derives visible cards separately at apply time', () => {
   const analyticsSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/analytics-view.js'), 'utf8')
 
-  assert.match(analyticsSource, /const strengthExerciseOptions = useMemo\(\(\) => buildStrengthExerciseOptions\(\{[\s\S]*strengthExerciseLibraryItems: strengthExerciseLibraryState\.items,[\s\S]*strengthCards: model\.strengthCards,[\s\S]*\}\), \[model\.strengthCards, strengthExerciseLibraryState\.items\]\)/)
+  assert.match(analyticsSource, /const strengthExerciseOptions = useMemo\(\(\) => buildStrengthExerciseOptions\(\{[\s\S]*strengthExerciseLibraryItems: strengthExerciseLibraryState\.items,[\s\S]*strengthCards: activeMetricCards,[\s\S]*\}\), \[activeMetricCards, strengthExerciseLibraryState\.items\]\)/)
   assert.match(analyticsSource, /const selectedStrengthExerciseOptions = useMemo\(\(\) => draftStrengthExerciseIds[\s\S]*resolveStrengthExerciseOption\(exerciseId\)[\s\S]*filter\(Boolean\)/)
-  assert.match(analyticsSource, /const visibleStrengthCards = useMemo\(\(\) => buildVisibleStrengthCards\(\{[\s\S]*appliedStrengthExerciseIds,[\s\S]*strengthExerciseOptions,[\s\S]*strengthCards: model\.strengthCards,[\s\S]*appliedStrengthExercises,[\s\S]*\}\), \[appliedStrengthExerciseIds, appliedStrengthExercises, model\.strengthCards, strengthExerciseOptions\]\)/)
+  assert.match(analyticsSource, /const visibleStrengthCards = useMemo\(\(\) => buildVisibleStrengthCards\(\{[\s\S]*appliedStrengthExerciseIds,[\s\S]*strengthExerciseOptions,[\s\S]*strengthCards: activeMetricCards,[\s\S]*appliedStrengthExercises,[\s\S]*emptyMetricMessage: activeMetricEmptyMessage,[\s\S]*emptyMetricLabel: activeMetricLabel,[\s\S]*\}\), \[activeMetricCards, activeMetricEmptyMessage, activeMetricLabel, appliedStrengthExerciseIds, appliedStrengthExercises, strengthExerciseOptions\]\)/)
 })
 
 test('mobile analytics strength Update Chart canonicalizes applied selections to metric ids so the main Strength rows still render on a fresh mount before the library reloads', () => {
@@ -474,6 +476,32 @@ test('mobile analytics strength cold reload can reconstruct selected non-metric 
   assert.deepEqual(visibleStrengthCards.map((card) => card.exerciseName), ['Back Squat', '1-Arm DB Row', '1-Leg Cable RDL'])
   assert.equal(visibleStrengthCards[1].oneRepMaxValueLabel, '--')
   assert.equal(visibleStrengthCards[2].sourcePerformanceTagLabel, 'No logged strength sets yet')
+})
+
+test('mobile analytics strength filter options include valid strength library exercises even when they have no result-backed metric card yet', () => {
+  const strengthCards = [
+    {
+      id: 'metric-front-squat',
+      exerciseId: 'metric-front-squat',
+      exerciseName: 'Front Squat',
+      oneRepMaxValueLabel: '113',
+      sourcePerformanceTagLabel: '100 x 4',
+      thumbnailUrl: null,
+    },
+  ]
+
+  const strengthExerciseOptions = buildStrengthExerciseOptions({
+    strengthExerciseLibraryItems: [
+      { id: 'library-front-squat', name: 'Front Squat', thumbnailUrl: null },
+      { id: 'library-trap-bar-deadlift', name: 'Trap Bar Deadlift', thumbnailUrl: null },
+      { id: 'library-barbell-bench-press', name: 'Barbell Bench Press', thumbnailUrl: null },
+    ],
+    strengthCards,
+  })
+
+  assert.deepEqual(strengthExerciseOptions.map((exercise) => exercise.name), ['Front Squat', 'Trap Bar Deadlift', 'Barbell Bench Press'])
+  assert.equal(strengthExerciseOptions[1].metricExerciseId, null)
+  assert.equal(strengthExerciseOptions[2].metricExerciseId, null)
 })
 
 test('mobile analytics strength Progress rows prefer the selected library exercise metadata when applied state is stored as metric ids', () => {
@@ -609,21 +637,29 @@ test('mobile analytics strength defaults come from the athlete\'s two most frequ
   const analyticsSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/analytics-view.js'), 'utf8')
   const progressSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/progress/index.js'), 'utf8')
 
+  assert.match(analyticsSource, /const defaultAppliedStrengthExerciseIdsKey = useMemo\(\(\) => defaultAppliedStrengthExerciseIds\.join\('\|'\), \[defaultAppliedStrengthExerciseIds\]\)/)
+  assert.match(analyticsSource, /const defaultDraftStrengthExerciseIdsKey = useMemo\(\(\) => defaultDraftStrengthExerciseIds\.join\('\|'\), \[defaultDraftStrengthExerciseIds\]\)/)
+  assert.match(analyticsSource, /const appliedStrengthExerciseIdsKey = useMemo\(\(\) => appliedStrengthExerciseIds\.join\('\|'\), \[appliedStrengthExerciseIds\]\)/)
   assert.match(analyticsSource, /let isActive = true[\s\S]*setIsStrengthSelectionHydrated\(false\)/)
   assert.match(analyticsSource, /const nextStorage = await resolveStrengthSelectionStorage\(\)/)
   assert.match(analyticsSource, /setResolvedStrengthSelectionStorage\(nextStorage\)/)
-  assert.match(analyticsSource, /const persistedSelectionState = await readStoredStrengthSelectionState\(\{[\s\S]*storage: nextStorage,[\s\S]*selectionKey: strengthSelectionPersistenceKey,[\s\S]*defaultStrengthExerciseIds: defaultAppliedStrengthExerciseIds,[\s\S]*\}\)/)
-  assert.match(analyticsSource, /setAppliedStrengthExerciseIds\(persistedSelectionState\.appliedStrengthExerciseIds\)/)
-  assert.match(analyticsSource, /setDraftStrengthExerciseIds\(reconcileStrengthExerciseSelectionIds\(persistedSelectionState\.appliedStrengthExerciseIds, \{[\s\S]*strengthExerciseOptionByMetricExerciseId[\s\S]*\}\)\)/)
-  assert.match(analyticsSource, /setHasAppliedCustomStrengthFilter\(persistedSelectionState\.hasAppliedCustomStrengthFilter\)/)
+  assert.match(analyticsSource, /const persistedSelectionState = await readStoredStrengthSelectionState\(\{[\s\S]*storage: nextStorage,[\s\S]*selectionKey: activeMetricSelectionStorageKey,[\s\S]*defaultStrengthExerciseIds: defaultAppliedStrengthExerciseIds,[\s\S]*\}\)/)
+  assert.match(analyticsSource, /setAppliedStrengthExerciseIds\(\(current\) => \{[\s\S]*areExerciseIdListsEqual\(current, persistedSelectionState\.appliedStrengthExerciseIds\)[\s\S]*\? current[\s\S]*: persistedSelectionState\.appliedStrengthExerciseIds[\s\S]*\}\)/)
+  assert.match(analyticsSource, /setAppliedStrengthExercises\(\(current\) => \{[\s\S]*const next = persistedSelectionState\.appliedStrengthExercises \|\| \[\][\s\S]*if \(current\.length !== next\.length\) return next[\s\S]*return current[\s\S]*\}\)/)
+  assert.match(analyticsSource, /setDraftStrengthExerciseIds\(\(current\) => \{[\s\S]*const next = reconcileStrengthExerciseSelectionIds\(persistedSelectionState\.appliedStrengthExerciseIds, \{[\s\S]*strengthExerciseOptionByMetricExerciseId[\s\S]*\}\)[\s\S]*return areExerciseIdListsEqual\(current, next\) \? current : next[\s\S]*\}\)/)
+  assert.match(analyticsSource, /setHasAppliedCustomStrengthFilter\(\(current\) => \([\s\S]*current === persistedSelectionState\.hasAppliedCustomStrengthFilter[\s\S]*\? current[\s\S]*: persistedSelectionState\.hasAppliedCustomStrengthFilter[\s\S]*\)\)/)
   assert.match(analyticsSource, /setIsStrengthSelectionHydrated\(true\)/)
   assert.match(analyticsSource, /const nextDefaultSelection = getDefaultSyncedStrengthSelection\(\{[\s\S]*hasAppliedCustomStrengthFilter,[\s\S]*defaultStrengthExerciseIds: defaultAppliedStrengthExerciseIds,[\s\S]*\}\)/)
+  assert.match(analyticsSource, /setAppliedStrengthExerciseIds\(\(current\) => \{[\s\S]*areExerciseIdListsEqual\(current, nextDefaultSelection\.appliedStrengthExerciseIds\)[\s\S]*\? current[\s\S]*: nextDefaultSelection\.appliedStrengthExerciseIds[\s\S]*\}\)/)
+  assert.match(analyticsSource, /setAppliedStrengthExercises\(\(current\) => \(current\.length \? \[\] : current\)\)/)
+  assert.match(analyticsSource, /setDraftStrengthExerciseIds\(\(current\) => \{[\s\S]*areExerciseIdListsEqual\(current, defaultDraftStrengthExerciseIds\)[\s\S]*\? current[\s\S]*: defaultDraftStrengthExerciseIds[\s\S]*\}\)/)
   assert.match(analyticsSource, /if \(!isStrengthSelectionHydrated \|\| !resolvedStrengthSelectionStorage\) return/)
-  assert.match(analyticsSource, /writeStoredStrengthSelectionState\(\{[\s\S]*storage: resolvedStrengthSelectionStorage,[\s\S]*selectionKey: strengthSelectionPersistenceKey,[\s\S]*appliedStrengthExerciseIds,[\s\S]*hasAppliedCustomStrengthFilter,[\s\S]*\}\)/)
+  assert.match(analyticsSource, /writeStoredStrengthSelectionState\(\{[\s\S]*storage: resolvedStrengthSelectionStorage,[\s\S]*selectionKey: activeMetricSelectionStorageKey,[\s\S]*appliedStrengthExerciseIds,[\s\S]*hasAppliedCustomStrengthFilter,[\s\S]*\}\)/)
   assert.match(analyticsSource, /setHasAppliedCustomStrengthFilter\(true\)/)
   assert.match(progressSource, /strengthSelectionPersistenceKey: buildStrengthSelectionPersistenceKey\(\{[\s\S]*sessions: completedSessions,[\s\S]*strengthSelectionContextId,[\s\S]*\}\)/)
-  assert.match(progressSource, /defaultStrengthExerciseIds: buildDefaultStrengthExerciseIds\(completedSessions\)/)
-  assert.match(progressSource, /function buildDefaultStrengthExerciseIds\(sessions\) \{[\s\S]*exerciseCountById[\s\S]*sort\([\s\S]*right\.count - left\.count[\s\S]*slice\(0, 2\)[\s\S]*map\(\(entry\) => entry\.exerciseId\)/)
+  assert.match(progressSource, /const defaultMetricExerciseIdsByOptionId = buildDefaultMetricExerciseIdsByOptionId\(completedSessions\)/)
+  assert.match(progressSource, /defaultStrengthExerciseIds: defaultMetricExerciseIdsByOptionId\.strength/)
+  assert.match(progressSource, /function buildDefaultStrengthExerciseIds\(sessions\) \{[\s\S]*return buildDefaultMetricExerciseIdsByOptionId\(sessions\)\.strength/)
 })
 
 test('mobile analytics strength cold-reload migration backfills legacy saved selections by loading the exercise library even before the filter is reopened', () => {
@@ -633,13 +669,13 @@ test('mobile analytics strength cold-reload migration backfills legacy saved sel
   assert.match(analyticsSource, /const shouldLoadStrengthExerciseLibrary = isStrengthFilterViewOpen \|\| shouldHydratePersistedStrengthExercises/)
   assert.match(analyticsSource, /if \(!shouldLoadStrengthExerciseLibrary\) return/)
   assert.match(analyticsSource, /setAppliedStrengthExercises\(\(current\) => current\.length \? current : reconcileStrengthExerciseSelectionIds\(appliedStrengthExerciseIds, \{[\s\S]*\.map\(\(exerciseId\) => nextStrengthExerciseOptionById\.get\(exerciseId\)\)[\s\S]*\.filter\(Boolean\)\)/)
-  assert.match(analyticsSource, /\}, \[isStrengthFilterViewOpen, shouldHydratePersistedStrengthExercises\]\)/)
+  assert.match(analyticsSource, /\}, \[activeMetricCardsKey, activeProgressOptionId, appliedStrengthExerciseIdsKey, isStrengthFilterViewOpen, shouldHydratePersistedStrengthExercises\]\)/)
 })
 
 test('mobile analytics strength defaults only count metric-capable completed work for the initial top-2 selection', () => {
   const progressSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/progress/index.js'), 'utf8')
 
-  assert.match(progressSource, /function buildDefaultStrengthExerciseIds\(sessions\) \{[\s\S]*for \(const set of exercise\.sets \|\| \[\]\) \{[\s\S]*if \(!set\.isCompleted\) continue[\s\S]*const load = set\.actualLoad \?\? set\.prescribedLoad[\s\S]*const reps = set\.actualReps \?\? set\.prescribedReps[\s\S]*if \(load == null \|\| reps == null\) continue[\s\S]*hasMetricCompletedSet = true/)
+  assert.match(progressSource, /function buildDefaultMetricExerciseIdsByOptionId\(sessions\) \{[\s\S]*for \(const set of exercise\.sets \|\| \[\]\) \{[\s\S]*if \(!set\.isCompleted\) continue[\s\S]*const metricProfileId = resolveMetricProfileIdForAnalyticsSet\(exercise, set\)[\s\S]*if \(!metricProfileId\) continue[\s\S]*resolvedOptionId = getProgressMetricOptionId\(metricProfileId\)[\s\S]*hasMetricCompletedSet = true/)
 })
 
 test('mobile analytics strength filter reconciles selection ids into the visible exercise-id seam instead of raw-pruning applied state when the library ids differ', () => {
@@ -648,8 +684,8 @@ test('mobile analytics strength filter reconciles selection ids into the visible
 
   assert.match(strengthStateSource, /export function reconcileStrengthExerciseSelectionIds\(exerciseIds, \{[\s\S]*strengthExerciseOptionById[\s\S]*metricCardByLibraryId[\s\S]*metricCardByExerciseName[\s\S]*strengthExerciseOptionByName/)
   assert.match(analyticsSource, /const defaultAppliedStrengthExerciseIds = useMemo\(\(\) => reconcileAppliedStrengthExerciseSelectionIds\(getInitialStrengthSelectionIds\(/)
-  assert.match(analyticsSource, /setAppliedStrengthExerciseIds\(\(current\) => reconcileAppliedStrengthExerciseSelectionIds\(current, \{[\s\S]*strengthExerciseOptionByMetricExerciseId[\s\S]*\}\)\)/)
-  assert.match(analyticsSource, /setDraftStrengthExerciseIds\(\(current\) => reconcileStrengthExerciseSelectionIds\(current, \{[\s\S]*strengthExerciseOptionByMetricExerciseId[\s\S]*\}\)\)/)
+  assert.match(analyticsSource, /setAppliedStrengthExerciseIds\(\(current\) => \{[\s\S]*const next = reconcileAppliedStrengthExerciseSelectionIds\(current, \{[\s\S]*strengthExerciseOptionByMetricExerciseId[\s\S]*\}\)[\s\S]*return areExerciseIdListsEqual\(current, next\) \? current : next[\s\S]*\}\)/)
+  assert.match(analyticsSource, /setDraftStrengthExerciseIds\(\(current\) => \{[\s\S]*const next = reconcileStrengthExerciseSelectionIds\(current, \{[\s\S]*strengthExerciseOptionByMetricExerciseId[\s\S]*\}\)[\s\S]*return areExerciseIdListsEqual\(current, next\) \? current : next[\s\S]*\}\)/)
 })
 
 test('mobile analytics strength rendering keeps selected non-metric exercises visible with placeholder rows, while back-close keeps the last applied state intact', () => {
@@ -659,8 +695,130 @@ test('mobile analytics strength rendering keeps selected non-metric exercises vi
   assert.match(analyticsSource, /import \{ buildStrengthExerciseOptions, buildVisibleStrengthCards, normalizeStrengthExerciseName, getInitialStrengthSelectionIds, getInitialStrengthSelectionState, copyAppliedToDraft, toggleStrengthExerciseDraft, applyStrengthExerciseDraft, getDefaultSyncedStrengthSelection, reconcileStrengthExerciseSelectionIds, reconcileAppliedStrengthExerciseSelectionIds, resolveStrengthSelectionStorage, readStoredStrengthSelectionState, writeStoredStrengthSelectionState \} from '\.\/analytics-strength-state\.js'/)
   assert.match(analyticsSource, /const visibleStrengthCards = useMemo\(\(\) => buildVisibleStrengthCards\(/)
   assert.doesNotMatch(analyticsSource, /function createEmptyStrengthCard\(/)
-  assert.match(strengthStateSource, /export function buildVisibleStrengthCards\([\s\S]*findMetricCardForExerciseOption[\s\S]*if \(!resolvedMetricCard\) \{[\s\S]*oneRepMaxValueLabel: '--'[\s\S]*sourcePerformanceTagLabel: 'No logged strength sets yet'/)
+  assert.match(strengthStateSource, /export function buildVisibleStrengthCards\([\s\S]*emptyMetricMessage = 'No logged strength sets yet'[\s\S]*emptyMetricLabel = '1RM'[\s\S]*findMetricCardForExerciseOption[\s\S]*if \(!resolvedMetricCard\) \{[\s\S]*oneRepMaxValueLabel: '--'[\s\S]*sourcePerformanceTagLabel: emptyMetricMessage[\s\S]*metricLabel: emptyMetricLabel/)
   assert.match(analyticsSource, /function handleCloseStrengthExerciseFilter\(\) \{[\s\S]*setDraftStrengthExerciseIds\(reconcileStrengthExerciseSelectionIds\(appliedStrengthExerciseIds, \{[\s\S]*strengthExerciseOptionByMetricExerciseId[\s\S]*\}\)\)[\s\S]*setStrengthExerciseSearchQuery\(''\)[\s\S]*setIsStrengthFilterViewOpen\(false\)[\s\S]*\}/)
+})
+
+test('mobile analytics placeholder metric rows preserve classification metadata for exercise-detail handoff', () => {
+  const visibleCards = buildVisibleStrengthCards({
+    appliedStrengthExerciseIds: ['exercise-cone-drill'],
+    strengthExerciseOptions: [
+      {
+        id: 'exercise-cone-drill',
+        name: 'Cone Drill Alpha',
+        metricProfileId: 'speed_time',
+        stimulusType: 'speed',
+        movementPattern: 'agility',
+        videoUrl: 'https://cdn.example.com/cone-drill.mp4',
+        thumbnailUrl: 'https://cdn.example.com/cone-drill.png',
+      },
+    ],
+    strengthCards: [],
+    emptyMetricMessage: 'No logged speed sets yet',
+    emptyMetricLabel: 'TIME',
+  })
+
+  assert.equal(visibleCards.length, 1)
+  assert.equal(visibleCards[0].metricProfileId, 'speed_time')
+  assert.equal(visibleCards[0].stimulusType, 'speed')
+  assert.equal(visibleCards[0].movementPattern, 'agility')
+  assert.equal(visibleCards[0].videoUrl, 'https://cdn.example.com/cone-drill.mp4')
+})
+
+test('mobile analytics metric exercise filter is constrained to the active Progress category before building picker options', () => {
+  const analyticsSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/analytics-view.js'), 'utf8')
+
+  assert.match(analyticsSource, /resolveMetricProfileIdFromExercise/)
+  assert.match(analyticsSource, /function getProgressOptionIdForExercise\(exercise\)/)
+  assert.match(analyticsSource, /function filterExerciseLibraryItemsForProgressOption\(exercises = \[\], optionId\)/)
+  assert.match(analyticsSource, /const filteredLibraryItems = filterExerciseLibraryItemsForProgressOption\(items, activeProgressOptionId\)/)
+  assert.match(analyticsSource, /strengthExerciseLibraryItems: filteredLibraryItems/)
+})
+
+test('mobile analytics Speed cards compare mixed-distance results by pace instead of raw duration', () => {
+  const sessions = [
+    {
+      id: 'session-sprint-1',
+      status: 'completed',
+      completedAt: '2026-05-01T20:00:00.000Z',
+      exercises: [
+        {
+          id: 'session-exercise-sprint-1',
+          exerciseId: 'exercise-sprint',
+          nameSnapshot: 'Sprint [1/2 Kneel Start]',
+          sets: [
+            { id: 'sprint-set-1', isCompleted: true, actualDistance: 10, actualDistanceUnit: 'm', actualDurationSeconds: 2 },
+            { id: 'sprint-set-2', isCompleted: true, actualDistance: 30, actualDistanceUnit: 'm', actualDurationSeconds: 4 },
+          ],
+        },
+      ],
+    },
+  ]
+
+  const model = getAnalyticsViewModel({
+    sessions,
+    strengthSelectionContextId: 'coach-athlete-test',
+  })
+
+  assert.equal(model.progressMetricCardsByOptionId.speed.length, 1)
+  assert.deepEqual(model.progressMetricCardsByOptionId.speed[0], {
+    id: 'speed:exercise-sprint',
+    exerciseId: 'exercise-sprint',
+    exerciseName: 'Sprint [1/2 Kneel Start]',
+    metricProfileId: 'speed_time',
+    metricLabel: 'TIME',
+    stimulusType: null,
+    movementPattern: null,
+    videoUrl: null,
+    thumbnailUrl: null,
+    oneRepMaxValueLabel: '4 s',
+    sourcePerformanceTagLabel: '30 m',
+  })
+})
+
+test('mobile analytics Speed cards normalize mixed distance units before comparing pace', () => {
+  const sessions = [
+    {
+      id: 'session-sprint-unit-1',
+      status: 'completed',
+      completedAt: '2026-05-02T20:00:00.000Z',
+      exercises: [
+        {
+          id: 'session-exercise-sprint-unit-1',
+          exerciseId: 'exercise-sprint-unit',
+          nameSnapshot: 'Sprint [2-Point Start]',
+          stimulusType: 'speed',
+          movementPattern: 'sprint',
+          videoUrl: 'https://cdn.example.com/sprint.mp4',
+          thumbnailUrl: 'https://cdn.example.com/sprint.png',
+          sets: [
+            { id: 'sprint-unit-set-1', isCompleted: true, actualDistance: 100, actualDistanceUnit: 'm', actualDurationSeconds: 20 },
+            { id: 'sprint-unit-set-2', isCompleted: true, actualDistance: 0.1, actualDistanceUnit: 'km', actualDurationSeconds: 19 },
+          ],
+        },
+      ],
+    },
+  ]
+
+  const model = getAnalyticsViewModel({
+    sessions,
+    strengthSelectionContextId: 'coach-athlete-test',
+  })
+
+  assert.equal(model.progressMetricCardsByOptionId.speed.length, 1)
+  assert.deepEqual(model.progressMetricCardsByOptionId.speed[0], {
+    id: 'speed:exercise-sprint-unit',
+    exerciseId: 'exercise-sprint-unit',
+    exerciseName: 'Sprint [2-Point Start]',
+    metricProfileId: 'speed_time',
+    metricLabel: 'TIME',
+    stimulusType: 'speed',
+    movementPattern: 'sprint',
+    videoUrl: 'https://cdn.example.com/sprint.mp4',
+    thumbnailUrl: 'https://cdn.example.com/sprint.png',
+    oneRepMaxValueLabel: '19 s',
+    sourcePerformanceTagLabel: '0.1 km',
+  })
 })
 
 test('mobile analytics view includes the requested dropdown labels for Progress and Training Load', () => {
@@ -670,8 +828,13 @@ test('mobile analytics view includes the requested dropdown labels for Progress 
   assert.match(progressSource, /progressOptions: \[/)
   assert.match(progressSource, /id: 'strength'/)
   assert.match(progressSource, /label: 'Strength'/)
+  assert.match(progressSource, /id: 'speed'/)
+  assert.match(progressSource, /label: 'Speed'/)
   assert.match(progressSource, /id: 'consistency'/)
   assert.match(progressSource, /label: 'Consistency'/)
+  assert.doesNotMatch(progressSource, /label: 'Loaded Carry'/)
+  assert.doesNotMatch(progressSource, /label: 'Bodyweight'/)
+  assert.doesNotMatch(progressSource, /label: 'Holds'/)
   assert.match(progressSource, /activeProgressOptionId: 'strength'/)
   assert.match(progressSource, /trainingLoadOptions: \[/)
   assert.match(progressSource, /id: 'recovery'/)
@@ -694,18 +857,22 @@ test('mobile analytics recovery bars do not use a generic `.value` member in inl
   assert.match(progressSource, /barWidth:/)
 })
 
-test('mobile analytics progress dropdown opens a real bottom sheet with Strength and Consistency options', () => {
+test('mobile analytics progress dropdown opens a real bottom sheet with Strength, Speed, and Consistency options', () => {
   const analyticsSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/analytics-view.js'), 'utf8')
   const progressSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/progress/index.js'), 'utf8')
 
   assert.match(progressSource, /label: 'Strength'/)
+  assert.match(progressSource, /label: 'Speed'/)
   assert.match(progressSource, /label: 'Consistency'/)
+  assert.match(analyticsSource, /sheetLabel: option\.label/)
+  assert.doesNotMatch(analyticsSource, /sheetLabel: option\.id === 'consistency' \? 'Consistency' : 'Strength'/)
   assert.match(analyticsSource, /useState\(/)
   assert.match(analyticsSource, /function AnalyticsOptionSheet\(/)
   assert.match(analyticsSource, /<Modal transparent animationType="fade" visible onRequestClose=\{onClose\}>/)
   assert.match(analyticsSource, /optionSheetWrap/)
   assert.match(analyticsSource, /optionSheetBackdrop/)
   assert.match(analyticsSource, /Strength/)
+  assert.match(analyticsSource, /activeProgressOptionId === 'consistency'/)
   assert.match(analyticsSource, /Consistency/)
   assert.match(analyticsSource, /Check/)
   assert.match(analyticsSource, /activeSheet === 'progress'/)

@@ -293,6 +293,8 @@ function buildExerciseAnalyticsMetadataLookup({
 
     metadataByExerciseId.set(exerciseId, {
       bodyRegion: detailRow?.body_region ?? null,
+      stimulusType: detailRow?.stimulus_type ?? null,
+      movementPattern: detailRow?.movement_pattern ?? null,
       muscleTargets,
     });
   }
@@ -318,6 +320,8 @@ function mergeExerciseAnalyticsMetadata(exercises = [], { sourceExercises = [], 
       axialFatigueMultiplier: exercise?.axialFatigueMultiplier ?? sourceExercise?.axialFatigueMultiplier ?? null,
       skillFatigueMultiplier: exercise?.skillFatigueMultiplier ?? sourceExercise?.skillFatigueMultiplier ?? null,
       bodyRegion: exercise?.bodyRegion ?? sourceExercise?.bodyRegion ?? liveMetadata?.bodyRegion ?? null,
+      stimulusType: exercise?.stimulusType ?? sourceExercise?.stimulusType ?? liveMetadata?.stimulusType ?? null,
+      movementPattern: exercise?.movementPattern ?? sourceExercise?.movementPattern ?? liveMetadata?.movementPattern ?? null,
       muscleTargets: exerciseMuscleTargets.length
         ? exerciseMuscleTargets.map((target) => ({ ...target }))
         : sourceMuscleTargets.length
@@ -607,7 +611,7 @@ export function createSupabaseRestSessionDb(config) {
           table: 'exercises',
           query: {
             id: inFilter,
-            select: 'id,body_region',
+            select: 'id,body_region,stimulus_type,movement_pattern',
           },
         }),
         request({
@@ -1084,7 +1088,7 @@ export function createSessionDbAdapter(db) {
     try {
       const [exerciseDetailRows, muscleMapRows, subMuscleMapRows] = await Promise.all([
         query(
-          `select id, body_region
+          `select id, body_region, stimulus_type, movement_pattern
            from exercises
            where id = any($1)`,
           [normalizedExerciseIds]
