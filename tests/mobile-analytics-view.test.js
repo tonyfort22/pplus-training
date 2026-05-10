@@ -897,6 +897,47 @@ test('mobile analytics training load dropdown opens a real bottom sheet with Rec
   assert.match(analyticsSource, /setActiveSheet\('training-load'\)/)
 })
 
+test('mobile analytics Consistency chart builds real rolling week labels and counts from completed sessions', () => {
+  const sessions = [
+    {
+      id: 'consistency-session-1',
+      status: 'completed',
+      completedAt: '2026-04-21T20:00:00.000Z',
+      exercises: [],
+    },
+    {
+      id: 'consistency-session-2',
+      status: 'completed',
+      completedAt: '2026-04-28T20:00:00.000Z',
+      exercises: [],
+    },
+    {
+      id: 'consistency-session-3',
+      status: 'completed',
+      completedAt: '2026-05-01T20:00:00.000Z',
+      exercises: [],
+    },
+    {
+      id: 'consistency-session-4',
+      status: 'completed',
+      completedAt: '2026-05-05T20:00:00.000Z',
+      exercises: [],
+    },
+    {
+      id: 'consistency-session-5',
+      status: 'completed',
+      completedAt: '2026-05-12T20:00:00.000Z',
+      exercises: [],
+    },
+  ]
+
+  const model = getAnalyticsViewModel({ sessions })
+
+  assert.equal(model.consistencyChart.title, 'Workouts per week')
+  assert.deepEqual(model.consistencyChart.bars.map((bar) => bar.value), [0, 1, 1, 2, 1])
+  assert.deepEqual(model.consistencyChart.xAxisLabels, ['Apr 14', 'Apr 21', 'Apr 28', 'May 5', 'May 12'])
+})
+
 test('mobile analytics renders a dedicated Consistency chart state with Gifted Charts when Progress is switched', () => {
   const analyticsSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/analytics-view.js'), 'utf8')
   const packageSource = readFileSync(resolve(process.cwd(), 'apps/mobile/package.json'), 'utf8')
@@ -909,11 +950,10 @@ test('mobile analytics renders a dedicated Consistency chart state with Gifted C
   assert.match(analyticsSource, /activeProgressOptionId === 'consistency'/)
   assert.match(analyticsSource, /BarChart/)
   assert.match(analyticsSource, /WORKOUTS PER WEEK/)
-  assert.match(progressSource, /Mar 8/)
-  assert.match(progressSource, /Apr 19/)
   assert.match(analyticsSource, /consistencyGridline/)
   assert.match(analyticsSource, /consistencyXAxisLabels/)
   assert.match(progressSource, /title: 'Workouts per week'/)
+  assert.doesNotMatch(progressSource, /xAxisLabels: \['Mar 8', 'Mar 22', 'Apr 5', 'Apr 19'\]/)
   assert.doesNotMatch(analyticsSource, /from 'victory-native'/)
   assert.doesNotMatch(analyticsSource, /model\.consistencyLabel/)
 })
