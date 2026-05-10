@@ -18,27 +18,32 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_CI_ENABLED: ${{ vars.SONAR_CI_ENABLED }}
     steps:
+      - name: Skip SonarQube Cloud scan when CI sonar is disabled or token is not configured
+        if: env.SONAR_CI_ENABLED != 'true' || env.SONAR_TOKEN == ''
+        run: echo "Skipping SonarQube Cloud scan. Use repository variable SONAR_CI_ENABLED=true and disable SonarCloud Automatic Analysis before re-enabling CI sonar."
+
       - uses: actions/checkout@v6
+        if: env.SONAR_CI_ENABLED == 'true' && env.SONAR_TOKEN != ''
         with:
           fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
+        if: env.SONAR_CI_ENABLED == 'true' && env.SONAR_TOKEN != ''
 
       - uses: actions/setup-node@v4
+        if: env.SONAR_CI_ENABLED == 'true' && env.SONAR_TOKEN != ''
         with:
           node-version: 22
           cache: pnpm
 
       - name: Install dependencies
+        if: env.SONAR_CI_ENABLED == 'true' && env.SONAR_TOKEN != ''
         run: pnpm install --frozen-lockfile
 
-      - name: Skip SonarQube Cloud scan when token is not configured
-        if: env.SONAR_TOKEN == ''
-        run: echo "SONAR_TOKEN not configured. Skipping SonarQube Cloud scan."
-
       - name: Run SonarQube Cloud scan
-        if: env.SONAR_TOKEN != ''
+        if: env.SONAR_CI_ENABLED == 'true' && env.SONAR_TOKEN != ''
         uses: SonarSource/sonarqube-scan-action@v6
         env:
           SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
