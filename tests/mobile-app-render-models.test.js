@@ -115,6 +115,121 @@ test('getAnalyticsViewModel derives coach progress analytics from the selected a
   assert.notEqual(loadedAnalyticsModel.consistencyChart.bars.map((bar) => bar.value).join(','), emptyAnalyticsModel.consistencyChart.bars.map((bar) => bar.value).join(','))
 })
 
+test('getAnalyticsViewModel defaults muscles and submuscles with no recorded fatigue to 100 percent recovery instead of 0 percent', () => {
+  const completedDeadliftSession = {
+    status: 'completed',
+    exercises: [
+      {
+        nameSnapshot: 'Romanian Deadlift',
+        sets: [
+          { isCompleted: true, actualLoad: 185, actualReps: 6 },
+          { isCompleted: true, actualLoad: 185, actualReps: 6 },
+        ],
+      },
+    ],
+  }
+
+  const analyticsViewModel = getAnalyticsViewModel({
+    sessions: [completedDeadliftSession],
+  })
+
+  const legsGroup = analyticsViewModel.recoveryMuscleGroups.find((row) => row.id === 'legs')
+  const armsGroup = analyticsViewModel.recoveryMuscleGroups.find((row) => row.id === 'arms')
+  const quadsSubMuscle = legsGroup?.subMuscles.find((row) => row.id === 'quads')
+  const hamstringsSubMuscle = legsGroup?.subMuscles.find((row) => row.id === 'hamstrings')
+  const calvesSubMuscle = legsGroup?.subMuscles.find((row) => row.id === 'calves')
+
+  assert.equal(armsGroup?.percentageLabel, '100%')
+  assert.equal(armsGroup?.barWidth, '100%')
+  assert.equal(legsGroup?.percentageLabel, '67%')
+  assert.equal(legsGroup?.barWidth, '67%')
+  assert.equal(quadsSubMuscle?.percentageLabel, '100%')
+  assert.equal(quadsSubMuscle?.barWidth, '100%')
+  assert.equal(calvesSubMuscle?.percentageLabel, '100%')
+  assert.equal(calvesSubMuscle?.barWidth, '100%')
+  assert.equal(hamstringsSubMuscle?.percentageLabel, '0%')
+})
+
+test('getAnalyticsViewModel does not classify hurdle exercises as hamstrings just because hurdle contains the letters rdl', () => {
+  const completedHurdleSession = {
+    status: 'completed',
+    exercises: [
+      {
+        nameSnapshot: 'Hurdle Walk Backward',
+        sets: [
+          { isCompleted: true, actualLoad: 10, actualReps: 1 },
+        ],
+      },
+    ],
+  }
+
+  const analyticsViewModel = getAnalyticsViewModel({
+    sessions: [completedHurdleSession],
+  })
+
+  const legsGroup = analyticsViewModel.recoveryMuscleGroups.find((row) => row.id === 'legs')
+  const hamstringsSubMuscle = legsGroup?.subMuscles.find((row) => row.id === 'hamstrings')
+
+  assert.equal(legsGroup?.percentageLabel, '100%')
+  assert.equal(legsGroup?.barWidth, '100%')
+  assert.equal(hamstringsSubMuscle?.percentageLabel, '100%')
+  assert.equal(hamstringsSubMuscle?.barWidth, '100%')
+})
+
+test('getAnalyticsViewModel does not classify squat jump variations as full quad recovery fatigue', () => {
+  const completedSquatJumpSession = {
+    status: 'completed',
+    exercises: [
+      {
+        nameSnapshot: 'DB Squat Jump (Pause at Bottom)',
+        sets: [
+          { isCompleted: true, actualLoad: 60, actualReps: 5 },
+          { isCompleted: true, actualLoad: 60, actualReps: 5 },
+        ],
+      },
+    ],
+  }
+
+  const analyticsViewModel = getAnalyticsViewModel({
+    sessions: [completedSquatJumpSession],
+  })
+
+  const legsGroup = analyticsViewModel.recoveryMuscleGroups.find((row) => row.id === 'legs')
+  const quadsSubMuscle = legsGroup?.subMuscles.find((row) => row.id === 'quads')
+
+  assert.equal(legsGroup?.percentageLabel, '100%')
+  assert.equal(legsGroup?.barWidth, '100%')
+  assert.equal(quadsSubMuscle?.percentageLabel, '100%')
+  assert.equal(quadsSubMuscle?.barWidth, '100%')
+})
+
+test('getAnalyticsViewModel does not classify trap bar deadlift as full hamstring recovery fatigue', () => {
+  const completedTrapBarSession = {
+    status: 'completed',
+    exercises: [
+      {
+        nameSnapshot: 'Trap Bar Deadlift',
+        sets: [
+          { isCompleted: true, actualLoad: 100, actualReps: 4 },
+          { isCompleted: true, actualLoad: 100, actualReps: 4 },
+        ],
+      },
+    ],
+  }
+
+  const analyticsViewModel = getAnalyticsViewModel({
+    sessions: [completedTrapBarSession],
+  })
+
+  const legsGroup = analyticsViewModel.recoveryMuscleGroups.find((row) => row.id === 'legs')
+  const hamstringsSubMuscle = legsGroup?.subMuscles.find((row) => row.id === 'hamstrings')
+
+  assert.equal(legsGroup?.percentageLabel, '100%')
+  assert.equal(legsGroup?.barWidth, '100%')
+  assert.equal(hamstringsSubMuscle?.percentageLabel, '100%')
+  assert.equal(hamstringsSubMuscle?.barWidth, '100%')
+})
+
 test('getAnalyticsViewModel keeps the Strength persistence key stable for one athlete even when completed session ids change', () => {
   const firstCompletedSession = {
     id: 'session-1',
