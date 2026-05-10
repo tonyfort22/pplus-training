@@ -315,7 +315,7 @@ export function getAnalyticsViewModel({ sessions = [], progressModel = null, str
     consistencyChart: buildConsistencyChart(completedSessions),
     recoveryMuscleGroups: buildAnalyticsRecoveryMuscleGroups(completedSessions),
     recoveryRows: buildAnalyticsRecoveryRows(completedSessions),
-    activityMuscleGroups: buildAnalyticsActivityMuscleGroups(completedSessions),
+    activityMuscleGroups: buildAnalyticsActivityMuscleGroups(sessions),
   }
 }
 
@@ -741,36 +741,97 @@ function buildAnalyticsRecoveryRows(sessions) {
 }
 
 function buildAnalyticsActivityMuscleGroups(sessions) {
-  const totals = buildAnalyticsMuscleTotals(sessions)
+  const activitySessions = sessions.filter((session) => session.status === 'completed' || session.status === 'in_progress')
+  const totalsByMuscleId = buildAnalyticsActivitySetTotals(activitySessions)
   const baseRows = DEFAULT_ANALYTICS_VIEW_MODEL.activityMuscleGroups
 
   return baseRows.map((row) => {
-    if (row.id !== 'legs') {
-      return {
-        ...row,
-        setCountLabel: '0 sets',
-        subMuscles: row.subMuscles.map((subMuscle) => ({
-          ...subMuscle,
-          setCountLabel: '0 sets',
-        })),
-      }
-    }
+    const groupSetCount = row.subMuscles.reduce((sum, subMuscle) => sum + (totalsByMuscleId[subMuscle.id] || 0), 0)
 
     return {
       ...row,
-      setCountLabel: formatSetCountLabel(totals.totalSets),
+      setCountLabel: formatSetCountLabel(groupSetCount),
       subMuscles: row.subMuscles.map((subMuscle) => ({
         ...subMuscle,
-        setCountLabel: formatSetCountLabel(
-          subMuscle.id === 'quads'
-            ? totals.quadsSets
-            : subMuscle.id === 'hamstrings'
-              ? totals.hamstringsSets
-              : totals.calvesSets
-        ),
+        setCountLabel: formatSetCountLabel(totalsByMuscleId[subMuscle.id] || 0),
       })),
     }
   })
+}
+
+function buildAnalyticsActivitySetTotals(sessions) {
+  const totals = {
+    biceps: 0,
+    triceps: 0,
+    forearms: 0,
+    'front-delts': 0,
+    'side-delts': 0,
+    'rear-delts': 0,
+    'upper-chest': 0,
+    'mid-chest': 0,
+    'lower-chest': 0,
+    lats: 0,
+    traps: 0,
+    'lower-back': 0,
+    'upper-abs': 0,
+    'lower-abs': 0,
+    obliques: 0,
+    quads: 0,
+    hamstrings: 0,
+    calves: 0,
+  }
+
+  for (const session of sessions) {
+    for (const exercise of session.exercises || []) {
+      const name = (exercise.nameSnapshot || exercise.name || '').toLowerCase()
+      const completedSetCount = (exercise.sets || []).filter((set) => set.isCompleted).length
+      if (completedSetCount <= 0) continue
+      const matchedMuscleIds = getActivityTargetMuscleIdsForExerciseName(name)
+      for (const muscleId of matchedMuscleIds) {
+        totals[muscleId] = (totals[muscleId] || 0) + completedSetCount
+      }
+    }
+  }
+
+  return totals
+}
+
+function getActivityTargetMuscleIdsForExerciseName(name) {
+  const lowerName = String(name || '').toLowerCase()
+  const matchedMuscleIds = []
+  const add = (muscleId) => {
+    if (!matchedMuscleIds.includes(muscleId)) matchedMuscleIds.push(muscleId)
+  }
+
+  if (lowerName.includes('curl') && !lowerName.includes('leg curl') && !lowerName.includes('hamstring curl') && !lowerName.includes('wrist curl') && !lowerName.includes('forearm curl')) add('biceps')
+  if (lowerName.includes('tricep')) add('triceps')
+  if ((lowerName.includes('forearm') || lowerName.includes('wrist')) && !lowerName.includes('plank')) add('forearms')
+
+  if (lowerName.includes('shoulder press') || lowerName.includes('overhead press') || lowerName.includes('front raise')) add('front-delts')
+  if (lowerName.includes('lateral raise') || lowerName.includes('side raise')) add('side-delts')
+  if (lowerName.includes('rear delt') || lowerName.includes('reverse fly') || lowerName.includes('face pull')) add('rear-delts')
+
+  if (lowerName.includes('incline')) {
+    add('upper-chest')
+  } else if (lowerName.includes('decline')) {
+    add('lower-chest')
+  } else if (lowerName.includes('bench press') || lowerName.includes('push up') || lowerName.includes('chest fly') || lowerName.includes('pec fly')) {
+    add('mid-chest')
+  }
+
+  if (lowerName.includes('row') || lowerName.includes('pull up') || lowerName.includes('chin up') || lowerName.includes('lat pulldown')) add('lats')
+  if (lowerName.includes('trap') || lowerName.includes('shrug')) add('traps')
+  if (lowerName.includes('back extension') || lowerName.includes('superman')) add('lower-back')
+
+  if (lowerName.includes('plank') || lowerName.includes('crunch') || lowerName.includes('sit up') || lowerName.includes('dead bug')) add('upper-abs')
+  if (lowerName.includes('leg raise') || lowerName.includes('reverse crunch')) add('lower-abs')
+  if (lowerName.includes('oblique') || lowerName.includes('russian twist') || lowerName.includes('side plank')) add('obliques')
+
+  if (lowerName.includes('squat') && !lowerName.includes('jump')) add('quads')
+  if ((lowerName.includes('deadlift') && !lowerName.includes('trap bar')) || /(^|[^a-z])rdl([^a-z]|$)/.test(lowerName) || lowerName.includes('leg curl') || lowerName.includes('hamstring curl')) add('hamstrings')
+  if (lowerName.includes('calf')) add('calves')
+
+  return matchedMuscleIds
 }
 
 function buildAnalyticsMuscleTotals(sessions) {

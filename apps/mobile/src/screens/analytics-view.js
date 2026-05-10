@@ -4,7 +4,7 @@ import { Check, ChevronDown, ChevronLeft, Clock3, Heart, SlidersHorizontal, Wave
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { SvgXml } from 'react-native-svg'
-import { recoveryMuscleMapSvg, RECOVERY_GROUP_TO_SVG_IDS, getRecoveryColorForPercent, applyRecoveryColorsToSvg, applyFocusedRecoveryColorsToSvg } from '../assets/recovery-muscle-map.js'
+import { recoveryMuscleMapSvg, RECOVERY_GROUP_TO_SVG_IDS, getRecoveryColorForPercent, applyRecoveryColorsToSvg, applyFocusedRecoveryColorsToSvg, getActivityColorForSetCount, applyActivityColorsToSvg, applyFocusedActivityColorsToSvg } from '../assets/recovery-muscle-map.js'
 import { getAnalyticsViewModel } from '../progress/index.js'
 import { getAppTheme } from '../theme/app-theme.js'
 import { ExerciseLibraryView } from './exercise-library-view.js'
@@ -290,6 +290,10 @@ function ActivityOverview({ rows, onSelectMuscle, styles, svg }) {
 }
 
 function ActivityDetailView({ muscleGroup, onBack, theme, styles, svg }) {
+  const detailSubMuscles = muscleGroup.subMuscles || []
+  const primaryDetailMuscle = detailSubMuscles[0] || null
+  const secondaryDetailMuscles = detailSubMuscles.slice(1, 3)
+
   return (
     <View style={styles.trainingLoadContent}>
       <RecoveryFigure styles={styles} svg={svg} />
@@ -298,11 +302,13 @@ function ActivityDetailView({ muscleGroup, onBack, theme, styles, svg }) {
           <ActivityCard isBackCard onPress={onBack} styles={styles}>
             <RecoveryBackButton theme={theme} styles={styles} />
           </ActivityCard>
-          <ActivityCard row={muscleGroup.subMuscles[0]} isCompact styles={styles} />
+          {primaryDetailMuscle ? <ActivityCard row={primaryDetailMuscle} isCompact styles={styles} /> : <View style={styles.recoveryDetailCardSpacer} />}
         </View>
         <View style={styles.recoveryDetailBottomRow}>
-          <ActivityCard row={muscleGroup.subMuscles[1]} isCompact styles={styles} />
-          <ActivityCard row={muscleGroup.subMuscles[2]} isCompact styles={styles} />
+          {secondaryDetailMuscles.map((row) => (
+            <ActivityCard key={row.id} row={row} isCompact styles={styles} />
+          ))}
+          {secondaryDetailMuscles.length < 2 ? <View style={styles.recoveryDetailCardSpacer} /> : null}
         </View>
       </View>
     </View>
@@ -482,6 +488,32 @@ export function AnalyticsView({ model = getAnalyticsViewModel(), theme, onOpenEx
   }, [recoveryMuscleMapSvg, recoverySvgColorMap, focusedRecoverySvgIds])
   const activityMuscleGroups = model.activityMuscleGroups || []
   const activeActivityMuscle = activityMuscleGroups.find((row) => row.id === activeActivityMuscleId) || null
+  const activityMaxSetCount = useMemo(() => {
+    return activityMuscleGroups.reduce((maxCount, row) => {
+      const match = String(row.setCountLabel || '').match(/(\d+)/)
+      const nextCount = match ? Number(match[1]) : 0
+      return Math.max(maxCount, nextCount)
+    }, 0)
+  }, [activityMuscleGroups])
+  const activitySvgColorMap = useMemo(() => {
+    return activityMuscleGroups.reduce((accumulator, row) => {
+      const match = String(row.setCountLabel || '').match(/(\d+)/)
+      const setCount = match ? Number(match[1]) : 0
+      const color = getActivityColorForSetCount(setCount, activityMaxSetCount)
+      for (const svgId of RECOVERY_GROUP_TO_SVG_IDS[row.id] || []) {
+        accumulator[svgId] = color
+      }
+      return accumulator
+    }, {})
+  }, [activityMuscleGroups, activityMaxSetCount])
+  const focusedActivitySvgIds = useMemo(() => (
+    activeActivityMuscle ? RECOVERY_GROUP_TO_SVG_IDS[activeActivityMuscle.id] || [] : []
+  ), [activeActivityMuscle])
+  const activityFigureSvg = useMemo(() => {
+    return focusedActivitySvgIds.length > 0
+      ? applyFocusedActivityColorsToSvg(recoveryMuscleMapSvg, activitySvgColorMap, focusedActivitySvgIds)
+      : applyActivityColorsToSvg(recoveryMuscleMapSvg, activitySvgColorMap)
+  }, [activitySvgColorMap, focusedActivitySvgIds])
   const metricCardByLibraryId = useMemo(() => new Map(activeMetricCards.map((card) => [card.exerciseId || card.id, card])), [activeMetricCards])
   const metricCardByExerciseName = useMemo(() => new Map(activeMetricCards.map((card) => [normalizeStrengthExerciseName(card.exerciseName), card])), [activeMetricCards])
   const strengthExerciseOptions = useMemo(() => buildStrengthExerciseOptions({
@@ -794,9 +826,9 @@ export function AnalyticsView({ model = getAnalyticsViewModel(), theme, onOpenEx
             <RecoveryOverview rows={recoveryMuscleGroups} onSelectMuscle={(row) => setActiveRecoveryMuscleId(row.id)} styles={styles} svg={recoveryFigureSvg} />
           )
         ) : activeActivityMuscleId ? (
-          <ActivityDetailView muscleGroup={activeActivityMuscle} onBack={() => setActiveActivityMuscleId(null)} theme={resolvedTheme} styles={styles} svg={recoveryFigureSvg} />
+          <ActivityDetailView muscleGroup={activeActivityMuscle} onBack={() => setActiveActivityMuscleId(null)} theme={resolvedTheme} styles={styles} svg={activityFigureSvg} />
         ) : (
-          <ActivityOverview rows={activityMuscleGroups} onSelectMuscle={(row) => setActiveActivityMuscleId(row.id)} styles={styles} svg={recoveryFigureSvg} />
+          <ActivityOverview rows={activityMuscleGroups} onSelectMuscle={(row) => setActiveActivityMuscleId(row.id)} styles={styles} svg={activityFigureSvg} />
         )}
       </View>
 
