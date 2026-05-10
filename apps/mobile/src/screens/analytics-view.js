@@ -308,9 +308,11 @@ function HealthMetricCard({ metric, theme, styles }) {
 }
 
 function StrengthMetricRow({ card, styles, sourceSurface = 'metrics-strength', onOpenExerciseDetail }) {
+  const canOpenExerciseDetail = Boolean(card.exerciseId) && !String(card.exerciseId).startsWith('empty-') && typeof onOpenExerciseDetail === 'function'
+
   return (
     <Pressable
-      onPress={() => onOpenExerciseDetail?.({
+      onPress={canOpenExerciseDetail ? () => onOpenExerciseDetail?.({
         id: card.exerciseId || card.id,
         exerciseId: card.exerciseId || card.id,
         name: card.exerciseName,
@@ -320,7 +322,7 @@ function StrengthMetricRow({ card, styles, sourceSurface = 'metrics-strength', o
         stimulusType: card.stimulusType || null,
         movementPattern: card.movementPattern || null,
         sourceSurface,
-      })}
+      }) : undefined}
       style={styles.progressStrengthRow}
     >
       <Text style={styles.progressExerciseLabel}>{card.exerciseName}</Text>
@@ -335,7 +337,18 @@ function StrengthMetricRow({ card, styles, sourceSurface = 'metrics-strength', o
   )
 }
 
-function StrengthMetricsCard({ cards, theme, styles, metricLabel, filterLabel, sourceSurface, onOpenFilter, onOpenExerciseDetail }) {
+function StrengthMetricsCard({ cards, theme, styles, metricLabel, filterLabel, emptyMessage = 'No logged strength sets yet', sourceSurface, onOpenFilter, onOpenExerciseDetail }) {
+  const resolvedCards = cards.length === 0
+    ? [{
+        id: `empty-${filterLabel}`,
+        exerciseId: `empty-${filterLabel}`,
+        exerciseName: filterLabel,
+        oneRepMaxValueLabel: '--',
+        sourcePerformanceTagLabel: emptyMessage,
+        isMetricMissing: true,
+      }]
+    : cards
+
   return (
     <View style={styles.progressStrengthCard}>
       <View style={styles.progressStrengthCardHeader}>
@@ -346,7 +359,7 @@ function StrengthMetricsCard({ cards, theme, styles, metricLabel, filterLabel, s
       </View>
 
       <View style={styles.progressStrengthRows}>
-        {cards.map((card, index) => (
+        {resolvedCards.map((card, index) => (
           <View key={card.id} style={index > 0 ? styles.progressStrengthRowDivider : null}>
             <StrengthMetricRow key={card.id} card={card} styles={styles} sourceSurface={sourceSurface} onOpenExerciseDetail={onOpenExerciseDetail} />
           </View>
@@ -410,8 +423,8 @@ export function AnalyticsView({ model = getAnalyticsViewModel(), theme, onOpenEx
   const [isStrengthFilterViewOpen, setIsStrengthFilterViewOpen] = useState(false)
   const strengthSelectionPersistenceKey = model.strengthSelectionPersistenceKey || 'analytics-strength:default'
   const activeMetricCards = useMemo(() => model.progressMetricCardsByOptionId?.[activeProgressOptionId] || [], [activeProgressOptionId, model.progressMetricCardsByOptionId])
-  const activeMetricLabel = useMemo(() => activeMetricCards[0]?.metricLabel || (activeProgressOptionId === 'speed' ? 'TIME' : model.oneRepMaxLabel), [activeMetricCards, activeProgressOptionId, model.oneRepMaxLabel])
-  const activeMetricEmptyMessage = useMemo(() => activeProgressOptionId === 'speed' ? 'No logged speed sets yet' : 'No logged strength sets yet', [activeProgressOptionId])
+  const activeMetricLabel = useMemo(() => activeMetricCards[0]?.metricLabel || (activeProgressOptionId === 'speed' || activeProgressOptionId === 'loaded-carry' ? 'TIME' : model.oneRepMaxLabel), [activeMetricCards, activeProgressOptionId, model.oneRepMaxLabel])
+  const activeMetricEmptyMessage = useMemo(() => activeProgressOptionId === 'loaded-carry' ? 'No logged loaded carry sets yet' : activeProgressOptionId === 'speed' ? 'No logged speed sets yet' : 'No logged strength sets yet', [activeProgressOptionId])
   const activeMetricSourceSurface = useMemo(() => `metrics-${activeProgressOptionId}`, [activeProgressOptionId])
   const activeMetricSelectionStorageKey = useMemo(() => `${strengthSelectionPersistenceKey}:${activeProgressOptionId}`, [activeProgressOptionId, strengthSelectionPersistenceKey])
   const activeMetricCardsKey = useMemo(() => activeMetricCards.map((card) => card.exerciseId || card.id).join('|'), [activeMetricCards])
@@ -449,18 +462,22 @@ export function AnalyticsView({ model = getAnalyticsViewModel(), theme, onOpenEx
       .map((exercise) => [exercise.metricExerciseId, exercise])
   ), [strengthExerciseOptions])
   const strengthExerciseOptionByName = useMemo(() => new Map(strengthExerciseOptions.map((exercise) => [normalizeStrengthExerciseName(exercise.name), exercise])), [strengthExerciseOptions])
+  const defaultStrengthSelectionSeedIds = useMemo(() => {
+    if (activeDefaultMetricExerciseIds.length) return activeDefaultMetricExerciseIds
+    return strengthExerciseOptions.map((exercise) => exercise.metricExerciseId || exercise.id)
+  }, [activeDefaultMetricExerciseIds, strengthExerciseOptions])
   const defaultAppliedStrengthExerciseIds = useMemo(() => reconcileAppliedStrengthExerciseSelectionIds(getInitialStrengthSelectionIds({
-    defaultStrengthExerciseIds: activeDefaultMetricExerciseIds,
+    defaultStrengthExerciseIds: defaultStrengthSelectionSeedIds,
     strengthCards: activeMetricCards,
   }), {
     strengthExerciseOptionById,
     strengthExerciseOptionByMetricExerciseId,
     metricCardByLibraryId,
     metricCardByExerciseName,
-  }), [activeDefaultMetricExerciseIds, activeMetricCards, metricCardByExerciseName, metricCardByLibraryId, strengthExerciseOptionById, strengthExerciseOptionByMetricExerciseId])
+  }), [activeMetricCards, defaultStrengthSelectionSeedIds, metricCardByExerciseName, metricCardByLibraryId, strengthExerciseOptionById, strengthExerciseOptionByMetricExerciseId])
   const defaultAppliedStrengthExerciseIdsKey = useMemo(() => defaultAppliedStrengthExerciseIds.join('|'), [defaultAppliedStrengthExerciseIds])
   const defaultDraftStrengthExerciseIds = useMemo(() => reconcileStrengthExerciseSelectionIds(getInitialStrengthSelectionIds({
-    defaultStrengthExerciseIds: activeDefaultMetricExerciseIds,
+    defaultStrengthExerciseIds: defaultStrengthSelectionSeedIds,
     strengthCards: activeMetricCards,
   }), {
     strengthExerciseOptionById,
@@ -468,7 +485,7 @@ export function AnalyticsView({ model = getAnalyticsViewModel(), theme, onOpenEx
     metricCardByLibraryId,
     metricCardByExerciseName,
     strengthExerciseOptionByName,
-  }), [activeDefaultMetricExerciseIds, activeMetricCards, metricCardByExerciseName, metricCardByLibraryId, strengthExerciseOptionById, strengthExerciseOptionByMetricExerciseId, strengthExerciseOptionByName])
+  }), [activeMetricCards, defaultStrengthSelectionSeedIds, metricCardByExerciseName, metricCardByLibraryId, strengthExerciseOptionById, strengthExerciseOptionByMetricExerciseId, strengthExerciseOptionByName])
   const defaultDraftStrengthExerciseIdsKey = useMemo(() => defaultDraftStrengthExerciseIds.join('|'), [defaultDraftStrengthExerciseIds])
   const appliedStrengthExerciseIdsKey = useMemo(() => appliedStrengthExerciseIds.join('|'), [appliedStrengthExerciseIds])
 
@@ -497,6 +514,7 @@ export function AnalyticsView({ model = getAnalyticsViewModel(), theme, onOpenEx
     .map((exerciseId) => resolveStrengthExerciseOption(exerciseId))
     .filter(Boolean), [draftStrengthExerciseIds, strengthExerciseOptionById, strengthExerciseOptionByName, strengthExerciseOptions, metricCardByLibraryId])
   const shouldHydratePersistedStrengthExercises = isStrengthSelectionHydrated && hasAppliedCustomStrengthFilter && !appliedStrengthExercises.length
+  const shouldHydrateDefaultStrengthExercises = isStrengthSelectionHydrated && !hasAppliedCustomStrengthFilter && defaultAppliedStrengthExerciseIds.length === 0
   const visibleStrengthExerciseOptions = useMemo(() => strengthExerciseOptions.filter((exercise) => {
     const query = String(strengthExerciseSearchQuery || '').trim().toLowerCase()
     if (!query) return true
@@ -586,10 +604,9 @@ export function AnalyticsView({ model = getAnalyticsViewModel(), theme, onOpenEx
       storage: resolvedStrengthSelectionStorage,
       selectionKey: activeMetricSelectionStorageKey,
       appliedStrengthExerciseIds,
-      appliedStrengthExercises,
       hasAppliedCustomStrengthFilter,
     })
-  }, [activeMetricSelectionStorageKey, appliedStrengthExerciseIds, appliedStrengthExercises, hasAppliedCustomStrengthFilter, isStrengthSelectionHydrated, resolvedStrengthSelectionStorage])
+  }, [activeMetricSelectionStorageKey, appliedStrengthExerciseIds, hasAppliedCustomStrengthFilter, isStrengthSelectionHydrated, resolvedStrengthSelectionStorage])
 
   useEffect(() => {
     setAppliedStrengthExerciseIds((current) => {
@@ -599,6 +616,9 @@ export function AnalyticsView({ model = getAnalyticsViewModel(), theme, onOpenEx
         metricCardByLibraryId,
         metricCardByExerciseName,
       })
+      if (hasAppliedCustomStrengthFilter && current.length > 0 && next.length === 0) {
+        setHasAppliedCustomStrengthFilter(false)
+      }
       return areExerciseIdListsEqual(current, next) ? current : next
     })
     setDraftStrengthExerciseIds((current) => {
@@ -611,10 +631,10 @@ export function AnalyticsView({ model = getAnalyticsViewModel(), theme, onOpenEx
       })
       return areExerciseIdListsEqual(current, next) ? current : next
     })
-  }, [strengthExerciseOptionById, strengthExerciseOptionByMetricExerciseId, strengthExerciseOptionByName, metricCardByExerciseName, metricCardByLibraryId])
+  }, [hasAppliedCustomStrengthFilter, strengthExerciseOptionById, strengthExerciseOptionByMetricExerciseId, strengthExerciseOptionByName, metricCardByExerciseName, metricCardByLibraryId])
 
   useEffect(() => {
-    const shouldLoadStrengthExerciseLibrary = isStrengthFilterViewOpen || shouldHydratePersistedStrengthExercises
+    const shouldLoadStrengthExerciseLibrary = isStrengthFilterViewOpen || shouldHydratePersistedStrengthExercises || shouldHydrateDefaultStrengthExercises
     if (!shouldLoadStrengthExerciseLibrary) return
 
     const exerciseClient = createMobileExerciseLibraryClient()
@@ -658,7 +678,7 @@ export function AnalyticsView({ model = getAnalyticsViewModel(), theme, onOpenEx
     return () => {
       isActive = false
     }
-  }, [activeMetricCardsKey, activeProgressOptionId, appliedStrengthExerciseIdsKey, isStrengthFilterViewOpen, shouldHydratePersistedStrengthExercises])
+  }, [activeMetricCardsKey, activeProgressOptionId, appliedStrengthExerciseIdsKey, isStrengthFilterViewOpen, shouldHydrateDefaultStrengthExercises, shouldHydratePersistedStrengthExercises])
 
   function handleOpenStrengthExerciseFilter() {
     setDraftStrengthExerciseIds(reconcileStrengthExerciseSelectionIds(appliedStrengthExerciseIds, {
@@ -723,7 +743,7 @@ export function AnalyticsView({ model = getAnalyticsViewModel(), theme, onOpenEx
           </View>
         ) : (
           <View style={styles.progressStrengthList}>
-            <StrengthMetricsCard cards={visibleStrengthCards} theme={resolvedTheme} styles={styles} metricLabel={activeMetricLabel} filterLabel={activeProgressOption} sourceSurface={activeMetricSourceSurface} onOpenFilter={handleOpenStrengthExerciseFilter} onOpenExerciseDetail={onOpenExerciseDetail} />
+            <StrengthMetricsCard cards={visibleStrengthCards} theme={resolvedTheme} styles={styles} metricLabel={activeMetricLabel} filterLabel={activeProgressOption} emptyMessage={activeMetricEmptyMessage} sourceSurface={activeMetricSourceSurface} onOpenFilter={handleOpenStrengthExerciseFilter} onOpenExerciseDetail={onOpenExerciseDetail} />
           </View>
         )}
       </View>

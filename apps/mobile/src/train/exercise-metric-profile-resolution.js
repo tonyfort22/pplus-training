@@ -37,6 +37,23 @@ const MOVEMENT_PATTERN_TO_METRIC_PROFILE_ID = {
 function resolveMetricProfileIdFromExerciseName(exercise = {}) {
   const normalizedExerciseName = normalizeClassificationValue(exercise?.name || exercise?.title || exercise?.nameSnapshot)
   if (!normalizedExerciseName) return null
+  const obviousDistanceLoadCues = [
+    'carry',
+    'farmer',
+    'drag',
+    'prowler',
+    'sled_push',
+    'sled_pull',
+    'walking_lunge',
+    'hurdle_walk',
+    'linear_march',
+    'straight_leg_march',
+    'wall_march',
+    'skater_walk',
+  ]
+  if (obviousDistanceLoadCues.some((cue) => normalizedExerciseName.includes(cue))) {
+    return 'distance_load'
+  }
   if (normalizedExerciseName.includes('sprint')) return 'speed_time'
   if (normalizedExerciseName === 'tempo_run' || normalizedExerciseName.endsWith('_run') || normalizedExerciseName.startsWith('run_') || normalizedExerciseName.includes('_run_')) {
     return 'speed_time'

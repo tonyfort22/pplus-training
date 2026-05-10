@@ -48,11 +48,24 @@ test('exercise metric profile resolver falls back to grounded exercise-name cues
   assert.equal(resolveMetricProfileIdFromExercise({ name: 'Barbell Bench Press' }), 'strength_1rm')
 })
 
+test('exercise metric profile resolver falls back to grounded exercise-name cues for obvious loaded-carry library rows when structured classification is missing', () => {
+  assert.equal(resolveMetricProfileIdFromExercise({ name: 'Farmer Carry' }), 'distance_load')
+  assert.equal(resolveMetricProfileIdFromExercise({ name: 'Heavy Sled Push Forward' }), 'distance_load')
+  assert.equal(resolveMetricProfileIdFromExercise({ name: 'DB Walking Lunge' }), 'distance_load')
+  assert.equal(resolveMetricProfileIdFromExercise({ name: 'Linear March' }), 'distance_load')
+  assert.equal(resolveMetricProfileIdFromExercise({ name: 'Straight Leg March' }), 'distance_load')
+  assert.equal(resolveMetricProfileIdFromExercise({ name: 'Hurdle Walk Forward' }), 'distance_load')
+  assert.equal(resolveMetricProfileIdFromExercise({ name: 'Hurdle Walk Backward' }), 'distance_load')
+  assert.equal(resolveMetricProfileIdFromExercise({ name: 'Sled Sprint' }), 'speed_time')
+})
+
 test('exercise metric profile resolver returns null for unknown or missing values when no explicit recognized metricProfileId exists', () => {
   assert.equal(resolveMetricProfileIdFromExercise({ metricProfileId: 'tempo_based', stimulusType: 'coordination', movementPattern: 'rotation' }), null)
   assert.equal(resolveMetricProfileIdFromExercise({ stimulusType: 'coordination' }), null)
   assert.equal(resolveMetricProfileIdFromExercise({ movementPattern: 'rotation' }), null)
-  assert.equal(resolveMetricProfileIdFromExercise({ name: 'Wall March Hold' }), null)
+  assert.equal(resolveMetricProfileIdFromExercise({ name: 'Wall March Hold' }), 'distance_load')
+  assert.equal(resolveMetricProfileIdFromExercise({ name: 'Warmup Walkthrough' }), null)
+  assert.equal(resolveMetricProfileIdFromExercise({ name: 'Marching A-Skip' }), null)
   assert.equal(resolveMetricProfileIdFromExercise({}), null)
   assert.equal(resolveMetricProfileIdFromExercise(), null)
 })
