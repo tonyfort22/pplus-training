@@ -6,8 +6,15 @@
   "packageManager": "pnpm@10.0.0",
   "scripts": {
     "dev:mobile": "pnpm --dir apps/mobile dev",
+    "dev:mobile:warm": "pnpm --dir apps/mobile dev:warm",
+    "dev:mobile:home": "pnpm --dir apps/mobile dev:home",
+    "dev:mobile:home:warm": "pnpm --dir apps/mobile dev:home:warm",
+    "dev:mobile:phone": "pnpm --dir apps/mobile dev:phone",
+    "dev:mobile:phone:warm": "pnpm --dir apps/mobile dev:phone:warm",
     "dev:web": "pnpm --dir apps/web dev",
     "lint": "pnpm -r lint",
-    "test": "node --test"
+    "test": "node --test",
+    "verify:local": "pnpm test",
+    "verify:ci": "pnpm test"
   }
 }

@@ -7,6 +7,8 @@ export function getProgramSurfaceModel(todayModel) {
 }
 
 export function getTodayCardsModel(todayModel) {
+  const hasAssignedProgram = Boolean(todayModel.programName) && todayModel.programName !== 'No program assigned'
+
   return {
     todayCard: {
       title: todayModel.heroTitle,
@@ -21,17 +23,23 @@ export function getTodayCardsModel(todayModel) {
     },
     programCard: {
       title: 'Program snapshot',
-      body: `${todayModel.programName}, ${todayModel.programWeekLabel}. ${todayModel.completionLabel}.`,
+      body: hasAssignedProgram
+        ? `${todayModel.programName}, ${todayModel.programWeekLabel}. ${todayModel.completionLabel}.`
+        : 'No program is assigned to this athlete yet.',
       variant: 'program-summary',
       programName: todayModel.programName,
       dateRangeLabel: todayModel.programDateRangeLabel,
       weekLabel: todayModel.programWeekLabel,
-      completionLabel: `${todayModel.programCompletedWorkouts} of ${todayModel.programTotalWorkouts} workouts`,
-      progressSegments: Array.from({ length: todayModel.programTotalWeeks }, (_, index) => ({
-        id: `program-week-${index + 1}`,
-        isComplete: index + 1 < todayModel.programCurrentWeek,
-        isCurrent: index + 1 === todayModel.programCurrentWeek,
-      })),
+      completionLabel: hasAssignedProgram
+        ? `${todayModel.programCompletedWorkouts} of ${todayModel.programTotalWorkouts} workouts`
+        : 'No workouts assigned yet',
+      progressSegments: hasAssignedProgram
+        ? Array.from({ length: todayModel.programTotalWeeks }, (_, index) => ({
+            id: `program-week-${index + 1}`,
+            isComplete: index + 1 < todayModel.programCurrentWeek,
+            isCurrent: index + 1 === todayModel.programCurrentWeek,
+          }))
+        : [],
     },
   }
 }

@@ -1,0 +1,294 @@
+{
+  "restored": {
+    "root_collection": {
+      "id": 5,
+      "name": "PPLUS Reporting",
+      "created_during_restore": false
+    },
+    "child_collections": [
+      {
+        "id": 6,
+        "name": "Sessions",
+        "path": "PPLUS Reporting / Sessions",
+        "created_during_restore": true
+      },
+      {
+        "id": 7,
+        "name": "Performance",
+        "path": "PPLUS Reporting / Performance",
+        "created_during_restore": true
+      },
+      {
+        "id": 8,
+        "name": "Workload & Fatigue",
+        "path": "PPLUS Reporting / Workload & Fatigue",
+        "created_during_restore": true
+      },
+      {
+        "id": 9,
+        "name": "Ops",
+        "path": "PPLUS Reporting / Ops",
+        "created_during_restore": true
+      }
+    ],
+    "saved_questions": {
+      "manifest_expected_count": 10,
+      "restored_count": 10,
+      "exact_name_match_count": 8,
+      "exact_name_matches": [
+        "Session Load History",
+        "Muscle Load Event History",
+        "Muscle Fatigue Summary",
+        "Exercise Completion History",
+        "Exercise Performance History",
+        "PR Events",
+        "Athlete Adherence Summary",
+        "Coach Activity Summary"
+      ],
+      "restored_items": [
+        {
+          "id": 50,
+          "name": "Completed Sessions",
+          "collection_id": 6,
+          "collection_path": "PPLUS Reporting / Sessions",
+          "source_view": "reporting.completed_session_summary",
+          "display": "table",
+          "created_during_restore": true
+        },
+        {
+          "id": 51,
+          "name": "Discarded Sessions",
+          "collection_id": 6,
+          "collection_path": "PPLUS Reporting / Sessions",
+          "source_view": "reporting.discarded_session_summary",
+          "display": "table",
+          "created_during_restore": true
+        },
+        {
+          "id": 52,
+          "name": "Exercise Completion History",
+          "collection_id": 7,
+          "collection_path": "PPLUS Reporting / Performance",
+          "source_view": "reporting.exercise_completion_history",
+          "display": "table",
+          "created_during_restore": true
+        },
+        {
+          "id": 53,
+          "name": "Exercise Performance History",
+          "collection_id": 7,
+          "collection_path": "PPLUS Reporting / Performance",
+          "source_view": "reporting.exercise_performance_history",
+          "display": "table",
+          "created_during_restore": true
+        },
+        {
+          "id": 54,
+          "name": "PR Events",
+          "collection_id": 7,
+          "collection_path": "PPLUS Reporting / Performance",
+          "source_view": "reporting.pr_events",
+          "display": "table",
+          "created_during_restore": true
+        },
+        {
+          "id": 55,
+          "name": "Session Load History",
+          "collection_id": 8,
+          "collection_path": "PPLUS Reporting / Workload & Fatigue",
+          "source_view": "reporting.session_load_history",
+          "display": "table",
+          "created_during_restore": true
+        },
+        {
+          "id": 56,
+          "name": "Muscle Load Event History",
+          "collection_id": 8,
+          "collection_path": "PPLUS Reporting / Workload & Fatigue",
+          "source_view": "reporting.muscle_load_event_history",
+          "display": "table",
+          "created_during_restore": true
+        },
+        {
+          "id": 57,
+          "name": "Muscle Fatigue Summary",
+          "collection_id": 8,
+          "collection_path": "PPLUS Reporting / Workload & Fatigue",
+          "source_view": "reporting.muscle_fatigue_summary",
+          "display": "table",
+          "created_during_restore": true
+        },
+        {
+          "id": 58,
+          "name": "Athlete Adherence Summary",
+          "collection_id": 9,
+          "collection_path": "PPLUS Reporting / Ops",
+          "source_view": "reporting.athlete_adherence_summary",
+          "display": "table",
+          "created_during_restore": true
+        },
+        {
+          "id": 59,
+          "name": "Coach Activity Summary",
+          "collection_id": 9,
+          "collection_path": "PPLUS Reporting / Ops",
+          "source_view": "reporting.coach_activity_summary",
+          "display": "table",
+          "created_during_restore": true
+        }
+      ],
+      "name_mismatches": [
+        {
+          "source_view": "reporting.completed_session_summary",
+          "expected_name": "Completed Session Summary",
+          "restored_name": "Completed Sessions",
+          "collection_path": "PPLUS Reporting / Sessions"
+        },
+        {
+          "source_view": "reporting.discarded_session_summary",
+          "expected_name": "Discarded Session Summary",
+          "restored_name": "Discarded Sessions",
+          "collection_path": "PPLUS Reporting / Sessions"
+        }
+      ]
+    },
+    "dashboards": {
+      "manifest_expected_count": 4,
+      "restored_count": 4,
+      "restored_items": [
+        {
+          "id": 4,
+          "name": "PPLUS Reporting - Sessions",
+          "collection_id": 5,
+          "collection_path": "PPLUS Reporting",
+          "dashcard_count": 2,
+          "created_during_restore": true
+        },
+        {
+          "id": 5,
+          "name": "PPLUS Reporting - Performance & PRs",
+          "collection_id": 5,
+          "collection_path": "PPLUS Reporting",
+          "dashcard_count": 3,
+          "created_during_restore": true
+        },
+        {
+          "id": 6,
+          "name": "PPLUS Reporting - Workload & Fatigue",
+          "collection_id": 5,
+          "collection_path": "PPLUS Reporting",
+          "dashcard_count": 3,
+          "created_during_restore": true
+        },
+        {
+          "id": 7,
+          "name": "PPLUS Reporting - Adherence & Coach Ops",
+          "collection_id": 5,
+          "collection_path": "PPLUS Reporting",
+          "dashcard_count": 2,
+          "created_during_restore": true
+        }
+      ]
+    },
+    "preserved_existing_pplus_content": {
+      "dashboards_kept": [
+        "PPLUS Workflow Monitor v2",
+        "PPLUS Session Anomalies"
+      ],
+      "legacy_saved_questions_kept": [
+        "Open Sessions Count",
+        "Session Status Counts",
+        "Session Starts Last 24 Hours",
+        "Coach Workflow Pressure",
+        "Athletes With Open Sessions",
+        "Recent Session Outcomes",
+        "Discarded Sessions Count",
+        "Stale In-Progress Sessions",
+        "Discards By Workout",
+        "Recent Discards Readable"
+      ]
+    }
+  },
+  "preserved_connections": [
+    {
+      "name": "metabase_postgres",
+      "database_id": 2,
+      "engine": "postgres",
+      "host": "aws-1-us-east-2.pooler.supabase.com",
+      "ssl": true,
+      "preserved_existing_connection": true,
+      "reporting_schema_objects_visible": 10,
+      "reporting_objects": [
+        "athlete_adherence_summary",
+        "coach_activity_summary",
+        "completed_session_summary",
+        "discarded_session_summary",
+        "exercise_completion_history",
+        "exercise_performance_history",
+        "muscle_fatigue_summary",
+        "muscle_load_event_history",
+        "pr_events",
+        "session_load_history"
+      ],
+      "status": "preserved_and_queryable"
+    }
+  ],
+  "preserved_services": [
+    {
+      "name": "workspace",
+      "url": "http://127.0.0.1:3000",
+      "status": "preserved_but_unreachable",
+      "health_note": "Connection refused in both the pre-rebuild audit and the final live probe. No restart or repair was attempted."
+    },
+    {
+      "name": "hermes_dashboard",
+      "url": "http://127.0.0.1:9119",
+      "status": "preserved_but_unreachable",
+      "health_note": "Connection refused in both the pre-rebuild audit and the final live probe. No restart or repair was attempted."
+    },
+    {
+      "name": "hermes_gateway",
+      "url": "http://127.0.0.1:8642/health",
+      "status": "reachable",
+      "http_status": 200,
+      "health_note": "Health endpoint remained healthy. Root path 404 behavior was previously observed and is consistent with gateway-only service behavior."
+    },
+    {
+      "name": "metabase",
+      "url": "http://127.0.0.1:3002/api/health",
+      "status": "reachable",
+      "http_status": 200,
+      "version": "v0.60.3.1",
+      "docker_container": "metabase",
+      "health_note": "Existing container and metabase-data volume were preserved. The instance remains healthy after the rebuild."
+    }
+  ],
+  "remaining_gaps": [
+    {
+      "type": "saved_question_name_mismatches",
+      "details": [
+        {
+          "source_view": "reporting.completed_session_summary",
+          "expected_name": "Completed Session Summary",
+          "restored_name": "Completed Sessions",
+          "collection_path": "PPLUS Reporting / Sessions"
+        },
+        {
+          "source_view": "reporting.discarded_session_summary",
+          "expected_name": "Discarded Session Summary",
+          "restored_name": "Discarded Sessions",
+          "collection_path": "PPLUS Reporting / Sessions"
+        }
+      ],
+      "status": "renamed_relative_to_manifest"
+    },
+    {
+      "type": "layout_and_visualization_fidelity",
+      "status": "not_provable_from_repo_visible_artifacts",
+      "details": [
+        "No repo-visible historical Metabase export was available for original visualization settings.",
+        "Exact dashboard filters, formatting, and pixel-level dashcard arrangement remain unverified even though sensible layouts were applied."
+      ]
+    }
+  ]
+}

@@ -1,139 +1,156 @@
-import { Check, CalendarDays, ChevronLeft, Dumbbell, X } from 'lucide-react-native';
+import { CalendarDays, Dumbbell, X } from 'lucide-react-native';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getAppTheme } from '../theme/app-theme.js';
+import { AppStatusIconBadge, AppSurfaceCard } from '../ui/primitives.js';
 
-function ProgramSheetStatIcon({ icon }) {
+function ProgramSheetStatIcon({ icon, theme }) {
   if (icon === 'calendar') {
-    return <CalendarDays color="#06D6A0" size={18} strokeWidth={2.2} />
+    return <CalendarDays color={theme.accent} size={18} strokeWidth={2.2} />
   }
 
-  return <Dumbbell color="#06D6A0" size={18} strokeWidth={2.2} />
+  return <Dumbbell color={theme.accent} size={18} strokeWidth={2.2} />
 }
 
-function ProgramSheetStatusBadge({ status }) {
-  if (status === 'done') {
-    return (
-      <View className="h-6 w-6 items-center justify-center rounded-lg border border-green-500 bg-[#052e1a]">
-        <Check color="#22c55e" size={14} strokeWidth={2.6} />
-      </View>
-    )
-  }
-
-  return (
-    <View className="h-6 w-6 items-center justify-center rounded-lg border border-red-500 bg-[#3b0b12]">
-      <X color="#ef4444" size={14} strokeWidth={2.6} />
-    </View>
-  )
+function ProgramSheetStatusBadge({ status, theme }) {
+  return <AppStatusIconBadge status={status} theme={theme} size="sm" />
 }
 
-function ProgramSheetWeekCard({ week }) {
+function ProgramSheetWeekCard({ week, theme, onOpenWorkoutDetail }) {
   return (
-    <View key={week.id} className="gap-3.5 rounded-3xl border border-[#243041] bg-[#111827] p-[18px]">
-      <Text className="text-[13px] font-semibold text-slate-400">{week.dateRangeLabel}</Text>
-      <Text className="text-2xl font-bold text-white">{week.title}</Text>
+    <AppSurfaceCard theme={theme} contentClassName="gap-3.5 px-[18px] py-[18px]" containerClassName="rounded-3xl overflow-hidden">
+      <Text className="text-[13px] font-semibold" style={{ color: theme.textSoft }}>{week.dateRangeLabel}</Text>
+      <Text className="text-2xl font-bold" style={{ color: theme.text }}>{week.title}</Text>
 
-      <View className="flex-row items-center gap-3">
-        <View className="h-px flex-1 bg-slate-600" />
-        <Text className="text-xs font-semibold text-slate-400">{week.topDividerLabel}</Text>
-        <View className="h-px flex-1 bg-slate-600" />
-      </View>
-
-      <View className="gap-3.5">
-        {week.entries.map((entry) => (
-          <View key={entry.id} className="flex-row items-center gap-2.5">
-            <Text className="w-[34px] text-[15px] font-bold text-white">{entry.dayLabel}</Text>
-            <Text className="flex-1 text-[15px] font-semibold text-white">{entry.workoutLabel}</Text>
-            <Text className="text-[13px] font-semibold text-slate-400">{entry.durationLabel}</Text>
-            <ProgramSheetStatusBadge status={entry.status} />
+      <View className="gap-1.5">
+        {week.entries.map((entry, index) => (
+          <View
+            key={entry.id}
+            className="flex-row items-center justify-between gap-4 py-3"
+          >
+            <View className="w-12 shrink-0 pr-2">
+              <Text className="text-[14px] font-semibold uppercase" style={{ color: theme.textSoft }}>{entry.dayLabel}</Text>
+            </View>
+            {entry.status === 'rest' ? (
+              <View className="flex-1 flex-row items-center gap-3">
+                <View className="h-px flex-1" style={{ backgroundColor: theme.borderStrong }} />
+                <Text className="text-xs font-semibold" style={{ color: theme.textSoft }}>Rest Day</Text>
+                <View className="h-px flex-1" style={{ backgroundColor: theme.borderStrong }} />
+              </View>
+            ) : (
+              <>
+                <Pressable className="flex-1 gap-1" onPress={() => onOpenWorkoutDetail?.(entry)}>
+                  <Text className="text-[16px] font-semibold" style={{ color: theme.text }}>{entry.workoutLabel}</Text>
+                  <Text className="text-[14px]" style={{ color: theme.textSoft }}>{entry.durationLabel}</Text>
+                </Pressable>
+                <ProgramSheetStatusBadge status={entry.status} theme={theme} />
+              </>
+            )}
           </View>
         ))}
       </View>
-
-      <View className="flex-row items-center gap-3">
-        <View className="h-px flex-1 bg-slate-600" />
-        <Text className="text-xs font-semibold text-slate-400">{week.bottomDividerLabel}</Text>
-        <View className="h-px flex-1 bg-slate-600" />
-      </View>
-    </View>
+    </AppSurfaceCard>
   )
 }
 
-export function renderProgramSheet({ isVisible, onClose, model }) {
-  if (!model) {
-    return null
-  }
+function ProgramSheetContent({ model, theme, onClose, onEditProgram, onOpenWorkoutDetail }) {
+  const insets = useSafeAreaInsets()
+  const resolvedTheme = theme || getAppTheme('dark')
+
+  if (!model) return null
 
   return (
-    <Modal visible={isVisible} transparent animationType="slide" onRequestClose={onClose}>
-      <View className="flex-1 justify-end bg-[rgba(2,6,23,0.76)]">
-        <Pressable className="flex-1" onPress={onClose} />
-        <View className="max-h-[88%] rounded-t-[28px] bg-slate-900 px-5 pb-7 pt-[18px]">
-          <ScrollView
-            className="flex-grow-0"
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ gap: 24, paddingBottom: 32 }}
+    <SafeAreaView className="flex-1" style={{ backgroundColor: resolvedTheme.background }}>
+      <View className="px-5 pb-6" style={{ paddingTop: Math.max(insets.top, 16) }}>
+        <View className="mb-7 flex-row items-center justify-between">
+          <AppSurfaceCard
+            theme={resolvedTheme}
+            onPress={onClose}
+            containerClassName="h-10 w-10 rounded-[14px] overflow-hidden"
+            contentClassName="h-full items-center justify-center"
           >
-            <View className="flex-row items-center justify-between">
-              <Pressable className="h-10 w-10 items-center justify-center rounded-[14px] bg-slate-800" onPress={onClose}>
-                <ChevronLeft color="#ffffff" size={24} strokeWidth={2.2} />
-              </Pressable>
-              <Pressable onPress={() => {}}>
-                <Text className="text-[17px] font-semibold text-emerald-400">{model.editLabel}</Text>
-              </Pressable>
-            </View>
+            <X color={resolvedTheme.icon} size={20} strokeWidth={2.4} />
+          </AppSurfaceCard>
+          <Pressable onPress={onEditProgram}>
+            <Text className="text-[17px] font-semibold" style={{ color: resolvedTheme.accent }}>{model.editLabel}</Text>
+          </Pressable>
+        </View>
 
-            <View className="gap-2">
-              <Text className="text-[28px] font-bold text-white">{model.title}</Text>
-              <Text className="text-sm text-slate-400">{model.dateRangeLabel}</Text>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
+          <View className="gap-8">
+            <View className="gap-3">
+              <Text className="text-[34px] font-bold" style={{ color: resolvedTheme.text }}>{model.title}</Text>
+              <Text className="text-[15px]" style={{ color: resolvedTheme.textSoft }}>{model.dateRangeLabel}</Text>
             </View>
 
             <View className="gap-4">
               <View className="flex-row gap-1.5">
                 {model.progressSegments.map((segment) => {
-                  const stateClass = segment.isCurrent
-                    ? 'bg-emerald-700'
+                  const backgroundColor = segment.isCurrent
+                    ? resolvedTheme.accentSoft
                     : segment.isComplete
-                      ? 'bg-emerald-500'
-                      : 'bg-slate-700'
+                      ? resolvedTheme.accent
+                      : resolvedTheme.borderStrong
 
-                  return <View key={segment.id} className={`h-3 flex-1 rounded-full ${stateClass}`} />
+                  return <View key={segment.id} className="h-3 flex-1 rounded-full" style={{ backgroundColor }} />
                 })}
               </View>
             </View>
 
-            <View className="gap-2.5">
-              {model.stats.map((stat) => (
-                <View key={stat.id} className="flex-row items-center gap-2.5">
-                  <ProgramSheetStatIcon icon={stat.icon} />
-                  <Text className="text-sm font-semibold text-slate-300">{stat.label}</Text>
+            <AppSurfaceCard theme={resolvedTheme} contentClassName="gap-2.5 px-4 py-4">
+              {model.stats.map((stat, index) => (
+                <View
+                  key={stat.id}
+                  className="flex-row items-center gap-3 py-3"
+                  style={index < model.stats.length - 1 ? { borderBottomWidth: 1, borderBottomColor: resolvedTheme.border } : null}
+                >
+                  <ProgramSheetStatIcon icon={stat.icon} theme={resolvedTheme} />
+                  <Text className="text-[16px] font-semibold" style={{ color: resolvedTheme.text }}>{stat.label}</Text>
                 </View>
               ))}
-            </View>
+            </AppSurfaceCard>
 
             <View className="gap-3.5">
-              <Text className="text-lg font-semibold text-slate-300">Workouts</Text>
+              <Text className="text-lg font-semibold" style={{ color: resolvedTheme.textMuted }}>Workouts</Text>
               <View className="flex-row flex-wrap gap-3">
                 {model.routines.map((routine) => (
-                  <View
+                  <AppSurfaceCard
                     key={routine.id}
-                    className="min-h-[52px] w-[48%] justify-center rounded-[18px] border border-[#243041] bg-[#111827] px-4"
+                    theme={resolvedTheme}
+                    containerClassName="min-h-[56px] w-[48%] justify-center rounded-[24px] overflow-hidden"
+                    contentClassName="justify-center px-5 py-4"
                   >
-                    <Text className="text-[15px] font-semibold text-white">{routine.label}</Text>
-                  </View>
+                    <Text className="text-[15px] font-semibold" style={{ color: resolvedTheme.text }}>{routine.label}</Text>
+                  </AppSurfaceCard>
                 ))}
               </View>
             </View>
 
             <View className="gap-3.5">
-              <Text className="text-lg font-semibold text-slate-300">Schedule</Text>
+              <Text className="text-lg font-semibold" style={{ color: resolvedTheme.textMuted }}>Schedule</Text>
               <View className="gap-4">
                 {model.weeks.map((week) => (
-                  <ProgramSheetWeekCard key={week.id} week={week} />
+                  <ProgramSheetWeekCard key={week.id} week={week} theme={resolvedTheme} onOpenWorkoutDetail={onOpenWorkoutDetail} />
                 ))}
               </View>
             </View>
-          </ScrollView>
-        </View>
+          </View>
+        </ScrollView>
       </View>
+    </SafeAreaView>
+  )
+}
+
+export function renderProgramSheet({ isVisible, onClose, onEditProgram, onOpenWorkoutDetail, model, theme }) {
+  if (!model) {
+    return null
+  }
+
+  return (
+    <Modal visible={isVisible} animationType="slide" onRequestClose={onClose}>
+      <SafeAreaProvider>
+        <ProgramSheetContent model={model} theme={theme} onClose={onClose} onEditProgram={onEditProgram} onOpenWorkoutDetail={onOpenWorkoutDetail} />
+      </SafeAreaProvider>
     </Modal>
   )
 }

@@ -1,109 +1,119 @@
-import { Check, ChevronLeft, RotateCcw, X } from 'lucide-react-native';
+import { Check, RotateCcw, X } from 'lucide-react-native';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getAppTheme } from '../theme/app-theme.js';
+import { AppStatusIconBadge, AppSurfaceCard } from '../ui/primitives.js';
 
-function WeekBadge({ label }) {
+function WeekBadge({ label, theme }) {
   return (
-    <View className="rounded-full border border-[#243041] bg-[#111827] px-3 py-1.5">
-      <Text className="text-[13px] font-semibold text-emerald-300">{label}</Text>
-    </View>
+    <AppSurfaceCard theme={theme} containerClassName="rounded-full overflow-hidden" contentClassName="px-3 py-1.5">
+      <Text className="text-[13px] font-semibold" style={{ color: theme.accentText }}>{label}</Text>
+    </AppSurfaceCard>
   )
 }
 
-function TrainingCalendarStatusBadge({ status }) {
-  if (status === 'done') {
-    return (
-      <View className="h-8 w-8 items-center justify-center rounded-[10px] border border-emerald-500 bg-[#052e1a]">
-        <Check color="#1fb56c" size={16} strokeWidth={2.8} />
-      </View>
-    )
-  }
-
-  if (status === 'missed') {
-    return (
-      <View className="h-8 w-8 items-center justify-center rounded-[10px] border border-rose-500 bg-[#3b0b12]">
-        <X color="#d94b63" size={16} strokeWidth={2.8} />
-      </View>
-    )
-  }
-
-  return <View className="h-8 w-8 rounded-[10px] border border-[#243041] bg-[#111827]" />
+function TrainingCalendarStatusBadge({ status, theme }) {
+  const resolvedStatus = status === 'done' || status === 'missed' ? status : 'upcoming'
+  return <AppStatusIconBadge status={resolvedStatus} theme={theme} size="sm" />
 }
 
-function TrainingCalendarDayRow({ day }) {
+function TrainingCalendarDayRow({ day, theme }) {
   return (
-    <View className="flex-row items-center gap-4 py-2.5">
-      <View className="w-[52px] items-center">
-        <Text className="text-[12px] font-semibold uppercase tracking-[1px] text-slate-400">{day.dayLabel}</Text>
-        <Text className="text-center text-[20px] font-semibold text-white">{day.dateNumber}</Text>
+    <View className="flex-row items-center justify-between gap-4 py-3">
+      <View className="w-12 shrink-0 pr-2">
+        <Text className="text-[14px] font-semibold uppercase" style={{ color: theme.textSoft }}>{day.dayLabel}</Text>
       </View>
-
-      <View className="flex-1">
-        {day.type === 'rest' ? (
-          <Text className="text-[16px] text-slate-300">Rest Day</Text>
-        ) : (
-          <View className="flex-row items-center justify-between rounded-[18px] border border-[#243041] bg-[#111827] px-4 py-4">
-            <Text className="flex-1 text-[16px] font-medium text-white">{day.workoutLabel}</Text>
-            <TrainingCalendarStatusBadge status={day.status} />
+      {day.type === 'rest' ? (
+        <View className="flex-1 flex-row items-center gap-3">
+          <View className="h-px flex-1" style={{ backgroundColor: theme.borderStrong }} />
+          <Text className="text-xs font-semibold" style={{ color: theme.textSoft }}>Rest Day</Text>
+          <View className="h-px flex-1" style={{ backgroundColor: theme.borderStrong }} />
+        </View>
+      ) : (
+        <>
+          <View className="flex-1 gap-1">
+            <Text className="text-[16px] font-semibold" style={{ color: theme.text }}>{day.workoutLabel}</Text>
+            <Text className="text-[14px]" style={{ color: theme.textSoft }}>{day.statusLabel || 'Scheduled'}</Text>
           </View>
-        )}
-      </View>
+          <TrainingCalendarStatusBadge status={day.status} theme={theme} />
+        </>
+      )}
     </View>
   )
 }
 
-function TrainingCalendarSheetContent({ onClose, model }) {
+function TrainingCalendarWeekCard({ week, theme }) {
+  return (
+    <AppSurfaceCard theme={theme} contentClassName="gap-3.5 px-[18px] py-[18px]" containerClassName="rounded-3xl overflow-hidden">
+      <Text className="text-[13px] font-semibold" style={{ color: theme.textSoft }}>{week.dateRangeLabel}</Text>
+      <Text className="text-2xl font-bold" style={{ color: theme.text }}>{week.weekTitle || week.weekLabel}</Text>
+
+      <View className="gap-1.5">
+        {week.days.map((day) => (
+          <TrainingCalendarDayRow key={day.id} day={day} theme={theme} />
+        ))}
+      </View>
+    </AppSurfaceCard>
+  )
+}
+
+function TrainingCalendarSheetContent({ onClose, model, theme }) {
   const insets = useSafeAreaInsets()
+  const resolvedTheme = theme || getAppTheme('dark')
 
   if (!model) {
     return null
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#0b1220]">
-      <View className="border-b border-[#243041] px-5 pb-4" style={{ paddingTop: Math.max(insets.top, 16) }}>
-        <View className="flex-row items-center justify-between">
-          <Pressable className="w-[84px] flex-row items-center justify-start gap-2 rounded-[14px] border border-[#243041] bg-[#111827] px-3 py-2 focus:outline-none" onPress={onClose}>
-            <ChevronLeft color="#ffffff" size={24} strokeWidth={2.4} />
-            <Text className="text-[16px] font-semibold text-white">Back</Text>
-          </Pressable>
-          <Text className="flex-1 text-center text-[19px] font-semibold text-white">Training Calendar</Text>
-          <View className="w-11" />
+    <SafeAreaView className="flex-1" style={{ backgroundColor: resolvedTheme.background }}>
+      <View className="px-5 pb-6" style={{ paddingTop: Math.max(insets.top, 16) }}>
+        <View className="mb-7 flex-row items-center justify-between">
+          <AppSurfaceCard
+            theme={resolvedTheme}
+            onPress={onClose}
+            containerClassName="h-10 w-10 rounded-[14px] overflow-hidden"
+            contentClassName="h-full items-center justify-center"
+          >
+            <X color={resolvedTheme.icon} size={20} strokeWidth={2.4} />
+          </AppSurfaceCard>
+          <View className="w-10" />
         </View>
-      </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 18, paddingBottom: 40 }}>
-        <Pressable className="mb-7 flex-row items-center justify-center gap-2 rounded-[14px] border border-[#243041] bg-[#111827] px-4 py-4" onPress={() => {}}>
-          <RotateCcw color="#cbd5e1" size={16} strokeWidth={2.2} />
-          <Text className="text-[16px] font-medium text-slate-300">Load more</Text>
-        </Pressable>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
+          <View className="gap-8">
+            <Text className="text-[34px] font-bold" style={{ color: resolvedTheme.text }}>Training Calendar</Text>
 
-        <View className="gap-7">
-          {model.weeks.map((week) => (
-            <View key={week.id} className="gap-4">
-              <View className="flex-row items-center justify-between">
-                <Text className="text-[20px] font-semibold text-slate-200">{week.dateRangeLabel}</Text>
-                <WeekBadge label={week.weekLabel} />
-              </View>
-              <View className="h-px bg-[#243041]" />
-              <View className="gap-1">
-                {week.days.map((day) => (
-                  <TrainingCalendarDayRow key={day.id} day={day} />
+            <AppSurfaceCard
+              theme={resolvedTheme}
+              onPress={() => {}}
+              containerClassName="rounded-[14px] overflow-hidden"
+              contentClassName="flex-row items-center justify-center gap-2 px-4 py-4"
+            >
+              <RotateCcw color={resolvedTheme.textMuted} size={16} strokeWidth={2.2} />
+              <Text className="text-[16px] font-medium" style={{ color: resolvedTheme.textMuted }}>{model.loadMoreLabel || 'Load more'}</Text>
+            </AppSurfaceCard>
+
+            <View className="gap-3.5">
+              <Text className="text-lg font-semibold" style={{ color: resolvedTheme.textMuted }}>Schedule</Text>
+              <View className="gap-4">
+                {model.weeks.map((week) => (
+                  <TrainingCalendarWeekCard key={week.id} week={week} theme={resolvedTheme} />
                 ))}
               </View>
             </View>
-          ))}
-        </View>
-      </ScrollView>
+          </View>
+        </ScrollView>
+      </View>
     </SafeAreaView>
   )
 }
 
-export function TrainingCalendarSheet({ isVisible, onClose, model }) {
+export function TrainingCalendarSheet({ isVisible, onClose, model, theme }) {
   return (
     <Modal visible={isVisible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaProvider>
-        <TrainingCalendarSheetContent onClose={onClose} model={model} />
+        <TrainingCalendarSheetContent onClose={onClose} model={model} theme={theme} />
       </SafeAreaProvider>
     </Modal>
   )

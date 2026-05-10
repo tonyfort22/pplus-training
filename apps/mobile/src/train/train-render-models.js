@@ -56,6 +56,7 @@ export function getTrainRenderModel({ trainSurfaceModel, sessionSections }) {
     return {
       tabs: trainSurfaceModel.tabs,
       showTabs: false,
+      floatingStartWorkoutButton: trainSurfaceModel.surface.floatingStartWorkoutButton ?? null,
       content: {
         type: 'sections',
         sections: [
@@ -68,26 +69,53 @@ export function getTrainRenderModel({ trainSurfaceModel, sessionSections }) {
             type: 'section-heading',
             title: trainSurfaceModel.surface.selectedWorkoutHeading,
           },
-          {
-            type: 'action-card',
-            ...trainSurfaceModel.surface.selectedWorkoutCard,
-          },
+          trainSurfaceModel.surface.selectedWorkoutCard
+            ? {
+                type: 'action-card',
+                ...trainSurfaceModel.surface.selectedWorkoutCard,
+              }
+            : {
+                type: 'empty-state-card',
+                variant: 'empty-card',
+                title: trainSurfaceModel.surface.selectedWorkoutEmptyState.title,
+                body: trainSurfaceModel.surface.selectedWorkoutEmptyState.body,
+              },
           {
             type: 'section-heading',
             title: trainSurfaceModel.surface.programSectionTitle,
           },
-          {
-            type: 'action-card',
-            ...trainSurfaceModel.surface.programCard,
-          },
+          trainSurfaceModel.surface.programCard
+            ? {
+                type: 'action-card',
+                ...trainSurfaceModel.surface.programCard,
+              }
+            : {
+                type: 'empty-state-card',
+                variant: 'empty-card',
+                title: trainSurfaceModel.surface.programEmptyState.title,
+                body: trainSurfaceModel.surface.programEmptyState.body,
+              },
           {
             type: 'section-heading',
             title: trainSurfaceModel.surface.workoutListTitle,
           },
+          ...(trainSurfaceModel.surface.workoutListRows.length > 0
+            ? [{
+                type: 'body-list',
+                title: undefined,
+                rows: trainSurfaceModel.surface.workoutListRows,
+              }]
+            : [{
+                type: 'empty-state-card',
+                variant: 'empty-card',
+                title: trainSurfaceModel.surface.workoutEmptyState.title,
+                body: trainSurfaceModel.surface.workoutEmptyState.body,
+              }]),
           {
-            type: 'body-list',
-            title: undefined,
-            rows: trainSurfaceModel.surface.workoutListRows,
+            type: 'create-workout-card',
+            title: trainSurfaceModel.surface.createWorkoutCard.title,
+            subtitle: trainSurfaceModel.surface.createWorkoutCard.subtitle,
+            targetKey: 'create-workout',
           },
         ],
       },

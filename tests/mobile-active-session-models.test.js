@@ -29,8 +29,13 @@ test('getActiveSessionSurfaceModel builds the session surface for an in-progress
     programWorkout: createDemoProgramWorkout(),
     startedAt: '2026-04-21T20:00:00.000Z',
   })
+  const session = {
+    ...trainState.session,
+    status: 'in_progress',
+    startedAt: '2026-04-21T20:00:00.000Z',
+  }
 
-  const model = getActiveSessionSurfaceModel(trainState.session, 35, null)
+  const model = getActiveSessionSurfaceModel(session, 35, null)
 
   assert.equal(model.header.title, 'Lower A')
   assert.equal(model.header.finishLabel, 'Finish')

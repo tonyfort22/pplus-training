@@ -15,18 +15,19 @@ const bottomTabs = [
   { key: 'train', label: 'Train', isActive: true },
   { key: 'progress', label: 'Progress', isActive: false },
   { key: 'team', label: 'Team', isActive: false },
-  { key: 'inbox', label: 'Inbox', isActive: false },
+  { key: 'inbox', label: 'Athletes', isActive: false },
 ]
 
-test('getBottomTabViewItems groups primary tabs and detached utility tab for shell rendering', () => {
+test('getBottomTabViewItems returns one four-option bottom bar for shell rendering', () => {
   const items = getBottomTabViewItems(bottomTabs)
 
-  assert.equal(items.primaryTabs.length, 3)
-  assert.equal(items.primaryTabs[0].icon, '🏋️')
-  assert.equal(items.primaryTabs[1].icon, '📊')
-  assert.equal(items.primaryTabs[2].icon, '👥')
-  assert.equal(items.utilityTab.key, 'inbox')
-  assert.equal(items.utilityTab.icon, '💬')
+  assert.equal(items.tabs.length, 4)
+  assert.deepEqual(items.tabs.map((tab) => tab.key), ['train', 'progress', 'team', 'inbox'])
+  assert.equal(items.tabs[0].icon, '🏋️')
+  assert.equal(items.tabs[1].icon, '📊')
+  assert.equal(items.tabs[2].icon, '👥')
+  assert.equal(items.tabs[3].label, 'Athletes')
+  assert.equal(items.tabs[3].icon, '🪪')
 })
 
 test('getGenericSectionViewItems adds stable keys to generic section items', () => {

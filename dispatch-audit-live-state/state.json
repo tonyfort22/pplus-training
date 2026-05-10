@@ -1,0 +1,309 @@
+{
+  "audit_task": "worker-audit-live-state",
+  "audit_time_local": "2026-05-01T02:49:05-0400",
+  "workdir": "/Users/anthonyfortugno/.openclaw.pre-migration/workspace/projects/pplus-training",
+  "inspection_only": true,
+  "preserved_services": [
+    {
+      "name": "workspace",
+      "url": "http://127.0.0.1:3000",
+      "status": "unreachable",
+      "http_status": null,
+      "error": "connection refused",
+      "listener_present": false,
+      "preservation_note": "Preserved by non-interference only. No restart or repair was attempted during audit."
+    },
+    {
+      "name": "hermes_dashboard",
+      "url": "http://127.0.0.1:9119",
+      "status": "unreachable",
+      "http_status": null,
+      "error": "connection refused",
+      "listener_present": false,
+      "preservation_note": "Preserved by non-interference only. No restart or repair was attempted during audit."
+    },
+    {
+      "name": "hermes_gateway",
+      "url": "http://127.0.0.1:8642/health",
+      "status": "reachable",
+      "root_path_status": 404,
+      "http_status": 200,
+      "listener": "python3.1",
+      "pid": 30476,
+      "preservation_note": "Healthy health endpoint preserved unchanged."
+    },
+    {
+      "name": "metabase",
+      "url": "http://127.0.0.1:3002/api/health",
+      "status": "reachable",
+      "http_status": 200,
+      "listener": "docker",
+      "docker_container": "metabase",
+      "version": "v0.60.3.1",
+      "preservation_note": "Healthy Metabase instance preserved unchanged."
+    }
+  ],
+  "port_listeners": [
+    {
+      "port": 3000,
+      "listener_present": false
+    },
+    {
+      "port": 9119,
+      "listener_present": false
+    },
+    {
+      "port": 8642,
+      "listener_present": true,
+      "process": "python3.1",
+      "pid": 30476,
+      "bind": "127.0.0.1:8642"
+    },
+    {
+      "port": 3002,
+      "listener_present": true,
+      "process": "com.docke",
+      "pid": 3783,
+      "bind": "*:3002"
+    }
+  ],
+  "docker": {
+    "running_containers": [
+      {
+        "name": "metabase",
+        "image": "metabase/metabase:latest",
+        "status": "Up 25 minutes",
+        "ports": "0.0.0.0:3002->3000/tcp, [::]:3002->3000/tcp"
+      }
+    ],
+    "metabase_container": {
+      "name": "metabase",
+      "created_at_utc": "2026-05-01T05:53:54.578295053Z",
+      "started_at_utc": "2026-05-01T06:23:40.306250504Z",
+      "restart_count": 0,
+      "app_db_file_env": "MB_DB_FILE=/metabase-data/metabase.db",
+      "mounts": [
+        {
+          "type": "volume",
+          "name": "metabase-data",
+          "source": "/var/lib/docker/volumes/metabase-data/_data",
+          "destination": "/metabase-data"
+        }
+      ]
+    },
+    "metabase_volume": {
+      "name": "metabase-data",
+      "created_at_utc": "2026-05-01T05:53:54Z",
+      "mountpoint": "/var/lib/docker/volumes/metabase-data/_data",
+      "preservation_note": "Do not remove, replace, or reset this volume."
+    }
+  },
+  "metabase_storage_files": {
+    "copied_for_read_only_audit": true,
+    "temporary_copy_removed_after_audit": true,
+    "live_volume_files": [
+      "/metabase-data/metabase.db/metabase.db.mv.db",
+      "/metabase-data/metabase.db/metabase.db.trace.db"
+    ],
+    "copied_snapshot_observations": [
+      {
+        "filename": "metabase.db.mv.db",
+        "size_bytes": 5148672,
+        "mtime_local": "2026-05-01 02:50:00 EDT"
+      },
+      {
+        "filename": "metabase.db.trace.db",
+        "size_bytes": 115277,
+        "mtime_local": "2026-05-01 02:22:40 EDT"
+      }
+    ]
+  },
+  "metabase_connection_state": {
+    "database_count": 2,
+    "database_two": {
+      "id": 2,
+      "name": "postgres",
+      "engine": "postgres",
+      "is_full_sync": true,
+      "is_on_demand": false,
+      "current_supabase_connection_preserved": true
+    },
+    "reporting_schema_visible": true,
+    "reporting_object_count": 10,
+    "reporting_objects": [
+      "athlete_adherence_summary",
+      "coach_activity_summary",
+      "completed_session_summary",
+      "discarded_session_summary",
+      "exercise_completion_history",
+      "exercise_performance_history",
+      "muscle_fatigue_summary",
+      "muscle_load_event_history",
+      "pr_events",
+      "session_load_history"
+    ],
+    "schema_counts": {
+      "auth": 23,
+      "extensions": 2,
+      "public": 28,
+      "realtime": 3,
+      "reporting": 10,
+      "storage": 8,
+      "supabase_migrations": 1,
+      "vault": 2
+    }
+  },
+  "metabase_content_inventory": {
+    "collections": 5,
+    "cards": 49,
+    "dashboards": 3,
+    "dashboard_cards": 46,
+    "users": 2,
+    "collections_present": [
+      {
+        "id": 1,
+        "name": "Trash",
+        "location": "/"
+      },
+      {
+        "id": 2,
+        "name": "Examples",
+        "location": "/"
+      },
+      {
+        "id": 3,
+        "name": "E-commerce",
+        "location": "/2/"
+      },
+      {
+        "id": 4,
+        "name": "Anthony Fortugno's Personal Collection",
+        "location": "/"
+      },
+      {
+        "id": 5,
+        "name": "PPLUS Reporting",
+        "location": "/"
+      }
+    ],
+    "pplus_collection_present": true,
+    "pplus_saved_questions": [
+      "Open Sessions Count",
+      "Session Status Counts",
+      "Session Starts Last 24 Hours",
+      "Coach Workflow Pressure",
+      "Athletes With Open Sessions",
+      "Recent Session Outcomes",
+      "Discarded Sessions Count",
+      "Stale In-Progress Sessions",
+      "Discards By Workout",
+      "Recent Discards Readable"
+    ],
+    "pplus_dashboards": [
+      {
+        "id": 2,
+        "name": "PPLUS Workflow Monitor v2",
+        "collection_id": 5,
+        "description": "Operational monitor for live session workflow volume, starts, coach load, and recent outcomes.",
+        "layout": [
+          {"card": "Open Sessions Count", "col": 0, "row": 0, "size_x": 6, "size_y": 4},
+          {"card": "Session Status Counts", "col": 6, "row": 0, "size_x": 9, "size_y": 4},
+          {"card": "Session Starts Last 24 Hours", "col": 15, "row": 0, "size_x": 9, "size_y": 4},
+          {"card": "Coach Workflow Pressure", "col": 0, "row": 4, "size_x": 12, "size_y": 6},
+          {"card": "Athletes With Open Sessions", "col": 12, "row": 4, "size_x": 12, "size_y": 6},
+          {"card": "Recent Session Outcomes", "col": 0, "row": 10, "size_x": 24, "size_y": 8}
+        ]
+      },
+      {
+        "id": 3,
+        "name": "PPLUS Session Anomalies",
+        "collection_id": 5,
+        "description": "Exception dashboard for stale sessions and discard-heavy workflows.",
+        "layout": [
+          {"card": "Discarded Sessions Count", "col": 0, "row": 0, "size_x": 6, "size_y": 4},
+          {"card": "Stale In-Progress Sessions", "col": 6, "row": 0, "size_x": 18, "size_y": 4},
+          {"card": "Discards By Workout", "col": 0, "row": 4, "size_x": 10, "size_y": 6},
+          {"card": "Recent Discards Readable", "col": 10, "row": 4, "size_x": 14, "size_y": 8}
+        ]
+      }
+    ],
+    "sample_content_preserved": true
+  },
+  "manifest_comparison": {
+    "source": "dispatch-audit-source-of-truth/restore_manifest.json",
+    "expected_root_collection": "PPLUS Reporting",
+    "expected_child_collections": [
+      "PPLUS Reporting / Sessions",
+      "PPLUS Reporting / Performance",
+      "PPLUS Reporting / Workload & Fatigue",
+      "PPLUS Reporting / Ops"
+    ],
+    "live_child_collections_found": [],
+    "expected_saved_questions": [
+      "Completed Sessions",
+      "Discarded Sessions",
+      "Exercise Completion History",
+      "Exercise Performance History",
+      "PR Events",
+      "Session Load History",
+      "Muscle Load Event History",
+      "Muscle Fatigue Summary",
+      "Athlete Adherence Summary",
+      "Coach Activity Summary"
+    ],
+    "live_overlap_saved_questions": [],
+    "missing_saved_questions": [
+      "Completed Sessions",
+      "Discarded Sessions",
+      "Exercise Completion History",
+      "Exercise Performance History",
+      "PR Events",
+      "Session Load History",
+      "Muscle Load Event History",
+      "Muscle Fatigue Summary",
+      "Athlete Adherence Summary",
+      "Coach Activity Summary"
+    ],
+    "expected_dashboards": [
+      "PPLUS Reporting - Session Overview",
+      "PPLUS Reporting - Performance & PRs",
+      "PPLUS Reporting - Workload & Fatigue",
+      "PPLUS Reporting - Adherence & Coach Ops"
+    ],
+    "live_pplus_dashboards": [
+      "PPLUS Workflow Monitor v2",
+      "PPLUS Session Anomalies"
+    ],
+    "missing_expected_dashboards": [
+      "PPLUS Reporting - Session Overview",
+      "PPLUS Reporting - Performance & PRs",
+      "PPLUS Reporting - Workload & Fatigue",
+      "PPLUS Reporting - Adherence & Coach Ops"
+    ],
+    "assessment": "Live Metabase state already contains some PPLUS collection, saved-question, dashboard, and layout metadata, but it does not contain the manifest-defined reporting hierarchy or manifest-defined dashboard set."
+  },
+  "metabase_logs_evidence": [
+    "GET /api/collection/5",
+    "GET /api/dashboard/2",
+    "GET /api/dashboard/3",
+    "GET /api/database/2"
+  ],
+  "exact_commands_used": [
+    "python3 reachability probe for 3000, 9119, 8642, 8642/health, 3002, 3002/api/health",
+    "lsof -nP -iTCP:3000 -iTCP:3002 -iTCP:8642 -iTCP:9119 -sTCP:LISTEN || true",
+    "docker ps --format 'table {{.Names}}\\t{{.Image}}\\t{{.Status}}\\t{{.Ports}}'",
+    "docker ps -a --format 'table {{.Names}}\\t{{.Image}}\\t{{.Status}}\\t{{.Ports}}'",
+    "docker inspect metabase --format '{{json .}}'",
+    "docker volume inspect metabase-data",
+    "docker exec metabase sh -lc 'ls -lah /metabase-data && find /metabase-data -maxdepth 3 -type f | sort'",
+    "docker logs --tail 120 metabase 2>&1",
+    "docker cp metabase:/metabase-data/metabase.db dispatch-audit-live-state/metabase-db-copy",
+    "docker cp /tmp/metabase-db-copy-audit/. metabase:/tmp/metabase-db-copy-audit",
+    "docker exec metabase /opt/java/openjdk/bin/java -cp /app/metabase.jar org.h2.tools.Shell -url jdbc:h2:/tmp/metabase-db-copy-audit/metabase.db;ACCESS_MODE_DATA=r",
+    "docker exec metabase /opt/java/openjdk/bin/java -cp /app/metabase.jar org.h2.tools.Shell dashboard layout query"
+  ],
+  "artifacts": {
+    "report": "/Users/anthonyfortugno/.openclaw.pre-migration/workspace/projects/pplus-training/dispatch-audit-live-state/report.md",
+    "state": "/Users/anthonyfortugno/.openclaw.pre-migration/workspace/projects/pplus-training/dispatch-audit-live-state/state.json"
+  }
+}

@@ -7,6 +7,27 @@ export function getAppScreenViewModel({ screen }) {
     }
   }
 
+  if (screen.type === 'analytics') {
+    return {
+      ...screen,
+      type: 'analytics-surface',
+    }
+  }
+
+  if (screen.type === 'auth') {
+    return {
+      ...screen,
+      type: 'auth-surface',
+    }
+  }
+
+  if (screen.type === 'loading') {
+    return {
+      ...screen,
+      type: 'loading-surface',
+    }
+  }
+
   return {
     type: 'generic-surface',
     screenType: screen.type,
@@ -19,29 +40,15 @@ export function getBottomTabViewItems(tabs) {
     train: '🏋️',
     progress: '📊',
     team: '👥',
-    inbox: '💬',
+    inbox: '🪪',
   }
 
-  const primaryTabs = tabs
-    .filter((tab) => tab.key !== 'inbox')
-    .map((tab) => ({
+  return {
+    tabs: tabs.map((tab) => ({
       key: tab.key,
       label: tab.label,
       icon: iconByKey[tab.key] || tab.label,
       isActive: tab.isActive,
-    }))
-
-  const inboxTab = tabs.find((tab) => tab.key === 'inbox')
-
-  return {
-    primaryTabs,
-    utilityTab: inboxTab
-      ? {
-          key: inboxTab.key,
-          label: inboxTab.label,
-          icon: iconByKey[inboxTab.key] || inboxTab.label,
-          isActive: inboxTab.isActive,
-        }
-      : null,
+    })),
   }
 }

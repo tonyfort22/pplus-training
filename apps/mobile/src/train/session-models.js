@@ -38,7 +38,9 @@ export function getSessionExerciseModels(session) {
 
   return (session.exercises || []).map((exercise) => ({
     id: exercise.id,
+    exerciseId: exercise.exerciseId || exercise.id,
     title: exercise.nameSnapshot || exercise.name,
+    name: exercise.nameSnapshot || exercise.name,
     restLabel: formatClock(exercise.defaultRestSeconds || 0),
     status: exercise.status,
     sets: (exercise.sets || []).map((set, index) => {

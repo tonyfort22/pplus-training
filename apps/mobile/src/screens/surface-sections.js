@@ -60,6 +60,19 @@ export function getProgressSections(progressModel) {
 }
 
 export function getPlaceholderSections(placeholderModel) {
+  if (placeholderModel.actionLabel && placeholderModel.targetKey) {
+    return [
+      {
+        type: 'action-card',
+        title: placeholderModel.title,
+        body: placeholderModel.body,
+        actionLabel: placeholderModel.actionLabel,
+        targetKey: placeholderModel.targetKey,
+        actionPayload: placeholderModel.actionPayload || null,
+      },
+    ]
+  }
+
   return [
     {
       type: 'body',
