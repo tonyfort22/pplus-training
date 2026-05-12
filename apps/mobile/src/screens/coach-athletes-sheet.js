@@ -1,9 +1,9 @@
 import { Image, Modal, ScrollView, Text, View } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Check, ChevronRight, UserCircle2 } from 'lucide-react-native'
+import { Check, ChevronRight, Send, UserCircle2 } from 'lucide-react-native'
 import { useMemo, useState } from 'react'
 import { getAppTheme } from '../theme/app-theme.js'
-import { AppListRow, AppSearchInput, AppSheetHeader } from '../ui/primitives.js'
+import { AppButton, AppListRow, AppSearchInput, AppSheetHeader } from '../ui/primitives.js'
 
 function CoachAthleteRow({ athlete, isSelected = false, onPress, theme }) {
   const avatar = (
@@ -56,7 +56,7 @@ function CoachAthletesSheetContent({ onClose, athletes = [], selectedAthleteId =
       <View className="flex-1 px-5" style={{ paddingTop: Math.max(insets.top, 16), paddingBottom: Math.max(insets.bottom, 20) }}>
         <AppSheetHeader theme={resolvedTheme} title="Athletes" onBack={onClose} />
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 188 }}>
           <View>
             {filteredAthletes.map((athlete) => (
               <CoachAthleteRow
@@ -75,7 +75,19 @@ function CoachAthletesSheetContent({ onClose, athletes = [], selectedAthleteId =
           </View>
         </ScrollView>
 
-        <View className="absolute inset-x-0 bottom-0 px-5" style={{ paddingBottom: Math.max(insets.bottom, 20) }}>
+        <View className="absolute inset-x-0 bottom-0 gap-3 px-5" style={{ paddingBottom: Math.max(insets.bottom, 20) }}>
+          <AppButton
+            theme={resolvedTheme}
+            label="Invite athlete"
+            onPress={() => onActionTarget?.('coach-athlete-invite')}
+            leftIcon={<Send color={resolvedTheme.accentText} size={18} strokeWidth={2.2} />}
+            style={{
+              minHeight: 56,
+              borderRadius: 999,
+              backgroundColor: resolvedTheme.accentSurface,
+              borderColor: resolvedTheme.accentBorder,
+            }}
+          />
           <AppSearchInput
             theme={resolvedTheme}
             value={searchValue}

@@ -54,6 +54,8 @@ import { WorkoutSheet } from './src/screens/workout-sheet.js';
 import { WorkoutEditView } from './src/screens/workout-edit-view.js';
 import { ActiveWorkoutView } from './src/screens/active-workout-view.js';
 import { CoachAthletesSheet } from './src/screens/coach-athletes-sheet.js';
+import { InviteAthleteView } from './src/screens/invite-athlete-view.js';
+import { InvitationSuccessView } from './src/screens/invitation-success-view.js';
 import { CoachAthleteWorkspaceSheet } from './src/screens/coach-athlete-workspace-sheet.js';
 import { AuthView } from './src/screens/auth-view.js';
 import { ExerciseDetailView } from './src/screens/exercise-detail-view.js';
@@ -71,6 +73,7 @@ import {
 } from './src/train/session-orchestration.js';
 import { deriveWorkoutOpenRequestContext } from './src/train/workout-open-request-context.js';
 import { hydrateCoachTrainBridge } from './src/train/coach-train-bridge.js';
+import { createMobileInvitationClient, sendCoachAthleteInvitation } from './src/train/athlete-invitation-runtime.js';
 import { orchestrateWorkoutOpen } from './src/train/workout-open-selection.js';
 import { orchestrateStartWorkoutFromSheet } from './src/train/start-workout-selection.js';
 import { orchestrateOpenOrResumeSession } from './src/train/open-resume-selection.js';
@@ -315,6 +318,11 @@ function AppShellContent() {
   const [isStartingWorkout, setIsStartingWorkout] = useState(false);
   const [isActiveWorkoutViewOpen, setIsActiveWorkoutViewOpen] = useState(false);
   const [isCoachAthletesSheetOpen, setIsCoachAthletesSheetOpen] = useState(false);
+  const [isInviteAthleteViewOpen, setIsInviteAthleteViewOpen] = useState(false);
+  const [isInvitationSuccessViewOpen, setIsInvitationSuccessViewOpen] = useState(false);
+  const [inviteAthleteEmail, setInviteAthleteEmail] = useState('');
+  const [isSendingAthleteInvitation, setIsSendingAthleteInvitation] = useState(false);
+  const [athleteInvitationErrorMessage, setAthleteInvitationErrorMessage] = useState('');
   const [isCoachAthleteWorkspaceOpen, setIsCoachAthleteWorkspaceOpen] = useState(false);
   const [isWorkoutEditViewOpen, setIsWorkoutEditViewOpen] = useState(false);
   const [isExerciseDetailViewOpen, setIsExerciseDetailViewOpen] = useState(false);
@@ -1553,6 +1561,14 @@ function AppShellContent() {
       return;
     }
 
+    if (targetKey === 'coach-athlete-invite') {
+      setIsCoachAthletesSheetOpen(false);
+      setIsInviteAthleteViewOpen(true);
+      setInviteAthleteEmail('');
+      setAthleteInvitationErrorMessage('');
+      return;
+    }
+
     if (targetKey === 'start-workout') {
       await handleStartWorkoutFromSheet(payload);
       return;
@@ -1630,6 +1646,38 @@ function AppShellContent() {
     if (targetKey) {
       setActiveTrainTab(targetKey);
     }
+  }
+
+  function handleCloseInviteAthleteView() {
+    setIsInviteAthleteViewOpen(false);
+    setAthleteInvitationErrorMessage('');
+    setIsCoachAthletesSheetOpen(true);
+  }
+
+  async function handleSendAthleteInvitation() {
+    setIsSendingAthleteInvitation(true);
+    setAthleteInvitationErrorMessage('');
+
+    try {
+      const invitationClient = createMobileInvitationClient({ accessToken: authSession.accessToken });
+      await sendCoachAthleteInvitation({
+        invitationClient,
+        inviteeEmail: inviteAthleteEmail,
+        coachProfile: effectiveBootstrapState.coachProfile,
+        appStoreUrl: process.env.EXPO_PUBLIC_PPLUS_APP_STORE_URL || '',
+      });
+      setIsInviteAthleteViewOpen(false);
+      setIsInvitationSuccessViewOpen(true);
+    } catch (error) {
+      setAthleteInvitationErrorMessage(error?.message || 'Something went sideways while sending the athlete invitation.');
+    } finally {
+      setIsSendingAthleteInvitation(false);
+    }
+  }
+
+  function handleCloseInvitationSuccessView() {
+    setIsInvitationSuccessViewOpen(false);
+    setIsCoachAthletesSheetOpen(true);
   }
 
   function handleOpenProgramDetail(program, sourceSurface = null) {
@@ -1968,6 +2016,21 @@ function AppShellContent() {
         athletes={coachAthletesList}
         selectedAthleteId={selectedCoachAthleteId}
         onActionTarget={handleTrainNavigation}
+        theme={appTheme}
+      />
+      <InviteAthleteView
+        isVisible={isInviteAthleteViewOpen}
+        email={inviteAthleteEmail}
+        onChangeEmail={setInviteAthleteEmail}
+        onClose={handleCloseInviteAthleteView}
+        onSendInvitation={handleSendAthleteInvitation}
+        isSubmitting={isSendingAthleteInvitation}
+        errorMessage={athleteInvitationErrorMessage}
+        theme={appTheme}
+      />
+      <InvitationSuccessView
+        isVisible={isInvitationSuccessViewOpen}
+        onClose={handleCloseInvitationSuccessView}
         theme={appTheme}
       />
         <CoachAthleteWorkspaceSheet

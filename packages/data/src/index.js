@@ -1,4 +1,5 @@
 export * as identity from './identity/index.js';
+export * as invitations from './invitations/index.js';
 export * as athletes from './athletes/index.js';
 export * as exercises from './exercises/index.js';
 export * as workouts from './workouts/index.js';

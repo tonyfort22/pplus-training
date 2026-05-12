@@ -487,6 +487,22 @@ create table if not exists body_metric_logs (
   created_at timestamptz not null default now()
 );
 
+create table if not exists athlete_invitations (
+  id uuid primary key default gen_random_uuid(),
+  coach_id uuid not null references coach_profiles(id) on delete cascade,
+  invitee_email text not null,
+  code_hash text not null,
+  expires_at timestamptz not null,
+  used_at timestamptz,
+  revoked_at timestamptz,
+  sent_at timestamptz,
+  athlete_profile_id uuid references athlete_profiles(id) on delete set null,
+  created_by_user_id uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint athlete_invitations_code_hash_key unique (code_hash)
+);
+
 create index if not exists idx_athlete_profiles_coach on athlete_profiles(coach_id);
 create index if not exists idx_exercise_aliases_exercise on exercise_aliases(exercise_id);
 create index if not exists idx_sub_muscles_muscle on sub_muscles(muscle_id);
@@ -542,6 +558,8 @@ create index if not exists idx_muscle_load_events_athlete_date on muscle_load_ev
 create index if not exists idx_session_muscle_load_summaries_session on session_muscle_load_summaries(workout_session_id);
 create index if not exists idx_recovery_snapshots_athlete_date on recovery_snapshots(athlete_id, snapshot_date desc);
 create index if not exists idx_body_metric_logs_athlete_recorded on body_metric_logs(athlete_id, recorded_at desc);
+create index if not exists idx_athlete_invitations_coach_created on athlete_invitations(coach_id, created_at desc);
+create index if not exists idx_athlete_invitations_email_created on athlete_invitations(invitee_email, created_at desc);
 
 alter table athlete_profiles enable row level security;
 revoke all on table athlete_profiles from anon;
@@ -570,6 +588,55 @@ create policy athlete_profiles_update_own on athlete_profiles
 for update to authenticated
 using (user_id = auth.uid())
 with check (user_id = auth.uid());
+
+alter table athlete_invitations enable row level security;
+revoke all on table athlete_invitations from anon;
+revoke all on table athlete_invitations from authenticated;
+grant select, insert, update on table athlete_invitations to authenticated;
+
+drop policy if exists athlete_invitations_select_coach_owned on athlete_invitations;
+create policy athlete_invitations_select_coach_owned on athlete_invitations
+for select to authenticated
+using (
+  exists (
+    select 1
+    from coach_profiles
+    where coach_profiles.id = athlete_invitations.coach_id
+      and coach_profiles.user_id = auth.uid()
+  )
+);
+
+drop policy if exists athlete_invitations_insert_coach_owned on athlete_invitations;
+create policy athlete_invitations_insert_coach_owned on athlete_invitations
+for insert to authenticated
+with check (
+  exists (
+    select 1
+    from coach_profiles
+    where coach_profiles.id = athlete_invitations.coach_id
+      and coach_profiles.user_id = auth.uid()
+  )
+);
+
+drop policy if exists athlete_invitations_update_coach_owned on athlete_invitations;
+create policy athlete_invitations_update_coach_owned on athlete_invitations
+for update to authenticated
+using (
+  exists (
+    select 1
+    from coach_profiles
+    where coach_profiles.id = athlete_invitations.coach_id
+      and coach_profiles.user_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1
+    from coach_profiles
+    where coach_profiles.id = athlete_invitations.coach_id
+      and coach_profiles.user_id = auth.uid()
+  )
+);
 
 alter table coach_profiles enable row level security;
 
