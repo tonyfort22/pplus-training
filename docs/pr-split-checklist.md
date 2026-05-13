@@ -26,7 +26,7 @@ Ask which family the branch is really about:
 - `apps/mobile/App.js` + `apps/mobile/src/train/*`
 - `apps/mobile/src/screens/*`
 - `packages/data/*`
-- `.github/*`, `semgrep.yml`, `sonar-project.properties`
+- `.github/*`, `semgrep.yml`
 - `docs/*`, `infra/*`
 
 If the answer is "a bit of everything," the branch is drifting.

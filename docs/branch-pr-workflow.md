@@ -79,7 +79,6 @@ Typical files:
 Typical files:
 - `.github/*`
 - `semgrep.yml`
-- `sonar-project.properties`
 
 ### Lane E: docs / schema / sql
 Typical files:
