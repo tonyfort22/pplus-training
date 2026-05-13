@@ -60,6 +60,7 @@ test('complete-athlete-invitation handler surfaces nested existing-account sign-
     lastName: 'Thibault',
     password: 'secret123',
     confirmPassword: 'secret123',
+    dateOfBirth: '2008-04-17',
     gender: 'Male',
     position: 'Forward',
     weight: '170.5',

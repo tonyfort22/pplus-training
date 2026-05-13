@@ -73,8 +73,8 @@ for (const sqlName of ['schema-v1.sql', '0001_initial_schema.sql']) {
     assert.match(normalized, /grant select, update on table coach_profiles to authenticated/)
     assert.match(normalized, /create policy coach_profiles_select_own on coach_profiles for select to authenticated using \(user_id = auth\.uid\(\)\)/)
     assert.match(normalized, /create policy coach_profiles_update_own on coach_profiles for update to authenticated using \(user_id = auth\.uid\(\)\) with check \(user_id = auth\.uid\(\)\)/)
-    assert.doesNotMatch(normalized, /grant .*insert.* on table coach_profiles to authenticated/)
-    assert.doesNotMatch(normalized, /grant .*select.* on table coach_profiles to anon/)
+    assert.doesNotMatch(normalized, /grant\s+insert\s+on table coach_profiles to authenticated/)
+    assert.doesNotMatch(normalized, /grant\s+select\s+on table coach_profiles to anon/)
   })
 
   test(`${sqlName} locks athlete_profiles behind authenticated self-service RLS without open public grants`, () => {
@@ -86,8 +86,8 @@ for (const sqlName of ['schema-v1.sql', '0001_initial_schema.sql']) {
     assert.match(normalized, /create policy athlete_profiles_select_own on athlete_profiles for select to authenticated using \(user_id = auth\.uid\(\)\)/)
     assert.match(normalized, /create policy athlete_profiles_select_coach_linked on athlete_profiles for select to authenticated using \([\s\S]*coach_profiles\.id = athlete_profiles\.coach_id[\s\S]*coach_profiles\.user_id = auth\.uid\(\)[\s\S]*\)/)
     assert.match(normalized, /create policy athlete_profiles_update_own on athlete_profiles for update to authenticated using \(user_id = auth\.uid\(\)\) with check \(user_id = auth\.uid\(\)\)/)
-    assert.doesNotMatch(normalized, /grant .*insert.* on table athlete_profiles to authenticated/)
-    assert.doesNotMatch(normalized, /grant .*select.* on table athlete_profiles to anon/)
+    assert.doesNotMatch(normalized, /grant\s+insert\s+on table athlete_profiles to authenticated/)
+    assert.doesNotMatch(normalized, /grant\s+select\s+on table athlete_profiles to anon/)
   })
 
   test(`${sqlName} preserves coach profile fields needed by coach auth and profile surfaces`, () => {

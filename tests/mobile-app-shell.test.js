@@ -675,7 +675,7 @@ test('mobile coach workspace rehydrates the latest saved readiness snapshot when
  assert.match(identitySource, /async getLatestBodyMetricLog\(\{ athleteId, metricType, source = null \}/)
  assert.match(runtimeSource, /createSupabaseMobileIdentityClient\([\s\S]*createSupabaseRestIdentityRepository/)
  assert.match(providerSource, /async getLatestCoachBodyMetricLog\(\{ athleteId, metricType = 'readiness', source = 'coach_workspace' \} = \{\}\) \{[\s\S]*identityClient\.getLatestBodyMetricLog\(/)
- assert.match(appSource, /const \{ authSession, bootstrapState, sessionStore, signInWithPassword, signUpWithPassword, resetPasswordForEmail, signOut, refreshAuthSession, updateAthleteProfile, updateCoachProfile, createCoachBodyMetricLog, getLatestCoachBodyMetricLog \} = useMobileAuthSession\(\);/)
+ assert.match(appSource, /const \{ authSession, bootstrapState, sessionStore, signInWithPassword, signUpWithPassword, resetPasswordForEmail, signOut, refreshAuthSession, updateAuthSession, updateAthleteProfile, updateCoachProfile, createCoachBodyMetricLog, getLatestCoachBodyMetricLog \} = useMobileAuthSession\(\);/)
  assert.match(appSource, /useEffect\(\(\) => \{[\s\S]*getLatestCoachBodyMetricLog\(\{[\s\S]*athleteId: selectedCoachAthlete\.athleteProfileId,[\s\S]*metricType: 'readiness',[\s\S]*source: 'coach_workspace',[\s\S]*\}\)/)
  assert.match(appSource, /setCoachReadinessDraft\(\{ percent: '', note: '' \}\)/)
  assert.match(appSource, /percent: latestReadinessLog\?\.value != null \? String\(latestReadinessLog\.value\) : ''/)

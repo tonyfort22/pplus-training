@@ -31,6 +31,10 @@ test('createSupabaseServiceProgramRepository falls back when live program_workou
         select,
       })
 
+      if (parsedUrl.pathname === '/rest/v1/programs' && (options.method || 'GET') === 'GET' && parsedUrl.searchParams.get('athlete_id') === 'eq.athlete-1') {
+        return json([])
+      }
+
       if (parsedUrl.pathname === '/rest/v1/programs' && (options.method || 'GET') === 'GET') {
         return json([
           {
@@ -117,8 +121,8 @@ test('createSupabaseServiceProgramRepository falls back when live program_workou
   assert.equal(workoutSelects[0], 'id,athlete_id,coach_id,program_id,program_day_id,workout_template_id,name_snapshot,notes,status,sort_order')
   assert.equal(workoutSelects[1], 'id,athlete_id,coach_id,program_id,program_day_id,workout_template_id,name_snapshot,status,sort_order')
   const workoutCreateCalls = calls.filter((call) => call.url.includes('/rest/v1/program_workouts') && call.method === 'POST')
-  assert.equal(workoutCreateCalls.length, 2)
-  assert.equal('notes' in workoutCreateCalls[1].body, false)
+  assert.equal(workoutCreateCalls.length, 1)
+  assert.equal(workoutCreateCalls[0].body[0].notes, '')
 })
 
 test('createSupabaseServiceProgramRepository drops workout notes and retries when the live schema is legacy', async () => {
@@ -137,6 +141,10 @@ test('createSupabaseServiceProgramRepository drops workout notes and retries whe
         body,
         select,
       })
+
+      if (parsedUrl.pathname === '/rest/v1/programs' && (options.method || 'GET') === 'GET' && parsedUrl.searchParams.get('athlete_id') === 'eq.athlete-1') {
+        return json([])
+      }
 
       if (parsedUrl.pathname === '/rest/v1/programs' && (options.method || 'GET') === 'GET') {
         return json([{ id: 'program-1', athlete_id: 'seed-athlete', coach_id: 'coach-1', name: 'Training Program', description: null, start_date: '2026-05-18', end_date: '2026-07-27', status: 'active' }])
@@ -183,7 +191,6 @@ test('createSupabaseServiceProgramRepository drops workout notes and retries whe
 
   assert.equal(result.id, 'assigned-program')
   const workoutCreateCalls = calls.filter((call) => call.url.includes('/rest/v1/program_workouts') && call.method === 'POST')
-  assert.equal(workoutCreateCalls.length, 2)
-  assert.equal(workoutCreateCalls[0].body.notes, 'Coach note')
-  assert.equal('notes' in workoutCreateCalls[1].body, false)
+  assert.equal(workoutCreateCalls.length, 1)
+  assert.equal(workoutCreateCalls[0].body[0].notes, 'Coach note')
 })
