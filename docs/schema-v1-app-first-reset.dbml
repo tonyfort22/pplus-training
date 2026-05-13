@@ -1,0 +1,450 @@
+// PPLUS Training app-first reset schema v1
+// Synced from infra/supabase/migrations/0001_initial_schema.sql
+
+Table users {
+  id uuid [pk]
+  email text [not null, unique]
+  role text [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table coach_profiles {
+  id uuid [pk]
+  user_id uuid [not null, unique]
+  display_name text
+  organization_name text
+  bio text
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table athlete_profiles {
+  id uuid [pk]
+  user_id uuid [not null, unique]
+  coach_id uuid
+  first_name text
+  last_name text
+  date_of_birth date
+  sport text
+  position text
+  handedness text
+  units_preference text
+  status text
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table exercises {
+  id uuid [pk]
+  name text [not null]
+  slug text [unique]
+  description text
+  coaching_cues text
+  video_url text
+  thumbnail_url text
+  difficulty text
+  movement_pattern text
+  stimulus_type text
+  body_region text
+  default_equipment text
+  default_load_unit text
+  created_by uuid
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table exercise_aliases {
+  id uuid [pk]
+  exercise_id uuid [not null]
+  alias_text text [not null]
+  alias_type text [not null]
+  source_system text
+  created_at timestamptz [not null]
+}
+
+Table muscles {
+  id uuid [pk]
+  name text [not null]
+  slug text [unique]
+  body_region text
+  thumbnail_url text
+  sort_order integer
+  is_active boolean [not null]
+}
+
+Table sub_muscles {
+  id uuid [pk]
+  muscle_id uuid [not null]
+  name text [not null]
+  slug text
+  thumbnail_url text
+  sort_order integer
+  is_active boolean [not null]
+}
+
+Table exercise_muscle_maps {
+  id uuid [pk]
+  exercise_id uuid [not null]
+  muscle_id uuid [not null]
+  role text [not null]
+  contribution_percent numeric
+  sort_order integer
+  created_at timestamptz [not null]
+}
+
+Table exercise_sub_muscle_maps {
+  id uuid [pk]
+  exercise_id uuid [not null]
+  exercise_muscle_map_id uuid
+  sub_muscle_id uuid [not null]
+  role text [not null]
+  contribution_percent numeric
+  sort_order integer
+  created_at timestamptz [not null]
+}
+
+Table workout_templates {
+  id uuid [pk]
+  coach_id uuid
+  name text [not null]
+  description text
+  category text
+  focus_area text
+  training_type text
+  estimated_duration_minutes integer
+  thumbnail_url text
+  status text [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table workout_template_exercises {
+  id uuid [pk]
+  workout_template_id uuid [not null]
+  exercise_id uuid
+  name_snapshot text [not null]
+  sort_order integer [not null]
+  notes text
+  default_rest_seconds integer
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table workout_template_sets {
+  id uuid [pk]
+  workout_template_exercise_id uuid [not null]
+  sort_order integer [not null]
+  set_type text [not null]
+  target_reps integer
+  target_load numeric
+  target_load_unit text
+  target_duration_seconds integer
+  target_distance numeric
+  target_distance_unit text
+  target_rpe numeric
+  target_rir numeric
+  target_rest_seconds integer
+  notes text
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table programs {
+  id uuid [pk]
+  athlete_id uuid [not null]
+  coach_id uuid
+  name text [not null]
+  description text
+  start_date date
+  end_date date
+  status text [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table program_weeks {
+  id uuid [pk]
+  program_id uuid [not null]
+  week_index integer [not null]
+  name text
+  start_date date
+  end_date date
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table program_days {
+  id uuid [pk]
+  program_week_id uuid [not null]
+  day_index integer [not null]
+  date date
+  name text
+  notes text
+  status text
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table program_workouts {
+  id uuid [pk]
+  athlete_id uuid
+  coach_id uuid
+  program_id uuid
+  program_day_id uuid
+  workout_template_id uuid
+  name_snapshot text [not null]
+  status text [not null]
+  sort_order integer
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table program_workout_exercises {
+  id uuid [pk]
+  program_workout_id uuid [not null]
+  exercise_id uuid
+  name_snapshot text [not null]
+  sort_order integer [not null]
+  notes text
+  default_rest_seconds integer
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table program_workout_sets {
+  id uuid [pk]
+  program_workout_exercise_id uuid [not null]
+  sort_order integer [not null]
+  set_type text [not null]
+  target_reps integer
+  target_load numeric
+  target_load_unit text
+  target_duration_seconds integer
+  target_distance numeric
+  target_distance_unit text
+  target_rpe numeric
+  target_rir numeric
+  target_rest_seconds integer
+  notes text
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table workout_sessions {
+  id uuid [pk]
+  athlete_id uuid
+  coach_id uuid
+  program_id uuid
+  program_day_id uuid
+  program_workout_id uuid
+  workout_template_id uuid
+  name_snapshot text [not null]
+  status text [not null]
+  started_at timestamptz
+  completed_at timestamptz
+  elapsed_seconds integer [not null]
+  notes text
+  perceived_difficulty numeric
+  total_exercises_count integer [not null]
+  completed_exercises_count integer [not null]
+  total_sets_count integer [not null]
+  completed_sets_count integer [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table workout_session_exercises {
+  id uuid [pk]
+  workout_session_id uuid [not null]
+  program_workout_exercise_id uuid
+  exercise_id uuid
+  name_snapshot text [not null]
+  sort_order integer [not null]
+  status text [not null]
+  notes text
+  default_rest_seconds integer
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table workout_session_sets {
+  id uuid [pk]
+  workout_session_exercise_id uuid [not null]
+  program_workout_set_id uuid
+  sort_order integer [not null]
+  set_type text [not null]
+  prescribed_reps integer
+  prescribed_load numeric
+  prescribed_load_unit text
+  prescribed_duration_seconds integer
+  prescribed_distance numeric
+  prescribed_distance_unit text
+  prescribed_rpe numeric
+  prescribed_rir numeric
+  prescribed_rest_seconds integer
+  actual_reps integer
+  actual_load numeric
+  actual_load_unit text
+  actual_duration_seconds integer
+  actual_distance numeric
+  actual_distance_unit text
+  actual_rpe numeric
+  actual_rir numeric
+  actual_rest_seconds integer
+  completed_at timestamptz
+  is_completed boolean [not null]
+  notes text
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table rest_timer_states {
+  id uuid [pk]
+  workout_session_id uuid [not null]
+  workout_session_set_id uuid
+  mode text [not null]
+  duration_seconds integer [not null]
+  remaining_seconds integer [not null]
+  started_at timestamptz [not null]
+  ended_at timestamptz
+  is_running boolean [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table exercise_performance_snapshots {
+  id uuid [pk]
+  athlete_id uuid [not null]
+  exercise_id uuid [not null]
+  workout_session_id uuid
+  workout_session_exercise_id uuid
+  metric_type text [not null]
+  load numeric
+  reps integer
+  sets integer
+  duration_seconds integer
+  distance numeric
+  unit text
+  log_date date [not null]
+  estimated_one_rep_max numeric
+  notes text
+  created_at timestamptz [not null]
+}
+
+Table muscle_load_events {
+  id uuid [pk]
+  athlete_id uuid [not null]
+  workout_session_id uuid [not null]
+  workout_session_exercise_id uuid
+  workout_session_set_id uuid
+  exercise_id uuid
+  muscle_id uuid
+  sub_muscle_id uuid
+  is_sub_muscle boolean [not null]
+  event_date date [not null]
+  percent numeric
+  score numeric
+  created_at timestamptz [not null]
+}
+
+Table session_muscle_load_summaries {
+  id uuid [pk]
+  athlete_id uuid [not null]
+  workout_session_id uuid [not null]
+  muscle_id uuid [not null]
+  event_date date [not null]
+  percent numeric
+  score numeric
+  cap numeric
+  level text
+  created_at timestamptz [not null]
+}
+
+Table recovery_snapshots {
+  id uuid [pk]
+  athlete_id uuid [not null]
+  snapshot_date date [not null]
+  muscle_id uuid
+  sub_muscle_id uuid
+  fatigue_score numeric
+  recovery_score numeric
+  recovery_percent numeric
+  readiness_level text
+  source_window_days integer
+  created_at timestamptz [not null]
+}
+
+Table body_metric_logs {
+  id uuid [pk]
+  athlete_id uuid [not null]
+  coach_id uuid
+  metric_type text [not null]
+  value numeric [not null]
+  unit text
+  recorded_at timestamptz [not null]
+  source text
+  notes text
+  progress_photo_url text
+  created_at timestamptz [not null]
+}
+
+Ref: coach_profiles.user_id > users.id
+Ref: athlete_profiles.user_id > users.id
+Ref: athlete_profiles.coach_id > coach_profiles.id
+Ref: exercises.created_by > users.id
+Ref: exercise_aliases.exercise_id > exercises.id
+Ref: sub_muscles.muscle_id > muscles.id
+Ref: exercise_muscle_maps.exercise_id > exercises.id
+Ref: exercise_muscle_maps.muscle_id > muscles.id
+Ref: exercise_sub_muscle_maps.exercise_id > exercises.id
+Ref: exercise_sub_muscle_maps.exercise_muscle_map_id > exercise_muscle_maps.id
+Ref: exercise_sub_muscle_maps.sub_muscle_id > sub_muscles.id
+Ref: workout_templates.coach_id > coach_profiles.id
+Ref: workout_template_exercises.workout_template_id > workout_templates.id
+Ref: workout_template_exercises.exercise_id > exercises.id
+Ref: workout_template_sets.workout_template_exercise_id > workout_template_exercises.id
+Ref: programs.athlete_id > athlete_profiles.id
+Ref: programs.coach_id > coach_profiles.id
+Ref: program_weeks.program_id > programs.id
+Ref: program_days.program_week_id > program_weeks.id
+Ref: program_workouts.athlete_id > athlete_profiles.id
+Ref: program_workouts.coach_id > coach_profiles.id
+Ref: program_workouts.program_id > programs.id
+Ref: program_workouts.program_day_id > program_days.id
+Ref: program_workouts.workout_template_id > workout_templates.id
+Ref: program_workout_exercises.program_workout_id > program_workouts.id
+Ref: program_workout_exercises.exercise_id > exercises.id
+Ref: program_workout_sets.program_workout_exercise_id > program_workout_exercises.id
+Ref: workout_sessions.athlete_id > athlete_profiles.id
+Ref: workout_sessions.coach_id > coach_profiles.id
+Ref: workout_sessions.program_id > programs.id
+Ref: workout_sessions.program_day_id > program_days.id
+Ref: workout_sessions.program_workout_id > program_workouts.id
+Ref: workout_sessions.workout_template_id > workout_templates.id
+Ref: workout_session_exercises.workout_session_id > workout_sessions.id
+Ref: workout_session_exercises.program_workout_exercise_id > program_workout_exercises.id
+Ref: workout_session_exercises.exercise_id > exercises.id
+Ref: workout_session_sets.workout_session_exercise_id > workout_session_exercises.id
+Ref: workout_session_sets.program_workout_set_id > program_workout_sets.id
+Ref: rest_timer_states.workout_session_id > workout_sessions.id
+Ref: rest_timer_states.workout_session_set_id > workout_session_sets.id
+Ref: exercise_performance_snapshots.athlete_id > athlete_profiles.id
+Ref: exercise_performance_snapshots.exercise_id > exercises.id
+Ref: exercise_performance_snapshots.workout_session_id > workout_sessions.id
+Ref: exercise_performance_snapshots.workout_session_exercise_id > workout_session_exercises.id
+Ref: muscle_load_events.athlete_id > athlete_profiles.id
+Ref: muscle_load_events.workout_session_id > workout_sessions.id
+Ref: muscle_load_events.workout_session_exercise_id > workout_session_exercises.id
+Ref: muscle_load_events.workout_session_set_id > workout_session_sets.id
+Ref: muscle_load_events.exercise_id > exercises.id
+Ref: muscle_load_events.muscle_id > muscles.id
+Ref: muscle_load_events.sub_muscle_id > sub_muscles.id
+Ref: session_muscle_load_summaries.athlete_id > athlete_profiles.id
+Ref: session_muscle_load_summaries.workout_session_id > workout_sessions.id
+Ref: session_muscle_load_summaries.muscle_id > muscles.id
+Ref: recovery_snapshots.athlete_id > athlete_profiles.id
+Ref: recovery_snapshots.muscle_id > muscles.id
+Ref: recovery_snapshots.sub_muscle_id > sub_muscles.id
+Ref: body_metric_logs.athlete_id > athlete_profiles.id
+Ref: body_metric_logs.coach_id > coach_profiles.id

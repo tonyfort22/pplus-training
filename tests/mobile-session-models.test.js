@@ -1,0 +1,94 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import {
+  createTrainDemoState,
+  createDemoProgramWorkout,
+} from '../apps/mobile/src/train/index.js'
+import {
+  getRestTimerModel,
+  getSessionExerciseModels,
+  getSessionHeaderModel,
+} from '../apps/mobile/src/train/session-models.js'
+import { completeWorkoutSet, findSessionSet } from '../packages/core/src/index.js'
+
+test('getSessionHeaderModel summarizes workout progress for the active session surface', () => {
+  const trainState = createTrainDemoState({
+    programWorkout: createDemoProgramWorkout(),
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+
+  const model = getSessionHeaderModel(trainState.session, 35)
+  assert.equal(model.title, 'Lower A')
+  assert.equal(model.finishLabel, 'Finish')
+  assert.equal(model.workoutTimerLabel, '00:00:35')
+  assert.equal(model.nextUpLabel, 'Next up: Barbell Back Squat Set 1 • 120 lb x 8')
+  assert.equal(model.progressLabel, '0/7 sets, 0/2 exercises')
+  assert.equal(model.progressPercent, 0)
+})
+
+test('getSessionHeaderModel shifts to a wrap-up cue when every set is already logged', () => {
+  const trainState = createTrainDemoState({
+    programWorkout: createDemoProgramWorkout(),
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+
+  let session = trainState.session
+  for (const exercise of session.exercises) {
+    for (const set of exercise.sets) {
+      session = completeWorkoutSet({
+        session,
+        exerciseId: exercise.id,
+        setId: set.id,
+      })
+    }
+  }
+
+  const model = getSessionHeaderModel(session, 1800)
+
+  assert.equal(model.finishLabel, 'View summary')
+  assert.equal(model.nextUpLabel, 'All sets logged. Finish to open the session summary.')
+  assert.equal(model.progressPercent, 100)
+})
+
+test('getRestTimerModel returns null until a set completion starts a timer', () => {
+  const trainState = createTrainDemoState({
+    programWorkout: createDemoProgramWorkout(),
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+
+  assert.equal(getRestTimerModel(trainState.session, null), null)
+
+  const completedSession = completeWorkoutSet({
+    session: trainState.session,
+    exerciseId: 'pwe-squat',
+    setId: 'pws-squat-1',
+    completedAt: '2026-04-21T20:10:00.000Z',
+  })
+
+  const selectedSet = findSessionSet(completedSession, 'pwe-squat', 'pws-squat-1')
+  const model = getRestTimerModel(completedSession, selectedSet)
+  const exerciseModels = getSessionExerciseModels(completedSession)
+  assert.equal(model.eyebrow, 'Rest timer')
+  assert.equal(model.title, 'Barbell Back Squat • Set 1 complete')
+  assert.equal(model.body, 'Recover, then roll straight into Set 2.')
+  assert.equal(model.clockLabel, '03:00')
+  assert.equal(exerciseModels[0].sets[0].completionLabel, 'Done')
+  assert.equal(exerciseModels[0].sets[1].completionLabel, 'Ready now')
+  assert.equal(exerciseModels[0].sets[2].completionLabel, 'Later')
+})
+
+test('getSessionExerciseModels formats exercise and set presentation cleanly', () => {
+  const trainState = createTrainDemoState({
+    programWorkout: createDemoProgramWorkout(),
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+
+  const models = getSessionExerciseModels(trainState.session)
+  assert.equal(models.length, 2)
+  assert.equal(models[0].title, 'Barbell Back Squat')
+  assert.equal(models[0].restLabel, '03:00')
+  assert.equal(models[0].sets[0].title, 'Set 1')
+  assert.match(models[0].sets[0].prescribedLabel, /120 lb x 8 reps/)
+  assert.equal(models[0].sets[0].completionLabel, 'Ready now')
+  assert.equal(models[0].sets[1].completionLabel, 'Later')
+})

@@ -1,0 +1,50 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { getProgressSurfaceModel, getPlaceholderSurfaceModel } from '../apps/mobile/src/progress/index.js'
+import { getProgressSections, getPlaceholderSections } from '../apps/mobile/src/screens/surface-sections.js'
+
+test('getProgressSections converts the progress surface model into renderable sections', () => {
+  const progressModel = getProgressSurfaceModel()
+  const sections = getProgressSections(progressModel)
+
+  assert.equal(sections.length, 8)
+  assert.equal(sections[0].type, 'header')
+  assert.equal(sections[1].type, 'metrics-grid')
+  assert.equal(sections[1].items.length, 3)
+  assert.equal(sections[2].type, 'body-with-rows')
+  assert.equal(sections[2].title, 'Readiness interpretation')
+  assert.equal(sections[3].title, 'Training load')
+  assert.equal(sections[4].rows[0].title, 'Quads')
+  assert.equal(sections[6].type, 'body-with-rows')
+  assert.equal(sections[6].title, 'Recent momentum')
+  assert.equal(sections[7].type, 'body-with-rows')
+  assert.equal(sections[7].title, 'Exercise breakdown')
+})
+
+test('getPlaceholderSections creates a single simple section for placeholder tabs', () => {
+  const placeholder = getPlaceholderSurfaceModel('Inbox', 'Messages and reminders will live here later.')
+  const sections = getPlaceholderSections(placeholder)
+
+  assert.equal(sections.length, 1)
+  assert.equal(sections[0].type, 'body')
+  assert.equal(sections[0].title, 'Inbox')
+  assert.equal(sections[0].body, 'Messages and reminders will live here later.')
+})
+
+test('getPlaceholderSections can promote a placeholder into a single action card when a real next-step action is provided', () => {
+  const sections = getPlaceholderSections({
+    title: 'No workout scheduled',
+    body: 'This athlete has no workout scheduled today yet.',
+    actionLabel: 'Open athlete workspace',
+    targetKey: 'coach-athlete-workspace-open',
+    actionPayload: { sourceSurface: 'coach-no-workout' },
+  })
+
+  assert.equal(sections.length, 1)
+  assert.equal(sections[0].type, 'action-card')
+  assert.equal(sections[0].title, 'No workout scheduled')
+  assert.equal(sections[0].body, 'This athlete has no workout scheduled today yet.')
+  assert.equal(sections[0].actionLabel, 'Open athlete workspace')
+  assert.equal(sections[0].targetKey, 'coach-athlete-workspace-open')
+  assert.deepEqual(sections[0].actionPayload, { sourceSurface: 'coach-no-workout' })
+})

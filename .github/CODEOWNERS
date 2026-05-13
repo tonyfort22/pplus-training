@@ -1,0 +1,9 @@
+# Default reviewer fallback
+* @tonyfort22
+
+# High-risk seams
+/apps/mobile/src/train/ @tonyfort22
+/apps/mobile/src/progress/ @tonyfort22
+/packages/data/src/ @tonyfort22
+/infra/supabase/ @tonyfort22
+/tests/ @tonyfort22

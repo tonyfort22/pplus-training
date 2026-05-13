@@ -1,742 +1,2298 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import * as ImagePicker from 'expo-image-picker';
 import { StatusBar } from 'expo-status-bar';
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { InteractionManager, Pressable, Text, View } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import * as data from '../../packages/data/src/index.js';
 import {
   adjustRestTimer,
   clearRestTimer,
-  completeWorkoutSessionSet,
-  createWorkoutSessionFromTemplate,
-  finishWorkoutSession,
-  findSessionSet,
-  formatClock,
+  canFinishWorkoutSession,
   formatWorkoutTimer,
-  getSessionProgress,
-  updateSessionSetActuals
 } from '@pplus/core';
+import { findSessionSet } from '../../packages/core/src/index.js';
+import { getBootstrapSurfaceModel } from './src/auth/bootstrap.js';
+import { MobileAuthSessionProvider, useMobileAuthSession } from './src/auth/session-provider.js';
+import { getAuthScreenModel } from './src/auth/auth-screen-models.js';
+import {
+  orchestrateAuthSubmit,
+  orchestrateProfileSignOut,
+  orchestrateThemePreferenceChange,
+  orchestrateUnitsPreferenceChange,
+  orchestrateSaveProfile,
+  orchestrateSaveCoachReadinessMetric,
+} from './src/auth/auth-profile-actions.js';
+import {
+  getCalendarSurfaceModel,
+  getTodaySurfaceModel,
+  getWorkoutSurfaceModel,
+  mobileTabs,
+  trainTabs,
+} from './src/train/index.js';
+import { getActiveSessionSurfaceModel } from './src/train/active-session-models.js';
+import { getCompletedSessionSurfaceModel } from './src/train/completed-session-models.js';
+import { getDiscardedSessionSurfaceModel } from './src/train/discarded-session-models.js';
+import { getTrainRenderModel } from './src/train/train-render-models.js';
+import { getTrainSurfaceModel } from './src/train/train-screen-models.js';
+import { getProgramSheetModel } from './src/train/program-sheet-models.js';
+import { getProgramEditViewModel } from './src/train/program-edit-view-models.js';
+import { getTrainingCalendarModel } from './src/train/training-calendar-models.js';
+import { getWorkoutSheetModel } from './src/train/workout-sheet-models.js';
+import { getWorkoutEditViewModel, createEmptyWorkoutEditDraftModel } from './src/train/workout-edit-view-models.js';
+import { getActiveWorkoutViewModel } from './src/train/active-workout-view-models.js';
+import { getExerciseDetailViewModel } from './src/train/exercise-detail-view-models.js';
+import { getAnalyticsViewModel, getPlaceholderSurfaceModel, getProgressSurfaceModel } from './src/progress/index.js';
+import { getAppRenderModel } from './src/screens/app-render-models.js';
+import { getPlaceholderSections, getProgressSections } from './src/screens/surface-sections.js';
+import { getGenericSectionRenderPlan, getSessionSectionRenderPlan } from './src/screens/render-plans.js';
+import { getSessionRenderModel } from './src/screens/session-render-models.js';
+import { getSessionSections } from './src/screens/session-sections.js';
+import { renderGenericSections, renderSessionSections, renderTrainSurface } from './src/screens/renderers.js';
+import { renderProgramSheet } from './src/screens/program-sheet.js';
+import { ProgramEditView } from './src/screens/program-edit-view.js';
+import { TrainingCalendarSheet } from './src/screens/training-calendar-sheet.js';
+import { WorkoutSheet } from './src/screens/workout-sheet.js';
+import { WorkoutEditView } from './src/screens/workout-edit-view.js';
+import { ActiveWorkoutView } from './src/screens/active-workout-view.js';
+import { CoachAthletesSheet } from './src/screens/coach-athletes-sheet.js';
+import { InviteAthleteView } from './src/screens/invite-athlete-view.js';
+import { InvitationSuccessView } from './src/screens/invitation-success-view.js';
+import { InvitationCodeEntryView } from './src/screens/invitation-code-entry-view.js';
+import { AthleteInviteOnboardingView } from './src/screens/athlete-invite-onboarding-view.js';
+import { CoachAthleteWorkspaceSheet } from './src/screens/coach-athlete-workspace-sheet.js';
+import { AuthView } from './src/screens/auth-view.js';
+import { ExerciseDetailView } from './src/screens/exercise-detail-view.js';
+import { ProfileView } from './src/screens/profile-view.js';
+import { LoadingView } from './src/screens/loading-view.js';
+import { AnalyticsView } from './src/screens/analytics-view.js';
+import { renderAppShell } from './src/screens/shell-renderers.js';
+import { getBottomTabViewItems } from './src/screens/shell-view-models.js';
+import { createAppStyles, statusStyles } from './src/screens/styles.js';
+import { getAppTheme } from './src/theme/app-theme.js';
+import { getTabButtonModels } from './src/ui/tab-models.js';
+import { getPreviewStateButtonModels } from './src/ui/preview-state-models.js';
+import {
+  resolveIncomingSession,
+} from './src/train/session-orchestration.js';
+import { deriveWorkoutOpenRequestContext } from './src/train/workout-open-request-context.js';
+import { hydrateCoachTrainBridge } from './src/train/coach-train-bridge.js';
+import { createMobileInvitationClient, sendCoachAthleteInvitation } from './src/train/athlete-invitation-runtime.js';
+import { orchestrateWorkoutOpen } from './src/train/workout-open-selection.js';
+import { orchestrateStartWorkoutFromSheet } from './src/train/start-workout-selection.js';
+import { orchestrateOpenOrResumeSession } from './src/train/open-resume-selection.js';
+import { orchestrateCloseProgramSheet, orchestrateOpenProgramSheet } from './src/train/open-program-selection.js';
+import { orchestrateCloseExerciseDetail, orchestrateOpenExerciseDetail } from './src/train/open-exercise-detail-selection.js';
+import { orchestrateCoachAthleteSelect, orchestrateCoachAthleteWorkspaceOpen } from './src/train/coach-athlete-selection.js';
+import { orchestrateCloseActiveWorkout } from './src/train/active-workout-selection.js';
+import {
+  orchestrateAddExercisesToSession,
+  orchestrateAddSessionSet,
+  orchestrateAdjustRestTimer,
+  orchestrateClosePostSetEffortAdjustment,
+  orchestrateCompleteSet,
+  orchestrateDeleteSessionExercise,
+  orchestrateDeleteSessionSet,
+  orchestrateDismissRestTimer,
+  orchestrateExerciseRestTimeChange,
+  orchestrateFinishWorkout,
+  orchestrateDiscardWorkout,
+  orchestrateMoveActiveWorkoutExercise,
+  orchestrateQuickActualUpdate,
+  orchestratePostSetEffortChange,
+  orchestrateRemoveExerciseRestTime,
+  orchestrateSessionSetValueChange,
+  orchestrateWorkoutNotesChange,
+  orchestrateWorkoutSettingsChange,
+} from './src/train/active-workout-mutations.js';
+import { orchestrateCloseProgramEditView, orchestrateOpenProgramEditView } from './src/train/program-edit-selection.js';
+import { orchestrateCloseWorkoutEditView, orchestrateOpenWorkoutEditView } from './src/train/workout-edit-selection.js';
+import { orchestrateAddExercisesToWorkoutEdit, orchestrateAddWorkoutEditSet, orchestrateDeleteWorkoutEditSet, orchestrateMoveWorkoutEditExercise } from './src/train/workout-edit-mutations.js';
+import { createSessionPersistenceController } from './src/train/session-persistence.js';
+import { getSessionDebugSummary, logResolvedIncomingSession } from './src/train/session-diagnostics.js';
 
-const workoutTemplate = {
-  id: 'lower-a',
-  name: 'Lower A',
-  exercises: [
-    {
-      id: 'squat',
-      name: 'Barbell Back Squat',
-      defaultRestSeconds: 180,
-      sets: [
-        { id: 'squat-1', prescribedReps: 8, prescribedLoad: 120, prescribedRpe: 6 },
-        { id: 'squat-2', prescribedReps: 8, prescribedLoad: 120, prescribedRpe: 7 },
-        { id: 'squat-3', prescribedReps: 8, prescribedLoad: 120, prescribedRpe: 8 },
-        { id: 'squat-4', prescribedReps: 8, prescribedLoad: 120, prescribedRpe: 9 }
-      ]
-    },
-    {
-      id: 'rdl',
-      name: 'Barbell Romanian Deadlift',
-      defaultRestSeconds: 150,
-      sets: [
-        { id: 'rdl-1', prescribedReps: 8, prescribedLoad: 95, prescribedRpe: 6 },
-        { id: 'rdl-2', prescribedReps: 8, prescribedLoad: 95, prescribedRpe: 7 },
-        { id: 'rdl-3', prescribedReps: 8, prescribedLoad: 95, prescribedRpe: 8 }
-      ]
-    }
-  ]
+const authPreviewStates = [
+  { key: 'live', label: 'Live' },
+  { key: 'sign_in', label: 'Sign in' },
+  { key: 'sign_up', label: 'Sign up' },
+];
+
+const initialInvitationOnboardingValues = {
+  avatarUrl: '',
+  avatarAsset: null,
+  firstName: '',
+  lastName: '',
+  email: '',
+  password: '',
+  confirmPassword: '',
+  dateOfBirth: '',
+  gender: '',
+  position: '',
+  weightUnit: 'lb',
+  weight: '70',
+  heightUnit: 'ft',
+  heightFeet: '5',
+  heightInches: '9',
+  heightCm: '175',
 };
 
-const mobileTabs = [
-  { key: 'train', label: 'Train' },
-  { key: 'progress', label: 'Progress' },
-  { key: 'team', label: 'Team' },
-  { key: 'inbox', label: 'Inbox' }
-];
-
-const trainTabs = [
-  { key: 'today', label: 'Today' },
-  { key: 'program', label: 'Program' },
-  { key: 'workout', label: 'Workout' },
-  { key: 'session', label: 'Session' }
-];
-
-function SurfaceCard({ title, body, actionLabel, onAction }) {
-  return (
-    <View style={styles.sectionCard}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <Text style={styles.sectionBody}>{body}</Text>
-      {actionLabel ? (
-        <Pressable style={styles.primaryAction} onPress={onAction}>
-          <Text style={styles.primaryActionText}>{actionLabel}</Text>
-        </Pressable>
-      ) : null}
-    </View>
-  );
+function isUuidValue(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''));
 }
 
-function MetricCard({ label, value, detail }) {
-  return (
-    <View style={styles.metricCard}>
-      <Text style={styles.metricLabel}>{label}</Text>
-      <Text style={styles.metricValue}>{value}</Text>
-      <Text style={styles.metricDetail}>{detail}</Text>
-    </View>
-  );
+function createMobileExerciseDetailClient({ env = process.env, fetchImpl = globalThis.fetch } = {}) {
+  const url = env.EXPO_PUBLIC_SUPABASE_URL;
+  const anonKey = env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !anonKey) {
+    return null;
+  }
+
+  return data.exercises.createSupabaseRestExerciseRepository({
+    url,
+    anonKey,
+    fetchImpl,
+  });
+}
+
+function createMobileExerciseLibraryClient({ env = process.env, fetchImpl = globalThis.fetch } = {}) {
+  const url = env.EXPO_PUBLIC_SUPABASE_URL;
+  const anonKey = env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !anonKey) {
+    return null;
+  }
+
+  return data.exercises.createSupabaseRestExerciseRepository({
+    url,
+    anonKey,
+    fetchImpl,
+  });
+}
+
+function createMobileProgramClient({ env = process.env, fetchImpl = globalThis.fetch, accessToken = null } = {}) {
+  const url = env.EXPO_PUBLIC_SUPABASE_URL;
+  const anonKey = env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !anonKey) {
+    return null;
+  }
+
+  return data.programs.createSupabaseRestProgramRepository({
+    url,
+    anonKey,
+    accessToken,
+    fetchImpl,
+  });
+}
+
+function createMobileWorkoutClient({ env = process.env, fetchImpl = globalThis.fetch, accessToken = null } = {}) {
+  const url = env.EXPO_PUBLIC_SUPABASE_URL;
+  const anonKey = env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !anonKey) {
+    return null;
+  }
+
+  return data.sessions.createSupabaseRestSessionDb({
+    url,
+    anonKey,
+    accessToken,
+    fetchImpl,
+  });
+}
+
+function createEmptySessionState() {
+  return {
+    id: null,
+    programWorkoutId: null,
+    status: 'planned',
+    startedAt: null,
+    completedAt: null,
+    discardedAt: null,
+    elapsedSeconds: 0,
+    totalExercisesCount: 0,
+    completedExercisesCount: 0,
+    totalSetsCount: 0,
+    completedSetsCount: 0,
+    exercises: [],
+    activeRestTimer: null,
+    settings: {
+      defaultRestSeconds: null,
+      autoProgressEnabled: false,
+      keepAwake: false,
+      adjustEffortAfterSet: false,
+    },
+  };
+}
+
+function createEmptyTrainState(session = createEmptySessionState()) {
+  const today = new Date()
+  const todayIsoDate = today.toISOString().slice(0, 10)
+  const startOfWeek = new Date(today)
+  startOfWeek.setHours(0, 0, 0, 0)
+  startOfWeek.setDate(today.getDate() - today.getDay())
+  const calendarWeek = Array.from({ length: 7 }, (_, index) => {
+    const dayDate = new Date(startOfWeek)
+    dayDate.setDate(startOfWeek.getDate() + index)
+    const isoDate = dayDate.toISOString().slice(0, 10)
+    const weekdayShort = dayDate.toLocaleDateString('en-US', { weekday: 'short' })
+    return {
+      id: isoDate,
+      dayLabel: weekdayShort,
+      weekdayLabel: weekdayShort.toUpperCase(),
+      dateLabel: dayDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      workoutName: 'No workout scheduled',
+      status: 'off',
+      workoutPreview: null,
+    }
+  })
+
+  return {
+    programWorkout: {
+      id: null,
+      nameSnapshot: 'No workout scheduled',
+      exercises: [],
+    },
+    today: {
+      title: 'Today',
+      workoutName: 'No workout scheduled',
+      scheduledLabel: 'No workout scheduled',
+      quickSummary: 'No workout is scheduled for this athlete yet.',
+    },
+    program: {
+      name: 'No program assigned',
+      dateRangeLabel: '',
+      currentWeek: 0,
+      totalWeeks: 0,
+      weekLabel: 'No active program',
+      completedWorkouts: 0,
+      totalWorkouts: 0,
+      completionLabel: 'No workouts assigned yet',
+      todayCalendarDayId: todayIsoDate,
+      selectedCalendarDayId: todayIsoDate,
+      calendarWeek,
+    },
+    session,
+    completedSessions: [],
+  };
+}
+
+function getRelatedWorkoutCount({ calendarWeek = [], persistedWorkoutListRows = [], selectedDayId = null }) {
+  const selectedDay = calendarWeek.find((day) => day.id === selectedDayId) || null;
+  const dayWorkouts = Array.isArray(selectedDay?.workouts) ? selectedDay.workouts : [];
+  const dayWorkoutIds = new Set(dayWorkouts.map((workout) => workout?.id).filter(Boolean));
+  const localSameDayRows = persistedWorkoutListRows.filter((row) => {
+    if (row?.actionPayload?.selectedDayId !== selectedDayId) return false;
+    const rowProgramWorkoutId = row?.actionPayload?.programWorkoutId || null;
+    return !rowProgramWorkoutId || !dayWorkoutIds.has(rowProgramWorkoutId);
+  });
+
+  return dayWorkouts.length + localSameDayRows.length;
 }
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('train');
-  const [activeTrainTab, setActiveTrainTab] = useState('today');
-  const [session, setSession] = useState(() => createWorkoutSessionFromTemplate(workoutTemplate));
-  const [elapsedSeconds] = useState(35);
+  const [previewState, setPreviewState] = useState('planned');
 
-  const progress = useMemo(() => getSessionProgress(session), [session]);
+  return (
+    <MobileAuthSessionProvider previewState={previewState}>
+      <AppShellContent />
+    </MobileAuthSessionProvider>
+  );
+}
+
+function AppShellContent() {
+  const emptySession = useMemo(() => createEmptySessionState(), []);
+  const emptyTrainState = useMemo(() => createEmptyTrainState(emptySession), [emptySession]);
+  const { authSession, bootstrapState, sessionStore, signInWithPassword, signUpWithPassword, resetPasswordForEmail, signOut, refreshAuthSession, updateAuthSession, updateAthleteProfile, updateCoachProfile, createCoachBodyMetricLog, getLatestCoachBodyMetricLog } = useMobileAuthSession();
+  const runtimeAuthPreviewState = process.env.EXPO_PUBLIC_PPLUS_RUNTIME_AUTH_PREVIEW || null;
+  const isAuthPreviewEnabled = runtimeAuthPreviewState === 'sign_in' || runtimeAuthPreviewState === 'sign_up';
+  const [authPreviewState, setAuthPreviewState] = useState(runtimeAuthPreviewState || 'live');
+  const [authMode, setAuthMode] = useState('sign_in');
+  const [authErrorMessage, setAuthErrorMessage] = useState('');
+  const [authNoticeMessage, setAuthNoticeMessage] = useState('');
+  const [authInvitationCode, setAuthInvitationCode] = useState('');
+  const [authInvitationCodeErrorMessage, setAuthInvitationCodeErrorMessage] = useState('');
+  const [authInvitationOnboardingStep, setAuthInvitationOnboardingStep] = useState(0);
+  const [authInvitationOnboardingValues, setAuthInvitationOnboardingValues] = useState(initialInvitationOnboardingValues);
+  const [isAuthSubmitting, setIsAuthSubmitting] = useState(false);
+  const [isProfileSaving, setIsProfileSaving] = useState(false);
+  const [profileSaveNotice, setProfileSaveNotice] = useState('');
+  const [isCoachMetricSaving, setIsCoachMetricSaving] = useState(false);
+  const [coachMetricNotice, setCoachMetricNotice] = useState('');
+  const [coachMetricError, setCoachMetricError] = useState('');
+  const [coachReadinessDraft, setCoachReadinessDraft] = useState({ percent: '', note: '' });
+  const [coachWorkspaceFormVersion, setCoachWorkspaceFormVersion] = useState(0);
+  const optimisticSessionMutationRef = useRef(0);
+  const previousBootstrapStatusRef = useRef(bootstrapState.status);
+  const [activeTab, setActiveTab] = useState('train');
+  const [activeTrainTab, setActiveTrainTab] = useState('calendar');
+  const [isProgramSheetOpen, setIsProgramSheetOpen] = useState(false);
+  const [isProgramEditViewOpen, setIsProgramEditViewOpen] = useState(false);
+  const [programSheetReturnSurface, setProgramSheetReturnSurface] = useState(null);
+  const [selectedProgramPreview, setSelectedProgramPreview] = useState(null);
+  const [workoutSheetReturnSurface, setWorkoutSheetReturnSurface] = useState(null);
+  const [isTrainingCalendarOpen, setIsTrainingCalendarOpen] = useState(false);
+  const [isWorkoutSheetOpen, setIsWorkoutSheetOpen] = useState(false);
+  const [selectedProgramWorkoutPreview, setSelectedProgramWorkoutPreview] = useState(null);
+  const [selectedWorkoutSessionPreview, setSelectedWorkoutSessionPreview] = useState(null);
+  const [persistedCreatedWorkoutRows, setPersistedCreatedWorkoutRows] = useState([]);
+  const [workoutEditReturnSurface, setWorkoutEditReturnSurface] = useState(null);
+  const [workoutEditDraftModel, setWorkoutEditDraftModel] = useState(null);
+  const [isDeleteWorkoutModalOpen, setIsDeleteWorkoutModalOpen] = useState(false);
+  const [isDeletingWorkout, setIsDeletingWorkout] = useState(false);
+  const [deleteWorkoutErrorMessage, setDeleteWorkoutErrorMessage] = useState('');
+  const [isStartingWorkout, setIsStartingWorkout] = useState(false);
+  const [isActiveWorkoutViewOpen, setIsActiveWorkoutViewOpen] = useState(false);
+  const [isCoachAthletesSheetOpen, setIsCoachAthletesSheetOpen] = useState(false);
+  const [isInviteAthleteViewOpen, setIsInviteAthleteViewOpen] = useState(false);
+  const [isInvitationSuccessViewOpen, setIsInvitationSuccessViewOpen] = useState(false);
+  const [inviteAthleteEmail, setInviteAthleteEmail] = useState('');
+  const [isSendingAthleteInvitation, setIsSendingAthleteInvitation] = useState(false);
+  const [athleteInvitationErrorMessage, setAthleteInvitationErrorMessage] = useState('');
+  const [isCoachAthleteWorkspaceOpen, setIsCoachAthleteWorkspaceOpen] = useState(false);
+  const [isWorkoutEditViewOpen, setIsWorkoutEditViewOpen] = useState(false);
+  const [isExerciseDetailViewOpen, setIsExerciseDetailViewOpen] = useState(false);
+  const [isProfileViewOpen, setIsProfileViewOpen] = useState(false);
+  const [postSetEffortAdjustment, setPostSetEffortAdjustment] = useState(null);
+  const [activeWorkoutAvailableExercises, setActiveWorkoutAvailableExercises] = useState([]);
+  const [isActiveWorkoutExercisesLoading, setIsActiveWorkoutExercisesLoading] = useState(false);
+  const [activeWorkoutExercisesError, setActiveWorkoutExercisesError] = useState('');
+  const [exerciseDetailReturnSurface, setExerciseDetailReturnSurface] = useState(null);
+  const [selectedExerciseId, setSelectedExerciseId] = useState(null);
+  const [selectedExercisePreview, setSelectedExercisePreview] = useState(null);
+  const [selectedCalendarDayId, setSelectedCalendarDayId] = useState(() => emptyTrainState.program.selectedCalendarDayId);
+  const [selectedCoachAthleteId, setSelectedCoachAthleteId] = useState(null);
+  const [resolvedCoachAthleteDefaultId, setResolvedCoachAthleteDefaultId] = useState(null);
+  const workflowContextKeyRef = useRef(null);
+  const invitationClient = useMemo(() => createMobileInvitationClient({ accessToken: authSession.accessToken }), [authSession.accessToken]);
+  const invitationCompletionClient = useMemo(() => createMobileInvitationClient({ accessToken: null }), []);
+  const [coachTrainBridgeState, setCoachTrainBridgeState] = useState({ trainState: null, sessionStore: null, isHydrating: false, hasResolved: false });
+  const [session, setSession] = useState(() => emptySession);
+  const exerciseDetailClient = useMemo(() => createMobileExerciseDetailClient(), []);
+  const exerciseLibraryClient = useMemo(() => createMobileExerciseLibraryClient(), []);
+  const programSheetClient = useMemo(() => createMobileProgramClient({ accessToken: authSession?.accessToken }), [authSession?.accessToken]);
+  const activeWorkoutExerciseIds = useMemo(() => new Set((session?.exercises || []).map((exercise) => exercise.exerciseId || exercise.id)), [session]);
+  const bottomTabModels = useMemo(() => getTabButtonModels({ tabs: mobileTabs, activeKey: activeTab }), [activeTab]);
+  const bottomTabViewItems = useMemo(() => getBottomTabViewItems(bottomTabModels), [bottomTabModels]);
+  const coachAthleteOptions = useMemo(() => {
+    if (!bootstrapState.coachAthletes?.length) {
+      return []
+    }
+
+    return bootstrapState.coachAthletes.map((athlete, index) => ({
+      id: `coach-athlete-${athlete.id}`,
+      name: [athlete.firstName, athlete.lastName].filter(Boolean).join(' ') || `Athlete ${index + 1}`,
+      readinessLabel: athlete.status ? `Status: ${athlete.status}` : 'No readiness state yet',
+      checkInLabel: 'Last check-in: pending',
+      nextActionLabel: '',
+      readinessPercent: null,
+      athleteProfileId: athlete.id,
+      avatarUrl: athlete.avatarUrl ?? null,
+    }))
+  }, [bootstrapState.coachAthletes]);
+  const coachAthletesList = useMemo(() => {
+    if (!bootstrapState.coachAthletes?.length) {
+      return []
+    }
+
+    return bootstrapState.coachAthletes.map((athlete, index) => ({
+      id: `coach-athlete-${athlete.id}`,
+      athleteId: `coach-athlete-${athlete.id}`,
+      firstName: athlete.firstName ?? '',
+      lastName: athlete.lastName ?? '',
+      displayName: [athlete.firstName, athlete.lastName].filter(Boolean).join(' ') || `Athlete ${index + 1}`,
+      avatarUrl: athlete.avatarUrl ?? null,
+    }))
+  }, [bootstrapState.coachAthletes]);
+  const selectedCoachAthlete = useMemo(() => {
+    return coachAthleteOptions.find((athlete) => athlete.id === selectedCoachAthleteId) || null;
+  }, [coachAthleteOptions, selectedCoachAthleteId]);
+  const coachWorkspaceAthlete = useMemo(() => {
+    if (!selectedCoachAthlete) {
+      return null
+    }
+
+    return {
+      ...selectedCoachAthlete,
+      readinessPercent: coachReadinessDraft.percent === '' ? null : Number(coachReadinessDraft.percent),
+      nextActionLabel: coachReadinessDraft.note.trim() || '',
+    }
+  }, [coachReadinessDraft.note, coachReadinessDraft.percent, selectedCoachAthlete])
+  const activeCoachAthleteProfile = useMemo(() => {
+    if (!bootstrapState.coachAthletes?.length) {
+      return null
+    }
+
+    return bootstrapState.coachAthletes.find((athlete) => `coach-athlete-${athlete.id}` === selectedCoachAthleteId) || null
+  }, [bootstrapState.coachAthletes, selectedCoachAthleteId]);
+  const activeCoachAthleteSummary = useMemo(() => {
+    const selectedNameParts = String(selectedCoachAthlete?.name || '').trim().split(/\s+/).filter(Boolean)
+    const firstName = selectedNameParts[0] || activeCoachAthleteProfile?.firstName || ''
+    const lastName = selectedNameParts.slice(1).join(' ') || activeCoachAthleteProfile?.lastName || ''
+    const avatarUrl = activeCoachAthleteProfile?.avatarUrl || selectedCoachAthlete?.avatarUrl || null
+
+    if (!firstName && !lastName) {
+      return null
+    }
+
+    return {
+      firstName,
+      lastName,
+      avatarUrl,
+    }
+  }, [activeCoachAthleteProfile, selectedCoachAthlete]);
+
+  useEffect(() => {
+    if (bootstrapState.status !== 'authenticated_coach' || !authSession?.accessToken || !bootstrapState.coachAthletes?.length) {
+      setResolvedCoachAthleteDefaultId(null)
+      return
+    }
+
+    if (selectedCoachAthleteId && coachAthleteOptions.some((athlete) => athlete.id === selectedCoachAthleteId)) {
+      setResolvedCoachAthleteDefaultId(selectedCoachAthleteId)
+      return
+    }
+
+    let isActive = true
+    const programClient = createMobileProgramClient({ accessToken: authSession.accessToken })
+
+    ;(async () => {
+      for (const athlete of bootstrapState.coachAthletes) {
+        try {
+          const assignedProgram = await programClient?.getAssignedProgramForAthlete?.(athlete.id)
+          if (!isActive) return
+          if (assignedProgram?.id) {
+            setResolvedCoachAthleteDefaultId(`coach-athlete-${athlete.id}`)
+            return
+          }
+        } catch {
+          if (!isActive) return
+        }
+      }
+
+      if (!isActive) return
+      setResolvedCoachAthleteDefaultId(`coach-athlete-${bootstrapState.coachAthletes[0]?.id}`)
+    })()
+
+    return () => {
+      isActive = false
+    }
+  }, [authSession?.accessToken, bootstrapState.coachAthletes, bootstrapState.status, coachAthleteOptions, selectedCoachAthleteId]);
+
+  useEffect(() => {
+    if (!resolvedCoachAthleteDefaultId) return
+    setSelectedCoachAthleteId((current) => {
+      if (coachAthleteOptions.some((athlete) => athlete.id === current)) {
+        return current
+      }
+      return resolvedCoachAthleteDefaultId
+    })
+  }, [coachAthleteOptions, resolvedCoachAthleteDefaultId, selectedCoachAthleteId])
+
+  useEffect(() => {
+    let isActive = true
+
+    if (!selectedCoachAthleteId || !selectedCoachAthlete?.athleteProfileId) {
+      setCoachReadinessDraft({ percent: '', note: '' })
+      setCoachWorkspaceFormVersion((current) => current + 1)
+      return () => {
+        isActive = false
+      }
+    }
+
+    setCoachReadinessDraft({ percent: '', note: '' })
+    setCoachWorkspaceFormVersion((current) => current + 1)
+
+    getLatestCoachBodyMetricLog({
+      athleteId: selectedCoachAthlete.athleteProfileId,
+      metricType: 'readiness',
+      source: 'coach_workspace',
+    })
+      .then((latestReadinessLog) => {
+        if (!isActive) return
+        setCoachReadinessDraft({
+          percent: latestReadinessLog?.value != null ? String(latestReadinessLog.value) : '',
+          note: latestReadinessLog?.notes ?? '',
+        })
+        setCoachWorkspaceFormVersion((current) => current + 1)
+      })
+      .catch(() => {
+        if (!isActive) return
+        setCoachReadinessDraft({ percent: '', note: '' })
+        setCoachWorkspaceFormVersion((current) => current + 1)
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [getLatestCoachBodyMetricLog, selectedCoachAthlete?.athleteProfileId, selectedCoachAthleteId])
+
+  useEffect(() => {
+    if (bootstrapState.status !== 'authenticated_coach' || !activeCoachAthleteProfile?.id || !authSession?.accessToken) {
+      setCoachTrainBridgeState({ trainState: null, sessionStore: null, isHydrating: false, hasResolved: false })
+      return
+    }
+
+    let isActive = true
+    setCoachTrainBridgeState({ trainState: null, sessionStore: null, isHydrating: true, hasResolved: false })
+
+    async function hydrateCoachAthleteTrainBridge() {
+      try {
+        const nextCoachTrainBridgeState = await hydrateCoachTrainBridge({
+          athleteId: activeCoachAthleteProfile.id,
+          currentUserId: authSession.currentUserId,
+          accessToken: authSession.accessToken,
+          accessTokenProvider: () => authSession.accessToken,
+          refreshAccessToken: refreshAuthSession,
+          programClient: createMobileProgramClient({ accessToken: authSession.accessToken }),
+          workoutClient: createMobileWorkoutClient({ accessToken: authSession.accessToken }),
+        })
+
+        if (!isActive) return
+
+        setCoachTrainBridgeState({
+          ...nextCoachTrainBridgeState,
+          isHydrating: false,
+          hasResolved: true,
+        })
+      } catch (error) {
+        if (!isActive) return
+        console.error('[coach-train-bridge-effect] hydrate failed', {
+          selectedCoachAthleteId,
+          athleteProfileId: activeCoachAthleteProfile?.id ?? null,
+          selectedAthleteName: selectedCoachAthlete?.name ?? '',
+          message: error?.message || 'Unknown coach train bridge error',
+        })
+        setCoachTrainBridgeState({ trainState: null, sessionStore: null, isHydrating: false, hasResolved: true })
+      }
+    }
+
+    hydrateCoachAthleteTrainBridge()
+
+    return () => {
+      isActive = false
+    }
+  }, [activeCoachAthleteProfile?.id, authSession?.accessToken, authSession?.currentUserId, bootstrapState.status, refreshAuthSession])
+  const [elapsedSecondsNow, setElapsedSecondsNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (session?.status !== 'in_progress' || !session?.startedAt) {
+      setElapsedSecondsNow(Date.now());
+      return;
+    }
+
+    setElapsedSecondsNow(Date.now());
+    const intervalId = setInterval(() => setElapsedSecondsNow(Date.now()), 1000);
+    return () => clearInterval(intervalId);
+  }, [session?.status, session?.startedAt]);
+
+  useEffect(() => {
+    if (!session?.activeRestTimer?.isRunning) return undefined;
+
+    const intervalId = setInterval(() => {
+      setSession((currentSession) => {
+        if (!currentSession?.activeRestTimer?.isRunning) {
+          return currentSession;
+        }
+
+        if ((currentSession.activeRestTimer.remainingSeconds || 0) <= 1) {
+          return clearRestTimer(currentSession);
+        }
+
+        return adjustRestTimer(currentSession, -1);
+      });
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [session?.activeRestTimer?.exerciseId, session?.activeRestTimer?.isRunning, session?.activeRestTimer?.setId]);
+
+  const elapsedSeconds = useMemo(() => {
+    if (session?.status !== 'in_progress') {
+      return session?.elapsedSeconds ?? 0;
+    }
+
+    const startedAtMs = Date.parse(session.startedAt);
+    if (!Number.isFinite(startedAtMs)) {
+      return session?.elapsedSeconds ?? 0;
+    }
+
+    return Math.max(0, Math.floor((elapsedSecondsNow - startedAtMs) / 1000));
+  }, [elapsedSecondsNow, session?.elapsedSeconds, session?.startedAt, session?.status]);
+
+  const effectiveRemoteTrainState = bootstrapState.status === 'authenticated_coach'
+    ? coachTrainBridgeState.trainState
+    : bootstrapState.trainState
+  const effectiveSessionStore = bootstrapState.status === 'authenticated_coach'
+    ? coachTrainBridgeState.sessionStore
+    : sessionStore
+  const {
+    persistSessionUpdate,
+    persistSessionUpdateOptimistic,
+    persistSessionDeletionOptimistic,
+  } = createSessionPersistenceController({
+    effectiveSessionStore,
+    setSession,
+    optimisticSessionMutationRef,
+    getSessionDebugSummary,
+  });
+
+  useEffect(() => {
+    if (!isActiveWorkoutViewOpen || !exerciseDetailClient?.listExercises) {
+      return undefined;
+    }
+
+    let isActive = true;
+    setIsActiveWorkoutExercisesLoading(true);
+    setActiveWorkoutExercisesError('');
+
+    exerciseDetailClient.listExercises()
+      .then((items) => {
+        if (!isActive) return;
+        const filteredItems = (items || []).filter((exercise) => !activeWorkoutExerciseIds.has(exercise.id));
+        setActiveWorkoutAvailableExercises(filteredItems);
+        setIsActiveWorkoutExercisesLoading(false);
+      })
+      .catch((error) => {
+        if (!isActive) return;
+        setActiveWorkoutExercisesError(error?.message || 'Something went sideways while loading exercises.');
+        setIsActiveWorkoutExercisesLoading(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [activeWorkoutExerciseIds, exerciseDetailClient, isActiveWorkoutViewOpen]);
+
+  useLayoutEffect(() => {
+    const nextTrainState = effectiveRemoteTrainState || emptyTrainState;
+    const nextSession = effectiveSessionStore?.getCurrentSession() || nextTrainState.session;
+    const nextWorkflowContextKey = [
+      nextSession?.athleteId || nextTrainState.programWorkout?.athleteId || selectedCoachAthleteId || 'no-athlete',
+      nextTrainState.program.id || nextTrainState.program.name || 'no-program',
+    ].join(':');
+    const didWorkflowContextChange = workflowContextKeyRef.current !== nextWorkflowContextKey;
+
+    setSession((currentSession) => {
+      const resolvedSession = resolveIncomingSession({
+        currentSession,
+        nextSession,
+        isActiveWorkoutViewOpen,
+      });
+
+      logResolvedIncomingSession({
+        currentSession,
+        nextSession,
+        isActiveWorkoutViewOpen,
+        resolvedSession,
+      });
+
+      return resolvedSession;
+    });
+    setSelectedCalendarDayId((current) => {
+      if (!didWorkflowContextChange && nextTrainState.program.calendarWeek.some((day) => day.id === current)) {
+        return current;
+      }
+      return nextTrainState.program.selectedCalendarDayId;
+    });
+    setSelectedCoachAthleteId((current) => {
+      if (coachAthleteOptions.some((athlete) => athlete.id === current)) {
+        return current
+      }
+      return resolvedCoachAthleteDefaultId ?? current
+    });
+
+    if (didWorkflowContextChange) {
+      workflowContextKeyRef.current = nextWorkflowContextKey;
+      setActiveTrainTab('calendar');
+      setIsProgramSheetOpen(false);
+      setProgramSheetReturnSurface(null);
+      setSelectedProgramPreview(null);
+      setIsTrainingCalendarOpen(false);
+      setIsWorkoutSheetOpen(false);
+      setSelectedProgramWorkoutPreview(null);
+      setSelectedWorkoutSessionPreview(null);
+      setIsCoachAthletesSheetOpen(false);
+      setIsCoachAthleteWorkspaceOpen(false);
+      setIsWorkoutEditViewOpen(false);
+      setIsExerciseDetailViewOpen(false);
+      setPostSetEffortAdjustment(null);
+      setCoachMetricNotice('');
+      setCoachMetricError('');
+      setIsCoachMetricSaving(false);
+      setExerciseDetailReturnSurface(null);
+      setSelectedExerciseId(null);
+      setSelectedExercisePreview(null);
+    }
+  }, [coachAthleteOptions, effectiveRemoteTrainState, effectiveSessionStore, emptyTrainState, isActiveWorkoutViewOpen, resolvedCoachAthleteDefaultId, selectedCoachAthleteId]);
+
+  const effectiveBootstrapState = useMemo(() => {
+    if (isAuthPreviewEnabled && (authPreviewState === 'sign_in' || authPreviewState === 'sign_up')) {
+      return {
+        ...bootstrapState,
+        status: 'signed_out',
+      };
+    }
+    return bootstrapState;
+  }, [authPreviewState, bootstrapState, isAuthPreviewEnabled]);
+  const authPreviewModels = useMemo(
+    () => getPreviewStateButtonModels({ states: authPreviewStates, activeKey: authPreviewState }),
+    [authPreviewState]
+  );
+  const isRuntimeTrainHomeVerificationEnabled = process.env.EXPO_PUBLIC_PPLUS_RUNTIME_SURFACE_OVERRIDE === 'authenticated_train_home';
+  const isCoachBootstrapState = effectiveBootstrapState.status === 'authenticated_coach';
+  const isAthleteLimitedState = !isRuntimeTrainHomeVerificationEnabled && !isCoachBootstrapState && (effectiveBootstrapState.status === 'authenticated' || effectiveBootstrapState.status === 'authenticated_no_workout');
+  const profileViewProfile = useMemo(() => {
+    if (isCoachBootstrapState) {
+      return {
+        id: effectiveBootstrapState.coachProfile?.id ?? null,
+        displayName: effectiveBootstrapState.coachProfile?.displayName ?? '',
+        firstName: effectiveBootstrapState.coachProfile?.firstName ?? '',
+        lastName: effectiveBootstrapState.coachProfile?.lastName ?? '',
+        dateOfBirth: '',
+        position: effectiveBootstrapState.coachProfile?.organizationName || 'Coach profile connected',
+        gender: '',
+        heightCm: null,
+        weightKg: null,
+        avatarUrl: effectiveBootstrapState.coachProfile?.avatarUrl ?? null,
+        phoneNumber: effectiveBootstrapState.coachProfile?.phoneNumber ?? '',
+        unitsPreference: 'imperial',
+        weightUnitPreference: effectiveBootstrapState.coachProfile?.weightUnitPreference ?? 'lb',
+        distanceUnitPreference: effectiveBootstrapState.coachProfile?.distanceUnitPreference ?? 'km',
+        themePreference: effectiveBootstrapState.coachProfile?.themePreference ?? 'dark',
+      }
+    }
+
+    return effectiveBootstrapState.athleteProfile
+  }, [effectiveBootstrapState.athleteProfile, effectiveBootstrapState.coachProfile, isCoachBootstrapState]);
+  const appThemePreference = profileViewProfile?.themePreference || 'dark'
+  const appTheme = useMemo(() => getAppTheme(appThemePreference), [appThemePreference])
+  const styles = useMemo(() => createAppStyles(appTheme), [appTheme])
+
+  const trainState = useMemo(() => ({ ...(effectiveRemoteTrainState || emptyTrainState), session }), [effectiveRemoteTrainState, emptyTrainState, session]);
+  useEffect(() => {
+    if (bootstrapState.status !== 'authenticated_coach') return
+  }, [activeCoachAthleteProfile?.id, bootstrapState.status, effectiveRemoteTrainState, selectedCoachAthlete?.name, selectedCoachAthleteId, trainState]);
+  const programSheetModel = useMemo(() => getProgramSheetModel(selectedProgramPreview || trainState), [selectedProgramPreview, trainState]);
+  const programEditViewModel = useMemo(() => getProgramEditViewModel(selectedProgramPreview || trainState), [selectedProgramPreview, trainState]);
+  const trainingCalendarModel = useMemo(() => getTrainingCalendarModel(trainState), [trainState]);
+  const todayModel = useMemo(() => getTodaySurfaceModel(trainState), [trainState]);
+  const workoutModel = useMemo(() => getWorkoutSurfaceModel(trainState, selectedCalendarDayId), [trainState, selectedCalendarDayId]);
+  const selectedDayWorkoutPreview = trainState.program.calendarWeek.find((day) => day.id === selectedCalendarDayId)?.workoutPreview || null;
+  const selectedProgramWorkoutId = workoutModel?.actionPayload?.programWorkoutId || selectedDayWorkoutPreview?.programWorkoutId || selectedDayWorkoutPreview?.id || null;
+  const workoutSheetSession = selectedWorkoutSessionPreview || session;
+  const resolvedWorkoutSheetProgramWorkout = selectedProgramWorkoutPreview || trainState.programWorkout;
+  const effectiveWorkoutSheetModel = useMemo(
+    () => selectedProgramWorkoutPreview
+      ? {
+          ...workoutModel,
+          workoutName: selectedProgramWorkoutPreview.nameSnapshot ?? '',
+          actionPayload: {
+            ...(workoutModel?.actionPayload || {}),
+            programWorkoutId: selectedProgramWorkoutPreview.id || selectedProgramWorkoutPreview.programWorkoutId || null,
+          },
+        }
+      : workoutModel,
+    [selectedProgramWorkoutPreview, workoutModel]
+  );
+  const workoutSheetModel = useMemo(() => getWorkoutSheetModel({ workoutModel: effectiveWorkoutSheetModel, session: workoutSheetSession, programWorkout: resolvedWorkoutSheetProgramWorkout, selectedDayId: selectedCalendarDayId }), [effectiveWorkoutSheetModel, resolvedWorkoutSheetProgramWorkout, selectedCalendarDayId, workoutSheetSession]);
+  const workoutEditViewModel = useMemo(() => getWorkoutEditViewModel({ workoutSheetModel, workoutDraftModel: workoutEditDraftModel }), [workoutEditDraftModel, workoutSheetModel]);
+  const activeWorkoutViewModel = useMemo(() => getActiveWorkoutViewModel({ session, elapsedSeconds }), [elapsedSeconds, session]);
+  const canFinishActiveWorkout = useMemo(() => canFinishWorkoutSession(session), [session]);
+  const selectedExercise = useMemo(() => {
+    const allExercises = [...(workoutSheetModel?.exercises || []), ...(workoutEditViewModel?.exercises || []), ...(activeWorkoutViewModel?.exercises || [])];
+    const matchedExercise = allExercises.find((exercise) => exercise.id === selectedExerciseId || exercise.exerciseId === selectedExerciseId) || null;
+    if (!matchedExercise) return selectedExercisePreview || null;
+    if (!selectedExercisePreview) return matchedExercise;
+    const previewExerciseId = selectedExercisePreview.exerciseId || selectedExercisePreview.id;
+    if (previewExerciseId !== selectedExerciseId) return matchedExercise;
+    return { ...matchedExercise, ...selectedExercisePreview };
+  }, [activeWorkoutViewModel, selectedExerciseId, selectedExercisePreview, workoutEditViewModel, workoutSheetModel]);
+
+  const progressSessions = useMemo(() => {
+    if (session.status === 'completed') {
+      return [...trainState.completedSessions, session];
+    }
+
+    return trainState.completedSessions;
+  }, [session, trainState.completedSessions]);
+  const exerciseDetailViewModel = useMemo(() => getExerciseDetailViewModel({ exercise: selectedExercise, sessions: progressSessions }), [progressSessions, selectedExercise]);
+  const calendarModel = useMemo(() => getCalendarSurfaceModel(trainState, selectedCalendarDayId), [trainState, selectedCalendarDayId]);
+  const teamPlaceholder = useMemo(
+    () => getPlaceholderSurfaceModel('Team', 'This surface will hold coach context, team relationships, and collaboration later.'),
+    []
+  );
+  const teamSections = useMemo(() => getPlaceholderSections(teamPlaceholder), [teamPlaceholder]);
+  const teamRenderPlan = useMemo(() => getGenericSectionRenderPlan(teamSections), [teamSections]);
+  const inboxPlaceholder = useMemo(
+    () => getPlaceholderSurfaceModel('Inbox', 'This surface will hold communication, reminders, and support flows later.'),
+    []
+  );
+  const inboxSections = useMemo(() => getPlaceholderSections(inboxPlaceholder), [inboxPlaceholder]);
+  const inboxRenderPlan = useMemo(() => getGenericSectionRenderPlan(inboxSections), [inboxSections]);
+  const progressModel = useMemo(() => getProgressSurfaceModel({ sessions: progressSessions }), [progressSessions]);
+  const analyticsStrengthSelectionContextId = activeCoachAthleteProfile?.id || authSession?.currentUserId || null;
+  const analyticsScreen = useMemo(() => getAnalyticsViewModel({
+    sessions: progressSessions,
+    progressModel,
+    strengthSelectionContextId: analyticsStrengthSelectionContextId,
+  }), [analyticsStrengthSelectionContextId, progressModel, progressSessions]);
+  const progressSections = useMemo(() => getProgressSections(progressModel), [progressModel]);
+  const progressRenderPlan = useMemo(() => getGenericSectionRenderPlan(progressSections), [progressSections]);
+
   const selectedSet = session.activeRestTimer
     ? findSessionSet(session, session.activeRestTimer.exerciseId, session.activeRestTimer.setId)
     : null;
+  const activeSessionModel = useMemo(
+    () => getActiveSessionSurfaceModel(session, elapsedSeconds, selectedSet),
+    [elapsedSeconds, selectedSet, session]
+  );
+  const completedSessionModel = useMemo(
+    () => (session.status === 'completed' ? getCompletedSessionSurfaceModel(session, { completedSessions: progressSessions }) : null),
+    [progressSessions, session]
+  );
+  const discardedSessionModel = useMemo(
+    () => (session.status === 'discarded' ? getDiscardedSessionSurfaceModel(session) : null),
+    [session]
+  );
+  const sessionSections = useMemo(() => getSessionSections(activeSessionModel), [activeSessionModel]);
+  const sessionRenderPlan = useMemo(() => getSessionSectionRenderPlan(sessionSections), [sessionSections]);
+  const sessionRenderModel = useMemo(
+    () => getSessionRenderModel({ sessionRenderPlan, sessionStatus: session.status }),
+    [session.status, sessionRenderPlan]
+  );
+  const trainSurfaceModel = useMemo(
+    () =>
+      getTrainSurfaceModel({
+        trainTabs,
+        activeTrainTab,
+        todayModel,
+        calendarModel,
+        workoutModel,
+        activeSessionModel,
+        completedSessionModel,
+        discardedSessionModel,
+        persistedWorkoutListRows: persistedCreatedWorkoutRows,
+      }),
+    [
+      activeSessionModel,
+      activeTrainTab,
+      calendarModel,
+      completedSessionModel,
+      discardedSessionModel,
+      persistedCreatedWorkoutRows,
+      todayModel,
+      workoutModel,
+    ]
+  );
+  const trainRenderModel = useMemo(
+    () => getTrainRenderModel({ trainSurfaceModel, sessionSections: sessionRenderPlan }),
+    [sessionRenderPlan, trainSurfaceModel]
+  );
+  const floatingStartWorkoutButtonModel = useMemo(() => {
+    if (activeTab !== 'train') return null
 
-  function handleCompleteSet(exerciseId, setId) {
-    if (session.status === 'completed') return;
-    setSession((currentSession) => completeWorkoutSessionSet(currentSession, exerciseId, setId));
+    if (session?.status === 'in_progress') {
+      const inProgressProgramWorkoutId = session?.programWorkoutId || session?.id || null
+
+      return {
+        kind: 'in-progress',
+        label: session?.nameSnapshot || session?.name || 'Workout in progress',
+        elapsedLabel: formatWorkoutTimer(elapsedSeconds),
+        targetKey: 'start-workout',
+        actionPayload: {
+          programWorkoutId: inProgressProgramWorkoutId,
+        },
+      }
+    }
+
+    if (!workoutModel.hasWorkoutData) return null
+
+    return {
+      kind: 'start-workout',
+      label: 'Start Workout',
+      targetKey: 'start-workout',
+      actionPayload: undefined,
+    }
+  }, [activeTab, elapsedSeconds, selectedCalendarDayId, session?.id, session?.name, session?.nameSnapshot, session?.programWorkoutId, session?.status, trainState.program.calendarWeek, workoutModel.hasWorkoutData]);
+  const bootstrapSurfaceModel = useMemo(() => getBootstrapSurfaceModel({ bootstrapState: effectiveBootstrapState }), [effectiveBootstrapState]);
+  const bootstrapSections = useMemo(
+    () => (bootstrapSurfaceModel ? getPlaceholderSections(bootstrapSurfaceModel) : []),
+    [bootstrapSurfaceModel]
+  );
+  const coachPlaceholderModel = useMemo(() => {
+    if (!isCoachBootstrapState || activeTab === 'train' || activeTab === 'progress') {
+      return null;
+    }
+
+    if (activeTab === 'team') {
+      return getPlaceholderSurfaceModel('Programs', 'This placeholder will become the coach programming surface for templates, assigned plans, and scheduling control.');
+    }
+
+    return getPlaceholderSurfaceModel('Inbox', 'This placeholder will become the coach communication hub for athlete follow-up, reminders, and support.');
+  }, [activeTab, isCoachBootstrapState]);
+  const coachOverrideScreen = useMemo(() => {
+    if (!isCoachBootstrapState) {
+      return null;
+    }
+
+    if (activeTab === 'progress') {
+      return null;
+    }
+
+    if (activeTab === 'train') {
+      return null;
+    }
+
+    if (!coachPlaceholderModel) {
+      return null;
+    }
+
+    return {
+      type: 'train-bootstrap',
+      sections: getPlaceholderSections(coachPlaceholderModel),
+    };
+  }, [activeTab, coachPlaceholderModel, isCoachBootstrapState]);
+  const athleteLimitedPlaceholderModel = useMemo(() => {
+    if (!isAthleteLimitedState || activeTab === 'progress') {
+      return null;
+    }
+
+    return getPlaceholderSurfaceModel('Progress only', 'Athletes only see their own progress metrics here. Coach-side program, roster, and editing flows stay on the coach app.');
+  }, [activeTab, isAthleteLimitedState]);
+  const athleteLimitedOverrideScreen = useMemo(
+    () => (athleteLimitedPlaceholderModel ? { type: 'train-bootstrap', sections: getPlaceholderSections(athleteLimitedPlaceholderModel) } : null),
+    [athleteLimitedPlaceholderModel]
+  );
+  const authScreenModel = useMemo(
+    () => ((effectiveBootstrapState.status === 'signed_out' || (isAuthPreviewEnabled && (authPreviewState === 'sign_in' || authPreviewState === 'sign_up')))
+      ? getAuthScreenModel({
+          mode: authPreviewState === 'sign_up' ? 'sign_up' : authMode,
+          isSubmitting: isAuthSubmitting,
+          errorMessage: authErrorMessage,
+          noticeMessage: authNoticeMessage,
+        })
+      : null),
+    [authErrorMessage, authMode, authNoticeMessage, authPreviewState, effectiveBootstrapState.status, isAuthPreviewEnabled, isAuthSubmitting]
+  );
+  const expectedAuthenticatedTrainHomeSession = effectiveSessionStore?.getCurrentSession() || effectiveRemoteTrainState?.session || null;
+  const expectedSessionLineageId = expectedAuthenticatedTrainHomeSession?.programWorkoutId || expectedAuthenticatedTrainHomeSession?.id || null;
+  const sessionLineageId = session?.programWorkoutId || session?.id || null;
+  const isCoachTrainHomeReadinessPending = activeTab === 'train'
+    && isCoachBootstrapState
+    && activeCoachAthleteProfile?.id
+    && coachTrainBridgeState.isHydrating;
+  const isAuthenticatedTrainHomeReadinessPending = activeTab === 'train'
+    && effectiveBootstrapState.status === 'authenticated'
+    && effectiveRemoteTrainState?.program?.selectedCalendarDayId
+    && sessionLineageId !== expectedSessionLineageId;
+  const appRenderModel = useMemo(
+    () =>
+      getAppRenderModel({
+        activeTab,
+        bottomTabModels,
+        trainRenderModel,
+        analyticsScreen,
+        progressSections: progressRenderPlan,
+        teamSections: teamRenderPlan,
+        inboxSections: inboxRenderPlan,
+        overrideScreen: effectiveBootstrapState.status === 'signed_out' || (isAuthPreviewEnabled && (authPreviewState === 'sign_in' || authPreviewState === 'sign_up'))
+            ? authScreenModel
+            : isAthleteLimitedState && activeTab !== 'progress'
+              ? athleteLimitedOverrideScreen
+              : isCoachBootstrapState && isCoachTrainHomeReadinessPending
+                ? { type: 'loading' }
+                : isCoachBootstrapState
+                  ? coachOverrideScreen
+                  : activeTab === 'train'
+                      ? ((effectiveBootstrapState.status === 'loading' || isAuthenticatedTrainHomeReadinessPending)
+                          ? { type: 'loading' }
+                          : bootstrapSections.length > 0
+                            ? { type: 'train-bootstrap', sections: bootstrapSections }
+                            : null)
+                      : null,
+      }),
+    [activeTab, activeCoachAthleteProfile?.id, analyticsScreen, athleteLimitedOverrideScreen, authScreenModel, authPreviewState, bootstrapSections, bottomTabModels, coachOverrideScreen, effectiveBootstrapState.status, inboxRenderPlan, isAuthenticatedTrainHomeReadinessPending, isAuthPreviewEnabled, isAthleteLimitedState, isCoachBootstrapState, isCoachTrainHomeReadinessPending, progressRenderPlan, teamRenderPlan, trainRenderModel]
+  );
+  const isFullscreenAuthGate = appRenderModel.screen.type === 'auth';
+  const isFullscreenLoading = appRenderModel.screen.type === 'loading' && !isProfileViewOpen
+
+  useEffect(() => {
+    if (isAthleteLimitedState) {
+      setActiveTab('progress');
+    }
+  }, [isAthleteLimitedState]);
+
+  useEffect(() => {
+    const previousBootstrapStatus = previousBootstrapStatusRef.current;
+
+    if (effectiveBootstrapState.status === 'authenticated_coach' && previousBootstrapStatus !== 'authenticated_coach') {
+      setActiveTab('train');
+    }
+
+    previousBootstrapStatusRef.current = effectiveBootstrapState.status;
+  }, [effectiveBootstrapState.status]);
+
+  async function handleAuthSubmit({ mode, values }) {
+    await orchestrateAuthSubmit({
+      mode,
+      values,
+      resetPasswordForEmail,
+      signUpWithPassword,
+      signInWithPassword,
+      setAuthErrorMessage,
+      setAuthNoticeMessage,
+      setIsAuthSubmitting,
+      setAuthMode,
+    });
   }
 
-  function handleFinishWorkout() {
-    if (session.status === 'completed') return;
-    setSession((currentSession) => finishWorkoutSession(currentSession));
+  function handleOpenInvitationCodeFlow() {
+    setAuthMode('invitation_code');
+    setAuthErrorMessage('');
+    setAuthNoticeMessage('');
+    setAuthInvitationCodeErrorMessage('');
+    setAuthInvitationCode('');
+    setAuthInvitationOnboardingStep(0);
+    setAuthInvitationOnboardingValues(initialInvitationOnboardingValues);
   }
 
-  function handleQuickActualUpdate(exerciseId, setId, field, delta) {
-    if (session.status === 'completed') return;
+  function handleContinueInvitationCodeFlow() {
+    const normalizedCode = String(authInvitationCode || '').trim().toUpperCase();
 
-    const currentSet = findSessionSet(session, exerciseId, setId);
-    if (!currentSet) return;
+    setAuthErrorMessage('');
+    setAuthNoticeMessage('');
+    setAuthInvitationCodeErrorMessage('');
 
-    const currentValue = Number(currentSet[field] ?? currentSet[`prescribed${field.slice(6)}`] ?? 0);
-    const nextValue = Math.max(0, currentValue + delta);
+    if (normalizedCode.length !== 6) {
+      setAuthInvitationCodeErrorMessage('Enter the full 6-character invitation code before continuing.');
+      return;
+    }
 
-    setSession((currentSession) =>
-      updateSessionSetActuals(currentSession, exerciseId, setId, {
-        [field]: nextValue
+    setAuthInvitationCode(normalizedCode);
+    setAuthInvitationOnboardingStep(0);
+    setAuthMode('invitation_onboarding');
+  }
+
+  function handleCloseInvitationCodeFlow() {
+    setAuthMode('sign_in');
+    setAuthErrorMessage('');
+    setAuthNoticeMessage('');
+    setAuthInvitationCodeErrorMessage('');
+  }
+
+  function handleInvitationOnboardingChange(fieldId, nextValue) {
+    setAuthInvitationOnboardingValues((current) => ({ ...current, [fieldId]: nextValue }));
+  }
+
+  async function handleInvitationAvatarUpload() {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (!permissionResult?.granted) {
+      setAuthErrorMessage('Photo library access is required to update the profile image.')
+      return
+    }
+
+    const pickerResult = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    })
+
+    if (pickerResult?.canceled) {
+      return
+    }
+
+    const asset = pickerResult?.assets?.[0]
+    if (!asset?.uri) {
+      setAuthErrorMessage('Could not read that photo. Try another image.')
+      return
+    }
+
+    const nextAvatarUrl = asset.uri
+    setAuthInvitationOnboardingValues((current) => ({
+      ...current,
+      avatarUrl: nextAvatarUrl,
+      avatarAsset: {
+        uri: asset.uri,
+        mimeType: asset.mimeType || 'image/jpeg',
+        fileName: asset.fileName || `athlete-avatar-${Date.now()}.jpg`,
+      },
+    }))
+    setAuthErrorMessage('')
+  }
+
+  function handleInvitationOnboardingPrevious() {
+    setAuthErrorMessage('');
+    setAuthNoticeMessage('');
+    setAuthInvitationOnboardingStep((current) => Math.max(0, current - 1));
+  }
+
+  function handleCloseInvitationOnboardingView() {
+    setAuthMode('invitation_code');
+    setAuthErrorMessage('');
+    setAuthNoticeMessage('');
+    setAuthInvitationOnboardingStep(0);
+  }
+
+  async function handleInvitationOnboardingNext() {
+    if (isAuthSubmitting) {
+      return;
+    }
+
+    setAuthErrorMessage('');
+    setAuthNoticeMessage('');
+    setIsAuthSubmitting(true);
+
+    try {
+      if (authInvitationOnboardingStep === 0) {
+        if (!authInvitationOnboardingValues.firstName?.trim() || !authInvitationOnboardingValues.lastName?.trim()) {
+          throw new Error('First name and last name are required before continuing.');
+        }
+        if (!authInvitationOnboardingValues.password || !authInvitationOnboardingValues.confirmPassword) {
+          throw new Error('Password and confirm password are both required before continuing.');
+        }
+        if (authInvitationOnboardingValues.password.length < 6) {
+          throw new Error('Password must be at least 6 characters before continuing.');
+        }
+        if (authInvitationOnboardingValues.password !== authInvitationOnboardingValues.confirmPassword) {
+          throw new Error('Passwords need to match before continuing.');
+        }
+
+        setAuthInvitationOnboardingStep((current) => current + 1);
+        return;
+      }
+
+      if (authInvitationOnboardingStep === 1) {
+        if (!String(authInvitationOnboardingValues.dateOfBirth || '').trim()) {
+          throw new Error('Select the athlete date of birth before continuing.');
+        }
+
+        setAuthInvitationOnboardingStep((current) => current + 1);
+        return;
+      }
+
+      if (authInvitationOnboardingStep === 2) {
+        if (!authInvitationOnboardingValues.gender?.trim()) {
+          throw new Error('Select the athlete gender before continuing.');
+        }
+
+        setAuthInvitationOnboardingStep((current) => current + 1);
+        return;
+      }
+
+      if (authInvitationOnboardingStep === 3) {
+        if (!authInvitationOnboardingValues.position?.trim()) {
+          throw new Error('Select the athlete position before continuing.');
+        }
+
+        setAuthInvitationOnboardingStep((current) => current + 1);
+        return;
+      }
+
+      if (authInvitationOnboardingStep === 4) {
+        if (!String(authInvitationOnboardingValues.weight || '').trim()) {
+          throw new Error('Set the athlete weight before continuing.');
+        }
+
+        setAuthInvitationOnboardingStep((current) => current + 1);
+        return;
+      }
+
+      if (String(authInvitationOnboardingValues.heightUnit || 'ft') === 'ft') {
+        if (!String(authInvitationOnboardingValues.heightFeet || '').trim() || !String(authInvitationOnboardingValues.heightInches || '').trim()) {
+          throw new Error('Set the athlete height before continuing.');
+        }
+      } else if (!String(authInvitationOnboardingValues.heightCm || '').trim()) {
+        throw new Error('Set the athlete height before continuing.');
+      }
+
+      if (!invitationCompletionClient?.completeAthleteInvitation) {
+        throw new Error('Athlete invitation completion is not available right now.');
+      }
+
+      const completionResult = await invitationCompletionClient.completeAthleteInvitation({
+        inviteCode: authInvitationCode,
+        firstName: authInvitationOnboardingValues.firstName,
+        lastName: authInvitationOnboardingValues.lastName,
+        password: authInvitationOnboardingValues.password,
+        confirmPassword: authInvitationOnboardingValues.confirmPassword,
+        dateOfBirth: authInvitationOnboardingValues.dateOfBirth,
+        gender: authInvitationOnboardingValues.gender,
+        position: authInvitationOnboardingValues.position,
+        weight: authInvitationOnboardingValues.weight,
+        weightUnit: authInvitationOnboardingValues.weightUnit,
+        heightUnit: authInvitationOnboardingValues.heightUnit,
+        heightFeet: authInvitationOnboardingValues.heightFeet,
+        heightInches: authInvitationOnboardingValues.heightInches,
+        heightCm: authInvitationOnboardingValues.heightCm,
+      });
+
+      const nextAuthSession = await updateAuthSession({
+        accessToken: completionResult.accessToken,
+        refreshToken: completionResult.refreshToken,
+        currentUserId: completionResult.currentUserId,
+        currentAthleteId: completionResult.currentAthleteId,
+      });
+
+      setActiveTab('progress');
+
+      if (authInvitationOnboardingValues.avatarAsset) {
+        await updateAthleteProfile({ avatarAsset: authInvitationOnboardingValues.avatarAsset });
+      }
+
+      void nextAuthSession;
+      setAuthInvitationCode('');
+      setAuthInvitationOnboardingValues(initialInvitationOnboardingValues);
+      setAuthInvitationOnboardingStep(0);
+      setAuthNoticeMessage('Welcome to PPLUS.');
+    } catch (error) {
+      setAuthErrorMessage(error?.message || 'Something went sideways while preparing the athlete onboarding flow.');
+    } finally {
+      setIsAuthSubmitting(false);
+    }
+  }
+
+  async function handleCompleteSet(exerciseId, setId) {
+    await orchestrateCompleteSet({
+      session,
+      exerciseId,
+      setId,
+      persistSessionUpdateOptimistic,
+      setPostSetEffortAdjustment,
+    });
+  }
+
+  async function handlePostSetEffortChange(nextEffort) {
+    await orchestratePostSetEffortChange({
+      session,
+      nextEffort,
+      postSetEffortAdjustment,
+      persistSessionUpdateOptimistic,
+      setPostSetEffortAdjustment,
+    });
+  }
+
+  function handleClosePostSetEffortAdjustment() {
+    orchestrateClosePostSetEffortAdjustment({
+      setPostSetEffortAdjustment,
+    });
+  }
+
+  async function handleFinishWorkout(completionPayload = {}) {
+    await orchestrateFinishWorkout({
+      session,
+      elapsedSeconds,
+      completionPayload,
+      persistSessionUpdate,
+      setPostSetEffortAdjustment,
+      setSelectedWorkoutSessionPreview,
+      setIsActiveWorkoutViewOpen,
+      setActiveTrainTab,
+    });
+  }
+
+  async function handleDiscardWorkout() {
+    await orchestrateDiscardWorkout({
+      session,
+      elapsedSeconds,
+      setPostSetEffortAdjustment,
+      setIsActiveWorkoutViewOpen,
+      persistSessionUpdateOptimistic,
+    });
+  }
+
+  async function handleCloseActiveWorkout() {
+    orchestrateCloseActiveWorkout({
+      session,
+      setSelectedWorkoutSessionPreview,
+      setIsActiveWorkoutViewOpen,
+      setIsWorkoutSheetOpen,
+      runAfterInteractions: InteractionManager.runAfterInteractions,
+    });
+  }
+
+  async function handleQuickActualUpdate(exerciseId, setId, field, delta) {
+    await orchestrateQuickActualUpdate({
+      session,
+      exerciseId,
+      setId,
+      field,
+      delta,
+      persistSessionUpdate,
+    });
+  }
+
+  async function handleSessionSetValueChange(exerciseId, setId, field, nextValue) {
+    await orchestrateSessionSetValueChange({
+      session,
+      exerciseId,
+      setId,
+      field,
+      nextValue,
+      persistSessionUpdateOptimistic,
+    });
+  }
+
+  async function handleAddSessionSet(exerciseId) {
+    await orchestrateAddSessionSet({
+      session,
+      exerciseId,
+      persistSessionUpdateOptimistic,
+    });
+  }
+
+  async function handleDeleteSessionSet(exerciseId, setId) {
+    await orchestrateDeleteSessionSet({
+      session,
+      exerciseId,
+      setId,
+      setPostSetEffortAdjustment,
+      persistSessionDeletionOptimistic,
+    });
+  }
+
+  async function handleDeleteSessionExercise(exerciseId) {
+    await orchestrateDeleteSessionExercise({
+      session,
+      exerciseId,
+      setPostSetEffortAdjustment,
+      persistSessionDeletionOptimistic,
+    });
+  }
+
+  async function handleMoveActiveWorkoutExercise(exerciseId, direction) {
+    await orchestrateMoveActiveWorkoutExercise({
+      session,
+      exerciseId,
+      direction,
+      persistSessionUpdateOptimistic,
+    });
+  }
+
+  async function handleExerciseRestTimeChange(exerciseId, nextRestSeconds) {
+    await orchestrateExerciseRestTimeChange({
+      session,
+      exerciseId,
+      nextRestSeconds,
+      persistSessionUpdateOptimistic,
+    });
+  }
+
+  async function handleRemoveExerciseRestTime(exerciseId) {
+    await orchestrateRemoveExerciseRestTime({
+      session,
+      exerciseId,
+      persistSessionUpdateOptimistic,
+    });
+  }
+
+  async function handleAddExercisesToSession(exerciseIds) {
+    await orchestrateAddExercisesToSession({
+      session,
+      exerciseIds,
+      exerciseDetailClient,
+      persistSessionUpdateOptimistic,
+    });
+  }
+
+  async function handleWorkoutNotesChange(nextNotes) {
+    await orchestrateWorkoutNotesChange({
+      session,
+      nextNotes,
+      persistSessionUpdateOptimistic,
+    });
+  }
+
+  async function handleWorkoutSettingsChange(settingsPatch) {
+    await orchestrateWorkoutSettingsChange({
+      session,
+      settingsPatch,
+      persistSessionUpdateOptimistic,
+    });
+  }
+
+  async function handleMoveWorkoutEditExercise(exerciseId, direction) {
+    return orchestrateMoveWorkoutEditExercise({
+      exercises: workoutEditViewModel?.exercises || [],
+      exerciseId,
+      direction,
+      programSheetClient,
+      setSelectedWorkoutSessionPreview,
+    });
+  }
+
+  async function handleAddWorkoutEditSet(exerciseId) {
+    return orchestrateAddWorkoutEditSet({
+      exercises: workoutEditViewModel?.exercises || [],
+      exerciseId,
+      programSheetClient,
+      setSelectedWorkoutSessionPreview,
+    });
+  }
+
+  async function handleDeleteWorkoutEditSet(exerciseId, setId) {
+    return orchestrateDeleteWorkoutEditSet({
+      exercises: workoutEditViewModel?.exercises || [],
+      exerciseId,
+      setId,
+      programSheetClient,
+      setSelectedWorkoutSessionPreview,
+    });
+  }
+
+  async function handleOpenWorkoutEditExercisePicker() {
+    const currentExerciseIds = new Set((workoutEditViewModel?.exercises || []).map((exercise) => exercise.exerciseId || exercise.id));
+    const items = await exerciseLibraryClient?.listExercises?.();
+    const availableExercises = (items || []).filter((exercise) => !currentExerciseIds.has(exercise.id));
+    setWorkoutEditDraftModel((currentDraft) => ({
+      ...(currentDraft || {}),
+      programWorkoutId: currentDraft?.programWorkoutId || workoutEditViewModel?.programWorkoutId || null,
+      addExerciseSheet: {
+        title: 'Exercises',
+        searchPlaceholder: 'Search or Create Exercises',
+        addButtonLabel: 'Add',
+        exercises: availableExercises,
+      },
+      exercises: currentDraft?.exercises || workoutEditViewModel?.exercises || [],
+    }));
+    return availableExercises;
+  }
+
+  async function handleAddExercisesToWorkoutEdit(exerciseIds) {
+    return orchestrateAddExercisesToWorkoutEdit({
+      programWorkoutId: workoutEditViewModel?.programWorkoutId || workoutEditDraftModel?.programWorkoutId,
+      exerciseIds,
+      programSheetClient,
+      exerciseLibraryClient,
+      setSelectedWorkoutSessionPreview,
+      setWorkoutEditDraftModel,
+    });
+  }
+
+  async function handleSaveWorkoutEdit(draft) {
+    const savedWorkout = await programSheetClient?.updateProgramWorkout?.({
+      programWorkoutId: workoutEditViewModel?.programWorkoutId || workoutEditDraftModel?.programWorkoutId,
+      nameSnapshot: draft?.workoutName || '',
+      notes: draft?.workoutNotes || '',
+    });
+
+    if (!savedWorkout?.id) {
+      handleCloseWorkoutEditView();
+      return;
+    }
+
+    setSelectedProgramWorkoutPreview((currentWorkout) => currentWorkout?.id === savedWorkout.id
+      ? { ...currentWorkout, nameSnapshot: savedWorkout.nameSnapshot, notes: savedWorkout.notes }
+      : currentWorkout);
+    setSelectedWorkoutSessionPreview((currentSession) => currentSession?.programWorkoutId === savedWorkout.id
+      ? { ...currentSession, nameSnapshot: savedWorkout.nameSnapshot, notes: savedWorkout.notes }
+      : currentSession);
+    setWorkoutEditDraftModel((currentDraft) => currentDraft
+      ? { ...currentDraft, title: savedWorkout.nameSnapshot, workoutNotes: savedWorkout.notes }
+      : currentDraft);
+    setPersistedCreatedWorkoutRows((currentRows) => currentRows.map((row) => row.actionPayload?.programWorkoutId === savedWorkout.id
+      ? { ...row, title: savedWorkout.nameSnapshot }
+      : row));
+    handleCloseWorkoutEditView();
+  }
+
+  async function handleConfirmDeleteWorkout() {
+    const deletedWorkoutId = workoutEditViewModel?.programWorkoutId || workoutEditDraftModel?.programWorkoutId
+    if (!deletedWorkoutId) {
+      setDeleteWorkoutErrorMessage('Missing workout id.')
+      return
+    }
+
+    setIsDeletingWorkout(true)
+    setDeleteWorkoutErrorMessage('')
+
+    try {
+      const deleteResult = await programSheetClient?.deleteProgramWorkout?.({
+        programWorkoutId: workoutEditViewModel?.programWorkoutId || workoutEditDraftModel?.programWorkoutId,
       })
-    );
+
+      if (!deleteResult?.success) {
+        throw new Error('Workout delete did not complete.')
+      }
+
+      if (bootstrapState.status === 'authenticated_coach' && activeCoachAthleteProfile?.id && authSession?.accessToken) {
+        const nextCoachTrainBridgeState = await hydrateCoachTrainBridge({
+          athleteId: activeCoachAthleteProfile.id,
+          currentUserId: authSession.currentUserId,
+          accessToken: authSession.accessToken,
+          programClient: createMobileProgramClient({ accessToken: authSession.accessToken }),
+          workoutClient: createMobileWorkoutClient({ accessToken: authSession.accessToken }),
+        })
+
+        setCoachTrainBridgeState({
+          ...nextCoachTrainBridgeState,
+          isHydrating: false,
+          hasResolved: true,
+        })
+      }
+
+      setPersistedCreatedWorkoutRows((currentRows) => currentRows.filter((row) => row.actionPayload?.programWorkoutId !== deletedWorkoutId))
+      setSelectedProgramWorkoutPreview((currentWorkout) => currentWorkout?.id === deletedWorkoutId ? null : currentWorkout)
+      setSelectedWorkoutSessionPreview((currentSession) => currentSession?.programWorkoutId === deletedWorkoutId ? null : currentSession)
+      setWorkoutEditDraftModel((currentDraft) => currentDraft?.programWorkoutId === deletedWorkoutId ? null : currentDraft)
+      setIsDeleteWorkoutModalOpen(false)
+      setDeleteWorkoutErrorMessage('')
+
+      if (workoutEditReturnSurface === 'workout-sheet') {
+        if (workoutSheetReturnSurface === 'program-sheet') {
+          setIsProgramSheetOpen(true)
+          setWorkoutSheetReturnSurface(null)
+        }
+        setWorkoutEditReturnSurface('train-home')
+      }
+
+      handleCloseWorkoutEditView()
+    } catch (error) {
+      setDeleteWorkoutErrorMessage(error?.message || 'Something went sideways while deleting this workout.')
+    } finally {
+      setIsDeletingWorkout(false)
+    }
   }
 
-  function renderSessionSurface() {
-    return (
-      <>
-        <View style={styles.headerCard}>
-          <View style={styles.headerTopRow}>
-            <View>
-              <Text style={styles.eyebrow}>Train / Session</Text>
-              <Text style={styles.title}>{session.name}</Text>
-            </View>
-            <Pressable
-              onPress={handleFinishWorkout}
-              style={[styles.finishButton, session.status === 'completed' && styles.finishButtonDone]}
-            >
-              <Text style={styles.finishButtonText}>
-                {session.status === 'completed' ? 'Completed' : 'Finish'}
-              </Text>
-            </Pressable>
-          </View>
+  async function handleCreateWorkout() {
+    const rawAthleteId = bootstrapState.status === 'authenticated_coach'
+      ? activeCoachAthleteProfile?.id || null
+      : bootstrapState.athleteProfile?.id || trainState.programWorkout?.athleteId || null;
+    const rawCoachId = trainState.programWorkout?.coachId || activeCoachAthleteProfile?.coachId || null;
+    const rawProgramId = trainState.program.id || null;
+    const athleteId = isUuidValue(rawAthleteId) ? rawAthleteId : null;
+    const coachId = isUuidValue(rawCoachId) ? rawCoachId : null;
+    const programId = isUuidValue(rawProgramId) ? rawProgramId : null;
+    const selectedProgramDayId = trainState.program.calendarWeek.find((day) => day.id === selectedCalendarDayId)?.programDayId || null;
+    const relatedWorkoutCount = getRelatedWorkoutCount({
+      calendarWeek: trainState.program.calendarWeek,
+      persistedWorkoutListRows: persistedCreatedWorkoutRows,
+      selectedDayId: selectedCalendarDayId,
+    });
+    const defaultWorkoutName = `Untitled Workout ${relatedWorkoutCount + 1}`;
+    const createdWorkout = await programSheetClient?.createProgramWorkout?.({
+      athleteId,
+      coachId,
+      programId,
+      programDayId: selectedProgramDayId,
+      nameSnapshot: defaultWorkoutName,
+      notes: '',
+      sortOrder: relatedWorkoutCount + 1,
+    });
 
-          <Text style={styles.summary}>{formatWorkoutTimer(elapsedSeconds)}</Text>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${progress.completionPercent}%` }]} />
-          </View>
-          <Text style={styles.progressLabel}>
-            {progress.completedSets}/{progress.totalSets} sets, {progress.completedExercises}/{progress.totalExercises} exercises
-          </Text>
-        </View>
+    if (!createdWorkout?.id) return;
 
-        {session.activeRestTimer ? (
-          <View style={styles.restCard}>
-            <View style={styles.restHeaderRow}>
-              <View>
-                <Text style={styles.restEyebrow}>Rest timer</Text>
-                <Text style={styles.restTitle}>{selectedSet ? 'Between completed sets' : 'Active rest block'}</Text>
-              </View>
-              <Pressable onPress={() => setSession((currentSession) => clearRestTimer(currentSession))}>
-                <Text style={styles.dismissText}>Dismiss</Text>
-              </Pressable>
-            </View>
-            <Text style={styles.restClock}>{formatClock(session.activeRestTimer.remainingSeconds)}</Text>
-            <View style={styles.restActions}>
-              <Pressable style={styles.restActionButton} onPress={() => setSession((currentSession) => adjustRestTimer(currentSession, -15))}>
-                <Text style={styles.restActionText}>-15s</Text>
-              </Pressable>
-              <Pressable style={styles.restActionButton} onPress={() => setSession((currentSession) => adjustRestTimer(currentSession, 15))}>
-                <Text style={styles.restActionText}>+15s</Text>
-              </Pressable>
-            </View>
-          </View>
-        ) : null}
+    setSelectedProgramWorkoutPreview({
+      ...createdWorkout,
+      notes: createdWorkout.notes || '',
+      exercises: [],
+    });
+    setSelectedWorkoutSessionPreview({
+      programWorkoutId: createdWorkout.id,
+      nameSnapshot: createdWorkout.nameSnapshot,
+      notes: createdWorkout.notes || '',
+      status: 'planned',
+      exercises: [],
+      totalExercisesCount: 0,
+      totalSetsCount: 0,
+    });
+    setPersistedCreatedWorkoutRows((currentRows) => [{
+      id: `created-workout-row-${createdWorkout.id}`,
+      title: createdWorkout.nameSnapshot,
+      body: `${workoutModel.dayLabel} · Scheduled`,
+      targetKey: 'workout',
+      actionPayload: {
+        selectedDayId: selectedCalendarDayId,
+        programWorkoutId: createdWorkout.id,
+      },
+    }, ...currentRows.filter((row) => row.actionPayload?.programWorkoutId !== createdWorkout.id)]);
 
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Active workout session</Text>
-          {session.exercises.map((exercise) => (
-            <View key={exercise.id} style={styles.exerciseCard}>
-              <View style={styles.exerciseHeader}>
-                <View>
-                  <Text style={styles.exerciseTitle}>{exercise.name}</Text>
-                  <Text style={styles.exerciseMeta}>Rest {Math.floor(exercise.defaultRestSeconds / 60)}:{String(exercise.defaultRestSeconds % 60).padStart(2, '0')}</Text>
-                </View>
-                <View style={[styles.exerciseStatusBadge, statusStyles[exercise.status]]}>
-                  <Text style={styles.exerciseStatusText}>{exercise.status.replace('_', ' ')}</Text>
-                </View>
-              </View>
-
-              {exercise.sets.map((set, index) => (
-                <View key={set.id} style={[styles.setRow, set.isCompleted && styles.setRowCompleted]}>
-                  <Pressable style={styles.setCopy} onPress={() => handleCompleteSet(exercise.id, set.id)}>
-                    <Text style={styles.setTitle}>Set {index + 1}</Text>
-                    <Text style={styles.setMeta}>
-                      Prescribed: {set.prescribedLoad ?? '-'} lb x {set.prescribedReps ?? '-'} reps, RPE {set.prescribedRpe ?? '-'}
-                    </Text>
-                    <Text style={styles.setMeta}>
-                      Actual: {set.actualLoad ?? '-'} lb x {set.actualReps ?? '-'} reps, RPE {set.actualRpe ?? '-'}
-                    </Text>
-                  </Pressable>
-
-                  <View style={styles.setControlsColumn}>
-                    <View style={styles.actualControl}>
-                      <Text style={styles.actualControlLabel}>Load</Text>
-                      <View style={styles.actualControlButtons}>
-                        <Pressable style={styles.stepButton} onPress={() => handleQuickActualUpdate(exercise.id, set.id, 'actualLoad', -5)}>
-                          <Text style={styles.stepButtonText}>-</Text>
-                        </Pressable>
-                        <Text style={styles.actualValue}>{set.actualLoad ?? set.prescribedLoad ?? 0}</Text>
-                        <Pressable style={styles.stepButton} onPress={() => handleQuickActualUpdate(exercise.id, set.id, 'actualLoad', 5)}>
-                          <Text style={styles.stepButtonText}>+</Text>
-                        </Pressable>
-                      </View>
-                    </View>
-
-                    <View style={styles.actualControl}>
-                      <Text style={styles.actualControlLabel}>Reps</Text>
-                      <View style={styles.actualControlButtons}>
-                        <Pressable style={styles.stepButton} onPress={() => handleQuickActualUpdate(exercise.id, set.id, 'actualReps', -1)}>
-                          <Text style={styles.stepButtonText}>-</Text>
-                        </Pressable>
-                        <Text style={styles.actualValue}>{set.actualReps ?? set.prescribedReps ?? 0}</Text>
-                        <Pressable style={styles.stepButton} onPress={() => handleQuickActualUpdate(exercise.id, set.id, 'actualReps', 1)}>
-                          <Text style={styles.stepButtonText}>+</Text>
-                        </Pressable>
-                      </View>
-                    </View>
-
-                    <View style={[styles.badge, set.isCompleted ? styles.badgeDone : styles.badgeTodo]}>
-                      <Text style={styles.badgeText}>{set.isCompleted ? 'Done' : 'Tap left side to complete'}</Text>
-                    </View>
-                  </View>
-                </View>
-              ))}
-            </View>
-          ))}
-        </View>
-      </>
-    );
+    orchestrateOpenWorkoutEditView({
+      setIsWorkoutSheetOpen,
+      setIsWorkoutEditViewOpen,
+      setWorkoutEditReturnSurface,
+      nextReturnSurface: 'train-home',
+      setWorkoutEditDraftModel,
+      workoutDraftModel: {
+        programWorkoutId: createdWorkout.id,
+        title: createdWorkout.nameSnapshot,
+        workoutNotes: createdWorkout.notes || '',
+        workoutNamePlaceholder: 'Workout name',
+        workoutNotesPlaceholder: 'Add notes',
+        exerciseNotesPlaceholder: 'Add Notes',
+        addExerciseLabel: 'Add Exercise',
+        deleteLabel: 'Delete Workout',
+        addSetLabel: 'Add Set',
+        addExerciseSheet: {
+          title: 'Exercises',
+          searchPlaceholder: 'Search or Create Exercises',
+          addButtonLabel: 'Add',
+          exercises: [],
+        },
+        exercises: [],
+      },
+    });
   }
 
-  function renderTrainSurface() {
-    return (
-      <>
-        <View style={styles.trainTabsRow}>
-          {trainTabs.map((tab) => (
-            <Pressable
-              key={tab.key}
-              style={[styles.trainTabButton, activeTrainTab === tab.key && styles.trainTabButtonActive]}
-              onPress={() => setActiveTrainTab(tab.key)}
-            >
-              <Text style={[styles.trainTabLabel, activeTrainTab === tab.key && styles.trainTabLabelActive]}>{tab.label}</Text>
-            </Pressable>
-          ))}
-        </View>
+  async function handleDismissRestTimer() {
+    await orchestrateDismissRestTimer({
+      session,
+      persistSessionUpdateOptimistic,
+    });
+  }
 
-        {activeTrainTab === 'today' && (
-          <>
-            <SurfaceCard
-              title="Today"
-              body="You have Lower A scheduled today. The athlete should see the next workout, high-level progress, and quick access into the session flow."
-              actionLabel="Open workout"
-              onAction={() => setActiveTrainTab('workout')}
+  async function handleAdjustRestTimer(delta) {
+    await orchestrateAdjustRestTimer({
+      session,
+      delta,
+      persistSessionUpdateOptimistic,
+    });
+  }
+
+  async function handleStartWorkoutFromSheet(payload = null) {
+    await orchestrateStartWorkoutFromSheet({
+      effectiveSessionStore,
+      selectedProgramWorkoutId: payload?.programWorkoutId || selectedProgramWorkoutId,
+      session,
+      selectedWorkoutSessionPreview,
+      workoutSheetModel,
+      startedAt: new Date().toISOString(),
+      setIsStartingWorkout,
+      setSession,
+      setIsWorkoutSheetOpen,
+      setIsActiveWorkoutViewOpen,
+    });
+  }
+
+  async function handleOpenOrResumeSession(payload = null) {
+    await orchestrateOpenOrResumeSession({
+      effectiveSessionStore,
+      session,
+      selectedProgramWorkoutId: payload?.programWorkoutId || selectedProgramWorkoutId,
+      setIsWorkoutSheetOpen,
+      setSession,
+      setActiveTrainTab,
+    });
+  }
+
+  async function handleTrainNavigation(targetKey, payload = null) {
+    if (payload?.selectedDayId) {
+      setSelectedCalendarDayId(payload.selectedDayId);
+    }
+
+    if (targetKey === 'coach-athlete-workspace-open') {
+      orchestrateCoachAthleteWorkspaceOpen({
+        payload,
+        selectedCoachAthleteId,
+        setSelectedCoachAthleteId,
+        setIsCoachAthletesSheetOpen,
+        setIsCoachAthleteWorkspaceOpen,
+      });
+      return;
+    }
+
+    if (targetKey === 'coach-athlete-select') {
+      orchestrateCoachAthleteSelect({
+        payload,
+        selectedCoachAthleteId,
+        setSelectedCoachAthleteId,
+        setIsCoachAthletesSheetOpen,
+        setIsCoachAthleteWorkspaceOpen,
+        setCoachMetricNotice,
+        setCoachMetricError,
+      });
+      return;
+    }
+
+    if (targetKey === 'coach-athlete-invite') {
+      setIsCoachAthletesSheetOpen(false);
+      setIsInviteAthleteViewOpen(true);
+      setInviteAthleteEmail('');
+      setAthleteInvitationErrorMessage('');
+      return;
+    }
+
+    if (targetKey === 'start-workout') {
+      await handleStartWorkoutFromSheet(payload);
+      return;
+    }
+
+    if (targetKey === 'calendar-day-select') {
+      return;
+    }
+
+    if (targetKey === 'exercise-detail') {
+      handleOpenExerciseDetail(payload?.exercise ?? payload, payload?.sourceSurface ?? 'completed-session');
+      return;
+    }
+
+    if (targetKey === 'program') {
+      orchestrateOpenProgramSheet({
+        trainState,
+        programSheetClient,
+        setProgramSheetReturnSurface,
+        setSelectedProgramPreview,
+        setIsProgramSheetOpen,
+      });
+      return;
+    }
+
+    if (targetKey === 'create-workout') {
+      await handleCreateWorkout();
+      return;
+    }
+
+    if (targetKey === 'workout') {
+      const {
+        requestedCalendarDayId,
+        requestedDayWorkoutPreview,
+        requestedProgramWorkoutId,
+        immediateProgramWorkout,
+        workoutOpenRequestContext,
+      } = deriveWorkoutOpenRequestContext({
+        payload,
+        selectedCalendarDayId,
+        selectedProgramWorkoutId,
+        trainState,
+      });
+
+      await orchestrateWorkoutOpen({
+        targetKey,
+        payload,
+        selectedCalendarDayId,
+        selectedProgramWorkoutId,
+        workoutOpenRequestContext: {
+          requestedCalendarDayId,
+          requestedDayWorkoutPreview,
+          requestedProgramWorkoutId,
+          ...workoutOpenRequestContext,
+        },
+        requestedProgramWorkoutId,
+        immediateProgramWorkout,
+        effectiveSessionStore,
+        workoutClient: createMobileWorkoutClient({ accessToken: authSession.accessToken }),
+        session,
+        trainState,
+        selectedWorkoutSessionPreview,
+        setIsWorkoutSheetOpen,
+        setSelectedProgramWorkoutPreview,
+        setSelectedWorkoutSessionPreview,
+      });
+      return;
+    }
+
+    if (targetKey === 'session') {
+      await handleOpenOrResumeSession(payload);
+      return;
+    }
+
+    if (targetKey) {
+      setActiveTrainTab(targetKey);
+    }
+  }
+
+  function handleCloseInviteAthleteView() {
+    setIsInviteAthleteViewOpen(false);
+    setAthleteInvitationErrorMessage('');
+    setIsCoachAthletesSheetOpen(true);
+  }
+
+  async function handleSendAthleteInvitation() {
+    setIsSendingAthleteInvitation(true);
+    setAthleteInvitationErrorMessage('');
+
+    try {
+      await sendCoachAthleteInvitation({
+        invitationClient,
+        inviteeEmail: inviteAthleteEmail,
+        coachProfile: effectiveBootstrapState.coachProfile,
+        appStoreUrl: process.env.EXPO_PUBLIC_PPLUS_APP_STORE_URL || '',
+      });
+      setIsInviteAthleteViewOpen(false);
+      setIsInvitationSuccessViewOpen(true);
+    } catch (error) {
+      setAthleteInvitationErrorMessage(error?.message || 'Something went sideways while sending the athlete invitation.');
+    } finally {
+      setIsSendingAthleteInvitation(false);
+    }
+  }
+
+  function handleCloseInvitationSuccessView() {
+    setIsInvitationSuccessViewOpen(false);
+    setIsCoachAthletesSheetOpen(true);
+  }
+
+  function handleOpenProgramDetail(program, sourceSurface = null) {
+    if (!program?.id) return;
+
+    orchestrateOpenProgramSheet({
+      program,
+      sourceSurface,
+      closeProfileView: () => setIsProfileViewOpen(false),
+      programSheetClient,
+      setProgramSheetReturnSurface,
+      setSelectedProgramPreview,
+      setIsProgramSheetOpen,
+    });
+  }
+
+  function handleCloseProgramSheet() {
+    orchestrateCloseProgramSheet({
+      programSheetReturnSurface,
+      setIsProgramSheetOpen,
+      setIsProfileViewOpen,
+      setProgramSheetReturnSurface,
+      setSelectedProgramPreview,
+    });
+  }
+
+  async function handleOpenProgramSheetWorkout(workout) {
+    if (!workout?.programWorkoutId) return;
+
+    setIsProgramSheetOpen(false);
+    setWorkoutSheetReturnSurface('program-sheet');
+
+    await handleTrainNavigation('workout', {
+      programWorkoutId: workout.programWorkoutId,
+      selectedDayId: workout.programDayId,
+    });
+  }
+
+  function handleCloseWorkoutSheet() {
+    setIsWorkoutSheetOpen(false);
+
+    if (workoutSheetReturnSurface === 'program-sheet') {
+      setIsProgramSheetOpen(true);
+      setWorkoutSheetReturnSurface(null);
+    }
+  }
+
+  function handleOpenProgramEditView() {
+    orchestrateOpenProgramEditView({
+      setIsProgramSheetOpen,
+      setIsProgramEditViewOpen,
+    });
+  }
+
+  function handleCloseProgramEditView() {
+    orchestrateCloseProgramEditView({
+      setIsProgramEditViewOpen,
+      setIsProgramSheetOpen,
+    });
+  }
+
+  function handleOpenWorkoutEditView() {
+    setIsDeleteWorkoutModalOpen(false)
+    setDeleteWorkoutErrorMessage('')
+    orchestrateOpenWorkoutEditView({
+      setIsWorkoutSheetOpen,
+      setIsWorkoutEditViewOpen,
+      setWorkoutEditReturnSurface,
+      nextReturnSurface: 'workout-sheet',
+      setWorkoutEditDraftModel,
+      workoutDraftModel: null,
+    });
+  }
+
+  function handleCloseWorkoutEditView() {
+    setIsDeleteWorkoutModalOpen(false)
+    setDeleteWorkoutErrorMessage('')
+    orchestrateCloseWorkoutEditView({
+      workoutEditReturnSurface,
+      setIsWorkoutEditViewOpen,
+      setIsWorkoutSheetOpen,
+      setWorkoutEditReturnSurface,
+      setWorkoutEditDraftModel,
+    });
+  }
+
+  function handleTabPress(nextTab) {
+    if (isCoachBootstrapState && nextTab === 'inbox') {
+      setIsCoachAthletesSheetOpen(true);
+      return;
+    }
+    setActiveTab(nextTab);
+  }
+
+  function handleOpenExerciseDetail(exercise, sourceSurface = null) {
+    orchestrateOpenExerciseDetail({
+      exercise,
+      sourceSurface,
+      exerciseDetailClient,
+      logger: console,
+      setSelectedExerciseId,
+      setSelectedExercisePreview,
+      setExerciseDetailReturnSurface,
+      setIsWorkoutSheetOpen,
+      setIsWorkoutEditViewOpen,
+      setIsProfileViewOpen,
+      setIsActiveWorkoutViewOpen,
+      setIsExerciseDetailViewOpen,
+    });
+  }
+
+  async function handleCloseExerciseDetail() {
+    orchestrateCloseExerciseDetail({
+      exerciseDetailReturnSurface,
+      setIsExerciseDetailViewOpen,
+      setIsWorkoutSheetOpen,
+      setIsWorkoutEditViewOpen,
+      setIsProfileViewOpen,
+      setIsActiveWorkoutViewOpen,
+      setExerciseDetailReturnSurface,
+    });
+  }
+
+  async function handleProfileSignOut() {
+    await orchestrateProfileSignOut({
+      signOut,
+      setAuthErrorMessage,
+      setAuthNoticeMessage,
+      setProfileSaveNotice,
+      setAuthMode,
+      setIsProfileViewOpen,
+    });
+  }
+
+  async function handleThemePreferenceChange(nextThemePreference) {
+    await orchestrateThemePreferenceChange({
+      nextThemePreference,
+      isCoachBootstrapState,
+      updateCoachProfile,
+      updateAthleteProfile,
+      setAuthErrorMessage,
+      setAuthNoticeMessage,
+      setProfileSaveNotice,
+      logger: console,
+    });
+  }
+
+  async function handleUnitsPreferenceChange(updates = {}) {
+    await orchestrateUnitsPreferenceChange({
+      updates,
+      profileViewProfile,
+      isCoachBootstrapState,
+      updateCoachProfile,
+      updateAthleteProfile,
+      logger: console,
+    });
+  }
+
+  async function handleSaveProfile(profileDraft) {
+    await orchestrateSaveProfile({
+      profileDraft,
+      isCoachBootstrapState,
+      updateCoachProfile,
+      updateAthleteProfile,
+      setAuthErrorMessage,
+      setAuthNoticeMessage,
+      setProfileSaveNotice,
+      setIsProfileSaving,
+    });
+  }
+
+  async function handleSaveCoachReadinessMetric() {
+    await orchestrateSaveCoachReadinessMetric({
+      selectedCoachAthlete: coachWorkspaceAthlete,
+      createCoachBodyMetricLog,
+      setCoachMetricNotice,
+      setCoachMetricError,
+      setIsCoachMetricSaving,
+    });
+  }
+
+  if (isFullscreenAuthGate) {
+    return (
+      <SafeAreaProvider>
+        <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
+          {authMode === 'invitation_code' ? (
+            <InvitationCodeEntryView
+              isVisible
+              code={authInvitationCode}
+              onChangeCode={setAuthInvitationCode}
+              errorMessage={authInvitationCodeErrorMessage}
+              isSubmitting={isAuthSubmitting}
+              onContinue={handleContinueInvitationCodeFlow}
+              onClose={handleCloseInvitationCodeFlow}
+              theme={appTheme}
             />
-            <SurfaceCard
-              title="Program snapshot"
-              body="Spring Hypertrophy, week 3 of 8. 6 of 39 workouts completed so far."
-              actionLabel="View program"
-              onAction={() => setActiveTrainTab('program')}
+          ) : authMode === 'invitation_onboarding' ? (
+            <AthleteInviteOnboardingView
+              isVisible
+              invitationCode={authInvitationCode}
+              currentStep={authInvitationOnboardingStep}
+              values={authInvitationOnboardingValues}
+              onChangeField={handleInvitationOnboardingChange}
+              onAvatarPress={handleInvitationAvatarUpload}
+              onNext={handleInvitationOnboardingNext}
+              onPrevious={handleInvitationOnboardingPrevious}
+              onClose={handleCloseInvitationOnboardingView}
+              isSubmitting={isAuthSubmitting}
+              errorMessage={authErrorMessage}
+              noticeMessage={authNoticeMessage}
+              theme={appTheme}
             />
-          </>
-        )}
-
-        {activeTrainTab === 'program' && (
-          <SurfaceCard
-            title="Program overview"
-            body="This area should hold the current program, weekly structure, training calendar, and scheduled workout progression."
-            actionLabel="See today’s workout"
-            onAction={() => setActiveTrainTab('workout')}
-          />
-        )}
-
-        {activeTrainTab === 'workout' && (
-          <>
-            <SurfaceCard
-              title="Workout detail"
-              body="Lower A contains 2 exercises in this scaffold, with prescribed sets, loads, reps, and planned rest. This is the preview before starting or continuing the session."
-              actionLabel="Go to session"
-              onAction={() => setActiveTrainTab('session')}
+          ) : (
+            <AuthView
+              mode={authMode}
+              isSubmitting={isAuthSubmitting}
+              errorMessage={authErrorMessage}
+              noticeMessage={authNoticeMessage}
+              theme={appTheme}
+              onModeChange={(nextMode) => {
+                setAuthMode(nextMode)
+                setAuthErrorMessage('')
+                setAuthNoticeMessage('')
+              }}
+              onForgotPassword={() => {
+                setAuthMode('forgot_password')
+                setAuthErrorMessage('')
+                setAuthNoticeMessage('')
+              }}
+              onInvitationCodePress={handleOpenInvitationCodeFlow}
+              onSubmit={handleAuthSubmit}
             />
-            <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>Planned exercises</Text>
-              {session.exercises.map((exercise) => (
-                <View key={exercise.id} style={styles.listRow}>
-                  <View>
-                    <Text style={styles.listRowTitle}>{exercise.name}</Text>
-                    <Text style={styles.listRowBody}>{exercise.sets.length} sets, default rest {Math.floor(exercise.defaultRestSeconds / 60)}:{String(exercise.defaultRestSeconds % 60).padStart(2, '0')}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          </>
-        )}
-
-        {activeTrainTab === 'session' && renderSessionSurface()}
-      </>
+          )}
+          <StatusBar style={appThemePreference === 'light' ? 'dark' : 'light'} />
+        </SafeAreaView>
+      </SafeAreaProvider>
     );
   }
 
-  function renderProgressSurface() {
+  if (isFullscreenLoading) {
     return (
-      <>
-        <View style={styles.headerCard}>
-          <Text style={styles.eyebrow}>Progress</Text>
-          <Text style={styles.title}>Performance & recovery</Text>
-          <Text style={styles.sectionBody}>
-            This is where the athlete should see results from training, not just the workouts themselves.
-          </Text>
-        </View>
-
-        <View style={styles.metricsGrid}>
-          <MetricCard label="Back Squat est. 1RM" value="205 lb" detail="Up 10 lb over the last 4 weeks" />
-          <MetricCard label="Weekly load" value="78" detail="Current training load score based on completed sessions" />
-          <MetricCard label="Readiness" value="Moderate" detail="Good to train, but lower body fatigue is accumulating" />
-        </View>
-
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Training load</Text>
-          <Text style={styles.sectionBody}>
-            The app should summarize completed session load across the week and connect it to muscles and sub-muscles through the analytics domain.
-          </Text>
-        </View>
-
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Muscle fatigue</Text>
-          <Text style={styles.sectionBody}>
-            This surface will show fatigue and recovery signals per muscle group once analytics are wired from the completed session data.
-          </Text>
-          <View style={styles.listRow}>
-            <Text style={styles.listRowTitle}>Quads</Text>
-            <Text style={styles.listRowBody}>High fatigue</Text>
-          </View>
-          <View style={styles.listRow}>
-            <Text style={styles.listRowTitle}>Hamstrings</Text>
-            <Text style={styles.listRowBody}>Moderate fatigue</Text>
-          </View>
-          <View style={styles.listRow}>
-            <Text style={styles.listRowTitle}>Glutes</Text>
-            <Text style={styles.listRowBody}>Moderate fatigue</Text>
-          </View>
-        </View>
-
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Performance snapshots</Text>
-          <Text style={styles.sectionBody}>
-            This area should hold lift progress, compliance, and trend summaries over time.
-          </Text>
-        </View>
-      </>
-    );
-  }
-
-  function renderPlaceholderSurface(title, copy) {
-    return (
-      <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>{title}</Text>
-        <Text style={styles.sectionBody}>{copy}</Text>
-      </View>
+      <SafeAreaProvider>
+        <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
+          <LoadingView theme={appTheme} />
+          <StatusBar style={appThemePreference === 'light' ? 'dark' : 'light'} />
+        </SafeAreaView>
+      </SafeAreaProvider>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.appShell}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          {activeTab === 'train' && renderTrainSurface()}
-          {activeTab === 'progress' && renderProgressSurface()}
-          {activeTab === 'team' && renderPlaceholderSurface('Team', 'This surface will hold coach context, team relationships, and collaboration later.')}
-          {activeTab === 'inbox' && renderPlaceholderSurface('Inbox', 'This surface will hold communication, reminders, and support flows later.')}
-        </ScrollView>
+    <SafeAreaProvider>
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
+        {isAuthPreviewEnabled ? (
+          <View style={styles.previewBar}>
+            <View style={styles.previewHeaderTopRow}>
+              <Text style={styles.previewBarLabel}>Auth Preview</Text>
+              <Text style={styles.previewHeaderActiveLabel}>{authPreviewModels.find((state) => state.isActive)?.label || 'Live'}</Text>
+            </View>
+            <View style={styles.previewButtonRow}>
+              {authPreviewModels.map((state) => (
+                <Pressable
+                  key={state.key}
+                  style={[styles.previewButton, state.isActive && styles.previewButtonActive]}
+                onPress={() => {
+                  setAuthPreviewState(state.key)
+                  if (state.key === 'sign_up') {
+                    setAuthMode('sign_up')
+                  }
+                  if (state.key === 'sign_in') {
+                    setAuthMode('sign_in')
+                  }
+                  if (state.key === 'live' && authMode === 'forgot_password') {
+                    setAuthMode('sign_in')
+                  }
+                  setAuthErrorMessage('')
+                  setAuthNoticeMessage('')
+                }}
+>
+                  <Text style={[styles.previewButtonText, state.isActive && styles.previewButtonTextActive]}>{state.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        ) : null}
+        {renderAppShell({
+          styles,
+          screen: appRenderModel.screen,
+          bottomTabs: bottomTabViewItems,
+          activeAthleteSummary: isCoachBootstrapState ? activeCoachAthleteSummary : null,
+          floatingStartWorkoutButton: floatingStartWorkoutButtonModel,
+          trainRenderModel,
+          sessionRenderModel,
+          onTabPress: handleTabPress,
+          onProfileHeaderPress: () => {
+            setIsProfileViewOpen(true);
+          },
+          onUtilityHeaderPress: () => setIsTrainingCalendarOpen(true),
+          onActionTarget: handleTrainNavigation,
+          renderTrainSurface: ({ trainRenderModel, sessionRenderModel, styles }) =>
+            renderTrainSurface({
+              trainRenderModel,
+              sessionRenderModel,
+              styles,
+              onTrainTabPress: setActiveTrainTab,
+              onActionTarget: handleTrainNavigation,
+              renderSections: (sections, onActionTarget) => renderGenericSections({ sections, styles, onActionTarget }),
+              renderSessionSections: (sections) =>
+                renderSessionSections({
+                  sections,
+                  styles,
+                  statusStyles,
+                  onFinishWorkout: handleFinishWorkout,
+                  onDiscardWorkout: handleDiscardWorkout,
+                  onDismissRestTimer: handleDismissRestTimer,
+                  onAdjustRestTimer: handleAdjustRestTimer,
+                  onCompleteSet: handleCompleteSet,
+                  onQuickActualUpdate: handleQuickActualUpdate,
+                }),
+            }),
+          renderAnalyticsView: (screen) => <AnalyticsView model={screen} theme={appTheme} onOpenExerciseDetail={(exercise) => handleOpenExerciseDetail(exercise, 'metrics-strength')} />,
+          renderAuthView: () => (
+            <AuthView
+              mode={authMode}
+              isSubmitting={isAuthSubmitting}
+              errorMessage={authErrorMessage}
+              noticeMessage={authNoticeMessage}
+              theme={appTheme}
+              onModeChange={(nextMode) => {
+                setAuthMode(nextMode)
+                setAuthErrorMessage('')
+                setAuthNoticeMessage('')
+              }}
+              onForgotPassword={() => {
+                setAuthMode('forgot_password')
+                setAuthErrorMessage('')
+                setAuthNoticeMessage('')
+              }}
+              onInvitationCodePress={handleOpenInvitationCodeFlow}
+              onSubmit={handleAuthSubmit}
+            />
+          ),
+          renderLoadingView: () => <LoadingView theme={appTheme} />,
+          renderGenericSections: ({ sections, styles, onActionTarget }) => renderGenericSections({ sections, styles, onActionTarget }),
+        })}
+        {renderProgramSheet({
+          isVisible: isProgramSheetOpen,
+          onClose: handleCloseProgramSheet,
+          onEditProgram: handleOpenProgramEditView,
+          onOpenWorkoutDetail: handleOpenProgramSheetWorkout,
+          model: programSheetModel,
+          theme: appTheme,
+        })}
 
-        <View style={styles.tabBar}>
-          {mobileTabs.map((tab) => (
-            <Pressable
-              key={tab.key}
-              style={[styles.tabButton, activeTab === tab.key && styles.tabButtonActive]}
-              onPress={() => setActiveTab(tab.key)}
-            >
-              <Text style={[styles.tabLabel, activeTab === tab.key && styles.tabLabelActive]}>{tab.label}</Text>
-            </Pressable>
-          ))}
-        </View>
-      </View>
-      <StatusBar style="light" />
-    </SafeAreaView>
+        <ProgramEditView
+          isVisible={isProgramEditViewOpen}
+          model={programEditViewModel}
+          theme={appTheme}
+          onClose={handleCloseProgramEditView}
+          onSave={handleCloseProgramEditView}
+        />
+
+      <CoachAthletesSheet
+        isVisible={isCoachAthletesSheetOpen}
+        onClose={() => setIsCoachAthletesSheetOpen(false)}
+        athletes={coachAthletesList}
+        selectedAthleteId={selectedCoachAthleteId}
+        onActionTarget={handleTrainNavigation}
+        theme={appTheme}
+      />
+      <InviteAthleteView
+        isVisible={isInviteAthleteViewOpen}
+        email={inviteAthleteEmail}
+        onChangeEmail={setInviteAthleteEmail}
+        onClose={handleCloseInviteAthleteView}
+        onSendInvitation={handleSendAthleteInvitation}
+        isSubmitting={isSendingAthleteInvitation}
+        errorMessage={athleteInvitationErrorMessage}
+        theme={appTheme}
+      />
+      <InvitationSuccessView
+        isVisible={isInvitationSuccessViewOpen}
+        onClose={handleCloseInvitationSuccessView}
+        theme={appTheme}
+      />
+        <CoachAthleteWorkspaceSheet
+          isVisible={isCoachAthleteWorkspaceOpen}
+          onClose={() => setIsCoachAthleteWorkspaceOpen(false)}
+          selectedAthlete={coachWorkspaceAthlete}
+          readinessDraft={coachReadinessDraft}
+          workspaceFormVersion={coachWorkspaceFormVersion}
+          onChangeReadinessDraft={setCoachReadinessDraft}
+          onSaveReadinessMetric={handleSaveCoachReadinessMetric}
+          isSavingMetric={isCoachMetricSaving}
+          saveNotice={coachMetricNotice}
+          saveErrorMessage={coachMetricError}
+          theme={appTheme}
+        />
+        <TrainingCalendarSheet
+          isVisible={isTrainingCalendarOpen}
+          onClose={() => setIsTrainingCalendarOpen(false)}
+          model={trainingCalendarModel}
+          theme={appTheme}
+        />
+        <WorkoutSheet
+          isVisible={isWorkoutSheetOpen}
+          model={workoutSheetModel}
+          theme={appTheme}
+          onClose={handleCloseWorkoutSheet}
+          onEditWorkout={handleOpenWorkoutEditView}
+          onOpenExerciseDetail={(exercise) => handleOpenExerciseDetail(exercise, 'workout-sheet')}
+          onStartWorkout={handleStartWorkoutFromSheet}
+          isStartingWorkout={isStartingWorkout}
+        />
+      <WorkoutEditView
+        isVisible={isWorkoutEditViewOpen}
+        key={`${workoutEditViewModel?.programWorkoutId || 'draft'}:${workoutEditViewModel?.title || workoutEditDraftModel?.title || ''}`}
+        model={workoutEditViewModel}
+        onClose={handleCloseWorkoutEditView}
+        onSave={handleSaveWorkoutEdit}
+        onAddSet={handleAddWorkoutEditSet}
+        onDeleteSet={handleDeleteWorkoutEditSet}
+        onMoveExercise={handleMoveWorkoutEditExercise}
+        onOpenExerciseDetail={(exercise) => handleOpenExerciseDetail(exercise, 'workout-edit')}
+        onAddExercise={handleOpenWorkoutEditExercisePicker}
+        onAddExercises={handleAddExercisesToWorkoutEdit}
+        onOpenDeleteWorkout={() => setIsDeleteWorkoutModalOpen(true)}
+        onCloseDeleteWorkoutModal={() => setIsDeleteWorkoutModalOpen(false)}
+        onConfirmDeleteWorkout={handleConfirmDeleteWorkout}
+        isDeleteWorkoutModalOpen={isDeleteWorkoutModalOpen}
+        isDeletingWorkout={isDeletingWorkout}
+        deleteWorkoutErrorMessage={deleteWorkoutErrorMessage}
+        theme={appTheme}
+      />
+
+      <ActiveWorkoutView
+          isVisible={isActiveWorkoutViewOpen}
+          model={activeWorkoutViewModel}
+          theme={appTheme}
+          onClose={handleCloseActiveWorkout}
+          onFinish={handleFinishWorkout}
+          onDiscard={handleDiscardWorkout}
+          canFinishWorkout={canFinishActiveWorkout}
+          onAddSet={handleAddSessionSet}
+          onDeleteSet={handleDeleteSessionSet}
+          onDeleteExercise={handleDeleteSessionExercise}
+          onMoveExercise={handleMoveActiveWorkoutExercise}
+          onOpenExerciseDetail={(exercise) => handleOpenExerciseDetail(exercise, 'active-workout')}
+          onWorkoutNotesChange={handleWorkoutNotesChange}
+          onExerciseRestTimeChange={handleExerciseRestTimeChange}
+          onRemoveExerciseRestTime={handleRemoveExerciseRestTime}
+          onAddExercises={handleAddExercisesToSession}
+          availableExercises={activeWorkoutAvailableExercises}
+          isLoadingAvailableExercises={isActiveWorkoutExercisesLoading}
+          availableExercisesError={activeWorkoutExercisesError}
+          onCompleteSet={handleCompleteSet}
+          onAdjustRestTimer={handleAdjustRestTimer}
+          onDismissRestTimer={handleDismissRestTimer}
+          onSetValueChange={handleSessionSetValueChange}
+          postSetEffortAdjustment={postSetEffortAdjustment}
+          onPostSetEffortChange={handlePostSetEffortChange}
+          onClosePostSetEffortAdjustment={handleClosePostSetEffortAdjustment}
+          onUpdateWorkoutSettings={handleWorkoutSettingsChange}
+        />
+        <ExerciseDetailView
+          isVisible={isExerciseDetailViewOpen}
+          model={exerciseDetailViewModel}
+          theme={appTheme}
+          onClose={handleCloseExerciseDetail}
+        />
+        <ProfileView isVisible={isProfileViewOpen} onClose={() => setIsProfileViewOpen(false)} onSignOut={handleProfileSignOut} athleteProfile={profileViewProfile} onSaveProfile={handleSaveProfile} isSavingProfile={isProfileSaving} saveNotice={profileSaveNotice} role={isCoachBootstrapState ? 'coach' : 'athlete'} onOpenAthletes={() => setIsCoachAthletesSheetOpen(true)} onOpenExerciseDetail={(exercise) => handleOpenExerciseDetail(exercise, 'profile-view')} onOpenProgramDetail={(program) => handleOpenProgramDetail(program, 'profile-view')} themePreference={appThemePreference} onChangeThemePreference={handleThemePreferenceChange} weightUnitPreference={profileViewProfile?.weightUnitPreference || 'lb'} distanceUnitPreference={profileViewProfile?.distanceUnitPreference || 'km'} onChangeWeightUnitPreference={(nextWeightUnitPreference) => handleUnitsPreferenceChange({ weightUnitPreference: nextWeightUnitPreference })} onChangeDistanceUnitPreference={(nextDistanceUnitPreference) => handleUnitsPreferenceChange({ distanceUnitPreference: nextDistanceUnitPreference })} theme={appTheme} />
+        <StatusBar style={appThemePreference === 'light' ? 'dark' : 'light'} />
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
-
-const statusStyles = StyleSheet.create({
-  not_started: { backgroundColor: '#1d4ed8' },
-  active: { backgroundColor: '#7c3aed' },
-  completed: { backgroundColor: '#059669' },
-  skipped: { backgroundColor: '#b45309' }
-});
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0b1220'
-  },
-  appShell: {
-    flex: 1
-  },
-  scrollContent: {
-    padding: 20,
-    gap: 16,
-    paddingBottom: 110
-  },
-  trainTabsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap'
-  },
-  trainTabButton: {
-    backgroundColor: '#111827',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 999
-  },
-  trainTabButtonActive: {
-    backgroundColor: '#2563eb'
-  },
-  trainTabLabel: {
-    color: '#94a3b8',
-    fontWeight: '700'
-  },
-  trainTabLabelActive: {
-    color: '#ffffff'
-  },
-  headerCard: {
-    backgroundColor: '#111827',
-    borderRadius: 20,
-    padding: 20,
-    gap: 8
-  },
-  eyebrow: {
-    color: '#93c5fd',
-    fontSize: 14,
-    textTransform: 'uppercase',
-    letterSpacing: 1
-  },
-  title: {
-    color: '#ffffff',
-    fontSize: 32,
-    fontWeight: '700'
-  },
-  headerTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center'
-  },
-  finishButton: {
-    backgroundColor: '#2563eb',
-    borderRadius: 999,
-    paddingVertical: 10,
-    paddingHorizontal: 16
-  },
-  finishButtonDone: {
-    backgroundColor: '#059669'
-  },
-  finishButtonText: {
-    color: '#ffffff',
-    fontWeight: '700'
-  },
-  summary: {
-    color: '#d1d5db',
-    fontSize: 18,
-    fontWeight: '600'
-  },
-  timer: {
-    color: '#34d399',
-    fontSize: 28,
-    fontWeight: '700'
-  },
-  progressTrack: {
-    height: 10,
-    backgroundColor: '#1f2937',
-    borderRadius: 999,
-    overflow: 'hidden',
-    marginTop: 4
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#3b82f6'
-  },
-  progressLabel: {
-    color: '#9ca3af',
-    fontSize: 13
-  },
-  restCard: {
-    backgroundColor: '#172554',
-    borderRadius: 20,
-    padding: 20,
-    gap: 14
-  },
-  restHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center'
-  },
-  restEyebrow: {
-    color: '#93c5fd',
-    textTransform: 'uppercase',
-    fontSize: 12,
-    letterSpacing: 1
-  },
-  restTitle: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '700'
-  },
-  dismissText: {
-    color: '#bfdbfe',
-    fontWeight: '700'
-  },
-  restClock: {
-    color: '#ffffff',
-    fontSize: 42,
-    fontWeight: '700'
-  },
-  restActions: {
-    flexDirection: 'row',
-    gap: 12
-  },
-  restActionButton: {
-    backgroundColor: '#2563eb',
-    borderRadius: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 18
-  },
-  restActionText: {
-    color: '#ffffff',
-    fontWeight: '700'
-  },
-  sectionCard: {
-    backgroundColor: '#111827',
-    borderRadius: 20,
-    padding: 20,
-    gap: 8
-  },
-  sectionTitle: {
-    color: '#ffffff',
-    fontSize: 20,
-    fontWeight: '700'
-  },
-  sectionBody: {
-    color: '#cbd5e1',
-    fontSize: 15,
-    lineHeight: 22
-  },
-  primaryAction: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#2563eb',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    marginTop: 4
-  },
-  primaryActionText: {
-    color: '#ffffff',
-    fontWeight: '700'
-  },
-  exerciseCard: {
-    backgroundColor: '#1f2937',
-    borderRadius: 18,
-    padding: 14,
-    gap: 12
-  },
-  exerciseHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 12
-  },
-  exerciseTitle: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '700'
-  },
-  exerciseMeta: {
-    color: '#9ca3af',
-    fontSize: 14
-  },
-  exerciseStatusBadge: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 999
-  },
-  exerciseStatusText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '700'
-  },
-  setRow: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 14,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'stretch',
-    gap: 12
-  },
-  setRowCompleted: {
-    backgroundColor: '#064e3b'
-  },
-  setCopy: {
-    flex: 1
-  },
-  setControlsColumn: {
-    minWidth: 120,
-    gap: 8,
-    alignItems: 'stretch'
-  },
-  setTitle: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600'
-  },
-  setMeta: {
-    color: '#d1d5db',
-    fontSize: 13,
-    marginTop: 2
-  },
-  actualControl: {
-    gap: 4
-  },
-  actualControlLabel: {
-    color: '#bfdbfe',
-    fontSize: 12,
-    fontWeight: '700'
-  },
-  actualControlButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8
-  },
-  stepButton: {
-    backgroundColor: '#2563eb',
-    borderRadius: 10,
-    width: 26,
-    height: 26,
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  stepButtonText: {
-    color: '#ffffff',
-    fontWeight: '700'
-  },
-  actualValue: {
-    color: '#ffffff',
-    fontWeight: '700',
-    minWidth: 28,
-    textAlign: 'center'
-  },
-  badge: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 999
-  },
-  badgeDone: {
-    backgroundColor: '#10b981'
-  },
-  badgeTodo: {
-    backgroundColor: '#2563eb'
-  },
-  badgeText: {
-    color: '#ffffff',
-    fontSize: 11,
-    fontWeight: '700',
-    textAlign: 'center'
-  },
-  listRow: {
-    backgroundColor: '#1f2937',
-    borderRadius: 14,
-    padding: 14,
-    marginTop: 10
-  },
-  listRowTitle: {
-    color: '#ffffff',
-    fontWeight: '700',
-    fontSize: 16
-  },
-  listRowBody: {
-    color: '#cbd5e1',
-    marginTop: 4
-  },
-  metricsGrid: {
-    gap: 12
-  },
-  metricCard: {
-    backgroundColor: '#111827',
-    borderRadius: 18,
-    padding: 18,
-    gap: 6
-  },
-  metricLabel: {
-    color: '#93c5fd',
-    fontWeight: '700'
-  },
-  metricValue: {
-    color: '#ffffff',
-    fontSize: 28,
-    fontWeight: '700'
-  },
-  metricDetail: {
-    color: '#cbd5e1',
-    lineHeight: 20
-  },
-  tabBar: {
-    position: 'absolute',
-    left: 16,
-    right: 16,
-    bottom: 16,
-    backgroundColor: '#111827',
-    borderRadius: 18,
-    padding: 8,
-    flexDirection: 'row',
-    gap: 8
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center'
-  },
-  tabButtonActive: {
-    backgroundColor: '#2563eb'
-  },
-  tabLabel: {
-    color: '#94a3b8',
-    fontWeight: '700'
-  },
-  tabLabelActive: {
-    color: '#ffffff'
-  }
-});
