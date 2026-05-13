@@ -176,15 +176,18 @@ export async function orchestrateSaveProfile({
   setIsProfileSaving(true)
 
   try {
-    await updateProfileByRole({
+    const updatedProfile = await updateProfileByRole({
       isCoachBootstrapState,
       updateCoachProfile,
       updateAthleteProfile,
       coachUpdates: profileDraft,
     })
     setProfileSaveNotice('Profile updated.')
+    return updatedProfile
   } catch (error) {
-    setAuthErrorMessage(error?.message || 'Something went sideways while saving the profile.')
+    const resolvedError = error instanceof Error ? error : new Error(error?.message || 'Something went sideways while saving the profile.')
+    setAuthErrorMessage(resolvedError.message)
+    throw resolvedError
   } finally {
     setIsProfileSaving(false)
   }

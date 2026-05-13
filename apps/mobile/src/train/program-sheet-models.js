@@ -137,6 +137,10 @@ function buildWeekEntriesFromDays(week) {
 
 function buildSheetModelFromDetailedProgram(program) {
   const weeks = Array.isArray(program.weeks) ? program.weeks : []
+  const currentWeekRecord = weeks[0] || null
+  const currentWeekWorkouts = currentWeekRecord
+    ? currentWeekRecord.days.flatMap((day) => Array.isArray(day.workouts) ? day.workouts : [])
+    : []
   const allWorkouts = []
   for (const week of weeks) {
     for (const day of week.days || []) {
@@ -150,7 +154,7 @@ function buildSheetModelFromDetailedProgram(program) {
   const totalWeeks = Number(program.weeksCount || weeks.length || 1)
   const completedWorkouts = allWorkouts.filter((workout) => String(workout?.status || '').toLowerCase() === 'completed').length
   const totalWorkouts = Number(program.workoutsCount || allWorkouts.length || 0)
-  const routineLabels = Array.from(new Set(allWorkouts.map((workout) => workout?.nameSnapshot).filter(Boolean)))
+  const routineLabels = Array.from(new Set(currentWeekWorkouts.map((workout) => workout?.nameSnapshot).filter(Boolean)))
 
   return {
     title: program.name || 'Program',

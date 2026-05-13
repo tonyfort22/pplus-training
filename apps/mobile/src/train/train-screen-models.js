@@ -12,6 +12,7 @@ export function getTrainSurfaceModel({
   completedSessionModel = null,
   discardedSessionModel = null,
   persistedWorkoutListRows = [],
+  canCreateWorkout = true,
 }) {
   const tabs = getTabButtonModels({ tabs: trainTabs, activeKey: activeTrainTab })
 
@@ -47,11 +48,11 @@ export function getTrainSurfaceModel({
 
   return {
     tabs,
-    surface: getTrainHomeSurface({ todayModel, calendarModel, workoutModel, persistedWorkoutListRows }),
+    surface: getTrainHomeSurface({ todayModel, calendarModel, workoutModel, persistedWorkoutListRows, canCreateWorkout }),
   }
 }
 
-function getTrainHomeSurface({ todayModel, calendarModel, workoutModel, persistedWorkoutListRows = [] }) {
+function getTrainHomeSurface({ todayModel, calendarModel, workoutModel, persistedWorkoutListRows = [], canCreateWorkout = true }) {
   const cards = getTodayCardsModel(todayModel)
   const persistedRowByWorkoutId = new Map(
     persistedWorkoutListRows
@@ -132,10 +133,12 @@ function getTrainHomeSurface({ todayModel, calendarModel, workoutModel, persiste
       title: 'No workout available',
       body: undefined,
     },
-    createWorkoutCard: {
-      title: 'Create workout',
-      subtitle: 'Repeatable workout template',
-    },
+    createWorkoutCard: canCreateWorkout
+      ? {
+          title: 'Create workout',
+          subtitle: 'Repeatable workout template',
+        }
+      : null,
     floatingStartWorkoutButton: workoutModel.hasWorkoutData
       ? {
           kind: 'start-workout',

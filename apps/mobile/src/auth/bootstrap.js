@@ -56,6 +56,19 @@ function createMobileProgramClient({ env, fetchImpl, accessToken }) {
   })
 }
 
+function createMobileWorkoutClient({ env, fetchImpl, accessToken }) {
+  if (!env?.EXPO_PUBLIC_SUPABASE_URL || !env?.EXPO_PUBLIC_SUPABASE_ANON_KEY) {
+    return null
+  }
+
+  return data.sessions.createSupabaseRestSessionDb({
+    url: env.EXPO_PUBLIC_SUPABASE_URL,
+    anonKey: env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+    accessToken,
+    fetchImpl,
+  })
+}
+
 export async function createMobileAppBootstrap({
   env = process.env,
   fetchImpl,
@@ -205,9 +218,12 @@ export async function createMobileAppBootstrap({
   }
 
   const todayIsoDate = getIsoToday()
-  const [assignedProgram, programWorkout] = await Promise.all([
-    createMobileProgramClient({ env, fetchImpl, accessToken: resolvedAccessToken })?.getAssignedProgramForAthlete?.(athleteProfile.id) || null,
+  const programClient = createMobileProgramClient({ env, fetchImpl, accessToken: resolvedAccessToken })
+  const workoutClient = createMobileWorkoutClient({ env, fetchImpl, accessToken: resolvedAccessToken })
+  const [assignedProgram, programWorkout, completedSessions] = await Promise.all([
+    programClient?.getAssignedProgramForAthlete?.(athleteProfile.id) || null,
     sessionStore.getProgramWorkout({ onDate: todayIsoDate }),
+    workoutClient?.getCompletedSessionsByAthleteId?.(athleteProfile.id) || [],
   ])
   const resolvedProgramWorkoutId = programWorkout?.id || getAssignedProgramWorkoutIdForDate(assignedProgram, todayIsoDate)
   const hydratedSession = await sessionStore.syncCurrentSession({
@@ -225,7 +241,13 @@ export async function createMobileAppBootstrap({
   }
 
   const seededTrainState = assignedProgram?.id
-    ? createAssignedProgramTrainState({ assignedProgram, programWorkout, previewState, todayIsoDate })
+    ? createAssignedProgramTrainState({
+        assignedProgram,
+        programWorkout,
+        previewState,
+        todayIsoDate,
+        completedSessions,
+      })
     : createTrainDemoState({ programWorkout, previewState })
   const resolvedBootstrapSession = hydratedSession || sessionStore.getCurrentSession() || seededTrainState.session
 

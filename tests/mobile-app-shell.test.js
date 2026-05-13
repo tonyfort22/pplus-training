@@ -104,7 +104,8 @@ test('mobile app shell renders bottom navigation from grouped shell tab view ite
  )
 
  assert.match(appSource, /import \{ getBottomTabViewItems \} from '\.\/src\/screens\/shell-view-models\.js';/)
- assert.match(appSource, /const bottomTabModels = useMemo\(\(\) => getTabButtonModels\(\{ tabs: mobileTabs, activeKey: activeTab \}\), \[activeTab\]\);/)
+ assert.match(appSource, /const visibleBottomTabs = useMemo\(\(\) => \(effectiveBootstrapState\.status === 'authenticated_coach' \? mobileTabs : mobileTabs\.filter\(\(tab\) => tab\.key !== 'inbox'\)\), \[effectiveBootstrapState\.status\]\);/)
+ assert.match(appSource, /const bottomTabModels = useMemo\(\(\) => getTabButtonModels\(\{ tabs: visibleBottomTabs, activeKey: activeTab \}\), \[activeTab, visibleBottomTabs\]\);/)
  assert.match(appSource, /const bottomTabViewItems = useMemo\(\(\) => getBottomTabViewItems\(bottomTabModels\), \[bottomTabModels\]\);/)
  assert.match(appSource, /renderAppShell\(\{[\s\S]*bottomTabs: bottomTabViewItems,[\s\S]*\}\)/)
  assert.doesNotMatch(appSource, /renderAppShell\(\{[\s\S]*bottomTabs: bottomTabModels,[\s\S]*\}\)/)
@@ -259,19 +260,21 @@ assert.doesNotMatch(appSource, /if \(targetKey === 'workout'\) \{[\s\S]*const pr
 assert.doesNotMatch(appSource, /if \(targetKey === 'workout'\) \{[\s\S]*const previewSession = createWorkoutSession\(\{ programWorkout: selectedWorkout, startedAt: new Date\(\)\.toISOString\(\) \}\)[\s\S]*setSelectedWorkoutSessionPreview\(previewSession\)/)
 })
 
-test('mobile app shell passes completed-session history into the workout completed recap model', () => {
+test('mobile app shell passes completed-session history into the workout completed recap model and includes live in-progress work for analytics only after completed sets exist', () => {
  const appSource = readFileSync(
    resolve(process.cwd(), 'apps/mobile/App.js'),
    'utf8'
  )
 
- assert.match(appSource, /const progressSessions = useMemo\(/)
+ assert.match(appSource, /const progressSessions = useMemo\(\s*\(\) =>/)
  assert.match(appSource, /session\.status === 'completed'/)
+ assert.match(appSource, /session\.status === 'in_progress'/)
  assert.match(appSource, /trainState\.completedSessions/)
  assert.match(appSource, /\.\.\.trainState\.completedSessions, session/)
+ assert.match(appSource, /session\.completedSetsCount \?\? 0/)
  assert.match(appSource, /const exerciseDetailViewModel = useMemo\(\(\) => getExerciseDetailViewModel\(\{ exercise: selectedExercise, sessions: progressSessions \}\), \[progressSessions, selectedExercise\]\);/)
  assert.ok(appSource.indexOf('const progressSessions = useMemo(') < appSource.indexOf('const exerciseDetailViewModel = useMemo('))
- assert.match(appSource, /const completedSessionModel = useMemo\(/)
+ assert.match(appSource, /const completedSessionModel = useMemo\(\s*\(\) =>/)
  assert.match(appSource, /getCompletedSessionSurfaceModel\(session, \{ completedSessions: progressSessions \}\)/)
  assert.doesNotMatch(appSource, /getCompletedSessionSurfaceModel\(session, \{ completedSessions: trainState\.completedSessions \}\)/)
 })
@@ -347,9 +350,9 @@ test('mobile app shell also owns a dedicated workout edit view state that suppor
  assert.match(appSource, /function handleOpenWorkoutEditView\(\) \{[\s\S]*orchestrateOpenWorkoutEditView\(\{[\s\S]*setIsWorkoutSheetOpen,[\s\S]*setIsWorkoutEditViewOpen,[\s\S]*setWorkoutEditReturnSurface,[\s\S]*nextReturnSurface: 'workout-sheet',[\s\S]*setWorkoutEditDraftModel,[\s\S]*workoutDraftModel: null,[\s\S]*\}\);[\s\S]*\}/)
  assert.match(appSource, /if \(targetKey === 'create-workout'\) \{[\s\S]*await handleCreateWorkout\(\);[\s\S]*return;[\s\S]*\}/)
  assert.match(appSource, /async function handleCreateWorkout\(\) \{[\s\S]*const relatedWorkoutCount = [\s\S]*const defaultWorkoutName = `Untitled Workout \$\{relatedWorkoutCount \+ 1\}`;/)
- assert.match(appSource, /setPersistedCreatedWorkoutRows\(\(currentRows\) => \[[\s\S]*title: createdWorkout\.nameSnapshot[\s\S]*actionPayload: \{[\s\S]*programWorkoutId: createdWorkout\.id[\s\S]*\}[\s\S]*\]\)/)
- assert.doesNotMatch(appSource, /function handleCloseWorkoutEditView\(\) \{[\s\S]*setPersistedCreatedWorkoutRows\(\[\]\)/)
- assert.match(appSource, /getTrainSurfaceModel\(\{[\s\S]*persistedWorkoutListRows: persistedCreatedWorkoutRows,[\s\S]*\}\)/)
+ assert.match(appSource, /setPersistedCreatedWorkoutRows\(\(currentRows\) => \[[\s\S]*title: createdWorkout\.nameSnapshot[\s\S]*actionPayload: \{[\s\S]*programWorkoutId: createdWorkout\.id,[\s\S]*athleteId,[\s\S]*programId,[\s\S]*\}[\s\S]*\]\)/)
+ assert.match(appSource, /if \(didWorkflowContextChange\) \{[\s\S]*setPersistedCreatedWorkoutRows\(\[\]\);[\s\S]*\}/)
+ assert.match(appSource, /getTrainSurfaceModel\(\{[\s\S]*persistedWorkoutListRows: scopedPersistedCreatedWorkoutRows,[\s\S]*\}\)/)
  assert.match(appSource, /\[[\s\S]*persistedCreatedWorkoutRows[\s\S]*\]\s*\);/)
  assert.match(appSource, /async function handleCreateWorkout\(\) \{[\s\S]*const rawAthleteId = bootstrapState\.status === 'authenticated_coach'[\s\S]*const rawCoachId = trainState\.programWorkout\?\.coachId \|\| activeCoachAthleteProfile\?\.coachId \|\| null;[\s\S]*const rawProgramId = trainState\.program\.id \|\| null;[\s\S]*const athleteId = isUuidValue\(rawAthleteId\) \? rawAthleteId : null;[\s\S]*const coachId = isUuidValue\(rawCoachId\) \? rawCoachId : null;[\s\S]*const programId = isUuidValue\(rawProgramId\) \? rawProgramId : null;[\s\S]*const selectedProgramDayId = trainState\.program\.calendarWeek\.find\(\(day\) => day\.id === selectedCalendarDayId\)\?\.programDayId \|\| null;[\s\S]*nameSnapshot: defaultWorkoutName,[\s\S]*notes: '',[\s\S]*sortOrder: relatedWorkoutCount \+ 1,[\s\S]*\)[\s\S]*setSelectedProgramWorkoutPreview\([\s\S]*createdWorkout[\s\S]*\)[\s\S]*setSelectedWorkoutSessionPreview\([\s\S]*programWorkoutId: createdWorkout\.id[\s\S]*\)[\s\S]*orchestrateOpenWorkoutEditView\(\{[\s\S]*nextReturnSurface: 'train-home'[\s\S]*setWorkoutEditDraftModel,[\s\S]*workoutDraftModel: \{[\s\S]*programWorkoutId: createdWorkout\.id[\s\S]*\}[\s\S]*\}\);[\s\S]*\}/)
  assert.doesNotMatch(appSource, /if \(targetKey === 'create-workout'\) \{[\s\S]*createEmptyWorkoutEditDraftModel\(\)/)
@@ -524,7 +527,7 @@ test('mobile coach athlete selection changes the active athlete context across t
  assert.match(sheetSource, /isSelected=\{selectedAthleteId === \(athlete\.athleteId \?\? athlete\.id\)\}/)
  assert.match(appSource, /if \(targetKey === 'coach-athlete-select'\) \{[\s\S]*orchestrateCoachAthleteSelect\(\{[\s\S]*payload,[\s\S]*selectedCoachAthleteId,[\s\S]*setSelectedCoachAthleteId,[\s\S]*setIsCoachAthletesSheetOpen,[\s\S]*setIsCoachAthleteWorkspaceOpen,[\s\S]*setCoachMetricNotice,[\s\S]*setCoachMetricError,[\s\S]*\}\);[\s\S]*return;[\s\S]*\}/)
  assert.doesNotMatch(appSource, /if \(targetKey === 'coach-athlete-select'\) \{[\s\S]*setIsCoachAthleteWorkspaceOpen\(true\);/)
- assert.match(appSource, /renderAppShell\(\{[\s\S]*activeAthleteSummary: isCoachBootstrapState \? activeCoachAthleteSummary : null,/)
+ assert.match(appSource, /renderAppShell\(\{[\s\S]*activeAthleteSummary: isCoachBootstrapState \? activeTrainAthleteLabel : null,/)
 })
 
 
@@ -546,7 +549,7 @@ test('mobile coach progress keeps the built analytics view instead of replacing 
 })
 
 
-test('mobile app shell limits authenticated athletes to progress-first visibility instead of broad coach-side surfaces', () => {
+test('mobile app shell lets authenticated athletes open the train tab while still avoiding broad coach-only placeholder routing elsewhere', () => {
  const appSource = readFileSync(
    resolve(process.cwd(), 'apps/mobile/App.js'),
    'utf8'
@@ -554,12 +557,37 @@ test('mobile app shell limits authenticated athletes to progress-first visibilit
 
  assert.match(appSource, /const isRuntimeTrainHomeVerificationEnabled = process\.env\.EXPO_PUBLIC_PPLUS_RUNTIME_SURFACE_OVERRIDE === 'authenticated_train_home';/)
  assert.match(appSource, /const isAthleteLimitedState = !isRuntimeTrainHomeVerificationEnabled && !isCoachBootstrapState && \(effectiveBootstrapState\.status === 'authenticated' \|\| effectiveBootstrapState\.status === 'authenticated_no_workout'\);/)
- assert.match(appSource, /if \(isAthleteLimitedState\) \{[\s\S]*setActiveTab\('progress'\);[\s\S]*\}/)
+ assert.doesNotMatch(appSource, /if \(isAthleteLimitedState\) \{[\s\S]*setActiveTab\('progress'\);[\s\S]*\}/)
  assert.match(appSource, /const athleteLimitedPlaceholderModel = useMemo\(/)
  assert.match(appSource, /getPlaceholderSurfaceModel\('Progress only', 'Athletes only see their own progress metrics here\./)
  assert.match(appSource, /const athleteLimitedOverrideScreen = useMemo\([\s\S]*getPlaceholderSections\(athleteLimitedPlaceholderModel\)/)
- assert.match(appSource, /overrideScreen: effectiveBootstrapState\.status === 'signed_out' \|\| \(isAuthPreviewEnabled && \(authPreviewState === 'sign_in' \|\| authPreviewState === 'sign_up'\)\)[\s\S]*\? authScreenModel[\s\S]*: isAthleteLimitedState && activeTab !== 'progress'[\s\S]*\? athleteLimitedOverrideScreen/)
+ assert.match(appSource, /overrideScreen: effectiveBootstrapState\.status === 'signed_out' \|\| \(isAuthPreviewEnabled && \(authPreviewState === 'sign_in' \|\| authPreviewState === 'sign_up'\)\)[\s\S]*\? authScreenModel[\s\S]*: isAthleteLimitedState && activeTab !== 'progress' && activeTab !== 'train'[\s\S]*\? athleteLimitedOverrideScreen/)
  assert.doesNotMatch(appSource, /const isAthleteLimitedState = !isCoachBootstrapState && \(effectiveBootstrapState\.status === 'authenticated' \|\| effectiveBootstrapState\.status === 'authenticated_no_workout'\);/)
+})
+
+test('mobile app shell derives one canonical active Train/Home athlete context so coach-selected athletes and authenticated athletes use the same ownership seam', () => {
+ const appSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/App.js'),
+   'utf8'
+ )
+
+ assert.match(appSource, /const activeTrainAthleteProfile = useMemo\(\(\) => \{[\s\S]*if \(isCoachBootstrapState\) \{[\s\S]*return activeCoachAthleteProfile \?\? null[\s\S]*\}[\s\S]*return effectiveBootstrapState\.athleteProfile \?\? null[\s\S]*\}, \[activeCoachAthleteProfile, effectiveBootstrapState\.athleteProfile, isCoachBootstrapState\]\)/)
+ assert.match(appSource, /const activeTrainAthleteId = activeTrainAthleteProfile\?\.id \?\? null;/)
+ assert.match(appSource, /const activeTrainAthleteLabel = useMemo\(\(\) => \{[\s\S]*if \(isCoachBootstrapState\) \{[\s\S]*return activeCoachAthleteSummary[\s\S]*\}[\s\S]*if \(!activeTrainAthleteProfile\) \{[\s\S]*return null[\s\S]*\}[\s\S]*return \{[\s\S]*firstName: activeTrainAthleteProfile\?\.firstName \?\? ''[\s\S]*lastName: activeTrainAthleteProfile\?\.lastName \?\? ''[\s\S]*avatarUrl: activeTrainAthleteProfile\?\.avatarUrl \?\? null[\s\S]*\}[\s\S]*\}, \[activeCoachAthleteSummary, activeTrainAthleteProfile, isCoachBootstrapState\]\)/)
+ assert.match(appSource, /const analyticsStrengthSelectionContextId = activeTrainAthleteId \|\| authSession\?\.currentUserId \|\| null;/)
+ assert.match(appSource, /activeAthleteSummary: isCoachBootstrapState \? activeTrainAthleteLabel : null,/)
+})
+
+test('mobile app shell scopes created My Workouts rows to the active train athlete and program so coach-created rows do not leak into a different athlete context', () => {
+ const appSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/App.js'),
+   'utf8'
+ )
+
+ assert.match(appSource, /const scopedPersistedCreatedWorkoutRows = useMemo\(\(\) => persistedCreatedWorkoutRows\.filter\(\(row\) => \{[\s\S]*const rowAthleteId = row\?\.actionPayload\?\.athleteId \|\| null;[\s\S]*const rowProgramId = row\?\.actionPayload\?\.programId \|\| null;[\s\S]*if \(activeTrainAthleteId && rowAthleteId && rowAthleteId !== activeTrainAthleteId\) return false;[\s\S]*if \(trainState\.program\.id && rowProgramId && rowProgramId !== trainState\.program\.id\) return false;[\s\S]*return true;[\s\S]*\}\), \[activeTrainAthleteId, persistedCreatedWorkoutRows, trainState\.program\.id\]\)/)
+ assert.match(appSource, /persistedWorkoutListRows: scopedPersistedCreatedWorkoutRows,/)
+ assert.match(appSource, /actionPayload: \{[\s\S]*selectedDayId: selectedCalendarDayId,[\s\S]*programWorkoutId: createdWorkout\.id,[\s\S]*athleteId,[\s\S]*programId,[\s\S]*\}/)
+ assert.match(appSource, /if \(didWorkflowContextChange\) \{[\s\S]*setPersistedCreatedWorkoutRows\(\[\]\);[\s\S]*\}/)
 })
 
 test('mobile coach athlete quick button replaces chat/inbox utility copy with athlete selection access', () => {
@@ -586,6 +614,14 @@ test('mobile bottom nav renders one four-option bar and keeps athletes as the fa
  assert.match(stylesSource, /bottomNavMainPill:\s*\{[\s\S]*justifyContent: 'space-between'/)
  assert.doesNotMatch(stylesSource, /bottomNavUtilityButton:\s*\{/)
  assert.doesNotMatch(stylesSource, /bottomNavUtilityButtonActive:\s*\{/)
+ assert.match(appSource, /function handleTabPress\(nextTab\) \{[\s\S]*if \(isCoachBootstrapState && nextTab === 'inbox'\) \{[\s\S]*setIsCoachAthletesSheetOpen\(true\);[\s\S]*return;[\s\S]*\}[\s\S]*setActiveTab\(nextTab\);[\s\S]*\}/)
+})
+
+test('mobile athlete sessions hide the athlete-picker bottom tab while coach sessions keep the inbox athlete sheet seam', () => {
+ const appSource = readFileSync(resolve(process.cwd(), 'apps/mobile/App.js'), 'utf8')
+
+ assert.match(appSource, /const visibleBottomTabs = useMemo\(\(\) => \(effectiveBootstrapState\.status === 'authenticated_coach' \? mobileTabs : mobileTabs\.filter\(\(tab\) => tab\.key !== 'inbox'\)\), \[effectiveBootstrapState\.status\]\);/)
+ assert.match(appSource, /const bottomTabModels = useMemo\(\(\) => getTabButtonModels\(\{ tabs: visibleBottomTabs, activeKey: activeTab \}\), \[activeTab, visibleBottomTabs\]\);/)
  assert.match(appSource, /function handleTabPress\(nextTab\) \{[\s\S]*if \(isCoachBootstrapState && nextTab === 'inbox'\) \{[\s\S]*setIsCoachAthletesSheetOpen\(true\);[\s\S]*return;[\s\S]*\}[\s\S]*setActiveTab\(nextTab\);[\s\S]*\}/)
 })
 

@@ -105,7 +105,7 @@ test('getAnalyticsViewModel derives coach progress analytics from the selected a
   const loadedAnalyticsModel = getAnalyticsViewModel({ sessions: [completedSquatSession], progressModel: loadedProgressModel })
 
   assert.notDeepEqual(loadedAnalyticsModel.strengthCards, emptyAnalyticsModel.strengthCards)
-  assert.equal(emptyAnalyticsModel.strengthCards[0].oneRepMaxValueLabel, '149 lb')
+  assert.equal(emptyAnalyticsModel.strengthCards.length, 0)
   assert.equal(loadedAnalyticsModel.strengthCards[0].metricLabel, '1RM')
   assert.equal(loadedAnalyticsModel.strengthCards[0].exerciseName, 'Barbell Back Squat')
   assert.equal(loadedAnalyticsModel.strengthCards[0].oneRepMaxValueLabel, '140 lb')
@@ -113,6 +113,13 @@ test('getAnalyticsViewModel derives coach progress analytics from the selected a
   assert.equal(emptyAnalyticsModel.activityMuscleGroups[5].setCountLabel, '0 sets')
   assert.equal(loadedAnalyticsModel.activityMuscleGroups[5].setCountLabel, '2 sets')
   assert.notEqual(loadedAnalyticsModel.consistencyChart.bars.map((bar) => bar.value).join(','), emptyAnalyticsModel.consistencyChart.bars.map((bar) => bar.value).join(','))
+})
+
+test('getAnalyticsViewModel keeps empty athlete strength history honest instead of falling back to demo 1RM cards', () => {
+  const analyticsModel = getAnalyticsViewModel({ sessions: [] })
+
+  assert.deepEqual(analyticsModel.strengthCards, [])
+  assert.deepEqual(analyticsModel.defaultStrengthExerciseIds, [])
 })
 
 test('getAnalyticsViewModel defaults muscles and submuscles with no recorded fatigue to 100 percent recovery instead of 0 percent', () => {

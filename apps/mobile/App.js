@@ -372,8 +372,6 @@ function AppShellContent() {
   const exerciseLibraryClient = useMemo(() => createMobileExerciseLibraryClient(), []);
   const programSheetClient = useMemo(() => createMobileProgramClient({ accessToken: authSession?.accessToken }), [authSession?.accessToken]);
   const activeWorkoutExerciseIds = useMemo(() => new Set((session?.exercises || []).map((exercise) => exercise.exerciseId || exercise.id)), [session]);
-  const bottomTabModels = useMemo(() => getTabButtonModels({ tabs: mobileTabs, activeKey: activeTab }), [activeTab]);
-  const bottomTabViewItems = useMemo(() => getBottomTabViewItems(bottomTabModels), [bottomTabModels]);
   const coachAthleteOptions = useMemo(() => {
     if (!bootstrapState.coachAthletes?.length) {
       return []
@@ -722,6 +720,7 @@ function AppShellContent() {
       setExerciseDetailReturnSurface(null);
       setSelectedExerciseId(null);
       setSelectedExercisePreview(null);
+      setPersistedCreatedWorkoutRows([]);
     }
   }, [coachAthleteOptions, effectiveRemoteTrainState, effectiveSessionStore, emptyTrainState, isActiveWorkoutViewOpen, resolvedCoachAthleteDefaultId, selectedCoachAthleteId]);
 
@@ -739,8 +738,34 @@ function AppShellContent() {
     [authPreviewState]
   );
   const isRuntimeTrainHomeVerificationEnabled = process.env.EXPO_PUBLIC_PPLUS_RUNTIME_SURFACE_OVERRIDE === 'authenticated_train_home';
+  const visibleBottomTabs = useMemo(() => (effectiveBootstrapState.status === 'authenticated_coach' ? mobileTabs : mobileTabs.filter((tab) => tab.key !== 'inbox')), [effectiveBootstrapState.status]);
+  const bottomTabModels = useMemo(() => getTabButtonModels({ tabs: visibleBottomTabs, activeKey: activeTab }), [activeTab, visibleBottomTabs]);
+  const bottomTabViewItems = useMemo(() => getBottomTabViewItems(bottomTabModels), [bottomTabModels]);
   const isCoachBootstrapState = effectiveBootstrapState.status === 'authenticated_coach';
   const isAthleteLimitedState = !isRuntimeTrainHomeVerificationEnabled && !isCoachBootstrapState && (effectiveBootstrapState.status === 'authenticated' || effectiveBootstrapState.status === 'authenticated_no_workout');
+  const activeTrainAthleteProfile = useMemo(() => {
+    if (isCoachBootstrapState) {
+      return activeCoachAthleteProfile ?? null
+    }
+
+    return effectiveBootstrapState.athleteProfile ?? null
+  }, [activeCoachAthleteProfile, effectiveBootstrapState.athleteProfile, isCoachBootstrapState])
+  const activeTrainAthleteId = activeTrainAthleteProfile?.id ?? null;
+  const activeTrainAthleteLabel = useMemo(() => {
+    if (isCoachBootstrapState) {
+      return activeCoachAthleteSummary
+    }
+
+    if (!activeTrainAthleteProfile) {
+      return null
+    }
+
+    return {
+      firstName: activeTrainAthleteProfile?.firstName ?? '',
+      lastName: activeTrainAthleteProfile?.lastName ?? '',
+      avatarUrl: activeTrainAthleteProfile?.avatarUrl ?? null,
+    }
+  }, [activeCoachAthleteSummary, activeTrainAthleteProfile, isCoachBootstrapState])
   const profileViewProfile = useMemo(() => {
     if (isCoachBootstrapState) {
       return {
@@ -769,6 +794,13 @@ function AppShellContent() {
   const styles = useMemo(() => createAppStyles(appTheme), [appTheme])
 
   const trainState = useMemo(() => ({ ...(effectiveRemoteTrainState || emptyTrainState), session }), [effectiveRemoteTrainState, emptyTrainState, session]);
+  const scopedPersistedCreatedWorkoutRows = useMemo(() => persistedCreatedWorkoutRows.filter((row) => {
+    const rowAthleteId = row?.actionPayload?.athleteId || null;
+    const rowProgramId = row?.actionPayload?.programId || null;
+    if (activeTrainAthleteId && rowAthleteId && rowAthleteId !== activeTrainAthleteId) return false;
+    if (trainState.program.id && rowProgramId && rowProgramId !== trainState.program.id) return false;
+    return true;
+  }), [activeTrainAthleteId, persistedCreatedWorkoutRows, trainState.program.id])
   useEffect(() => {
     if (bootstrapState.status !== 'authenticated_coach') return
   }, [activeCoachAthleteProfile?.id, bootstrapState.status, effectiveRemoteTrainState, selectedCoachAthlete?.name, selectedCoachAthleteId, trainState]);
@@ -813,6 +845,10 @@ function AppShellContent() {
       return [...trainState.completedSessions, session];
     }
 
+    if (session.status === 'in_progress' && (session.completedSetsCount ?? 0) > 0) {
+      return [...trainState.completedSessions, session];
+    }
+
     return trainState.completedSessions;
   }, [session, trainState.completedSessions]);
   const exerciseDetailViewModel = useMemo(() => getExerciseDetailViewModel({ exercise: selectedExercise, sessions: progressSessions }), [progressSessions, selectedExercise]);
@@ -830,7 +866,7 @@ function AppShellContent() {
   const inboxSections = useMemo(() => getPlaceholderSections(inboxPlaceholder), [inboxPlaceholder]);
   const inboxRenderPlan = useMemo(() => getGenericSectionRenderPlan(inboxSections), [inboxSections]);
   const progressModel = useMemo(() => getProgressSurfaceModel({ sessions: progressSessions }), [progressSessions]);
-  const analyticsStrengthSelectionContextId = activeCoachAthleteProfile?.id || authSession?.currentUserId || null;
+  const analyticsStrengthSelectionContextId = activeTrainAthleteId || authSession?.currentUserId || null;
   const analyticsScreen = useMemo(() => getAnalyticsViewModel({
     sessions: progressSessions,
     progressModel,
@@ -871,7 +907,8 @@ function AppShellContent() {
         activeSessionModel,
         completedSessionModel,
         discardedSessionModel,
-        persistedWorkoutListRows: persistedCreatedWorkoutRows,
+        persistedWorkoutListRows: scopedPersistedCreatedWorkoutRows,
+        canCreateWorkout: isCoachBootstrapState,
       }),
     [
       activeSessionModel,
@@ -879,7 +916,8 @@ function AppShellContent() {
       calendarModel,
       completedSessionModel,
       discardedSessionModel,
-      persistedCreatedWorkoutRows,
+      isCoachBootstrapState,
+      scopedPersistedCreatedWorkoutRows,
       todayModel,
       workoutModel,
     ]
@@ -997,7 +1035,7 @@ function AppShellContent() {
         inboxSections: inboxRenderPlan,
         overrideScreen: effectiveBootstrapState.status === 'signed_out' || (isAuthPreviewEnabled && (authPreviewState === 'sign_in' || authPreviewState === 'sign_up'))
             ? authScreenModel
-            : isAthleteLimitedState && activeTab !== 'progress'
+            : isAthleteLimitedState && activeTab !== 'progress' && activeTab !== 'train'
               ? athleteLimitedOverrideScreen
               : isCoachBootstrapState && isCoachTrainHomeReadinessPending
                 ? { type: 'loading' }
@@ -1015,12 +1053,6 @@ function AppShellContent() {
   );
   const isFullscreenAuthGate = appRenderModel.screen.type === 'auth';
   const isFullscreenLoading = appRenderModel.screen.type === 'loading' && !isProfileViewOpen
-
-  useEffect(() => {
-    if (isAthleteLimitedState) {
-      setActiveTab('progress');
-    }
-  }, [isAthleteLimitedState]);
 
   useEffect(() => {
     const previousBootstrapStatus = previousBootstrapStatusRef.current;
@@ -1566,7 +1598,7 @@ function AppShellContent() {
     const selectedProgramDayId = trainState.program.calendarWeek.find((day) => day.id === selectedCalendarDayId)?.programDayId || null;
     const relatedWorkoutCount = getRelatedWorkoutCount({
       calendarWeek: trainState.program.calendarWeek,
-      persistedWorkoutListRows: persistedCreatedWorkoutRows,
+      persistedWorkoutListRows: scopedPersistedCreatedWorkoutRows,
       selectedDayId: selectedCalendarDayId,
     });
     const defaultWorkoutName = `Untitled Workout ${relatedWorkoutCount + 1}`;
@@ -1597,15 +1629,17 @@ function AppShellContent() {
       totalSetsCount: 0,
     });
     setPersistedCreatedWorkoutRows((currentRows) => [{
-      id: `created-workout-row-${createdWorkout.id}`,
-      title: createdWorkout.nameSnapshot,
-      body: `${workoutModel.dayLabel} · Scheduled`,
-      targetKey: 'workout',
-      actionPayload: {
-        selectedDayId: selectedCalendarDayId,
-        programWorkoutId: createdWorkout.id,
-      },
-    }, ...currentRows.filter((row) => row.actionPayload?.programWorkoutId !== createdWorkout.id)]);
+        id: `created-workout-row-${createdWorkout.id}`,
+        title: createdWorkout.nameSnapshot,
+        body: `${workoutModel.dayLabel} · Scheduled`,
+        targetKey: 'workout',
+        actionPayload: {
+          selectedDayId: selectedCalendarDayId,
+          programWorkoutId: createdWorkout.id,
+          athleteId,
+          programId,
+        },
+      }, ...currentRows.filter((row) => row.actionPayload?.programWorkoutId !== createdWorkout.id)]);
 
     orchestrateOpenWorkoutEditView({
       setIsWorkoutSheetOpen,
@@ -2109,7 +2143,7 @@ function AppShellContent() {
           styles,
           screen: appRenderModel.screen,
           bottomTabs: bottomTabViewItems,
-          activeAthleteSummary: isCoachBootstrapState ? activeCoachAthleteSummary : null,
+          activeAthleteSummary: isCoachBootstrapState ? activeTrainAthleteLabel : null,
           floatingStartWorkoutButton: floatingStartWorkoutButtonModel,
           trainRenderModel,
           sessionRenderModel,

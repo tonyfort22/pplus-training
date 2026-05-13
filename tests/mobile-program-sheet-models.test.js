@@ -44,7 +44,7 @@ test('getProgramSheetModel builds the shared program sheet from a real nested pr
     startDate: '2026-05-18',
     endDate: '2026-07-27',
     weeksCount: 2,
-    workoutsCount: 2,
+    workoutsCount: 3,
     weeks: [
       {
         id: 'week-1',
@@ -82,7 +82,15 @@ test('getProgramSheetModel builds the shared program sheet from a real nested pr
         name: 'Week 2',
         startDate: '2026-05-25',
         endDate: '2026-05-31',
-        days: [],
+        days: [
+          {
+            id: 'day-4',
+            date: '2026-05-26',
+            name: 'Tuesday',
+            status: 'training',
+            workouts: [{ id: 'pw-3', nameSnapshot: 'Phase 4 Edge Work A', status: 'scheduled' }],
+          },
+        ],
       },
     ],
   })
@@ -91,8 +99,9 @@ test('getProgramSheetModel builds the shared program sheet from a real nested pr
   assert.equal(model.dateRangeLabel, 'May 18, 2026 - Jul 27, 2026')
   assert.equal(model.progressSegments.length, 2)
   assert.equal(model.progressSegments[0].isCurrent, true)
-  assert.deepEqual(model.stats.map((stat) => stat.label), ['Week 1 of 2', '1 of 2 Workouts'])
+  assert.deepEqual(model.stats.map((stat) => stat.label), ['Week 1 of 2', '1 of 3 Workouts'])
   assert.deepEqual(model.routines.map((routine) => routine.label), ['Speed Accelerator A', 'Edge Work A'])
+  assert.doesNotMatch(JSON.stringify(model.routines), /Phase 4 Edge Work A/)
   assert.equal(model.weeks[0].title, 'Week 1')
   assert.equal(model.weeks[0].dateRangeLabel, 'May 18 - May 24')
   assert.equal(model.weeks[0].entries.length, 7)

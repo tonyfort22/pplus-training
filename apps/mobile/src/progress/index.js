@@ -522,10 +522,6 @@ function buildAnalyticsMetricCardsByOptionId(sessions) {
       .map(({ sortValue, ...card }) => card)
   }
 
-  if (!byOption.strength.length) {
-    byOption.strength = DEFAULT_ANALYTICS_VIEW_MODEL.strengthCards
-  }
-
   return byOption
 }
 
@@ -580,7 +576,6 @@ function buildDefaultMetricExerciseIdsByOptionId(sessions) {
       .slice(0, 2)
       .map((entry) => entry.exerciseId)
   }
-  if (!byOption.strength.length) byOption.strength = DEFAULT_ANALYTICS_VIEW_MODEL.defaultStrengthExerciseIds
   return byOption
 }
 

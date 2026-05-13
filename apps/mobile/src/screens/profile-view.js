@@ -233,6 +233,7 @@ function getProfileIdentityModel(profile, role = 'athlete') {
     return {
       displayName: coachFullName || coachDisplayName || profile?.firstName || 'Coach',
       metaLabel: '',
+      avatarUrl: profile?.avatarUrl || null,
     }
   }
 
@@ -241,6 +242,7 @@ function getProfileIdentityModel(profile, role = 'athlete') {
   return {
     displayName: fullName || profile?.firstName || 'Athlete',
     metaLabel: '',
+    avatarUrl: profile?.avatarUrl || null,
   }
 }
 
@@ -759,7 +761,7 @@ function ProfileDetailsView({ onBack, athleteProfile, onSaveProfile, isSavingPro
       'avatar-asset': {
         uri: asset.uri,
         mimeType: asset.mimeType || 'image/jpeg',
-        fileName: asset.fileName || `coach-avatar-${Date.now()}.jpg`,
+        fileName: asset.fileName || `${role}-avatar-${Date.now()}.jpg`,
       },
     }))
     setSaveErrorMessage('')
@@ -798,8 +800,14 @@ function ProfileDetailsView({ onBack, athleteProfile, onSaveProfile, isSavingPro
 
     const activeProfileUpdate = buildAthleteProfileUpdatePayload(draftProfile, athleteProfile, role)
     setSaveErrorMessage('')
-    await onSaveProfile?.(activeProfileUpdate)
-    setSaveSuccessMessage('Profile updated.')
+
+    try {
+      await onSaveProfile?.(activeProfileUpdate)
+      setSaveSuccessMessage('Profile updated.')
+    } catch (error) {
+      setSaveErrorMessage(error?.message || 'Something went sideways while saving the profile.')
+      setSaveSuccessMessage('')
+    }
   }
 
   const unitsPreference = draftProfile['units-preference'] || 'metric'
@@ -1014,12 +1022,12 @@ function ProgramsView({ onBack, programs, isLoading = false, error = '', onOpenP
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
           <View className="gap-8">
             <View className="gap-3">
-              <Text className="text-[24px] font-semibold" style={{ color: resolvedTheme.textMuted }}>{PROGRAMS_VIEW_MODEL.activeSectionTitle}</Text>
+              <Text className="text-[12px] font-semibold uppercase tracking-[1.2px]" style={{ color: resolvedTheme.textSoft }}>{PROGRAMS_VIEW_MODEL.activeSectionTitle}</Text>
               {renderProgramRows(activePrograms, PROGRAMS_VIEW_MODEL.activeEmptyLabel)}
             </View>
 
             <View className="gap-3">
-              <Text className="text-[24px] font-semibold" style={{ color: resolvedTheme.textMuted }}>{PROGRAMS_VIEW_MODEL.completedSectionTitle}</Text>
+              <Text className="text-[12px] font-semibold uppercase tracking-[1.2px]" style={{ color: resolvedTheme.textSoft }}>{PROGRAMS_VIEW_MODEL.completedSectionTitle}</Text>
               {renderProgramRows(completedPrograms, PROGRAMS_VIEW_MODEL.completedEmptyLabel)}
             </View>
           </View>
@@ -1264,7 +1272,7 @@ function ProfileViewContent({ onClose, onSignOut, athleteProfile, onSaveProfile,
   const [exerciseSearchQuery, setExerciseSearchQuery] = useState('')
   const resolvedTheme = theme || getAppTheme(themePreference)
   const profileIdentity = getProfileIdentityModel(athleteProfile, role)
-  const hasProfileAvatar = Boolean(athleteProfile?.avatarUrl)
+  const hasProfileAvatar = Boolean(profileIdentity.avatarUrl)
   const profileSections = getVisibleProfileSections({ role })
   const filteredExercises = exerciseLibraryState.items.filter((exercise) => {
     const normalizedQuery = exerciseSearchQuery.trim().toLowerCase()
@@ -1310,8 +1318,13 @@ function ProfileViewContent({ onClose, onSignOut, athleteProfile, onSaveProfile,
 
     let isActive = true
     setProgramLibraryState((current) => ({ ...current, isLoading: true, error: '' }))
+    const loadPrograms = role === 'coach'
+      ? () => programClient.listPrograms()
+      : () => athleteProfile?.id
+          ? programClient.listProgramsForAthlete(athleteProfile.id)
+          : Promise.resolve([])
 
-    programClient.listPrograms()
+    loadPrograms()
       .then((items) => {
         if (!isActive) return
         setProgramLibraryState({ items, isLoading: false, error: '' })
@@ -1324,7 +1337,7 @@ function ProfileViewContent({ onClose, onSignOut, athleteProfile, onSaveProfile,
     return () => {
       isActive = false
     }
-  }, [activeScreen])
+  }, [activeScreen, athleteProfile?.id, role])
 
 
   function handleThemeSelection(nextThemePreference) {
@@ -1420,7 +1433,7 @@ function ProfileViewContent({ onClose, onSignOut, athleteProfile, onSaveProfile,
             <View className="items-center gap-3 pb-2">
               <View className="h-28 w-28 items-center justify-center overflow-hidden rounded-full" style={{ borderWidth: 1, borderColor: resolvedTheme.border, backgroundColor: resolvedTheme.surface }}>
                 {hasProfileAvatar ? (
-                  <Image source={{ uri: athleteProfile.avatarUrl }} className="h-full w-full" resizeMode="cover" />
+                  <Image source={{ uri: profileIdentity.avatarUrl }} className="h-full w-full" resizeMode="cover" />
                 ) : (
                   <UserCircle2 color={resolvedTheme.iconMuted} size={68} strokeWidth={1.8} />
                 )}

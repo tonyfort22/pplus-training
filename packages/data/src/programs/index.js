@@ -322,53 +322,67 @@ export function createSupabaseRestProgramRepository(config) {
     }
   }
 
+  async function listProgramsByQuery(query = {}) {
+    const programRows = await request({
+      table: 'programs',
+      query: {
+        select: 'id,athlete_id,coach_id,name,description,start_date,end_date,status',
+        ...query,
+      },
+    })
+
+    const programs = Array.isArray(programRows) ? programRows.map(mapProgramRow).filter(Boolean) : []
+    if (programs.length === 0) return []
+
+    const programIds = programs.map((program) => program.id).filter(Boolean)
+    const [weekRows, workoutRows] = await Promise.all([
+      request({
+        table: 'program_weeks',
+        query: {
+          select: 'id,program_id',
+          program_id: `in.(${programIds.join(',')})`,
+        },
+      }),
+      request({
+        table: 'program_workouts',
+        query: {
+          select: 'id,program_id',
+          program_id: `in.(${programIds.join(',')})`,
+        },
+      }),
+    ])
+
+    const weekCounts = new Map()
+    const workoutCounts = new Map()
+
+    for (const row of Array.isArray(weekRows) ? weekRows : []) {
+      weekCounts.set(row.program_id, (weekCounts.get(row.program_id) || 0) + 1)
+    }
+
+    for (const row of Array.isArray(workoutRows) ? workoutRows : []) {
+      workoutCounts.set(row.program_id, (workoutCounts.get(row.program_id) || 0) + 1)
+    }
+
+    return programs.map((program) => ({
+      ...program,
+      weeksCount: weekCounts.get(program.id) || 0,
+      workoutsCount: workoutCounts.get(program.id) || 0,
+    }))
+  }
+
   return {
     async listPrograms() {
-      const programRows = await request({
-        table: 'programs',
-        query: {
-          select: 'id,athlete_id,coach_id,name,description,start_date,end_date,status',
-          order: 'start_date.asc',
-        },
+      return listProgramsByQuery({
+        order: 'start_date.asc',
       })
+    },
 
-      const programs = Array.isArray(programRows) ? programRows.map(mapProgramRow).filter(Boolean) : []
-      if (programs.length === 0) return []
-
-      const programIds = programs.map((program) => program.id).filter(Boolean)
-      const [weekRows, workoutRows] = await Promise.all([
-        request({
-          table: 'program_weeks',
-          query: {
-            select: 'id,program_id',
-            program_id: `in.(${programIds.join(',')})`,
-          },
-        }),
-        request({
-          table: 'program_workouts',
-          query: {
-            select: 'id,program_id',
-            program_id: `in.(${programIds.join(',')})`,
-          },
-        }),
-      ])
-
-      const weekCounts = new Map()
-      const workoutCounts = new Map()
-
-      for (const row of Array.isArray(weekRows) ? weekRows : []) {
-        weekCounts.set(row.program_id, (weekCounts.get(row.program_id) || 0) + 1)
-      }
-
-      for (const row of Array.isArray(workoutRows) ? workoutRows : []) {
-        workoutCounts.set(row.program_id, (workoutCounts.get(row.program_id) || 0) + 1)
-      }
-
-      return programs.map((program) => ({
-        ...program,
-        weeksCount: weekCounts.get(program.id) || 0,
-        workoutsCount: workoutCounts.get(program.id) || 0,
-      }))
+    async listProgramsForAthlete(athleteId) {
+      if (!athleteId) return []
+      return listProgramsByQuery({
+        athlete_id: `eq.${athleteId}`,
+        order: 'start_date.asc',
+      })
     },
 
     async getAssignedProgramForAthlete(athleteId) {

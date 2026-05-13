@@ -193,7 +193,7 @@ test('mobile auth/profile actions save athlete profile drafts and publish the su
   const setterLog = createSetterLog()
   let athleteUpdates = null
 
-  await orchestrateSaveProfile({
+  const result = await orchestrateSaveProfile({
     profileDraft: { firstName: 'Anthony' },
     isCoachBootstrapState: false,
     updateCoachProfile: async () => {
@@ -201,6 +201,7 @@ test('mobile auth/profile actions save athlete profile drafts and publish the su
     },
     updateAthleteProfile: async (updates) => {
       athleteUpdates = updates
+      return { id: 'ath-1', firstName: 'Anthony' }
     },
     setAuthErrorMessage: setterLog.setter('error'),
     setAuthNoticeMessage: setterLog.setter('notice'),
@@ -208,6 +209,7 @@ test('mobile auth/profile actions save athlete profile drafts and publish the su
     setIsProfileSaving: setterLog.setter('saving'),
   })
 
+  assert.deepEqual(result, { id: 'ath-1', firstName: 'Anthony' })
   assert.deepEqual(athleteUpdates, { firstName: 'Anthony' })
   assert.deepEqual(setterLog.calls, [
     ['error', ''],
@@ -215,6 +217,38 @@ test('mobile auth/profile actions save athlete profile drafts and publish the su
     ['profileNotice', ''],
     ['saving', true],
     ['profileNotice', 'Profile updated.'],
+    ['saving', false],
+  ])
+})
+
+test('mobile auth/profile actions rethrow profile save failures so the profile screen can block fake avatar success copy', async () => {
+  const setterLog = createSetterLog()
+  const saveError = new Error('Avatar upload failed.')
+
+  await assert.rejects(
+    () => orchestrateSaveProfile({
+      profileDraft: { avatarUrl: 'file:///avatar.jpg' },
+      isCoachBootstrapState: false,
+      updateCoachProfile: async () => {
+        throw new Error('updateCoachProfile should not run for athlete profile saves')
+      },
+      updateAthleteProfile: async () => {
+        throw saveError
+      },
+      setAuthErrorMessage: setterLog.setter('error'),
+      setAuthNoticeMessage: setterLog.setter('notice'),
+      setProfileSaveNotice: setterLog.setter('profileNotice'),
+      setIsProfileSaving: setterLog.setter('saving'),
+    }),
+    /Avatar upload failed\./
+  )
+
+  assert.deepEqual(setterLog.calls, [
+    ['error', ''],
+    ['notice', ''],
+    ['profileNotice', ''],
+    ['saving', true],
+    ['error', 'Avatar upload failed.'],
     ['saving', false],
   ])
 })

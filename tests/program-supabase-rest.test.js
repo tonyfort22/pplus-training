@@ -77,6 +77,67 @@ test('createSupabaseRestProgramRepository lists programs with connected week and
   assert.equal(calls.length, 3)
 })
 
+test('createSupabaseRestProgramRepository lists only one athlete\'s programs when the athlete-scoped profile seam requests them', async () => {
+  const calls = []
+  const repo = createSupabaseRestProgramRepository({
+    url: 'https://example.supabase.co',
+    anonKey: 'anon-key',
+    accessToken: 'user-token',
+    fetchImpl: async (url, options = {}) => {
+      const parsed = new URL(url)
+      calls.push({ url: parsed.toString(), method: options.method || 'GET' })
+
+      if (parsed.pathname.endsWith('/programs')) {
+        assert.equal(parsed.searchParams.get('athlete_id'), 'eq.ath-1')
+        return json([
+          {
+            id: 'prog-1',
+            athlete_id: 'ath-1',
+            coach_id: 'coach-1',
+            name: 'Training Program',
+            description: null,
+            start_date: '2026-05-18',
+            end_date: '2026-07-27',
+            status: 'active',
+          },
+        ])
+      }
+
+      if (parsed.pathname.endsWith('/program_weeks')) {
+        return json([
+          { id: 'week-1', program_id: 'prog-1' },
+        ])
+      }
+
+      if (parsed.pathname.endsWith('/program_workouts')) {
+        return json([
+          { id: 'pw-1', program_id: 'prog-1' },
+        ])
+      }
+
+      throw new Error(`Unexpected request: ${parsed.pathname}`)
+    },
+  })
+
+  const programs = await repo.listProgramsForAthlete('ath-1')
+
+  assert.deepEqual(programs, [
+    {
+      id: 'prog-1',
+      athleteId: 'ath-1',
+      coachId: 'coach-1',
+      name: 'Training Program',
+      description: null,
+      startDate: '2026-05-18',
+      endDate: '2026-07-27',
+      status: 'active',
+      weeksCount: 1,
+      workoutsCount: 1,
+    },
+  ])
+  assert.equal(calls.length, 3)
+})
+
 test('createSupabaseRestProgramRepository fetches an assigned program with nested weeks, days, workouts, and derived workout checkbox states', async () => {
   const repo = createSupabaseRestProgramRepository({
     url: 'https://example.supabase.co',

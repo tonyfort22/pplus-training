@@ -58,6 +58,15 @@ test('mobile exercise detail view opens PR-driven recap rows with best-history c
   assert.match(screenSource, /model\.prCallout\.body/)
 })
 
+test('mobile exercise detail History keeps a width-only transparent wrapper around Recent\/Best and shrinks header labels so weight and 1RM fit on one line', () => {
+  const screenSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/exercise-detail-view.js'), 'utf8')
+
+  assert.match(screenSource, /<View className="flex-row items-center justify-between gap-4 px-5">[\s\S]*<View className="w-\[188px\]" style=\{\{ backgroundColor: 'transparent' \}\}>[\s\S]*<AppSegmentedControl theme=\{theme\} options=\{historyModes\} activeId=\{historyMode\} onChange=\{onHistoryModeChange\} \/>[\s\S]*<\/View>/)
+  assert.doesNotMatch(screenSource, /w-\[188px\] rounded-\[18px\] border p-1/)
+  assert.match(screenSource, /text-\[10px\] font-semibold uppercase tracking-\[0\.6px\]/)
+  assert.match(screenSource, /numberOfLines=\{1\}/)
+})
+
 test('mobile exercise detail view can resolve profile library exercises and active-workout exercises outside the workout sheet data set', () => {
   const appSource = readFileSync(resolve(process.cwd(), 'apps/mobile/App.js'), 'utf8')
   const modelSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/train/exercise-detail-view-models.js'), 'utf8')
@@ -598,6 +607,9 @@ test('mobile exercise detail view is video-ready and keeps one shared shell whil
   assert.match(screenSource, /className="-mt-7 rounded-t-\[32px\] border-x border-t px-5 pt-6"/)
   assert.match(screenSource, /className="text-\[30px\] font-bold leading-\[36px\]" style=\{\{ color: resolvedTheme\.text \}\}>\{model\.title\}<\/Text>/)
   assert.match(screenSource, /CURRENT BEST/)
+  assert.match(screenSource, /className="items-center justify-center rounded-\[16px\] border px-3 py-2"[\s\S]*borderColor: theme\.accentBorder,[\s\S]*backgroundColor: theme\.accentSurface/)
+  assert.match(screenSource, /<Text className="text-\[10px\] font-semibold uppercase tracking-\[0\.4px\]" style=\{\{ color: theme\.accentText \}\}>[\s\S]*CURRENT BEST/)
+  assert.match(screenSource, /\) : \([\s\S]*className="items-center justify-center rounded-\[16px\] border px-3 py-2"[\s\S]*borderColor: resolvedTheme\.accentBorder,[\s\S]*backgroundColor: resolvedTheme\.accentSurface[\s\S]*text-\[10px\] font-semibold uppercase tracking-\[0\.4px\][\s\S]*CURRENT BEST/)
   assert.match(screenSource, /latestProgressPointDisplayValue/)
   assert.match(screenSource, /from '\.\.\/ui\/primitives\.js'/)
   assert.match(screenSource, /AppSegmentedControl/)

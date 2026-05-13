@@ -221,6 +221,75 @@ test('createMobileAppBootstrap resolves authenticated athlete state and train st
   assert.equal(calls.some((call) => call.table === 'program_days'), true)
 })
 
+test('createMobileAppBootstrap carries athlete completed session history into train state so athlete analytics can read real completed work', async () => {
+  const { fetchImpl } = createBootstrapFetchStub()
+  const bootstrap = await createMobileAppBootstrap({
+    env: {
+      EXPO_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
+    },
+    accessToken: 'user-token',
+    fetchImpl: async (url, options = {}) => {
+      const parsedUrl = new URL(url)
+      const table = parsedUrl.pathname.split('/').at(-1)
+
+      if (table === 'workout_sessions') {
+        if (parsedUrl.searchParams.get('status') === 'eq.completed' || parsedUrl.searchParams.get('id') === 'eq.ws-completed-1') {
+          return json([{
+            id: 'ws-completed-1',
+            athlete_id: 'ath-1',
+            program_workout_id: 'pw-1',
+            status: 'completed',
+            started_at: '2026-04-20T18:00:00.000Z',
+            completed_at: '2026-04-20T18:45:00.000Z',
+            elapsed_seconds: 2700,
+          }])
+        }
+        return json([])
+      }
+
+      if (table === 'workout_session_exercises') {
+        return json([{
+          id: 'wse-1',
+          workout_session_id: 'ws-completed-1',
+          exercise_id: 'ex-1',
+          name_snapshot: 'Front Squat',
+          sort_order: 1,
+          notes: '',
+          default_rest_seconds: 120,
+        }])
+      }
+
+      if (table === 'workout_session_sets') {
+        return json([{
+          id: 'wss-1',
+          workout_session_exercise_id: 'wse-1',
+          set_number: 1,
+          target_reps: 8,
+          target_load: 135,
+          target_load_unit: 'lb',
+          actual_reps: 8,
+          actual_load: 135,
+          actual_load_unit: 'lb',
+          is_completed: true,
+          completed_at: '2026-04-20T18:10:00.000Z',
+          set_type: 'straight',
+          target_rest_seconds: 120,
+          notes: '',
+        }])
+      }
+
+      return fetchImpl(url, options)
+    },
+  })
+
+  assert.equal(bootstrap.status, 'authenticated')
+  assert.equal(Array.isArray(bootstrap.trainState.completedSessions), true)
+  assert.equal(bootstrap.trainState.completedSessions.length, 1)
+  assert.equal(bootstrap.trainState.completedSessions[0].status, 'completed')
+  assert.equal(bootstrap.trainState.completedSessions[0].exercises[0].nameSnapshot, 'Front Squat')
+})
+
 test('createMobileAppBootstrap falls back when athlete unit preference columns are not live in Supabase yet', async () => {
   const calls = []
   const fetchImpl = async (url) => {

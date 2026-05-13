@@ -111,12 +111,14 @@ export function getTrainRenderModel({ trainSurfaceModel, sessionSections }) {
                 title: trainSurfaceModel.surface.workoutEmptyState.title,
                 body: trainSurfaceModel.surface.workoutEmptyState.body,
               }]),
-          {
-            type: 'create-workout-card',
-            title: trainSurfaceModel.surface.createWorkoutCard.title,
-            subtitle: trainSurfaceModel.surface.createWorkoutCard.subtitle,
-            targetKey: 'create-workout',
-          },
+          ...(trainSurfaceModel.surface.createWorkoutCard
+            ? [{
+                type: 'create-workout-card',
+                title: trainSurfaceModel.surface.createWorkoutCard.title,
+                subtitle: trainSurfaceModel.surface.createWorkoutCard.subtitle,
+                targetKey: 'create-workout',
+              }]
+            : []),
         ],
       },
     }

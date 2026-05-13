@@ -62,6 +62,33 @@ test('getTrainRenderModel builds the stacked train-home sections for the barbell
   })
 })
 
+test('getTrainRenderModel hides the Create workout card for athlete train-home sessions', () => {
+  const trainState = createTrainDemoState({
+    programWorkout: createDemoProgramWorkout(),
+    startedAt: '2026-04-21T20:00:00.000Z',
+  })
+  const trainSurfaceModel = getTrainSurfaceModel({
+    trainTabs,
+    activeTrainTab: 'calendar',
+    todayModel: getTodaySurfaceModel(trainState),
+    calendarModel: getCalendarSurfaceModel(trainState, 'wed'),
+    workoutModel: getWorkoutSurfaceModel(trainState, 'wed'),
+    activeSessionModel: getActiveSessionSurfaceModel(trainState.session, 35, null),
+    canCreateWorkout: false,
+  })
+
+  const renderModel = getTrainRenderModel({
+    trainSurfaceModel,
+    sessionSections: getSessionSections(getActiveSessionSurfaceModel(trainState.session, 35, null)),
+  })
+
+  assert.equal(renderModel.content.sections.length, 7)
+  assert.equal(renderModel.content.sections[6].type, 'body-list')
+  assert.equal(renderModel.content.sections[6].rows[0].title, 'Upper A')
+  assert.doesNotMatch(JSON.stringify(renderModel.content.sections), /Create workout/)
+  assert.doesNotMatch(JSON.stringify(renderModel.content.sections), /create-workout-card/)
+})
+
 test('getTrainRenderModel can replace the idle Start Workout CTA with a compact in-progress bottom bar model', () => {
   const trainState = createTrainDemoState({
     programWorkout: createDemoProgramWorkout(),

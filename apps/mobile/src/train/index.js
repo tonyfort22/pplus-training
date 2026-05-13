@@ -152,7 +152,7 @@ function getPreferredAssignedWorkoutName(dayWorkouts = [], fallbackDayName = nul
   return preferredWorkout?.nameSnapshot || fallbackDayName || 'Rest Day'
 }
 
-export function createAssignedProgramTrainState({ assignedProgram, programWorkout = null, startedAt, previewState = 'planned', todayIsoDate = null } = {}) {
+export function createAssignedProgramTrainState({ assignedProgram, programWorkout = null, startedAt, previewState = 'planned', todayIsoDate = null, completedSessions = [] } = {}) {
   if (!assignedProgram?.id) {
     return createTrainDemoState({ programWorkout: programWorkout || createDemoProgramWorkout(), startedAt, previewState })
   }
@@ -239,7 +239,7 @@ export function createAssignedProgramTrainState({ assignedProgram, programWorkou
       }),
     },
     session,
-    completedSessions: [],
+    completedSessions: Array.isArray(completedSessions) ? completedSessions : [],
   }
 }
 

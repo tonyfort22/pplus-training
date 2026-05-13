@@ -63,10 +63,10 @@ function ExerciseProgressChart({ model, theme }) {
             </Text>
           </View>
           <View
-            className="rounded-full border px-3 py-2"
-            style={{ borderColor: theme.borderStrong, backgroundColor: theme.overlay }}
+            className="items-center justify-center rounded-[16px] border px-3 py-2"
+            style={{ borderColor: theme.accentBorder, backgroundColor: theme.accentSurface }}
           >
-            <Text className="text-[10px] font-bold uppercase tracking-[1.2px]" style={{ color: theme.accentText }}>
+            <Text className="text-[10px] font-semibold uppercase tracking-[0.4px]" style={{ color: theme.accentText }}>
               CURRENT BEST
             </Text>
           </View>
@@ -165,7 +165,7 @@ function ExerciseHistoryTable({ model, historyMode, onHistoryModeChange, theme }
     <View className="gap-4">
       <View className="flex-row items-center justify-between gap-4 px-5">
         <Text className="text-[22px] font-semibold" style={{ color: theme.text }}>{model.historyTitle || 'History'}</Text>
-        <View className="w-[188px] rounded-[18px] border p-1" style={{ borderColor: theme.border, backgroundColor: theme.surface }}>
+        <View className="w-[188px]" style={{ backgroundColor: 'transparent' }}>
           <AppSegmentedControl theme={theme} options={historyModes} activeId={historyMode} onChange={onHistoryModeChange} />
         </View>
       </View>
@@ -175,7 +175,8 @@ function ExerciseHistoryTable({ model, historyMode, onHistoryModeChange, theme }
           {model.historyHeaders.map((header, index) => (
             <Text
               key={`${header}-${index}`}
-              className={`${getHistoryColumnClassName(index)} ${index === 0 ? 'text-left' : 'text-center'} text-[11px] font-semibold uppercase tracking-[1px]`}
+              numberOfLines={1}
+              className={`${getHistoryColumnClassName(index)} ${index === 0 ? 'text-left' : 'text-center'} text-[10px] font-semibold uppercase tracking-[0.6px]`}
               style={{ color: theme.textSoft }}
             >
               {header}
@@ -276,8 +277,8 @@ function ExerciseDetailViewContent({ model, onClose, theme }) {
                             --
                           </Text>
                         </View>
-                        <View className="rounded-full border px-3 py-2" style={{ borderColor: resolvedTheme.borderStrong, backgroundColor: resolvedTheme.overlay }}>
-                          <Text className="text-[10px] font-bold uppercase tracking-[1.2px]" style={{ color: resolvedTheme.accentText }}>
+                        <View className="items-center justify-center rounded-[16px] border px-3 py-2" style={{ borderColor: resolvedTheme.accentBorder, backgroundColor: resolvedTheme.accentSurface }}>
+                          <Text className="text-[10px] font-semibold uppercase tracking-[0.4px]" style={{ color: resolvedTheme.accentText }}>
                             CURRENT BEST
                           </Text>
                         </View>
