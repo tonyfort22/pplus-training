@@ -59,6 +59,45 @@ test('createMobileInvitationClient targets the send-athlete-invitation edge func
   ])
 })
 
+test('createMobileInvitationClient lets the completion flow use a longer timeout budget than the generic edge default', async () => {
+  const client = createMobileInvitationClient({
+    supabaseUrl: 'https://example.supabase.co',
+    supabaseAnonKey: 'anon-key',
+    invitationCompletionRequestTimeoutMs: 10,
+    fetchImpl: async (_url, options = {}) => {
+      await new Promise((resolve, reject) => {
+        options.signal?.addEventListener('abort', () => reject(new Error('Aborted')), { once: true })
+      })
+      return {
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        async text() {
+          return JSON.stringify({ success: true })
+        },
+      }
+    },
+  })
+
+  await assert.rejects(
+    () => client.completeAthleteInvitation({
+      inviteCode: '7K9M2Q',
+      firstName: 'Thomas',
+      lastName: 'Thibault',
+      password: 'secret123',
+      confirmPassword: 'secret123',
+      gender: 'Male',
+      position: 'Forward',
+      weight: '170.5',
+      weightUnit: 'lb',
+      heightUnit: 'ft',
+      heightFeet: '5',
+      heightInches: '11',
+    }),
+    /Supabase edge invitation request timed out while waiting for complete-athlete-invitation\./,
+  )
+})
+
 test('sendCoachAthleteInvitation normalizes the email and forwards coach profile details through the mobile invitation client', async () => {
   const calls = []
   const response = await sendCoachAthleteInvitation({

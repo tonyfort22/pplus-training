@@ -300,6 +300,7 @@ export function createSupabaseRestIdentityRepository(config) {
       const body = {
         ...(updates.firstName != null ? { first_name: updates.firstName } : {}),
         ...(updates.lastName != null ? { last_name: updates.lastName } : {}),
+        ...(updates.coachId != null ? { coach_id: updates.coachId } : {}),
         ...(updates.dateOfBirth != null ? { date_of_birth: updates.dateOfBirth } : {}),
         ...(updates.sport != null ? { sport: updates.sport } : {}),
         ...(updates.position != null ? { position: updates.position } : {}),
@@ -404,6 +405,22 @@ export function createSupabaseRestIdentityRepository(config) {
       return uploadObject({
         bucket: 'coach-avatars',
         objectPath: `${coachId}/${safeFileName}`,
+        fileBuffer,
+        contentType,
+      })
+    },
+    async uploadAthleteAvatar({ athleteId, fileBuffer, contentType = 'image/jpeg', fileName = 'profile.jpg' }) {
+      if (!athleteId) {
+        throw new Error('Athlete avatar upload requires an athleteId')
+      }
+      if (!fileBuffer) {
+        throw new Error('Athlete avatar upload requires a fileBuffer')
+      }
+
+      const safeFileName = String(fileName || 'profile.jpg').replace(/[^a-zA-Z0-9._-]/g, '-')
+      return uploadObject({
+        bucket: 'athlete-avatars',
+        objectPath: `${athleteId}/${safeFileName}`,
         fileBuffer,
         contentType,
       })

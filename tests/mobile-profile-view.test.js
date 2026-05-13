@@ -9,7 +9,8 @@ test('mobile app shell owns a dedicated profile view opened from the top header 
 
   assert.match(appSource, /const \[isProfileViewOpen, setIsProfileViewOpen\] = useState\(false\);/)
   assert.match(appSource, /<ProfileView[\s\S]*isVisible=\{isProfileViewOpen\}/)
-  assert.match(appSource, /onProfileHeaderPress: \(\) => \{[\s\S]*if \(isAthleteLimitedState\) return;[\s\S]*setIsProfileViewOpen\(true\);[\s\S]*\}/)
+  assert.match(appSource, /onProfileHeaderPress: \(\) => \{[\s\S]*setIsProfileViewOpen\(true\);[\s\S]*\}/)
+  assert.doesNotMatch(appSource, /onProfileHeaderPress: \(\) => \{[\s\S]*if \(isAthleteLimitedState\) return;[\s\S]*setIsProfileViewOpen\(true\);[\s\S]*\}/)
   assert.match(shellSource, /onProfileHeaderPress/)
   assert.match(shellSource, /<Pressable style=\{styles\.brandIconButton\} onPress=\{onProfileHeaderPress\}>/)
 })
@@ -266,7 +267,8 @@ test('mobile profile view exposes a coach Athletes option that can open the athl
   assert.match(profileSource, /if \(item\?\.id === 'athletes'\) \{[\s\S]*onOpenAthletes\?\.\(\)[\s\S]*onClose\?\.\(\)[\s\S]*return/)
   assert.match(profileSource, /function ProfileOptionIcon\({ icon, theme }\) \{[\s\S]*if \(icon === 'users'\) return <Users color=\{theme\.iconMuted\} size=\{20\} strokeWidth=\{2\.2\} \/>/)
   assert.match(profileSource, /AppListRow/)
-  assert.match(appSource, /onProfileHeaderPress: \(\) => \{[\s\S]*if \(isAthleteLimitedState\) return;[\s\S]*setIsProfileViewOpen\(true\);[\s\S]*\}/)
+  assert.match(appSource, /onProfileHeaderPress: \(\) => \{[\s\S]*setIsProfileViewOpen\(true\);[\s\S]*\}/)
+  assert.doesNotMatch(appSource, /onProfileHeaderPress: \(\) => \{[\s\S]*if \(isAthleteLimitedState\) return;[\s\S]*setIsProfileViewOpen\(true\);[\s\S]*\}/)
   assert.match(appSource, /<ProfileView isVisible=\{isProfileViewOpen\} onClose=\{\(\) => setIsProfileViewOpen\(false\)\} onSignOut=\{handleProfileSignOut\} athleteProfile=\{profileViewProfile\}[\s\S]*role=\{isCoachBootstrapState \? 'coach' : 'athlete'\}[\s\S]*onOpenAthletes=\{\(\) => setIsCoachAthletesSheetOpen\(true\)\}[\s\S]*onOpenExerciseDetail=\{\(exercise\) => handleOpenExerciseDetail\(exercise, 'profile-view'\)\}[\s\S]*themePreference=\{appThemePreference\}[\s\S]*onChangeThemePreference=\{handleThemePreferenceChange\}[\s\S]*\/>/)
 })
 
@@ -274,7 +276,7 @@ test('mobile profile view exposes a real sign-out action at the bottom of the me
   const profileSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/profile-view.js'), 'utf8')
   const appSource = readFileSync(resolve(process.cwd(), 'apps/mobile/App.js'), 'utf8')
 
-  assert.match(appSource, /const \{ authSession, bootstrapState, sessionStore, signInWithPassword, signUpWithPassword, resetPasswordForEmail, signOut, refreshAuthSession, updateAthleteProfile, updateCoachProfile, createCoachBodyMetricLog, getLatestCoachBodyMetricLog \} = useMobileAuthSession\(\);/)
+  assert.match(appSource, /const \{ authSession, bootstrapState, sessionStore, signInWithPassword, signUpWithPassword, resetPasswordForEmail, signOut, refreshAuthSession, updateAuthSession, updateAthleteProfile, updateCoachProfile, createCoachBodyMetricLog, getLatestCoachBodyMetricLog \} = useMobileAuthSession\(\);/)
   assert.match(appSource, /import \{[\s\S]*orchestrateProfileSignOut,[\s\S]*\} from '\.\/src\/auth\/auth-profile-actions\.js';/)
   assert.match(appSource, /async function handleProfileSignOut\(\) \{[\s\S]*await orchestrateProfileSignOut\(\{[\s\S]*signOut,[\s\S]*setAuthErrorMessage,[\s\S]*setAuthNoticeMessage,[\s\S]*setProfileSaveNotice,[\s\S]*setAuthMode,[\s\S]*setIsProfileViewOpen,[\s\S]*\}\);[\s\S]*\}/)
   assert.match(appSource, /const profileViewProfile = useMemo\(\(\) => \{[\s\S]*effectiveBootstrapState\.coachProfile\?\.displayName[\s\S]*effectiveBootstrapState\.coachProfile\?\.firstName[\s\S]*effectiveBootstrapState\.coachProfile\?\.lastName[\s\S]*return effectiveBootstrapState\.athleteProfile[\s\S]*\}, \[effectiveBootstrapState\.athleteProfile, effectiveBootstrapState\.coachProfile, isCoachBootstrapState\]\);/)
@@ -333,7 +335,7 @@ test('mobile profile view exposes a saveable profile details flow wired back int
   assert.match(providerSource, /async updateAthleteProfile\(updates = \{\}\) \{[\s\S]*identityClient\.updateAthleteProfile\(/)
   assert.match(providerSource, /setBootstrapState\(\(current\) => \(\{[\s\S]*athleteProfile: updatedAthleteProfile/)
 
-  assert.match(appSource, /const \{ authSession, bootstrapState, sessionStore, signInWithPassword, signUpWithPassword, resetPasswordForEmail, signOut, refreshAuthSession, updateAthleteProfile, updateCoachProfile, createCoachBodyMetricLog, getLatestCoachBodyMetricLog \} = useMobileAuthSession\(\);/)
+  assert.match(appSource, /const \{ authSession, bootstrapState, sessionStore, signInWithPassword, signUpWithPassword, resetPasswordForEmail, signOut, refreshAuthSession, updateAuthSession, updateAthleteProfile, updateCoachProfile, createCoachBodyMetricLog, getLatestCoachBodyMetricLog \} = useMobileAuthSession\(\);/)
   assert.match(appSource, /import \{[\s\S]*orchestrateSaveProfile,[\s\S]*\} from '\.\/src\/auth\/auth-profile-actions\.js';/)
   assert.match(appSource, /async function handleSaveProfile\(profileDraft\) \{[\s\S]*await orchestrateSaveProfile\(\{[\s\S]*profileDraft,[\s\S]*isCoachBootstrapState,[\s\S]*updateCoachProfile,[\s\S]*updateAthleteProfile,[\s\S]*setAuthErrorMessage,[\s\S]*setAuthNoticeMessage,[\s\S]*setProfileSaveNotice,[\s\S]*setIsProfileSaving,[\s\S]*\}\);[\s\S]*\}/)
   assert.doesNotMatch(appSource, /handleSaveProfile\([\s\S]*setIsProfileViewOpen\(false\);/)

@@ -5,17 +5,30 @@ export function createMobileInvitationClient({
   supabaseAnonKey = process.env?.EXPO_PUBLIC_SUPABASE_ANON_KEY,
   accessToken = null,
   fetchImpl = globalThis.fetch,
+  invitationCompletionRequestTimeoutMs = 60000,
 } = {}) {
   if (!supabaseUrl || !supabaseAnonKey) {
     return null
   }
 
-  return data.invitations.createSupabaseEdgeInvitationClient({
+  const invitationClient = data.invitations.createSupabaseEdgeInvitationClient({
     url: supabaseUrl,
     anonKey: supabaseAnonKey,
     accessToken,
     fetchImpl,
   })
+  const invitationCompletionClient = data.invitations.createSupabaseEdgeInvitationCompletionClient({
+    url: supabaseUrl,
+    anonKey: supabaseAnonKey,
+    accessToken,
+    fetchImpl,
+    requestTimeoutMs: invitationCompletionRequestTimeoutMs,
+  })
+
+  return {
+    ...invitationClient,
+    ...invitationCompletionClient,
+  }
 }
 
 export async function sendCoachAthleteInvitation({

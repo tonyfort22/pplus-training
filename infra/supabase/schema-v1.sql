@@ -561,6 +561,66 @@ create index if not exists idx_body_metric_logs_athlete_recorded on body_metric_
 create index if not exists idx_athlete_invitations_coach_created on athlete_invitations(coach_id, created_at desc);
 create index if not exists idx_athlete_invitations_email_created on athlete_invitations(invitee_email, created_at desc);
 
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('athlete-avatars', 'athlete-avatars', true, 5242880, array['image/jpeg', 'image/png', 'image/webp'])
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists athlete_avatars_select_public on storage.objects;
+create policy athlete_avatars_select_public on storage.objects
+for select to public
+using (bucket_id = 'athlete-avatars');
+
+drop policy if exists athlete_avatars_insert_own on storage.objects;
+create policy athlete_avatars_insert_own on storage.objects
+for insert to authenticated
+with check (
+  bucket_id = 'athlete-avatars'
+  and exists (
+    select 1
+    from public.athlete_profiles
+    where athlete_profiles.user_id = auth.uid()
+      and athlete_profiles.id::text = split_part(name, '/', 1)
+  )
+);
+
+drop policy if exists athlete_avatars_update_own on storage.objects;
+create policy athlete_avatars_update_own on storage.objects
+for update to authenticated
+using (
+  bucket_id = 'athlete-avatars'
+  and exists (
+    select 1
+    from public.athlete_profiles
+    where athlete_profiles.user_id = auth.uid()
+      and athlete_profiles.id::text = split_part(name, '/', 1)
+  )
+)
+with check (
+  bucket_id = 'athlete-avatars'
+  and exists (
+    select 1
+    from public.athlete_profiles
+    where athlete_profiles.user_id = auth.uid()
+      and athlete_profiles.id::text = split_part(name, '/', 1)
+  )
+);
+
+drop policy if exists athlete_avatars_delete_own on storage.objects;
+create policy athlete_avatars_delete_own on storage.objects
+for delete to authenticated
+using (
+  bucket_id = 'athlete-avatars'
+  and exists (
+    select 1
+    from public.athlete_profiles
+    where athlete_profiles.user_id = auth.uid()
+      and athlete_profiles.id::text = split_part(name, '/', 1)
+  )
+);
+
 alter table athlete_profiles enable row level security;
 revoke all on table athlete_profiles from anon;
 revoke all on table athlete_profiles from authenticated;

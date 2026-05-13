@@ -1,5 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import {
   createAuthSessionController,
   createMemoryAuthStorage,
@@ -90,6 +92,21 @@ test('getBootstrapFailureState converts bootstrap exceptions into a non-loading 
   assert.equal(failureState.trainState, null)
   assert.equal(failureState.sessionStore, null)
   assert.equal(failureState.errorMessage, 'coach bootstrap failed')
+})
+
+test('session provider keeps the live auth session ref in sync for same-tick post-auth mutations', () => {
+  const providerSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/auth/session-provider.js'), 'utf8')
+
+  assert.match(providerSource, /async updateAuthSession\(nextSession = \{\}\) \{[\s\S]*const mergedSession = \{ \.\.\.authSession, \.\.\.nextSession \}[\s\S]*authSessionRef\.current = mergedSession[\s\S]*setAuthSession\(mergedSession\)[\s\S]*writeStoredAuthSession/)
+  assert.match(providerSource, /async updateAthleteProfile\(updates = \{\}\) \{[\s\S]*const currentAuthSession = authSessionRef\.current[\s\S]*const athleteId = bootstrapState\.athleteProfile\?\.id \|\| currentAuthSession\.currentAthleteId[\s\S]*accessToken: currentAuthSession\.accessToken/)
+  assert.match(providerSource, /setBootstrapState\(\(current\) => \({[\s\S]*athleteProfile: updatedAthleteProfile[\s\S]*}\)\)/)
+})
+
+test('session provider preserves a freshly saved athlete avatar when the auth bootstrap finishes with an older athlete profile snapshot', () => {
+  const providerSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/auth/session-provider.js'), 'utf8')
+
+  assert.match(providerSource, /function mergeBootstrapAthleteProfile\(currentBootstrapState, nextBootstrapState\) \{[\s\S]*currentAthleteProfile\.avatarUrl[\s\S]*nextAthleteProfile\.avatarUrl[\s\S]*return \{[\s\S]*avatarUrl: currentAthleteProfile\.avatarUrl[\s\S]*}\s*}/)
+  assert.match(providerSource, /setBootstrapState\(\(current\) => mergeBootstrapAthleteProfile\(current, nextBootstrapState\)\)/)
 })
 
 test('createSupabaseMobileIdentityClient supports forgot-password through the shared identity seam', async () => {

@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import * as ImagePicker from 'expo-image-picker';
 import { StatusBar } from 'expo-status-bar';
 import { InteractionManager, Pressable, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -56,6 +57,8 @@ import { ActiveWorkoutView } from './src/screens/active-workout-view.js';
 import { CoachAthletesSheet } from './src/screens/coach-athletes-sheet.js';
 import { InviteAthleteView } from './src/screens/invite-athlete-view.js';
 import { InvitationSuccessView } from './src/screens/invitation-success-view.js';
+import { InvitationCodeEntryView } from './src/screens/invitation-code-entry-view.js';
+import { AthleteInviteOnboardingView } from './src/screens/athlete-invite-onboarding-view.js';
 import { CoachAthleteWorkspaceSheet } from './src/screens/coach-athlete-workspace-sheet.js';
 import { AuthView } from './src/screens/auth-view.js';
 import { ExerciseDetailView } from './src/screens/exercise-detail-view.js';
@@ -112,6 +115,25 @@ const authPreviewStates = [
   { key: 'sign_in', label: 'Sign in' },
   { key: 'sign_up', label: 'Sign up' },
 ];
+
+const initialInvitationOnboardingValues = {
+  avatarUrl: '',
+  avatarAsset: null,
+  firstName: '',
+  lastName: '',
+  email: '',
+  password: '',
+  confirmPassword: '',
+  dateOfBirth: '',
+  gender: '',
+  position: '',
+  weightUnit: 'lb',
+  weight: '70',
+  heightUnit: 'ft',
+  heightFeet: '5',
+  heightInches: '9',
+  heightCm: '175',
+};
 
 function isUuidValue(value) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''));
@@ -281,13 +303,17 @@ export default function App() {
 function AppShellContent() {
   const emptySession = useMemo(() => createEmptySessionState(), []);
   const emptyTrainState = useMemo(() => createEmptyTrainState(emptySession), [emptySession]);
-  const { authSession, bootstrapState, sessionStore, signInWithPassword, signUpWithPassword, resetPasswordForEmail, signOut, refreshAuthSession, updateAthleteProfile, updateCoachProfile, createCoachBodyMetricLog, getLatestCoachBodyMetricLog } = useMobileAuthSession();
+  const { authSession, bootstrapState, sessionStore, signInWithPassword, signUpWithPassword, resetPasswordForEmail, signOut, refreshAuthSession, updateAuthSession, updateAthleteProfile, updateCoachProfile, createCoachBodyMetricLog, getLatestCoachBodyMetricLog } = useMobileAuthSession();
   const runtimeAuthPreviewState = process.env.EXPO_PUBLIC_PPLUS_RUNTIME_AUTH_PREVIEW || null;
   const isAuthPreviewEnabled = runtimeAuthPreviewState === 'sign_in' || runtimeAuthPreviewState === 'sign_up';
   const [authPreviewState, setAuthPreviewState] = useState(runtimeAuthPreviewState || 'live');
   const [authMode, setAuthMode] = useState('sign_in');
   const [authErrorMessage, setAuthErrorMessage] = useState('');
   const [authNoticeMessage, setAuthNoticeMessage] = useState('');
+  const [authInvitationCode, setAuthInvitationCode] = useState('');
+  const [authInvitationCodeErrorMessage, setAuthInvitationCodeErrorMessage] = useState('');
+  const [authInvitationOnboardingStep, setAuthInvitationOnboardingStep] = useState(0);
+  const [authInvitationOnboardingValues, setAuthInvitationOnboardingValues] = useState(initialInvitationOnboardingValues);
   const [isAuthSubmitting, setIsAuthSubmitting] = useState(false);
   const [isProfileSaving, setIsProfileSaving] = useState(false);
   const [profileSaveNotice, setProfileSaveNotice] = useState('');
@@ -338,6 +364,8 @@ function AppShellContent() {
   const [selectedCoachAthleteId, setSelectedCoachAthleteId] = useState(null);
   const [resolvedCoachAthleteDefaultId, setResolvedCoachAthleteDefaultId] = useState(null);
   const workflowContextKeyRef = useRef(null);
+  const invitationClient = useMemo(() => createMobileInvitationClient({ accessToken: authSession.accessToken }), [authSession.accessToken]);
+  const invitationCompletionClient = useMemo(() => createMobileInvitationClient({ accessToken: null }), []);
   const [coachTrainBridgeState, setCoachTrainBridgeState] = useState({ trainState: null, sessionStore: null, isHydrating: false, hasResolved: false });
   const [session, setSession] = useState(() => emptySession);
   const exerciseDetailClient = useMemo(() => createMobileExerciseDetailClient(), []);
@@ -1109,6 +1137,212 @@ function AppShellContent() {
     });
   }
 
+  function handleOpenInvitationCodeFlow() {
+    setAuthMode('invitation_code');
+    setAuthErrorMessage('');
+    setAuthNoticeMessage('');
+    setAuthInvitationCodeErrorMessage('');
+    setAuthInvitationCode('');
+    setAuthInvitationOnboardingStep(0);
+    setAuthInvitationOnboardingValues(initialInvitationOnboardingValues);
+  }
+
+  function handleContinueInvitationCodeFlow() {
+    const normalizedCode = String(authInvitationCode || '').trim().toUpperCase();
+
+    setAuthErrorMessage('');
+    setAuthNoticeMessage('');
+    setAuthInvitationCodeErrorMessage('');
+
+    if (normalizedCode.length !== 6) {
+      setAuthInvitationCodeErrorMessage('Enter the full 6-character invitation code before continuing.');
+      return;
+    }
+
+    setAuthInvitationCode(normalizedCode);
+    setAuthInvitationOnboardingStep(0);
+    setAuthMode('invitation_onboarding');
+  }
+
+  function handleCloseInvitationCodeFlow() {
+    setAuthMode('sign_in');
+    setAuthErrorMessage('');
+    setAuthNoticeMessage('');
+    setAuthInvitationCodeErrorMessage('');
+  }
+
+  function handleInvitationOnboardingChange(fieldId, nextValue) {
+    setAuthInvitationOnboardingValues((current) => ({ ...current, [fieldId]: nextValue }));
+  }
+
+  async function handleInvitationAvatarUpload() {
+    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (!permissionResult?.granted) {
+      setAuthErrorMessage('Photo library access is required to update the profile image.')
+      return
+    }
+
+    const pickerResult = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    })
+
+    if (pickerResult?.canceled) {
+      return
+    }
+
+    const asset = pickerResult?.assets?.[0]
+    if (!asset?.uri) {
+      setAuthErrorMessage('Could not read that photo. Try another image.')
+      return
+    }
+
+    const nextAvatarUrl = asset.uri
+    setAuthInvitationOnboardingValues((current) => ({
+      ...current,
+      avatarUrl: nextAvatarUrl,
+      avatarAsset: {
+        uri: asset.uri,
+        mimeType: asset.mimeType || 'image/jpeg',
+        fileName: asset.fileName || `athlete-avatar-${Date.now()}.jpg`,
+      },
+    }))
+    setAuthErrorMessage('')
+  }
+
+  function handleInvitationOnboardingPrevious() {
+    setAuthErrorMessage('');
+    setAuthNoticeMessage('');
+    setAuthInvitationOnboardingStep((current) => Math.max(0, current - 1));
+  }
+
+  function handleCloseInvitationOnboardingView() {
+    setAuthMode('invitation_code');
+    setAuthErrorMessage('');
+    setAuthNoticeMessage('');
+    setAuthInvitationOnboardingStep(0);
+  }
+
+  async function handleInvitationOnboardingNext() {
+    if (isAuthSubmitting) {
+      return;
+    }
+
+    setAuthErrorMessage('');
+    setAuthNoticeMessage('');
+    setIsAuthSubmitting(true);
+
+    try {
+      if (authInvitationOnboardingStep === 0) {
+        if (!authInvitationOnboardingValues.firstName?.trim() || !authInvitationOnboardingValues.lastName?.trim()) {
+          throw new Error('First name and last name are required before continuing.');
+        }
+        if (!authInvitationOnboardingValues.password || !authInvitationOnboardingValues.confirmPassword) {
+          throw new Error('Password and confirm password are both required before continuing.');
+        }
+        if (authInvitationOnboardingValues.password.length < 6) {
+          throw new Error('Password must be at least 6 characters before continuing.');
+        }
+        if (authInvitationOnboardingValues.password !== authInvitationOnboardingValues.confirmPassword) {
+          throw new Error('Passwords need to match before continuing.');
+        }
+
+        setAuthInvitationOnboardingStep((current) => current + 1);
+        return;
+      }
+
+      if (authInvitationOnboardingStep === 1) {
+        if (!String(authInvitationOnboardingValues.dateOfBirth || '').trim()) {
+          throw new Error('Select the athlete date of birth before continuing.');
+        }
+
+        setAuthInvitationOnboardingStep((current) => current + 1);
+        return;
+      }
+
+      if (authInvitationOnboardingStep === 2) {
+        if (!authInvitationOnboardingValues.gender?.trim()) {
+          throw new Error('Select the athlete gender before continuing.');
+        }
+
+        setAuthInvitationOnboardingStep((current) => current + 1);
+        return;
+      }
+
+      if (authInvitationOnboardingStep === 3) {
+        if (!authInvitationOnboardingValues.position?.trim()) {
+          throw new Error('Select the athlete position before continuing.');
+        }
+
+        setAuthInvitationOnboardingStep((current) => current + 1);
+        return;
+      }
+
+      if (authInvitationOnboardingStep === 4) {
+        if (!String(authInvitationOnboardingValues.weight || '').trim()) {
+          throw new Error('Set the athlete weight before continuing.');
+        }
+
+        setAuthInvitationOnboardingStep((current) => current + 1);
+        return;
+      }
+
+      if (String(authInvitationOnboardingValues.heightUnit || 'ft') === 'ft') {
+        if (!String(authInvitationOnboardingValues.heightFeet || '').trim() || !String(authInvitationOnboardingValues.heightInches || '').trim()) {
+          throw new Error('Set the athlete height before continuing.');
+        }
+      } else if (!String(authInvitationOnboardingValues.heightCm || '').trim()) {
+        throw new Error('Set the athlete height before continuing.');
+      }
+
+      if (!invitationCompletionClient?.completeAthleteInvitation) {
+        throw new Error('Athlete invitation completion is not available right now.');
+      }
+
+      const completionResult = await invitationCompletionClient.completeAthleteInvitation({
+        inviteCode: authInvitationCode,
+        firstName: authInvitationOnboardingValues.firstName,
+        lastName: authInvitationOnboardingValues.lastName,
+        password: authInvitationOnboardingValues.password,
+        confirmPassword: authInvitationOnboardingValues.confirmPassword,
+        dateOfBirth: authInvitationOnboardingValues.dateOfBirth,
+        gender: authInvitationOnboardingValues.gender,
+        position: authInvitationOnboardingValues.position,
+        weight: authInvitationOnboardingValues.weight,
+        weightUnit: authInvitationOnboardingValues.weightUnit,
+        heightUnit: authInvitationOnboardingValues.heightUnit,
+        heightFeet: authInvitationOnboardingValues.heightFeet,
+        heightInches: authInvitationOnboardingValues.heightInches,
+        heightCm: authInvitationOnboardingValues.heightCm,
+      });
+
+      const nextAuthSession = await updateAuthSession({
+        accessToken: completionResult.accessToken,
+        refreshToken: completionResult.refreshToken,
+        currentUserId: completionResult.currentUserId,
+        currentAthleteId: completionResult.currentAthleteId,
+      });
+
+      setActiveTab('progress');
+
+      if (authInvitationOnboardingValues.avatarAsset) {
+        await updateAthleteProfile({ avatarAsset: authInvitationOnboardingValues.avatarAsset });
+      }
+
+      void nextAuthSession;
+      setAuthInvitationCode('');
+      setAuthInvitationOnboardingValues(initialInvitationOnboardingValues);
+      setAuthInvitationOnboardingStep(0);
+      setAuthNoticeMessage('Welcome to PPLUS.');
+    } catch (error) {
+      setAuthErrorMessage(error?.message || 'Something went sideways while preparing the athlete onboarding flow.');
+    } finally {
+      setIsAuthSubmitting(false);
+    }
+  }
+
   async function handleCompleteSet(exerciseId, setId) {
     await orchestrateCompleteSet({
       session,
@@ -1659,7 +1893,6 @@ function AppShellContent() {
     setAthleteInvitationErrorMessage('');
 
     try {
-      const invitationClient = createMobileInvitationClient({ accessToken: authSession.accessToken });
       await sendCoachAthleteInvitation({
         invitationClient,
         inviteeEmail: inviteAthleteEmail,
@@ -1863,24 +2096,54 @@ function AppShellContent() {
     return (
       <SafeAreaProvider>
         <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
-          <AuthView
-            mode={authMode}
-            isSubmitting={isAuthSubmitting}
-            errorMessage={authErrorMessage}
-            noticeMessage={authNoticeMessage}
-            theme={appTheme}
-            onModeChange={(nextMode) => {
-              setAuthMode(nextMode)
-              setAuthErrorMessage('')
-              setAuthNoticeMessage('')
-            }}
-            onForgotPassword={() => {
-              setAuthMode('forgot_password')
-              setAuthErrorMessage('')
-              setAuthNoticeMessage('')
-            }}
-            onSubmit={handleAuthSubmit}
-          />
+          {authMode === 'invitation_code' ? (
+            <InvitationCodeEntryView
+              isVisible
+              code={authInvitationCode}
+              onChangeCode={setAuthInvitationCode}
+              errorMessage={authInvitationCodeErrorMessage}
+              isSubmitting={isAuthSubmitting}
+              onContinue={handleContinueInvitationCodeFlow}
+              onClose={handleCloseInvitationCodeFlow}
+              theme={appTheme}
+            />
+          ) : authMode === 'invitation_onboarding' ? (
+            <AthleteInviteOnboardingView
+              isVisible
+              invitationCode={authInvitationCode}
+              currentStep={authInvitationOnboardingStep}
+              values={authInvitationOnboardingValues}
+              onChangeField={handleInvitationOnboardingChange}
+              onAvatarPress={handleInvitationAvatarUpload}
+              onNext={handleInvitationOnboardingNext}
+              onPrevious={handleInvitationOnboardingPrevious}
+              onClose={handleCloseInvitationOnboardingView}
+              isSubmitting={isAuthSubmitting}
+              errorMessage={authErrorMessage}
+              noticeMessage={authNoticeMessage}
+              theme={appTheme}
+            />
+          ) : (
+            <AuthView
+              mode={authMode}
+              isSubmitting={isAuthSubmitting}
+              errorMessage={authErrorMessage}
+              noticeMessage={authNoticeMessage}
+              theme={appTheme}
+              onModeChange={(nextMode) => {
+                setAuthMode(nextMode)
+                setAuthErrorMessage('')
+                setAuthNoticeMessage('')
+              }}
+              onForgotPassword={() => {
+                setAuthMode('forgot_password')
+                setAuthErrorMessage('')
+                setAuthNoticeMessage('')
+              }}
+              onInvitationCodePress={handleOpenInvitationCodeFlow}
+              onSubmit={handleAuthSubmit}
+            />
+          )}
           <StatusBar style={appThemePreference === 'light' ? 'dark' : 'light'} />
         </SafeAreaView>
       </SafeAreaProvider>
@@ -1943,7 +2206,6 @@ function AppShellContent() {
           sessionRenderModel,
           onTabPress: handleTabPress,
           onProfileHeaderPress: () => {
-            if (isAthleteLimitedState) return;
             setIsProfileViewOpen(true);
           },
           onUtilityHeaderPress: () => setIsTrainingCalendarOpen(true),
@@ -1987,6 +2249,7 @@ function AppShellContent() {
                 setAuthErrorMessage('')
                 setAuthNoticeMessage('')
               }}
+              onInvitationCodePress={handleOpenInvitationCodeFlow}
               onSubmit={handleAuthSubmit}
             />
           ),

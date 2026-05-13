@@ -45,7 +45,7 @@ function AuthField({ field, onChange, theme }) {
       <AppFieldShell theme={theme} trailing={trailing} className="h-14 py-0">
         <TextInput
           className="px-0 py-0 text-[16px]"
-          style={{ backgroundColor: 'transparent', outlineStyle: 'none', color: theme.text }}
+          style={{ backgroundColor: 'transparent', outlineStyle: 'none', color: theme.text, textAlign: 'left', letterSpacing: 0 }}
           value={field.value}
           placeholder={field.placeholder}
           placeholderTextColor={theme.textSoft}
@@ -66,6 +66,7 @@ export function AuthView({
   onModeChange,
   onSubmit,
   onForgotPassword,
+  onInvitationCodePress,
   isSubmitting = false,
   errorMessage = '',
   noticeMessage = '',
@@ -142,6 +143,12 @@ export function AuthView({
               {model.secondaryActionLabel ? (
                 <Pressable className="items-center py-1" onPress={() => onForgotPassword?.(values.email || '')} disabled={model.secondaryActionDisabled}>
                   <Text className="text-[14px] font-medium" style={{ color: resolvedTheme.accentText }}>{model.secondaryActionLabel}</Text>
+                </Pressable>
+              ) : null}
+
+              {mode === 'sign_in' && values.role === 'athlete' && onInvitationCodePress ? (
+                <Pressable className="items-center py-1" onPress={() => onInvitationCodePress?.()} disabled={isSubmitting}>
+                  <Text className="text-[14px] font-medium" style={{ color: resolvedTheme.accentText }}>Sign up with invitation code</Text>
                 </Pressable>
               ) : null}
 

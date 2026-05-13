@@ -7,6 +7,7 @@ import {
   createSupabaseEdgeInvitationClient,
   createSupabaseRestInvitationRepository,
   hashAthleteInvitationCode,
+  createSupabaseEdgeInvitationCompletionClient,
 } from '../packages/data/src/invitations/index.js'
 
 function json(payload, status = 200) {
@@ -157,4 +158,149 @@ test('createSupabaseEdgeInvitationClient calls the send-athlete-invitation edge 
       },
     },
   ])
+})
+
+test('createSupabaseEdgeInvitationCompletionClient calls the complete-athlete-invitation edge function with onboarding payload', async () => {
+  const calls = []
+  const client = createSupabaseEdgeInvitationCompletionClient({
+    url: 'https://example.supabase.co',
+    anonKey: 'anon-key',
+    fetchImpl: async (url, options = {}) => {
+      const body = options.body ? JSON.parse(options.body) : null
+      calls.push({ url, method: options.method || 'GET', body, headers: options.headers || {}, signal: options.signal ?? null })
+      return json({
+        success: true,
+        invitationId: 'invite-1',
+        athleteProfileId: 'athlete-1',
+        coachId: 'coach-1',
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+        currentUserId: 'user-1',
+        currentAthleteId: 'athlete-1',
+        assignedProgramId: 'program-1',
+      })
+    },
+  })
+
+  const response = await client.completeAthleteInvitation({
+    inviteCode: '7K9M2Q',
+    firstName: 'Thomas',
+    lastName: 'Thibault',
+    password: 'secret123',
+    confirmPassword: 'secret123',
+    dateOfBirth: '2008-04-21',
+    gender: 'Male',
+    position: 'Forward',
+    weight: '170.5',
+    weightUnit: 'lb',
+    heightUnit: 'ft',
+    heightFeet: '5',
+    heightInches: '11',
+  })
+
+  assert.deepEqual(response, {
+    success: true,
+    invitationId: 'invite-1',
+    athleteProfileId: 'athlete-1',
+    coachId: 'coach-1',
+    accessToken: 'access-token',
+    refreshToken: 'refresh-token',
+    currentUserId: 'user-1',
+    currentAthleteId: 'athlete-1',
+    assignedProgramId: 'program-1',
+  })
+  assert.deepEqual(calls, [
+    {
+      url: 'https://example.supabase.co/functions/v1/complete-athlete-invitation',
+      method: 'POST',
+      body: {
+        inviteCode: '7K9M2Q',
+        firstName: 'Thomas',
+        lastName: 'Thibault',
+        password: 'secret123',
+        confirmPassword: 'secret123',
+        dateOfBirth: '2008-04-21',
+        gender: 'Male',
+        position: 'Forward',
+        weight: '170.5',
+        weightUnit: 'lb',
+        heightUnit: 'ft',
+        heightFeet: '5',
+        heightInches: '11',
+        heightCm: '',
+      },
+      headers: {
+        apikey: 'anon-key',
+        Authorization: 'Bearer anon-key',
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      signal: calls[0]?.signal ?? null,
+    },
+  ])
+  assert.equal(typeof calls[0]?.signal?.aborted, 'boolean')
+})
+
+test('createSupabaseEdgeInvitationCompletionClient times out hanging edge requests instead of leaving onboarding stuck forever', async () => {
+  const client = createSupabaseEdgeInvitationCompletionClient({
+    url: 'https://example.supabase.co',
+    anonKey: 'anon-key',
+    requestTimeoutMs: 10,
+    fetchImpl: async (_url, options = {}) => {
+      await new Promise((resolve, reject) => {
+        options.signal?.addEventListener('abort', () => reject(options.signal.reason || new Error('aborted')), { once: true })
+      })
+      return json({ success: true })
+    },
+  })
+
+  await assert.rejects(
+    () => client.completeAthleteInvitation({
+      inviteCode: '7K9M2Q',
+      firstName: 'Thomas',
+      lastName: 'Thibault',
+      password: 'secret123',
+      confirmPassword: 'secret123',
+      gender: 'Male',
+      position: 'Forward',
+      weight: '170.5',
+      weightUnit: 'lb',
+      heightUnit: 'ft',
+      heightFeet: '5',
+      heightInches: '11',
+    }),
+    /Supabase edge invitation request timed out while waiting for complete-athlete-invitation\./,
+  )
+})
+
+test('createSupabaseEdgeInvitationCompletionClient maps React Native abort errors to the same timeout message when its own timeout fired', async () => {
+  const client = createSupabaseEdgeInvitationCompletionClient({
+    url: 'https://example.supabase.co',
+    anonKey: 'anon-key',
+    requestTimeoutMs: 10,
+    fetchImpl: async (_url, options = {}) => {
+      await new Promise((resolve, reject) => {
+        options.signal?.addEventListener('abort', () => reject(new Error('Aborted')), { once: true })
+      })
+      return json({ success: true })
+    },
+  })
+
+  await assert.rejects(
+    () => client.completeAthleteInvitation({
+      inviteCode: '7K9M2Q',
+      firstName: 'Thomas',
+      lastName: 'Thibault',
+      password: 'secret123',
+      confirmPassword: 'secret123',
+      gender: 'Male',
+      position: 'Forward',
+      weight: '170.5',
+      weightUnit: 'lb',
+      heightUnit: 'ft',
+      heightFeet: '5',
+      heightInches: '11',
+    }),
+    /Supabase edge invitation request timed out while waiting for complete-athlete-invitation\./,
+  )
 })

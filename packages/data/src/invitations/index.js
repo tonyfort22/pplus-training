@@ -223,11 +223,14 @@ export function createSupabaseRestInvitationRepository(config = {}) {
   }
 }
 
-export function createSupabaseEdgeInvitationClient(config = {}) {
+function createSupabaseEdgeFunctionClient(config = {}) {
   const baseUrl = config.url
   const anonKey = config.anonKey
   const accessToken = config.accessToken || null
   const fetchImpl = requireFetch(config.fetchImpl ?? globalThis.fetch, 'Supabase edge invitation client requires fetch support')
+  const requestTimeoutMs = Number.isFinite(Number(config.requestTimeoutMs)) && Number(config.requestTimeoutMs) > 0
+    ? Number(config.requestTimeoutMs)
+    : 20000
 
   function resolveAccessToken() {
     return typeof accessToken === 'function' ? accessToken() : accessToken
@@ -241,9 +244,14 @@ export function createSupabaseEdgeInvitationClient(config = {}) {
     throw new Error('Supabase edge invitation client requires an anonKey')
   }
 
-  return {
-    async sendAthleteInvitation({ inviteeEmail, coachFirstName = '', coachLastName = '', appStoreUrl = '' }) {
-      const response = await fetchImpl(new URL('/functions/v1/send-athlete-invitation', baseUrl).toString(), {
+  async function invokeFunction(functionName, body) {
+    const abortController = typeof AbortController === 'function' ? new AbortController() : null
+    const timeoutHandle = abortController
+      ? globalThis.setTimeout(() => abortController.abort(new Error(`${functionName} timed out after ${requestTimeoutMs}ms`)), requestTimeoutMs)
+      : null
+
+    try {
+      const response = await fetchImpl(new URL(`/functions/v1/${functionName}`, baseUrl).toString(), {
         method: 'POST',
         headers: {
           apikey: anonKey,
@@ -251,23 +259,98 @@ export function createSupabaseEdgeInvitationClient(config = {}) {
           'Content-Type': 'application/json',
           Accept: 'application/json',
         },
-        body: JSON.stringify({
-          inviteeEmail: normalizeAthleteInvitationEmail(inviteeEmail),
-          coachFirstName: String(coachFirstName || '').trim(),
-          coachLastName: String(coachLastName || '').trim(),
-          appStoreUrl: String(appStoreUrl || '').trim(),
-        }),
+        body: JSON.stringify(body),
+        signal: abortController?.signal,
       })
 
       const text = await response.text()
       const parsed = text ? JSON.parse(text) : null
 
       if (!response.ok) {
-        const message = parsed?.message || (typeof parsed === 'string' && parsed) || response.statusText || 'Unknown athlete invitation send error'
+        const message = parsed?.message || parsed?.error || (typeof parsed === 'string' && parsed) || response.statusText || `Unknown ${functionName} error`
         throw new Error(`Supabase edge invitation request failed (${response.status}): ${message}`)
       }
 
       return parsed
+    } catch (error) {
+      const message = String(error?.message || '')
+      const isTimeoutAbort = Boolean(
+        abortController?.signal?.aborted && (
+          message.includes('timed out after')
+          || message === 'Aborted'
+          || error?.name === 'AbortError'
+        ),
+      )
+      if (isTimeoutAbort) {
+        throw new Error(`Supabase edge invitation request timed out while waiting for ${functionName}.`)
+      }
+      throw error
+    } finally {
+      if (timeoutHandle) {
+        clearTimeout(timeoutHandle)
+      }
+    }
+  }
+
+  return {
+    async sendAthleteInvitation({ inviteeEmail, coachFirstName = '', coachLastName = '', appStoreUrl = '' }) {
+      return invokeFunction('send-athlete-invitation', {
+        inviteeEmail: normalizeAthleteInvitationEmail(inviteeEmail),
+        coachFirstName: String(coachFirstName || '').trim(),
+        coachLastName: String(coachLastName || '').trim(),
+        appStoreUrl: String(appStoreUrl || '').trim(),
+      })
+    },
+    async completeAthleteInvitation({
+      inviteCode,
+      firstName,
+      lastName,
+      password,
+      confirmPassword,
+      dateOfBirth,
+      gender,
+      position,
+      weight,
+      weightUnit,
+      heightUnit,
+      heightFeet,
+      heightInches,
+      heightCm,
+    }) {
+      return invokeFunction('complete-athlete-invitation', {
+        inviteCode: String(inviteCode || '').trim().toUpperCase(),
+        firstName: String(firstName || '').trim(),
+        lastName: String(lastName || '').trim(),
+        password: String(password || ''),
+        confirmPassword: String(confirmPassword || ''),
+        dateOfBirth: String(dateOfBirth || '').trim(),
+        gender: String(gender || '').trim(),
+        position: String(position || '').trim(),
+        weight: String(weight || '').trim(),
+        weightUnit: String(weightUnit || '').trim().toLowerCase() || 'lb',
+        heightUnit: String(heightUnit || '').trim().toLowerCase() || 'ft',
+        heightFeet: String(heightFeet || '').trim(),
+        heightInches: String(heightInches || '').trim(),
+        heightCm: String(heightCm || '').trim(),
+      })
+    },
+  }
+}
+
+export function createSupabaseEdgeInvitationClient(config = {}) {
+  const client = createSupabaseEdgeFunctionClient(config)
+  return {
+    async sendAthleteInvitation(input) {
+      return client.sendAthleteInvitation(input)
+    },
+  }
+}
+
+export function createSupabaseEdgeInvitationCompletionClient(config = {}) {
+  const client = createSupabaseEdgeFunctionClient(config)
+  return {
+    async completeAthleteInvitation(input) {
+      return client.completeAthleteInvitation(input)
     },
   }
 }

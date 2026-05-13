@@ -166,6 +166,27 @@ export async function clearStoredAuthSession(storage) {
   await storage.removeItem()
 }
 
+function mergeBootstrapAthleteProfile(currentBootstrapState, nextBootstrapState) {
+  const currentAthleteProfile = currentBootstrapState?.athleteProfile || null
+  const nextAthleteProfile = nextBootstrapState?.athleteProfile || null
+
+  if (!currentAthleteProfile?.id || !nextAthleteProfile?.id || currentAthleteProfile.id !== nextAthleteProfile.id) {
+    return nextBootstrapState
+  }
+
+  if (!currentAthleteProfile.avatarUrl || nextAthleteProfile.avatarUrl) {
+    return nextBootstrapState
+  }
+
+  return {
+    ...nextBootstrapState,
+    athleteProfile: {
+      ...nextAthleteProfile,
+      avatarUrl: currentAthleteProfile.avatarUrl,
+    },
+  }
+}
+
 export function MobileAuthSessionProvider({
   children,
   previewState = 'planned',
@@ -309,7 +330,7 @@ export function MobileAuthSessionProvider({
               : null,
           })
         }
-        setBootstrapState(nextBootstrapState)
+        setBootstrapState((current) => mergeBootstrapAthleteProfile(current, nextBootstrapState))
       } catch (error) {
         if (!isMounted) return
         setBootstrapState(getBootstrapFailureState(error))
@@ -331,6 +352,7 @@ export function MobileAuthSessionProvider({
     setAuthSession,
     async updateAuthSession(nextSession = {}) {
       const mergedSession = { ...authSession, ...nextSession }
+      authSessionRef.current = mergedSession
       setAuthSession(mergedSession)
       if (resolvedStorage) {
         await writeStoredAuthSession(resolvedStorage, mergedSession)
@@ -451,7 +473,8 @@ export function MobileAuthSessionProvider({
       return updatedCoachProfile
     },
     async updateAthleteProfile(updates = {}) {
-      const athleteId = bootstrapState.athleteProfile?.id || authSession.currentAthleteId
+      const currentAuthSession = authSessionRef.current
+      const athleteId = bootstrapState.athleteProfile?.id || currentAuthSession.currentAthleteId
       if (!athleteId) {
         throw new Error('Profile update requires an authenticated athlete profile')
       }
@@ -459,7 +482,7 @@ export function MobileAuthSessionProvider({
       const identityClient = createSupabaseMobileIdentityClient({
         supabaseUrl: env?.EXPO_PUBLIC_SUPABASE_URL,
         supabaseAnonKey: env?.EXPO_PUBLIC_SUPABASE_ANON_KEY,
-        accessToken: authSession.accessToken,
+        accessToken: currentAuthSession.accessToken,
         fetchImpl,
       })
 
@@ -467,7 +490,24 @@ export function MobileAuthSessionProvider({
         throw new Error('Profile update requires Supabase auth configuration')
       }
 
-      const updatedAthleteProfile = await identityClient.updateAthleteProfile({ athleteId, updates })
+      const nextUpdates = {
+        ...updates,
+      }
+
+      if (updates.avatarAsset && identityClient?.uploadAthleteAvatar) {
+        const avatarBuffer = await readAvatarAssetBuffer({ uri: updates.avatarAsset.uri, fetchImpl })
+        const uploadedAvatar = await identityClient.uploadAthleteAvatar({
+          athleteId,
+          fileBuffer: avatarBuffer,
+          contentType: updates.avatarAsset.mimeType || 'image/jpeg',
+          fileName: updates.avatarAsset.fileName || `athlete-avatar-${athleteId}.jpg`,
+        })
+        nextUpdates.avatarUrl = uploadedAvatar.publicUrl
+      }
+
+      delete nextUpdates.avatarAsset
+
+      const updatedAthleteProfile = await identityClient.updateAthleteProfile({ athleteId, updates: nextUpdates })
       setBootstrapState((current) => ({
         ...current,
         athleteProfile: updatedAthleteProfile,

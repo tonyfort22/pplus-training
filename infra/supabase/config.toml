@@ -2,3 +2,6 @@ project_id = "pplus-training"
 
 [functions.send-athlete-invitation]
 verify_jwt = true
+
+[functions.complete-athlete-invitation]
+verify_jwt = false
