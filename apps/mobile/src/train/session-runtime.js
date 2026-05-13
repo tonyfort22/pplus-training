@@ -467,19 +467,7 @@ export function createTrainSessionStore({
     if (session?.status !== 'completed' || !session?.id || !session?.completedAt) return null
     const analyticsKey = `${session.id}:${session.completedAt}`
     if (analyticsKey == lastPersistedCompletedAnalyticsKey) return null
-    console.info('[analytics-persist] start', {
-      sessionId: session.id,
-      completedAt: session.completedAt,
-      completedSetsCount: session.completedSetsCount ?? 0,
-      totalSetsCount: session.totalSetsCount ?? 0,
-    })
     const result = await analyticsRepository.persistCompletedSessionAnalytics(session)
-    console.info('[analytics-persist] result', {
-      sessionId: session.id,
-      sessionLoadSummary: result?.sessionLoadSummary?.workoutSessionId || null,
-      exercisePerformanceSnapshotsCount: Array.isArray(result?.exercisePerformanceSnapshots) ? result.exercisePerformanceSnapshots.length : null,
-      muscleLoadEventsCount: Array.isArray(result?.muscleLoadEvents) ? result.muscleLoadEvents.length : null,
-    })
     lastPersistedCompletedAnalyticsKey = analyticsKey
     return result
   }

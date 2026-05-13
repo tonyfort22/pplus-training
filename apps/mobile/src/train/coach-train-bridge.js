@@ -27,31 +27,6 @@ export async function hydrateCoachTrainBridge({
     workoutClient?.getCompletedSessionsByAthleteId?.(athleteId) || [],
   ]);
 
-  console.info('[coach-train-bridge] fetched', {
-    athleteId,
-    todayIsoDate,
-    assignedProgram: assignedProgram
-      ? {
-          id: assignedProgram.id ?? null,
-          name: assignedProgram.name ?? '',
-          weekCount: Array.isArray(assignedProgram.weeks) ? assignedProgram.weeks.length : 0,
-          dayCount: Array.isArray(assignedProgram.weeks)
-            ? assignedProgram.weeks.reduce((sum, week) => sum + (Array.isArray(week.days) ? week.days.length : 0), 0)
-            : 0,
-        }
-      : null,
-    todayProgramWorkout: todayProgramWorkout
-      ? {
-          id: todayProgramWorkout.id ?? null,
-          athleteId: todayProgramWorkout.athleteId ?? null,
-          programDayId: todayProgramWorkout.programDayId ?? null,
-          nameSnapshot: todayProgramWorkout.nameSnapshot ?? '',
-          exerciseCount: Array.isArray(todayProgramWorkout.exercises) ? todayProgramWorkout.exercises.length : 0,
-        }
-      : null,
-    completedSessionsCount: Array.isArray(completedSessions) ? completedSessions.length : 0,
-  });
-
   const seededCoachTrainState = assignedProgram?.id
     ? createAssignedProgramTrainStateOverride({
         assignedProgram,
@@ -75,34 +50,6 @@ export async function hydrateCoachTrainBridge({
     : (!hydratedSession?.id && athleteId
       ? await workoutClient?.getInProgressSessionByAthleteId?.(athleteId)
       : null);
-
-  console.info('[coach-train-bridge] resolved', {
-    athleteId,
-    resolvedProgramWorkoutId: resolvedProgramWorkoutId ?? null,
-    seededCoachTrainState: seededCoachTrainState
-      ? {
-          todayWorkoutName: seededCoachTrainState.today?.workoutName ?? '',
-          scheduledLabel: seededCoachTrainState.today?.scheduledLabel ?? '',
-          programName: seededCoachTrainState.program?.name ?? '',
-          calendarWeekCount: Array.isArray(seededCoachTrainState.program?.calendarWeek) ? seededCoachTrainState.program.calendarWeek.length : 0,
-          selectedProgramWorkoutId: seededCoachTrainState.programWorkout?.id ?? null,
-        }
-      : null,
-    hydratedSession: hydratedSession
-      ? {
-          id: hydratedSession.id ?? null,
-          programWorkoutId: hydratedSession.programWorkoutId ?? null,
-          status: hydratedSession.status ?? null,
-        }
-      : null,
-    fallbackHydratedSession: fallbackHydratedSession
-      ? {
-          id: fallbackHydratedSession.id ?? null,
-          programWorkoutId: fallbackHydratedSession.programWorkoutId ?? null,
-          status: fallbackHydratedSession.status ?? null,
-        }
-      : null,
-  });
 
   return {
     trainState: seededCoachTrainState

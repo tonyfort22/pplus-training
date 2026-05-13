@@ -316,20 +316,6 @@ export function MobileAuthSessionProvider({
         })
 
         if (!isMounted) return
-        if (nextBootstrapState?.status === 'authenticated_coach') {
-          console.info('[coach-bootstrap]', {
-            userId: authSession.currentUserId ?? null,
-            coachProfile: nextBootstrapState.coachProfile
-              ? {
-                  id: nextBootstrapState.coachProfile.id ?? null,
-                  displayName: nextBootstrapState.coachProfile.displayName ?? null,
-                  firstName: nextBootstrapState.coachProfile.firstName ?? null,
-                  lastName: nextBootstrapState.coachProfile.lastName ?? null,
-                  phoneNumber: nextBootstrapState.coachProfile.phoneNumber ?? null,
-                }
-              : null,
-          })
-        }
         setBootstrapState((current) => mergeBootstrapAthleteProfile(current, nextBootstrapState))
       } catch (error) {
         if (!isMounted) return

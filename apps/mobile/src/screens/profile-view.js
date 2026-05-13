@@ -1326,19 +1326,6 @@ function ProfileViewContent({ onClose, onSignOut, athleteProfile, onSaveProfile,
     }
   }, [activeScreen])
 
-  useEffect(() => {
-    console.info('[profile-view-content]', {
-      role,
-      athleteProfile: {
-        id: athleteProfile?.id ?? null,
-        displayName: athleteProfile?.displayName ?? null,
-        firstName: athleteProfile?.firstName ?? null,
-        lastName: athleteProfile?.lastName ?? null,
-        avatarUrl: athleteProfile?.avatarUrl ? '[present]' : null,
-      },
-      profileIdentity,
-    })
-  }, [athleteProfile, profileIdentity, role])
 
   function handleThemeSelection(nextThemePreference) {
     onChangeThemePreference?.(nextThemePreference)

@@ -462,11 +462,6 @@ function AppShellContent() {
           const assignedProgram = await programClient?.getAssignedProgramForAthlete?.(athlete.id)
           if (!isActive) return
           if (assignedProgram?.id) {
-            console.info('[coach-athlete-default] picked-assigned-program-athlete', {
-              athleteId: athlete.id,
-              athleteName: [athlete.firstName, athlete.lastName].filter(Boolean).join(' ') || athlete.userId || athlete.id,
-              assignedProgramId: assignedProgram.id,
-            })
             setResolvedCoachAthleteDefaultId(`coach-athlete-${athlete.id}`)
             return
           }
@@ -486,10 +481,6 @@ function AppShellContent() {
 
   useEffect(() => {
     if (!resolvedCoachAthleteDefaultId) return
-    console.info('[coach-athlete-default] resolved', {
-      resolvedCoachAthleteDefaultId,
-      currentSelectedCoachAthleteId: selectedCoachAthleteId ?? null,
-    })
     setSelectedCoachAthleteId((current) => {
       if (coachAthleteOptions.some((athlete) => athlete.id === current)) {
         return current
@@ -559,23 +550,6 @@ function AppShellContent() {
 
         if (!isActive) return
 
-        console.info('[coach-train-bridge-effect] hydrated', {
-          selectedCoachAthleteId,
-          athleteProfileId: activeCoachAthleteProfile.id,
-          selectedAthleteName: selectedCoachAthlete?.name ?? '',
-          trainState: nextCoachTrainBridgeState?.trainState
-            ? {
-                todayWorkoutName: nextCoachTrainBridgeState.trainState.today?.workoutName ?? '',
-                scheduledLabel: nextCoachTrainBridgeState.trainState.today?.scheduledLabel ?? '',
-                programName: nextCoachTrainBridgeState.trainState.program?.name ?? '',
-                calendarWeekCount: Array.isArray(nextCoachTrainBridgeState.trainState.program?.calendarWeek)
-                  ? nextCoachTrainBridgeState.trainState.program.calendarWeek.length
-                  : 0,
-                selectedProgramWorkoutId: nextCoachTrainBridgeState.trainState.programWorkout?.id ?? null,
-              }
-            : null,
-        })
-
         setCoachTrainBridgeState({
           ...nextCoachTrainBridgeState,
           isHydrating: false,
@@ -599,47 +573,6 @@ function AppShellContent() {
       isActive = false
     }
   }, [activeCoachAthleteProfile?.id, authSession?.accessToken, authSession?.currentUserId, bootstrapState.status, refreshAuthSession])
-  useEffect(() => {
-    if (bootstrapState.status !== 'authenticated_coach' || !authSession?.accessToken || !bootstrapState.coachAthletes?.length) {
-      return
-    }
-
-    let isActive = true
-    const debugProgramClient = createMobileProgramClient({ accessToken: authSession.accessToken })
-
-    Promise.all(
-      bootstrapState.coachAthletes.map(async (athlete) => {
-        try {
-          const assignedProgram = await debugProgramClient?.getAssignedProgramForAthlete?.(athlete.id)
-          return {
-            athleteId: athlete.id,
-            athleteName: [athlete.firstName, athlete.lastName].filter(Boolean).join(' ') || athlete.userId || athlete.id,
-            assignedProgram: assignedProgram
-              ? {
-                  id: assignedProgram.id ?? null,
-                  name: assignedProgram.name ?? '',
-                  weekCount: Array.isArray(assignedProgram.weeks) ? assignedProgram.weeks.length : 0,
-                }
-              : null,
-          }
-        } catch (error) {
-          return {
-            athleteId: athlete.id,
-            athleteName: [athlete.firstName, athlete.lastName].filter(Boolean).join(' ') || athlete.userId || athlete.id,
-            error: error?.message || 'Unknown assigned program debug error',
-          }
-        }
-      })
-    ).then((results) => {
-      if (!isActive) return
-      console.info('[coach-program-debug] assigned-program-matrix', results)
-    })
-
-    return () => {
-      isActive = false
-    }
-  }, [authSession?.accessToken, bootstrapState.coachAthletes, bootstrapState.status])
-
   const [elapsedSecondsNow, setElapsedSecondsNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -838,30 +771,6 @@ function AppShellContent() {
   const trainState = useMemo(() => ({ ...(effectiveRemoteTrainState || emptyTrainState), session }), [effectiveRemoteTrainState, emptyTrainState, session]);
   useEffect(() => {
     if (bootstrapState.status !== 'authenticated_coach') return
-    console.info('[coach-train-body] handoff', {
-      selectedCoachAthleteId,
-      athleteProfileId: activeCoachAthleteProfile?.id ?? null,
-      selectedAthleteName: selectedCoachAthlete?.name ?? '',
-      effectiveRemoteTrainState: effectiveRemoteTrainState
-        ? {
-            todayWorkoutName: effectiveRemoteTrainState.today?.workoutName ?? '',
-            scheduledLabel: effectiveRemoteTrainState.today?.scheduledLabel ?? '',
-            programName: effectiveRemoteTrainState.program?.name ?? '',
-            calendarWeekCount: Array.isArray(effectiveRemoteTrainState.program?.calendarWeek)
-              ? effectiveRemoteTrainState.program.calendarWeek.length
-              : 0,
-            selectedProgramWorkoutId: effectiveRemoteTrainState.programWorkout?.id ?? null,
-          }
-        : null,
-      fallbackTriggered: !effectiveRemoteTrainState,
-      renderedTrainState: {
-        todayWorkoutName: trainState.today?.workoutName ?? '',
-        scheduledLabel: trainState.today?.scheduledLabel ?? '',
-        programName: trainState.program?.name ?? '',
-        calendarWeekCount: Array.isArray(trainState.program?.calendarWeek) ? trainState.program.calendarWeek.length : 0,
-        selectedProgramWorkoutId: trainState.programWorkout?.id ?? null,
-      },
-    })
   }, [activeCoachAthleteProfile?.id, bootstrapState.status, effectiveRemoteTrainState, selectedCoachAthlete?.name, selectedCoachAthleteId, trainState]);
   const programSheetModel = useMemo(() => getProgramSheetModel(selectedProgramPreview || trainState), [selectedProgramPreview, trainState]);
   const programEditViewModel = useMemo(() => getProgramEditViewModel(selectedProgramPreview || trainState), [selectedProgramPreview, trainState]);
