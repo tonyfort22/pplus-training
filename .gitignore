@@ -8,4 +8,6 @@ build
 coverage
 .env
 .env.*
+!.env.example
+!apps/mobile/.env.example
 .DS_Store

@@ -1,0 +1,689 @@
+{
+  "preserved_services_from_audit": [
+    {
+      "name": "workspace",
+      "url": "http://127.0.0.1:3000",
+      "status": "unreachable",
+      "http_status": null,
+      "error": "connection refused",
+      "listener_present": false,
+      "preservation_note": "Preserved by non-interference only. No restart or repair was attempted during audit."
+    },
+    {
+      "name": "hermes_dashboard",
+      "url": "http://127.0.0.1:9119",
+      "status": "unreachable",
+      "http_status": null,
+      "error": "connection refused",
+      "listener_present": false,
+      "preservation_note": "Preserved by non-interference only. No restart or repair was attempted during audit."
+    },
+    {
+      "name": "hermes_gateway",
+      "url": "http://127.0.0.1:8642/health",
+      "status": "reachable",
+      "root_path_status": 404,
+      "http_status": 200,
+      "listener": "python3.1",
+      "pid": 30476,
+      "preservation_note": "Healthy health endpoint preserved unchanged."
+    },
+    {
+      "name": "metabase",
+      "url": "http://127.0.0.1:3002/api/health",
+      "status": "reachable",
+      "http_status": 200,
+      "listener": "docker",
+      "docker_container": "metabase",
+      "version": "v0.60.3.1",
+      "preservation_note": "Healthy Metabase instance preserved unchanged."
+    }
+  ],
+  "current_service_checks": {
+    "workspace": {
+      "url": "http://127.0.0.1:3000",
+      "status": "unreachable",
+      "error": "HTTPConnectionPool(host='127.0.0.1', port=3000): Max retries exceeded with url: / (Caused by NewConnectionError(\"HTTPConnection(host='127.0.0.1', port=3000): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+    },
+    "hermes_dashboard": {
+      "url": "http://127.0.0.1:9119",
+      "status": "unreachable",
+      "error": "HTTPConnectionPool(host='127.0.0.1', port=9119): Max retries exceeded with url: / (Caused by NewConnectionError(\"HTTPConnection(host='127.0.0.1', port=9119): Failed to establish a new connection: [Errno 61] Connection refused\"))"
+    },
+    "hermes_gateway": {
+      "url": "http://127.0.0.1:8642/health",
+      "status": "reachable",
+      "http_status": 200
+    },
+    "metabase": {
+      "url": "http://127.0.0.1:3002/api/health",
+      "status": "reachable",
+      "http_status": 200
+    }
+  },
+  "preserved_connection": {
+    "metabase_database_id": 2,
+    "name": "postgres",
+    "engine": "postgres",
+    "host": "aws-1-us-east-2.pooler.supabase.com",
+    "ssl": true,
+    "preserved_existing_connection": true
+  },
+  "restored_root_collection": {
+    "id": 5,
+    "name": "PPLUS Reporting",
+    "created_during_restore": false
+  },
+  "restored_child_collections": [
+    {
+      "id": 6,
+      "name": "Sessions",
+      "path": "PPLUS Reporting / Sessions",
+      "created_during_restore": true
+    },
+    {
+      "id": 7,
+      "name": "Performance",
+      "path": "PPLUS Reporting / Performance",
+      "created_during_restore": true
+    },
+    {
+      "id": 8,
+      "name": "Workload & Fatigue",
+      "path": "PPLUS Reporting / Workload & Fatigue",
+      "created_during_restore": true
+    },
+    {
+      "id": 9,
+      "name": "Ops",
+      "path": "PPLUS Reporting / Ops",
+      "created_during_restore": true
+    }
+  ],
+  "restored_saved_questions": [
+    {
+      "id": 50,
+      "name": "Completed Sessions",
+      "collection_id": 6,
+      "collection_path": "PPLUS Reporting / Sessions",
+      "source_view": "reporting.completed_session_summary",
+      "display": "table",
+      "created_during_restore": true
+    },
+    {
+      "id": 51,
+      "name": "Discarded Sessions",
+      "collection_id": 6,
+      "collection_path": "PPLUS Reporting / Sessions",
+      "source_view": "reporting.discarded_session_summary",
+      "display": "table",
+      "created_during_restore": true
+    },
+    {
+      "id": 52,
+      "name": "Exercise Completion History",
+      "collection_id": 7,
+      "collection_path": "PPLUS Reporting / Performance",
+      "source_view": "reporting.exercise_completion_history",
+      "display": "table",
+      "created_during_restore": true
+    },
+    {
+      "id": 53,
+      "name": "Exercise Performance History",
+      "collection_id": 7,
+      "collection_path": "PPLUS Reporting / Performance",
+      "source_view": "reporting.exercise_performance_history",
+      "display": "table",
+      "created_during_restore": true
+    },
+    {
+      "id": 54,
+      "name": "PR Events",
+      "collection_id": 7,
+      "collection_path": "PPLUS Reporting / Performance",
+      "source_view": "reporting.pr_events",
+      "display": "table",
+      "created_during_restore": true
+    },
+    {
+      "id": 55,
+      "name": "Session Load History",
+      "collection_id": 8,
+      "collection_path": "PPLUS Reporting / Workload & Fatigue",
+      "source_view": "reporting.session_load_history",
+      "display": "table",
+      "created_during_restore": true
+    },
+    {
+      "id": 56,
+      "name": "Muscle Load Event History",
+      "collection_id": 8,
+      "collection_path": "PPLUS Reporting / Workload & Fatigue",
+      "source_view": "reporting.muscle_load_event_history",
+      "display": "table",
+      "created_during_restore": true
+    },
+    {
+      "id": 57,
+      "name": "Muscle Fatigue Summary",
+      "collection_id": 8,
+      "collection_path": "PPLUS Reporting / Workload & Fatigue",
+      "source_view": "reporting.muscle_fatigue_summary",
+      "display": "table",
+      "created_during_restore": true
+    },
+    {
+      "id": 58,
+      "name": "Athlete Adherence Summary",
+      "collection_id": 9,
+      "collection_path": "PPLUS Reporting / Ops",
+      "source_view": "reporting.athlete_adherence_summary",
+      "display": "table",
+      "created_during_restore": true
+    },
+    {
+      "id": 59,
+      "name": "Coach Activity Summary",
+      "collection_id": 9,
+      "collection_path": "PPLUS Reporting / Ops",
+      "source_view": "reporting.coach_activity_summary",
+      "display": "table",
+      "created_during_restore": true
+    }
+  ],
+  "restored_dashboards": [
+    {
+      "id": 4,
+      "name": "PPLUS Reporting - Sessions",
+      "collection_id": 5,
+      "collection_path": "PPLUS Reporting",
+      "dashcard_count": 2,
+      "created_during_restore": true
+    },
+    {
+      "id": 5,
+      "name": "PPLUS Reporting - Performance & PRs",
+      "collection_id": 5,
+      "collection_path": "PPLUS Reporting",
+      "dashcard_count": 3,
+      "created_during_restore": true
+    },
+    {
+      "id": 6,
+      "name": "PPLUS Reporting - Workload & Fatigue",
+      "collection_id": 5,
+      "collection_path": "PPLUS Reporting",
+      "dashcard_count": 3,
+      "created_during_restore": true
+    },
+    {
+      "id": 7,
+      "name": "PPLUS Reporting - Adherence & Coach Ops",
+      "collection_id": 5,
+      "collection_path": "PPLUS Reporting",
+      "dashcard_count": 2,
+      "created_during_restore": true
+    }
+  ],
+  "preserved_existing_pplus_content": {
+    "dashboards_kept": [
+      "PPLUS Workflow Monitor v2",
+      "PPLUS Session Anomalies"
+    ],
+    "legacy_saved_questions_kept": [
+      "Open Sessions Count",
+      "Session Status Counts",
+      "Session Starts Last 24 Hours",
+      "Coach Workflow Pressure",
+      "Athletes With Open Sessions",
+      "Recent Session Outcomes",
+      "Discarded Sessions Count",
+      "Stale In-Progress Sessions",
+      "Discards By Workout",
+      "Recent Discards Readable"
+    ]
+  },
+  "verification_evidence": {
+    "metabase_authenticated_user": {
+      "id": 1,
+      "email": "tonyfortugno22@gmail.com",
+      "is_superuser": true
+    },
+    "database": {
+      "id": 2,
+      "name": "postgres",
+      "engine": "postgres",
+      "host": "aws-1-us-east-2.pooler.supabase.com",
+      "provider_name": "Supabase",
+      "schema_filters_type": "all"
+    },
+    "reporting_objects": [
+      "athlete_adherence_summary",
+      "coach_activity_summary",
+      "completed_session_summary",
+      "discarded_session_summary",
+      "exercise_completion_history",
+      "exercise_performance_history",
+      "muscle_fatigue_summary",
+      "muscle_load_event_history",
+      "pr_events",
+      "session_load_history"
+    ],
+    "collections_snapshot": [
+      {
+        "id": "root",
+        "name": "Our analytics",
+        "location": "/"
+      },
+      {
+        "id": 4,
+        "name": "Anthony Fortugno's Personal Collection",
+        "location": "/"
+      },
+      {
+        "id": 2,
+        "name": "Examples",
+        "location": "/"
+      },
+      {
+        "id": 9,
+        "name": "Ops",
+        "location": "/5/"
+      },
+      {
+        "id": 7,
+        "name": "Performance",
+        "location": "/5/"
+      },
+      {
+        "id": 5,
+        "name": "PPLUS Reporting",
+        "location": "/"
+      },
+      {
+        "id": 6,
+        "name": "Sessions",
+        "location": "/5/"
+      },
+      {
+        "id": 8,
+        "name": "Workload & Fatigue",
+        "location": "/5/"
+      }
+    ],
+    "question_previews": {
+      "Completed Sessions": {
+        "row_count": 2,
+        "column_names": [
+          "workout_session_id",
+          "athlete_id",
+          "coach_id",
+          "program_id",
+          "program_day_id",
+          "program_workout_id",
+          "workout_template_id",
+          "name_snapshot",
+          "status",
+          "started_at",
+          "completed_at",
+          "elapsed_seconds",
+          "notes",
+          "perceived_difficulty",
+          "total_exercises_count",
+          "completed_exercises_count",
+          "total_sets_count",
+          "completed_sets_count",
+          "created_at",
+          "updated_at"
+        ],
+        "rows_sampled": 2,
+        "source_view": "reporting.completed_session_summary"
+      },
+      "Discarded Sessions": {
+        "row_count": 5,
+        "column_names": [
+          "workout_session_id",
+          "athlete_id",
+          "coach_id",
+          "program_id",
+          "program_day_id",
+          "program_workout_id",
+          "workout_template_id",
+          "name_snapshot",
+          "status",
+          "started_at",
+          "completed_at",
+          "elapsed_seconds",
+          "notes",
+          "perceived_difficulty",
+          "total_exercises_count",
+          "completed_exercises_count",
+          "total_sets_count",
+          "completed_sets_count",
+          "created_at",
+          "updated_at"
+        ],
+        "rows_sampled": 5,
+        "source_view": "reporting.discarded_session_summary"
+      },
+      "Exercise Completion History": {
+        "row_count": 5,
+        "column_names": [
+          "workout_session_id",
+          "athlete_id",
+          "coach_id",
+          "program_workout_id",
+          "session_completed_at",
+          "workout_session_exercise_id",
+          "exercise_id",
+          "exercise_name",
+          "completed_set_count",
+          "best_set_id",
+          "best_set_sort_order",
+          "best_set_load",
+          "best_set_load_unit",
+          "best_set_reps",
+          "best_set_rpe"
+        ],
+        "rows_sampled": 5,
+        "source_view": "reporting.exercise_completion_history"
+      },
+      "Exercise Performance History": {
+        "row_count": 5,
+        "column_names": [
+          "id",
+          "athlete_id",
+          "exercise_id",
+          "workout_session_id",
+          "workout_session_exercise_id",
+          "metric_type",
+          "load",
+          "reps",
+          "sets",
+          "duration_seconds",
+          "distance",
+          "unit",
+          "log_date",
+          "estimated_one_rep_max",
+          "notes",
+          "created_at"
+        ],
+        "rows_sampled": 5,
+        "source_view": "reporting.exercise_performance_history"
+      },
+      "PR Events": {
+        "row_count": 4,
+        "column_names": [
+          "id",
+          "athlete_id",
+          "exercise_id",
+          "workout_session_id",
+          "workout_session_exercise_id",
+          "log_date",
+          "load",
+          "reps",
+          "unit",
+          "estimated_one_rep_max",
+          "previous_load",
+          "previous_reps",
+          "prior_best_load"
+        ],
+        "rows_sampled": 4,
+        "source_view": "reporting.pr_events"
+      },
+      "Session Load History": {
+        "row_count": 2,
+        "column_names": [
+          "id",
+          "athlete_id",
+          "coach_id",
+          "workout_session_id",
+          "program_id",
+          "program_day_id",
+          "program_workout_id",
+          "workout_template_id",
+          "name_snapshot",
+          "completed_at",
+          "log_date",
+          "completed_sets",
+          "completed_reps",
+          "volume_load",
+          "effort_adjusted_load",
+          "session_difficulty",
+          "perceived_difficulty",
+          "elapsed_seconds",
+          "total_exercises_count",
+          "completed_exercises_count",
+          "total_sets_count",
+          "completed_sets_count",
+          "created_at"
+        ],
+        "rows_sampled": 2,
+        "source_view": "reporting.session_load_history"
+      },
+      "Muscle Load Event History": {
+        "row_count": 5,
+        "column_names": [
+          "id",
+          "athlete_id",
+          "coach_id",
+          "workout_session_id",
+          "workout_session_exercise_id",
+          "workout_session_set_id",
+          "exercise_id",
+          "exercise_name",
+          "muscle_id",
+          "muscle_name",
+          "muscle_body_region",
+          "sub_muscle_id",
+          "sub_muscle_name",
+          "is_sub_muscle",
+          "event_date",
+          "percent",
+          "score",
+          "created_at"
+        ],
+        "rows_sampled": 5,
+        "source_view": "reporting.muscle_load_event_history"
+      },
+      "Muscle Fatigue Summary": {
+        "row_count": 5,
+        "column_names": [
+          "athlete_id",
+          "coach_id",
+          "workout_session_id",
+          "program_id",
+          "program_day_id",
+          "program_workout_id",
+          "name_snapshot",
+          "completed_at",
+          "event_date",
+          "muscle_id",
+          "muscle_name",
+          "muscle_body_region",
+          "sub_muscle_id",
+          "sub_muscle_name",
+          "is_sub_muscle",
+          "contributing_event_count",
+          "contributing_exercise_count",
+          "contributing_set_count",
+          "target_percent_total",
+          "target_percent_avg",
+          "total_score",
+          "avg_event_score",
+          "latest_event_created_at"
+        ],
+        "rows_sampled": 5,
+        "source_view": "reporting.muscle_fatigue_summary"
+      },
+      "Athlete Adherence Summary": {
+        "row_count": 1,
+        "column_names": [
+          "athlete_id",
+          "assigned_program_workouts",
+          "completed_sessions",
+          "discarded_sessions",
+          "in_progress_sessions",
+          "completion_rate_percent"
+        ],
+        "rows_sampled": 1,
+        "source_view": "reporting.athlete_adherence_summary"
+      },
+      "Coach Activity Summary": {
+        "row_count": 1,
+        "column_names": [
+          "coach_id",
+          "athlete_count",
+          "assigned_workout_count",
+          "completed_session_count",
+          "discarded_session_count"
+        ],
+        "rows_sampled": 1,
+        "source_view": "reporting.coach_activity_summary"
+      }
+    },
+    "dashboard_layouts": {
+      "PPLUS Reporting - Sessions": [
+        {
+          "card_name": "Completed Sessions",
+          "col": 0,
+          "row": 0,
+          "size_x": 24,
+          "size_y": 8
+        },
+        {
+          "card_name": "Discarded Sessions",
+          "col": 0,
+          "row": 8,
+          "size_x": 24,
+          "size_y": 8
+        }
+      ],
+      "PPLUS Reporting - Performance & PRs": [
+        {
+          "card_name": "PR Events",
+          "col": 0,
+          "row": 0,
+          "size_x": 24,
+          "size_y": 8
+        },
+        {
+          "card_name": "Exercise Performance History",
+          "col": 0,
+          "row": 8,
+          "size_x": 24,
+          "size_y": 8
+        },
+        {
+          "card_name": "Exercise Completion History",
+          "col": 0,
+          "row": 16,
+          "size_x": 24,
+          "size_y": 8
+        }
+      ],
+      "PPLUS Reporting - Workload & Fatigue": [
+        {
+          "card_name": "Session Load History",
+          "col": 0,
+          "row": 0,
+          "size_x": 24,
+          "size_y": 8
+        },
+        {
+          "card_name": "Muscle Fatigue Summary",
+          "col": 0,
+          "row": 8,
+          "size_x": 24,
+          "size_y": 8
+        },
+        {
+          "card_name": "Muscle Load Event History",
+          "col": 0,
+          "row": 16,
+          "size_x": 24,
+          "size_y": 8
+        }
+      ],
+      "PPLUS Reporting - Adherence & Coach Ops": [
+        {
+          "card_name": "Athlete Adherence Summary",
+          "col": 0,
+          "row": 0,
+          "size_x": 12,
+          "size_y": 8
+        },
+        {
+          "card_name": "Coach Activity Summary",
+          "col": 12,
+          "row": 0,
+          "size_x": 12,
+          "size_y": 8
+        }
+      ]
+    }
+  },
+  "restore_notes": {
+    "source_state_file": "/Users/anthonyfortugno/.openclaw.pre-migration/workspace/projects/pplus-training/dispatch-audit-live-state/state.json",
+    "source_manifest_file": "/Users/anthonyfortugno/.openclaw.pre-migration/workspace/projects/pplus-training/dispatch-audit-source-of-truth/restore_manifest.json",
+    "manifest_root_collection": "PPLUS Reporting",
+    "manifest_child_collection_paths": [
+      "PPLUS Reporting / Sessions",
+      "PPLUS Reporting / Performance",
+      "PPLUS Reporting / Workload & Fatigue",
+      "PPLUS Reporting / Ops"
+    ],
+    "manifest_saved_questions": [
+      "Completed Sessions",
+      "Discarded Sessions",
+      "Exercise Completion History",
+      "Exercise Performance History",
+      "PR Events",
+      "Session Load History",
+      "Muscle Load Event History",
+      "Muscle Fatigue Summary",
+      "Athlete Adherence Summary",
+      "Coach Activity Summary"
+    ],
+    "manifest_dashboards": [
+      "PPLUS Reporting - Sessions",
+      "PPLUS Reporting - Performance & PRs",
+      "PPLUS Reporting - Workload & Fatigue",
+      "PPLUS Reporting - Adherence & Coach Ops"
+    ],
+    "manifest_reporting_views_count": 10,
+    "created_child_collections": [
+      "PPLUS Reporting / Sessions",
+      "PPLUS Reporting / Performance",
+      "PPLUS Reporting / Workload & Fatigue",
+      "PPLUS Reporting / Ops"
+    ],
+    "existing_child_collections_reused": [],
+    "created_questions": [
+      "Completed Sessions",
+      "Discarded Sessions",
+      "Exercise Completion History",
+      "Exercise Performance History",
+      "PR Events",
+      "Session Load History",
+      "Muscle Load Event History",
+      "Muscle Fatigue Summary",
+      "Athlete Adherence Summary",
+      "Coach Activity Summary"
+    ],
+    "updated_questions": [],
+    "created_dashboards": [
+      "PPLUS Reporting - Sessions",
+      "PPLUS Reporting - Performance & PRs",
+      "PPLUS Reporting - Workload & Fatigue",
+      "PPLUS Reporting - Adherence & Coach Ops"
+    ],
+    "updated_dashboards": [],
+    "sample_content_preserved": true,
+    "healthy_connection_reused": true
+  },
+  "remaining_gaps": [
+    "Exact historical Metabase visualization settings, filter widgets, and per-card formatting were not recoverable from repo-visible artifacts, so the rebuild applies straightforward saved questions and sensible dashboard placement derived from the manifest guidance."
+  ]
+}

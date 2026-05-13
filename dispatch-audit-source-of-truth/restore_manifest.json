@@ -1,0 +1,348 @@
+{
+  "mission": "Recover the repo-visible source of truth for the lost PPLUS Metabase reporting structure.",
+  "scope": "repo-visible artifacts only",
+  "generated_from": [
+    {
+      "path": "docs/sql/apply-metabase-reporting-layer.sql",
+      "role": "canonical reporting-schema source of truth"
+    },
+    {
+      "path": "docs/sql/apply-metabase-analytics-views.sql",
+      "role": "independent earlier proof of workload and muscle reporting views"
+    },
+    {
+      "path": "docs/sql/apply-session-load-summaries-table.sql",
+      "role": "prerequisite table definition for session_load_history"
+    },
+    {
+      "path": "dispatch-rebuild-metabase-reporting/restore_metabase_reporting.py",
+      "role": "repo-visible Metabase restore automation showing base URL, database id, and root collection naming"
+    },
+    {
+      "path": "dispatch-rebuild-metabase-reporting/report.md",
+      "role": "repo-visible evidence that PPLUS Reporting was used as the restore collection"
+    },
+    {
+      "path": "dispatch-repo-audit/repo-audit.md",
+      "role": "strongest repo-visible consolidation of missing workload and fatigue collection, question, and dashboard target names"
+    }
+  ],
+  "confidence_summary": {
+    "reporting_views": "high",
+    "connection_assumptions": "high",
+    "root_collection_name": "high",
+    "child_collection_names": "medium",
+    "workload_saved_question_names": "high",
+    "full_saved_question_inventory": "medium",
+    "dashboard_layout": "low",
+    "notes": "SQL is definitive for the reporting layer. Metabase content names are partly recoverable from repo-visible Conductor-chain artifacts, but no serialized dashboard export or full application metadata dump was found in the repo."
+  },
+  "reporting_schema": {
+    "schema_name": "reporting",
+    "purpose": "Read-optimized reporting layer for Metabase and internal analytics dashboards.",
+    "must_restore": true,
+    "evidence": [
+      "docs/sql/apply-metabase-reporting-layer.sql:20-22",
+      "docs/sql/apply-metabase-analytics-views.sql:9"
+    ]
+  },
+  "reporting_views": [
+    {
+      "name": "reporting.completed_session_summary",
+      "status": "known",
+      "source_file": "docs/sql/apply-metabase-reporting-layer.sql",
+      "purpose": "Primary high-level reporting source for completed workout sessions."
+    },
+    {
+      "name": "reporting.discarded_session_summary",
+      "status": "known",
+      "source_file": "docs/sql/apply-metabase-reporting-layer.sql",
+      "purpose": "Reporting source for discarded or abandoned sessions."
+    },
+    {
+      "name": "reporting.exercise_completion_history",
+      "status": "known",
+      "source_file": "docs/sql/apply-metabase-reporting-layer.sql",
+      "purpose": "Completed exercise history with best-set rollup."
+    },
+    {
+      "name": "reporting.exercise_performance_history",
+      "status": "known",
+      "source_file": "docs/sql/apply-metabase-reporting-layer.sql",
+      "purpose": "Derived exercise performance snapshots for progress reporting."
+    },
+    {
+      "name": "reporting.pr_events",
+      "status": "known",
+      "source_file": "docs/sql/apply-metabase-reporting-layer.sql",
+      "purpose": "First-pass PR events derived from strength snapshots."
+    },
+    {
+      "name": "reporting.session_load_history",
+      "status": "known",
+      "source_file": "docs/sql/apply-metabase-reporting-layer.sql",
+      "purpose": "Completed-session workload trend source.",
+      "also_confirmed_by": "docs/sql/apply-metabase-analytics-views.sql"
+    },
+    {
+      "name": "reporting.muscle_load_event_history",
+      "status": "known",
+      "source_file": "docs/sql/apply-metabase-reporting-layer.sql",
+      "purpose": "Raw completed-set muscle load drilldown source.",
+      "also_confirmed_by": "docs/sql/apply-metabase-analytics-views.sql"
+    },
+    {
+      "name": "reporting.muscle_fatigue_summary",
+      "status": "known",
+      "source_file": "docs/sql/apply-metabase-reporting-layer.sql",
+      "purpose": "Session-by-session muscle load rollup for fatigue reporting.",
+      "also_confirmed_by": "docs/sql/apply-metabase-analytics-views.sql"
+    },
+    {
+      "name": "reporting.athlete_adherence_summary",
+      "status": "known",
+      "source_file": "docs/sql/apply-metabase-reporting-layer.sql",
+      "purpose": "Assigned versus completed or discarded workout summary per athlete."
+    },
+    {
+      "name": "reporting.coach_activity_summary",
+      "status": "known",
+      "source_file": "docs/sql/apply-metabase-reporting-layer.sql",
+      "purpose": "Coach-level rollup of athletes, assignments, and outcomes."
+    }
+  ],
+  "collections": [
+    {
+      "name": "PPLUS Reporting",
+      "status": "known",
+      "must_restore": true,
+      "evidence": [
+        "dispatch-rebuild-metabase-reporting/restore_metabase_reporting.py:19",
+        "dispatch-rebuild-metabase-reporting/report.md:12-13"
+      ]
+    },
+    {
+      "name": "PPLUS Reporting / Sessions",
+      "status": "inferred",
+      "must_restore": true,
+      "confidence": "medium",
+      "evidence": [
+        "dispatch-repo-audit/repo-audit.md:165-171"
+      ]
+    },
+    {
+      "name": "PPLUS Reporting / Performance",
+      "status": "inferred",
+      "must_restore": true,
+      "confidence": "medium",
+      "evidence": [
+        "dispatch-repo-audit/repo-audit.md:165-171"
+      ]
+    },
+    {
+      "name": "PPLUS Reporting / Workload & Fatigue",
+      "status": "inferred",
+      "must_restore": true,
+      "confidence": "high",
+      "evidence": [
+        "dispatch-repo-audit/repo-audit.md:165-171",
+        "dispatch-repo-audit/repo-audit.md:227-231"
+      ]
+    },
+    {
+      "name": "PPLUS Reporting / Ops",
+      "status": "inferred",
+      "must_restore": true,
+      "confidence": "medium",
+      "evidence": [
+        "dispatch-repo-audit/repo-audit.md:165-171"
+      ]
+    }
+  ],
+  "saved_questions": [
+    {
+      "name": "Session Load History",
+      "status": "known",
+      "collection": "PPLUS Reporting / Workload & Fatigue",
+      "source_view": "reporting.session_load_history",
+      "evidence": [
+        "dispatch-repo-audit/repo-audit.md:167-171"
+      ]
+    },
+    {
+      "name": "Muscle Load Event History",
+      "status": "known",
+      "collection": "PPLUS Reporting / Workload & Fatigue",
+      "source_view": "reporting.muscle_load_event_history",
+      "evidence": [
+        "dispatch-repo-audit/repo-audit.md:167-171"
+      ]
+    },
+    {
+      "name": "Muscle Fatigue Summary",
+      "status": "known",
+      "collection": "PPLUS Reporting / Workload & Fatigue",
+      "source_view": "reporting.muscle_fatigue_summary",
+      "evidence": [
+        "dispatch-repo-audit/repo-audit.md:167-171"
+      ]
+    },
+    {
+      "name": "Completed Session Summary",
+      "status": "inferred",
+      "collection": "PPLUS Reporting / Sessions",
+      "source_view": "reporting.completed_session_summary",
+      "confidence": "medium"
+    },
+    {
+      "name": "Discarded Session Summary",
+      "status": "inferred",
+      "collection": "PPLUS Reporting / Sessions",
+      "source_view": "reporting.discarded_session_summary",
+      "confidence": "medium"
+    },
+    {
+      "name": "Exercise Completion History",
+      "status": "inferred",
+      "collection": "PPLUS Reporting / Performance",
+      "source_view": "reporting.exercise_completion_history",
+      "confidence": "medium"
+    },
+    {
+      "name": "Exercise Performance History",
+      "status": "inferred",
+      "collection": "PPLUS Reporting / Performance",
+      "source_view": "reporting.exercise_performance_history",
+      "confidence": "medium"
+    },
+    {
+      "name": "PR Events",
+      "status": "inferred",
+      "collection": "PPLUS Reporting / Performance",
+      "source_view": "reporting.pr_events",
+      "confidence": "medium"
+    },
+    {
+      "name": "Athlete Adherence Summary",
+      "status": "inferred",
+      "collection": "PPLUS Reporting / Ops",
+      "source_view": "reporting.athlete_adherence_summary",
+      "confidence": "medium"
+    },
+    {
+      "name": "Coach Activity Summary",
+      "status": "inferred",
+      "collection": "PPLUS Reporting / Ops",
+      "source_view": "reporting.coach_activity_summary",
+      "confidence": "medium"
+    }
+  ],
+  "dashboards": [
+    {
+      "name": "PPLUS Reporting - Workload & Fatigue",
+      "status": "known",
+      "collection": "PPLUS Reporting",
+      "cards": [
+        "Session Load History",
+        "Muscle Fatigue Summary",
+        "Muscle Load Event History"
+      ],
+      "layout_guidance": "Place workload trend and fatigue summary above the raw event-history drilldown.",
+      "evidence": [
+        "dispatch-repo-audit/repo-audit.md:167-171"
+      ]
+    },
+    {
+      "name": "PPLUS Workflow Monitor v2",
+      "status": "known",
+      "collection": "PPLUS Reporting",
+      "cards": [],
+      "layout_guidance": "Operational dashboard from prior repo-visible restore evidence, retained as supporting context rather than the primary lost workload/fatigue target.",
+      "evidence": [
+        "dispatch-rebuild-metabase-reporting/report.md:15-18"
+      ]
+    },
+    {
+      "name": "PPLUS Session Anomalies",
+      "status": "known",
+      "collection": "PPLUS Reporting",
+      "cards": [],
+      "layout_guidance": "Operational anomaly dashboard from prior repo-visible restore evidence, retained as supporting context rather than the primary lost workload/fatigue target.",
+      "evidence": [
+        "dispatch-rebuild-metabase-reporting/report.md:15-18"
+      ]
+    },
+    {
+      "name": "PPLUS Reporting - Sessions",
+      "status": "inferred",
+      "collection": "PPLUS Reporting",
+      "cards": [
+        "Completed Session Summary",
+        "Discarded Session Summary"
+      ],
+      "layout_guidance": "Overview cards first, exception and discard detail below.",
+      "confidence": "medium"
+    },
+    {
+      "name": "PPLUS Reporting - Performance & PRs",
+      "status": "inferred",
+      "collection": "PPLUS Reporting",
+      "cards": [
+        "Exercise Completion History",
+        "Exercise Performance History",
+        "PR Events"
+      ],
+      "layout_guidance": "Lead with PR and performance summaries, keep detailed history lower on the page.",
+      "confidence": "medium"
+    },
+    {
+      "name": "PPLUS Reporting - Adherence & Coach Ops",
+      "status": "inferred",
+      "collection": "PPLUS Reporting",
+      "cards": [
+        "Athlete Adherence Summary",
+        "Coach Activity Summary"
+      ],
+      "layout_guidance": "Pair athlete adherence with coach activity in a two-column layout.",
+      "confidence": "medium"
+    }
+  ],
+  "connection_assumptions": {
+    "database_id": 2,
+    "database_engine": "postgres",
+    "preferred_connectivity": "Use Supabase Session pooler credentials in Metabase unless direct connection is specifically required.",
+    "reader_role": "metabase_reader",
+    "required_schema_access": [
+      "reporting",
+      "public"
+    ],
+    "required_public_tables": [
+      "public.workout_sessions",
+      "public.workout_session_exercises",
+      "public.workout_session_sets",
+      "public.session_load_summaries",
+      "public.exercise_performance_snapshots",
+      "public.muscle_load_events",
+      "public.muscles",
+      "public.sub_muscles",
+      "public.program_workouts",
+      "public.program_workout_exercises",
+      "public.program_workout_sets",
+      "public.program_workout_display_states"
+    ],
+    "must_preserve": [
+      "The reporting layer should remain read-only for Metabase consumption.",
+      "The schema and views are designed to be rerunnable with create or replace semantics.",
+      "Completed-session filtering is a core reporting assumption for most workload and muscle views."
+    ],
+    "evidence": [
+      "docs/sql/apply-metabase-reporting-layer.sql:433-468",
+      "dispatch-rebuild-metabase-reporting/restore_metabase_reporting.py:15-19"
+    ]
+  },
+  "recoverability_notes": [
+    "No repo-visible Metabase export or dashboard serialization was recovered.",
+    "Exact dashcard coordinates, visualization settings, and filters are not provable from the repo.",
+    "The safest rebuild path is: restore SQL exactly, preserve PPLUS Reporting as root, restore workload/fatigue names exactly where evidence is explicit, and map the remaining views into straightforward one-view-per-question content."
+  ]
+}

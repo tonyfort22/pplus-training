@@ -1,0 +1,10 @@
+appId: host.exp.Exponent
+---
+- launchApp
+- assertVisible: "Athletes"
+- tapOn: "Invite athlete"
+- tapOn:
+    id: "invite-athlete-email-input"
+- inputText: "athlete@example.com"
+- tapOn: "Send invitation"
+- assertVisible: "The invitation was sent!"

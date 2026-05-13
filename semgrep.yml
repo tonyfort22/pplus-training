@@ -1,0 +1,46 @@
+rules:
+  - id: pplus-no-placeholder-analytics-strength-copy
+    message: Do not ship placeholder analytics copy on real metric surfaces without an explicit empty-state decision.
+    severity: WARNING
+    languages: [javascript, typescript]
+    paths:
+      include:
+        - /apps/mobile/src/**/*.js
+    pattern-either:
+      - pattern-regex: 'No logged strength sets yet'
+      - pattern-regex: '149 lb'
+      - pattern-regex: '120 lb x 8'
+    metadata:
+      category: correctness
+      rationale: Real analytics surfaces should not silently fall back to canned placeholder strength values.
+
+  - id: pplus-no-raw-desktop-clicks-in-automation
+    message: Do not add raw desktop click automation. Use approved structured tooling only.
+    severity: ERROR
+    languages: [python, bash, javascript, typescript]
+    paths:
+      include:
+        - '**/*'
+      exclude:
+        - /.github/**
+        - /docs/**
+    pattern-either:
+      - pattern-regex: 'cliclick\s'
+      - pattern-regex: 'CGEvent'
+    metadata:
+      category: policy
+      rationale: Anthony explicitly does not want raw desktop click automation fallbacks.
+
+  - id: pplus-require-real-metric-profile-in-exercise-detail
+    message: Exercise detail metric profiles should be explicit and model-driven.
+    severity: INFO
+    languages: [javascript, typescript]
+    paths:
+      include:
+        - /apps/mobile/src/train/exercise-detail-view-models.js
+    patterns:
+      - pattern-regex: '.'
+      - pattern-not-regex: 'metricProfileId'
+    metadata:
+      category: architecture
+      rationale: The shared detail shell must switch behavior through explicit metric profiles.
