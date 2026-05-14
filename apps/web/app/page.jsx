@@ -1,208 +1,191 @@
-const sections = [
-  { key: 'dashboard', label: 'Dashboard' },
-  { key: 'athletes', label: 'Athletes' },
-  { key: 'programs', label: 'Programs' },
-  { key: 'workouts', label: 'Workouts' },
-  { key: 'exercises', label: 'Exercises' },
-  { key: 'analytics', label: 'Analytics' }
-];
+import Image from 'next/image'
+import { ArrowRight, CircleCheckBig, Dumbbell, Flame, Mail, MapPin, Medal, Phone, Trophy, Users, Zap } from 'lucide-react'
+import LandingFeatureShowcase from './landing-feature-showcase'
+import { features, featuresSection, footer, hero, programs, programsSection } from './landing-content'
 
-const coachCards = [
-  {
-    title: 'Athletes',
-    value: '24',
-    detail: 'Active athletes managed through PPLUS Training'
-  },
-  {
-    title: 'Programs',
-    value: '12',
-    detail: 'Current assigned and draft training programs'
-  },
-  {
-    title: 'Sessions this week',
-    value: '87',
-    detail: 'Completed workout sessions ready for analytics'
-  }
-];
+const heroIcons = [
+  { id: 'top-left', icon: Dumbbell, className: 'landing-hero-icon-top-left' },
+  { id: 'mid-left', icon: Flame, className: 'landing-hero-icon-mid-left' },
+  { id: 'bottom-left', icon: Zap, className: 'landing-hero-icon-bottom-left' },
+  { id: 'top-right', icon: Trophy, className: 'landing-hero-icon-top-right' },
+  { id: 'mid-right', icon: Users, className: 'landing-hero-icon-mid-right' },
+  { id: 'bottom-right', icon: Medal, className: 'landing-hero-icon-bottom-right' },
+]
 
-function SectionPanel({ title, copy }) {
+const footerContactIcons = {
+  'map-pin': MapPin,
+  phone: Phone,
+  mail: Mail,
+}
+
+function FooterLinkColumn({ title, links }) {
   return (
-    <section style={styles.panel}>
-      <h2 style={styles.panelTitle}>{title}</h2>
-      <p style={styles.panelCopy}>{copy}</p>
-    </section>
-  );
+    <div className="landing-footer-column">
+      <h3>{title}</h3>
+      <ul>
+        {links.map((link) => (
+          <li key={`${title}-${link.label}`}>
+            <a href={link.href}>{link.label}</a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
 }
 
 export default function HomePage() {
+  const [heroLineOne, heroLineTwo] = hero.heading.split(' / ')
+
   return (
-    <main style={styles.page}>
-      <aside style={styles.sidebar}>
-        <div>
-          <p style={styles.brandEyebrow}>PPLUS Training</p>
-          <h1 style={styles.brandTitle}>Coach OS</h1>
-        </div>
-        <nav style={styles.nav}>
-          {sections.map((section) => (
-            <div key={section.key} style={styles.navItem}>
-              {section.label}
-            </div>
-          ))}
-        </nav>
-      </aside>
+    <main className="landing-page">
+      <header className="landing-header">
+        <div className="landing-shell landing-header-inner">
+          <a href="#hero" className="landing-header-brand" aria-label="PPLUS Training home">
+            <Image
+              src="/landing/brand/logo-ppht-landing.png"
+              alt="PPLUS Training logo"
+              width={290}
+              height={48}
+              priority
+              className="landing-logo landing-logo-header"
+            />
+          </a>
 
-      <section style={styles.content}>
-        <section style={styles.hero}>
-          <div>
-            <p style={styles.eyebrow}>Dashboard</p>
-            <h2 style={styles.heading}>Coach dashboard scaffold</h2>
-            <p style={styles.subheading}>
-              The athlete app now has a more meaningful Progress surface, so training execution and performance feedback are both represented in the shell.
-            </p>
+          <nav className="landing-header-nav" aria-label="Primary">
+            <a href="#features">Features</a>
+            <a href="#programs">Program</a>
+            <a href="#footer">Support</a>
+          </nav>
+
+          <div className="landing-header-actions">
+            <a href="#footer" className="landing-signin-link">Sign In</a>
+            <a className="landing-store-link landing-store-link-header" href="#programs" aria-label="View PPLUS Training programs">
+              <Image
+                src="/landing/brand/app-store-badge.svg"
+                alt="Download on the App Store"
+                width={154}
+                height={46}
+              />
+            </a>
           </div>
-        </section>
+        </div>
+      </header>
 
-        <section style={styles.cardGrid}>
-          {coachCards.map((card) => (
-            <article key={card.title} style={styles.metricCard}>
-              <p style={styles.metricLabel}>{card.title}</p>
-              <h3 style={styles.metricValue}>{card.value}</h3>
-              <p style={styles.metricDetail}>{card.detail}</p>
-            </article>
-          ))}
-        </section>
+      <section id="hero" className="landing-section landing-hero">
+        <div className="landing-shell landing-hero-inner">
+          <div className="landing-hero-icon-cloud" aria-hidden="true">
+            {heroIcons.map((icon) => {
+              const Icon = icon.icon
 
-        <section style={styles.twoColumn}>
-          <SectionPanel
-            title="Athletes"
-            copy="Athlete list, athlete detail, assigned programs, recent sessions, and progress review will live here."
-          />
-          <SectionPanel
-            title="Programs"
-            copy="Program authoring, week/day scheduling, and assignment flows will live here."
-          />
-          <SectionPanel
-            title="Workouts"
-            copy="Workout template creation and set composition will live here."
-          />
-          <SectionPanel
-            title="Exercises"
-            copy="Exercise library, muscle maps, and sub-muscle maps will live here."
-          />
-          <SectionPanel
-            title="Analytics"
-            copy="Fatigue, performance, compliance, and workload summaries will live here, aligned with the athlete Progress surface."
-          />
-        </section>
+              return (
+                <div key={icon.id} className={`landing-hero-icon-box ${icon.className}`}>
+                  <Icon />
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="landing-hero-copy">
+            <p className="landing-pill">
+              <Trophy className="landing-pill-icon" aria-hidden="true" />
+              {hero.pill}
+            </p>
+            <h1 className="landing-hero-title">
+              <span>{heroLineOne}</span>
+              <span className="landing-hero-title-accent">{heroLineTwo}</span>
+            </h1>
+            <p className="landing-hero-description">{hero.copy}</p>
+            <div className="landing-hero-actions">
+              <a className="landing-store-link" href="#programs" aria-label="View PPLUS Training programs">
+                <Image
+                  src="/landing/brand/app-store-badge.svg"
+                  alt="Download on the App Store"
+                  width={184}
+                  height={56}
+                />
+              </a>
+            </div>
+          </div>
+        </div>
       </section>
-    </main>
-  );
-}
 
-const styles = {
-  page: {
-    minHeight: '100vh',
-    background: '#08111f',
-    color: '#f8fafc',
-    display: 'grid',
-    gridTemplateColumns: '240px 1fr'
-  },
-  sidebar: {
-    background: '#020617',
-    borderRight: '1px solid #1e293b',
-    padding: '24px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '24px'
-  },
-  brandEyebrow: {
-    color: '#93c5fd',
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-    fontSize: '12px'
-  },
-  brandTitle: {
-    margin: '8px 0 0'
-  },
-  nav: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px'
-  },
-  navItem: {
-    padding: '12px 14px',
-    borderRadius: '12px',
-    background: '#0f172a',
-    color: '#dbeafe',
-    fontWeight: 600
-  },
-  content: {
-    padding: '32px'
-  },
-  hero: {
-    background: 'linear-gradient(135deg, #0f172a, #1d4ed8)',
-    borderRadius: '24px',
-    padding: '32px',
-    marginBottom: '24px'
-  },
-  eyebrow: {
-    color: '#93c5fd',
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-    fontSize: '12px'
-  },
-  heading: {
-    margin: '8px 0 12px',
-    fontSize: '40px'
-  },
-  subheading: {
-    maxWidth: '760px',
-    lineHeight: 1.5,
-    color: '#dbeafe'
-  },
-  cardGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-    gap: '16px',
-    marginBottom: '24px'
-  },
-  metricCard: {
-    background: '#0f172a',
-    border: '1px solid #1e293b',
-    borderRadius: '20px',
-    padding: '20px'
-  },
-  metricLabel: {
-    color: '#94a3b8',
-    marginBottom: '8px'
-  },
-  metricValue: {
-    fontSize: '32px',
-    margin: '0 0 8px'
-  },
-  metricDetail: {
-    color: '#cbd5e1',
-    lineHeight: 1.5,
-    margin: 0
-  },
-  twoColumn: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-    gap: '16px'
-  },
-  panel: {
-    background: '#0f172a',
-    border: '1px solid #1e293b',
-    borderRadius: '20px',
-    padding: '24px'
-  },
-  panelTitle: {
-    marginTop: 0,
-    marginBottom: '12px'
-  },
-  panelCopy: {
-    margin: 0,
-    color: '#dbeafe',
-    lineHeight: 1.7
-  }
-};
+      <section id="features" className="landing-section landing-features-section">
+        <div className="landing-shell landing-features-stack">
+          <div className="landing-section-heading landing-section-heading-centered landing-features-heading">
+            <p>{featuresSection.label}</p>
+            <h2>{featuresSection.heading}</h2>
+          </div>
+          <LandingFeatureShowcase features={features} />
+        </div>
+      </section>
+
+      <section id="programs" className="landing-section landing-programs-section">
+        <div className="landing-shell">
+          <div className="landing-section-heading landing-section-heading-centered landing-programs-heading">
+            <p>{programsSection.label}</p>
+            <h2>{programsSection.heading}</h2>
+          </div>
+
+          <div className="landing-program-grid">
+            {programs.map((program) => (
+              <article key={program.title} className="landing-program-card">
+                <span className="landing-program-icon" aria-hidden="true">
+                  <Dumbbell />
+                </span>
+                <h3>{program.title}</h3>
+                <p>{program.description}</p>
+                <ul className="landing-program-list">
+                  {program.bullets.map((bullet) => (
+                    <li key={`${program.title}-${bullet}`} className="landing-program-list-item">
+                      <CircleCheckBig className="landing-program-list-icon" aria-hidden="true" />
+                      <span>{bullet}</span>
+                    </li>
+                  ))}
+                </ul>
+                <a href="#footer" className="landing-program-link">
+                  <span>Learn more</span>
+                  <ArrowRight className="landing-program-link-icon" aria-hidden="true" />
+                </a>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <footer id="footer" className="landing-footer">
+        <div className="landing-shell landing-footer-grid">
+          <div className="landing-footer-brand-block">
+            <Image
+              src="/landing/brand/logo-ppht-landing.png"
+              alt="PPLUS Training logo"
+              width={290}
+              height={48}
+              className="landing-logo"
+            />
+            <p>{footer.brandCopy}</p>
+            <address>
+              {footer.contact.map((item) => {
+                const Icon = footerContactIcons[item.icon]
+
+                return (
+                  <span key={item.text} className="landing-footer-contact-item">
+                    <Icon className="landing-footer-contact-icon" aria-hidden="true" />
+                    <span>{item.text}</span>
+                  </span>
+                )
+              })}
+            </address>
+          </div>
+
+          <FooterLinkColumn title="Features" links={footer.featureLinks} />
+          <FooterLinkColumn title="Programs" links={footer.programLinks} />
+          <FooterLinkColumn title="Resources" links={footer.resourceLinks} />
+        </div>
+
+        <div className="landing-shell landing-footer-meta">
+          <p>{footer.copyright}</p>
+        </div>
+      </footer>
+    </main>
+  )
+}
