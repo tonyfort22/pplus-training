@@ -11,6 +11,7 @@ import {
 import Sidebar from '../ui/sidebar'
 import SidebarLayout from '../ui/sidebar-layout'
 import { adminBottomNavigation, adminNavigation, findAdminRoute } from './admin-navigation'
+import DashboardOverview from './dashboard-overview'
 
 const iconMap = {
   'calendar-range': CalendarRange,
@@ -29,7 +30,7 @@ function withIcons(groups = []) {
     return {
       ...group,
       icon: Icon ? <Icon className="h-4 w-4" /> : null,
-      items: group.items.map((item) => ({ ...item })),
+      items: group.items?.map((item) => ({ ...item })) ?? [],
     }
   })
 }
@@ -47,6 +48,7 @@ export default function AdminShell({ currentPath = '' }) {
   const pageTitle = currentItem.title
   const pageDescription = currentItem.description
   const sectionLabel = currentGroup.label
+  const isDashboardOverview = currentPath === '/admin/dashboard'
 
   return (
     <SidebarLayout
@@ -64,18 +66,24 @@ export default function AdminShell({ currentPath = '' }) {
       }
     >
       <main className="admin-shell-workspace">
-        <div className="admin-shell-workspace-header">
-          <span className="admin-shell-workspace-kicker">{sectionLabel}</span>
-          <h1 className="admin-shell-workspace-title">{pageTitle}</h1>
-          <p className="admin-shell-workspace-description">{pageDescription}</p>
-        </div>
+        {!isDashboardOverview && (
+          <div className="admin-shell-workspace-header">
+            <span className="admin-shell-workspace-kicker">{sectionLabel}</span>
+            <h1 className="admin-shell-workspace-title">{pageTitle}</h1>
+            <p className="admin-shell-workspace-description">{pageDescription}</p>
+          </div>
+        )}
 
-        <section className="admin-shell-workspace-panel">
-          <h2 className="admin-shell-workspace-panel-title">{pageTitle} workspace</h2>
-          <p className="admin-shell-workspace-panel-copy">
-            This route is wired into the real admin navigation system. Build the page content for this section here instead of falling back to a single mocked showcase screen.
-          </p>
-        </section>
+        {isDashboardOverview ? (
+          <DashboardOverview />
+        ) : (
+          <section className="admin-shell-workspace-panel">
+            <h2 className="admin-shell-workspace-panel-title">{pageTitle} workspace</h2>
+            <p className="admin-shell-workspace-panel-copy">
+              This route is wired into the real admin navigation system. Build the page content for this section here instead of falling back to a single mocked showcase screen.
+            </p>
+          </section>
+        )}
       </main>
     </SidebarLayout>
   )
