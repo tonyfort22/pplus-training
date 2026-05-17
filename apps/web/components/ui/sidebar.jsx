@@ -31,7 +31,8 @@ function SidebarGroup({ currentPath = '', group, secondary = false }) {
   const groupHref = group.href || group.defaultHref || group.items?.[0]?.href || '/'
   const hasActiveChild = group.items?.some((item) => currentPath === item.href)
   const isActive = group.current || isPathActive(currentPath, groupHref) || hasActiveChild
-  const isExpanded = isActive
+  const isExpanded = isActive && Boolean(group.items?.length)
+  const showChevron = Boolean(group.items?.length)
 
   return (
     <div className={['ui-sidebar-group', secondary ? 'ui-sidebar-group-secondary' : ''].filter(Boolean).join(' ')}>
@@ -45,7 +46,9 @@ function SidebarGroup({ currentPath = '', group, secondary = false }) {
       >
         {group.icon ? <span className="ui-sidebar-item-icon ui-sidebar-group-icon">{group.icon}</span> : <span className="ui-sidebar-group-spacer" />}
         <span className="ui-sidebar-group-label">{group.label}</span>
-        <ChevronRight className={['ui-sidebar-group-chevron', isExpanded ? 'ui-sidebar-group-chevron-expanded' : ''].filter(Boolean).join(' ')} />
+        {showChevron ? (
+          <ChevronRight className={['ui-sidebar-group-chevron', isExpanded ? 'ui-sidebar-group-chevron-expanded' : ''].filter(Boolean).join(' ')} />
+        ) : null}
       </Link>
 
       {isExpanded && group.items?.length ? (

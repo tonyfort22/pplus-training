@@ -5,38 +5,8 @@ export const adminNavigation = [
     icon: 'house',
     href: '/admin/dashboard',
     defaultHref: '/admin/dashboard',
-    title: 'Dashboard overview',
-    description: 'Review the coach dashboard, today view, alerts, and recent admin activity.',
-    items: [
-      {
-        id: 'dashboard-overview',
-        label: 'Overview',
-        href: '/admin/dashboard',
-        title: 'Dashboard overview',
-        description: 'Review the coach dashboard, today view, alerts, and recent admin activity.',
-      },
-      {
-        id: 'dashboard-today',
-        label: 'Today',
-        href: '/admin/dashboard/today',
-        title: 'Today',
-        description: 'Focus the dashboard on what needs attention today across athletes and programming.',
-      },
-      {
-        id: 'dashboard-alerts',
-        label: 'Alerts',
-        href: '/admin/dashboard/alerts',
-        title: 'Alerts',
-        description: 'Track admin-side flags, missed items, and issues that need coach follow-up.',
-      },
-      {
-        id: 'dashboard-recent',
-        label: 'Recent activity',
-        href: '/admin/dashboard/recent-activity',
-        title: 'Recent activity',
-        description: 'Review the latest admin actions, updates, and recent system activity.',
-      },
-    ],
+    title: 'Overview',
+    description: 'Here is an overview of your platform.',
   },
   {
     id: 'athletes',
@@ -289,14 +259,14 @@ const navigationGroups = [...adminNavigation, ...adminBottomNavigation]
 export function findAdminRoute(currentPath = '') {
   for (const group of navigationGroups) {
     if (group.href === currentPath) {
-      const overviewItem = group.items.find((item) => item.href === currentPath) ?? group.items[0]
+      const currentItem = group.items?.find((item) => item.href === currentPath) ?? group.items?.[0] ?? group
       return {
         currentGroup: group,
-        currentItem: overviewItem,
+        currentItem,
       }
     }
 
-    const itemMatch = group.items.find((item) => item.href === currentPath)
+    const itemMatch = group.items?.find((item) => item.href === currentPath)
     if (itemMatch) {
       return {
         currentGroup: group,
