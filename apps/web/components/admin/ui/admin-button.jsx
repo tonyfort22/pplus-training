@@ -1,7 +1,9 @@
 export default function AdminButton({
   children,
   className = '',
+  leadingIcon = null,
   size = 'default',
+  trailingIcon = null,
   type = 'button',
   variant = 'primary',
   ...props
@@ -24,7 +26,9 @@ export default function AdminButton({
 
   return (
     <button type={type} className={classes} {...props}>
-      {children}
+      {leadingIcon ? <span className="admin-button-icon admin-button-icon-leading">{leadingIcon}</span> : null}
+      <span className="admin-button-label">{children}</span>
+      {trailingIcon ? <span className="admin-button-icon admin-button-icon-trailing">{trailingIcon}</span> : null}
     </button>
   )
 }
