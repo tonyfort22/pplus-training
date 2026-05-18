@@ -627,6 +627,12 @@ button {
   justify-content: space-between;
 }
 
+.ui-dialog-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .ui-dialog-title,
 .ui-fieldset-legend,
 .ui-alert-title {
@@ -644,6 +650,14 @@ button {
   font-size: var(--ui-text-base);
   line-height: 1.55;
 }
+
+.ui-dialog-description {
+  margin: 0;
+  color: var(--ui-fg-muted);
+  font-size: var(--ui-text-base);
+  line-height: 1.55;
+}
+
 
 .ui-dialog-actions {
   margin-top: var(--ui-space-8);
@@ -1491,41 +1505,74 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   width: auto;
-  border-radius: var(--admin-input-radius);
-  background: var(--admin-accent-surface);
+  border: 1px solid var(--admin-accent-outline);
+  border-radius: 8px;
+  background: rgba(8, 27, 24, 0.9);
   color: var(--admin-accent);
-  font-size: 0.95rem;
+  font-size: 0.82rem;
   font-weight: 600;
   line-height: 1;
   cursor: pointer;
-  box-shadow: inset 0 0 0 1px var(--admin-accent-outline);
+  box-shadow: none;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.admin-button:hover {
+  background: rgba(12, 38, 34, 0.96);
+  border-color: rgba(59, 224, 175, 0.38);
+}
+
+.admin-button:focus-visible {
+  outline: 2px solid rgba(88, 198, 255, 0.36);
+  outline-offset: 2px;
+}
+
+.admin-button-label {
+  display: inline-flex;
+  align-items: center;
+}
+
+.admin-button-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.admin-button-icon > svg {
+  width: 14px;
+  height: 14px;
 }
 
 .admin-button-compact {
   height: var(--admin-button-height-compact);
   padding: 0 12px;
-  border-radius: 12px;
-  font-size: 0.82rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
 }
 
 .admin-button-default {
-  height: var(--admin-button-height-default);
-  padding: 0 16px;
-  border-radius: 14px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 8px;
 }
 
 .admin-button-prominent {
   height: var(--admin-button-height-prominent);
-  padding: 0 20px;
-  border-radius: 16px;
+  padding: 0 18px;
+  border-radius: 12px;
 }
 
 .admin-button-auth {
   height: var(--admin-button-height-auth);
   margin-top: 4px;
+  border: 0;
   border-radius: var(--admin-input-radius);
+  background: var(--admin-accent-surface);
+  color: var(--admin-accent);
+  box-shadow: inset 0 0 0 1px var(--admin-accent-outline);
   font-size: 22px;
 }
 
@@ -1878,6 +1925,1334 @@ button {
   font-size: 16px;
   font-weight: 600;
   text-decoration: none;
+}
+
+.admin-shell-athletes-view {
+  display: grid;
+  gap: 28px;
+}
+
+.admin-shell-athletes-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.admin-shell-athletes-page-title {
+  margin: 0;
+  color: #f4f7fb;
+  font-size: 1.9rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.admin-shell-athletes-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.admin-shell-athletes-top-search {
+  min-width: 360px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border: 1px solid rgba(39, 52, 78, 0.95);
+  border-radius: 14px;
+  background: #0d1727;
+}
+
+.admin-shell-athletes-top-search input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #dce6f8;
+  font-size: 0.84rem;
+  outline: none;
+}
+
+.admin-shell-athletes-top-search input::placeholder {
+  color: #7f91ad;
+}
+
+.admin-shell-athletes-top-search-icon {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  color: #8ea0bc;
+}
+
+.admin-shell-athletes-invite-button {
+  justify-self: end;
+}
+
+.admin-shell-athletes-invite-button-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.admin-shell-athletes-invite-dialog {
+  position: relative;
+  width: min(100%, 800px);
+  padding: 32px;
+  border: 1px solid rgba(34, 48, 74, 0.92);
+  border-radius: 10px;
+  background: #0b1120;
+  box-shadow: 0 28px 68px rgba(6, 12, 24, 0.52);
+}
+
+.admin-shell-athletes-invite-dialog .ui-dialog-title {
+  color: #f4f8ff;
+  font-size: 1.65rem;
+  font-weight: 800;
+}
+
+.admin-shell-athletes-invite-dialog-body {
+  display: grid;
+  gap: 30px;
+  margin-top: 14px;
+}
+
+.admin-shell-athletes-invite-dialog-copy {
+  margin: 0;
+  color: #8ea0bc;
+  font-size: 0.95rem;
+}
+
+.admin-shell-athletes-invite-dialog-close {
+  position: absolute;
+  top: 22px;
+  right: 22px;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: #8ea0bc;
+  cursor: pointer;
+}
+
+.admin-shell-athletes-invite-dialog-close-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.admin-shell-athletes-invite-dialog-illustration {
+  width: min(100%, 270px);
+  height: auto;
+  margin: 0 auto;
+  overflow: visible;
+}
+
+.admin-shell-athletes-invite-dialog-field {
+  display: grid;
+  gap: 10px;
+  color: #dce6f8;
+  font-size: 0.92rem;
+}
+
+.admin-shell-athletes-invite-dialog-field input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 16px;
+  border: 1px solid rgba(39, 52, 78, 0.95);
+  border-radius: 6px;
+  background: #0f1829;
+  color: #eef4ff;
+  outline: none;
+}
+
+.admin-shell-athletes-invite-dialog-field input::placeholder {
+  color: #7587a3;
+}
+
+.admin-shell-athletes-invite-dialog-submit {
+  justify-self: end;
+  min-height: 40px;
+}
+
+.admin-shell-athletes-table-card {
+  display: grid;
+  padding: 20px 28px 22px;
+  border: 1px solid rgba(38, 52, 78, 0.92);
+  border-radius: 28px;
+  background: rgba(10, 18, 33, 0.92);
+}
+
+.admin-shell-athletes-table-shell {
+  overflow: hidden;
+  border-radius: 18px;
+}
+
+.admin-shell-athletes-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.admin-shell-athletes-table thead th {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(34, 48, 74, 0.9);
+  color: #8fa0bc;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.admin-shell-athletes-table tbody td {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(24, 35, 56, 0.7);
+  color: #dce4f4;
+  font-size: 0.84rem;
+  vertical-align: middle;
+}
+
+.admin-shell-athletes-row-even {
+  background: rgba(15, 23, 38, 0.94);
+}
+
+.admin-shell-athletes-row-odd {
+  background: rgba(12, 19, 32, 0.96);
+}
+
+.admin-shell-athletes-checkbox-cell {
+  width: 54px;
+}
+
+.admin-shell-athletes-checkbox-cell input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid rgba(72, 88, 116, 0.95);
+  border-radius: 3px;
+  background: #111a2c;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 8px 8px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+}
+
+.admin-shell-athletes-checkbox-cell input:checked {
+  border-color: #3be0af;
+  background: #3be0af;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2.2 6.25 4.75 8.8 9.8 3.75' stroke='white' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  box-shadow: none;
+}
+
+.admin-shell-athletes-checkbox-cell input:focus-visible {
+  outline: 2px solid rgba(88, 198, 255, 0.34);
+  outline-offset: 2px;
+}
+
+.admin-shell-athletes-sort-label {
+  display: inline-flex;
+  align-items: center;
+}
+
+.admin-shell-athletes-sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.admin-shell-athletes-sort-icon {
+  width: 12px;
+  height: 12px;
+  color: #6f84a6;
+}
+
+.admin-shell-athletes-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-shell-athletes-name-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-shell-athletes-avatar {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #f4f7fb 0%, #cfd8e7 100%);
+  color: #0e1727;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.admin-shell-athletes-name-text,
+.admin-shell-athletes-program-cell,
+.admin-shell-athletes-last-active-cell {
+  color: #eef4ff;
+}
+
+.admin-shell-athletes-name-meta {
+  color: #8ea0bc;
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.admin-shell-athletes-workouts-cell {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-shell-athletes-workouts-label {
+  color: #eef4ff;
+  font-weight: 600;
+}
+
+.admin-shell-athletes-progress-track {
+  width: 108px;
+  height: 7px;
+  display: block;
+  border-radius: 999px;
+  background: rgba(32, 48, 72, 0.95);
+  overflow: hidden;
+}
+
+.admin-shell-athletes-progress-fill {
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+  background: #3be0af;
+}
+
+.admin-shell-athletes-status-badge {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: rgba(35, 120, 86, 0.22);
+  color: #66efbf;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.admin-shell-athletes-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.admin-shell-athletes-actions-cell {
+  width: 48px;
+  text-align: right;
+}
+
+.admin-shell-athletes-row-menu {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #8ea0bc;
+  cursor: pointer;
+}
+
+.admin-shell-athletes-row-menu-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.admin-shell-athletes-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  color: #8193af;
+  font-size: 0.8rem;
+}
+
+.admin-shell-athletes-pagination-count,
+.admin-shell-athletes-pagination-label {
+  color: #8193af;
+}
+
+.admin-shell-athletes-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-shell-athletes-rows-button,
+.admin-shell-athletes-pagination-arrow {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid rgba(39, 52, 78, 0.95);
+  border-radius: 12px;
+  background: #0d1727;
+  color: #dce6f8;
+}
+
+.admin-shell-athletes-pagination-arrow {
+  width: 34px;
+  padding: 0;
+}
+
+.admin-shell-athletes-rows-button-icon,
+.admin-shell-athletes-pagination-arrow-icon {
+  width: 14px;
+  height: 14px;
+  color: #8ea0bc;
+}
+
+.admin-shell-invites-view {
+  display: grid;
+  gap: 28px;
+}
+
+.admin-shell-invites-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.admin-shell-invites-page-title {
+  margin: 0;
+  color: #f4f7fb;
+  font-size: 1.9rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.admin-shell-invites-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.admin-shell-invites-top-search {
+  min-width: 360px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border: 1px solid rgba(39, 52, 78, 0.95);
+  border-radius: 14px;
+  background: #0d1727;
+}
+
+.admin-shell-invites-top-search input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #dce6f8;
+  font-size: 0.84rem;
+  outline: none;
+}
+
+.admin-shell-invites-top-search input::placeholder {
+  color: #7f91ad;
+}
+
+.admin-shell-invites-top-search-icon {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  color: #8ea0bc;
+}
+
+.admin-shell-invites-invite-button {
+  justify-self: end;
+}
+
+.admin-shell-invites-invite-button-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.admin-shell-invites-table-card {
+  display: grid;
+  padding: 20px 28px 22px;
+  border: 1px solid rgba(38, 52, 78, 0.92);
+  border-radius: 28px;
+  background: rgba(10, 18, 33, 0.92);
+}
+
+.admin-shell-invites-table-shell {
+  overflow: hidden;
+  border-radius: 18px;
+  background: rgba(9, 16, 29, 0.65);
+}
+
+.admin-shell-invites-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.admin-shell-invites-table thead th {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(34, 48, 74, 0.9);
+  color: #8fa0bc;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.admin-shell-invites-table tbody td {
+  padding: 15px 16px;
+  border-bottom: 1px solid rgba(24, 35, 56, 0.7);
+  color: #dce4f4;
+  font-size: 0.84rem;
+  vertical-align: middle;
+}
+
+.admin-shell-invites-row-even {
+  background: rgba(15, 23, 38, 0.94);
+}
+
+.admin-shell-invites-row-odd {
+  background: rgba(12, 19, 32, 0.96);
+}
+
+.admin-shell-invites-checkbox-cell {
+  width: 54px;
+}
+
+.admin-shell-invites-checkbox-cell input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid rgba(72, 88, 116, 0.95);
+  border-radius: 3px;
+  background: #111a2c;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 8px 8px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+}
+
+.admin-shell-invites-checkbox-cell input:checked {
+  border-color: #3be0af;
+  background: #3be0af;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2.2 6.25 4.75 8.8 9.8 3.75' stroke='white' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  box-shadow: none;
+}
+
+.admin-shell-invites-checkbox-cell input:focus-visible {
+  outline: 2px solid rgba(88, 198, 255, 0.34);
+  outline-offset: 2px;
+}
+
+.admin-shell-invites-sort-label {
+  display: inline-flex;
+  align-items: center;
+}
+
+.admin-shell-invites-sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.admin-shell-invites-sort-icon {
+  width: 12px;
+  height: 12px;
+  color: #6f84a6;
+}
+
+.admin-shell-invites-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-shell-invites-name-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-shell-invites-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #f4f7fb;
+  object-fit: cover;
+  padding: 4px;
+}
+
+.admin-shell-invites-name-text,
+.admin-shell-invites-join-date-cell {
+  color: #eef4ff;
+}
+
+.admin-shell-invites-name-meta {
+  color: #8ea0bc;
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.admin-shell-invites-role-chip {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid rgba(58, 73, 101, 0.95);
+  border-radius: 12px;
+  background: rgba(13, 23, 39, 0.95);
+  color: #dce6f8;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-shell-invites-role-chip-icon {
+  width: 14px;
+  height: 14px;
+  color: #8ea0bc;
+}
+
+.admin-shell-invites-status-badge {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: rgba(35, 120, 86, 0.22);
+  color: #66efbf;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.admin-shell-invites-status-badge-pending {
+  background: rgba(120, 88, 30, 0.24);
+  color: #f1c76a;
+}
+
+.admin-shell-invites-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.admin-shell-invites-status-dot-pending {
+  background: #f1c76a;
+}
+
+.admin-shell-invites-actions-cell {
+  width: 48px;
+  text-align: right;
+}
+
+.admin-shell-invites-row-menu {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #8ea0bc;
+  cursor: pointer;
+}
+
+.admin-shell-invites-row-menu-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.admin-shell-invites-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  color: #8193af;
+  font-size: 0.8rem;
+}
+
+.admin-shell-invites-pagination-count,
+.admin-shell-invites-pagination-label {
+  color: #8193af;
+}
+
+.admin-shell-invites-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-shell-invites-rows-button,
+.admin-shell-invites-pagination-arrow {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid rgba(39, 52, 78, 0.95);
+  border-radius: 12px;
+  background: #0d1727;
+  color: #dce6f8;
+}
+
+.admin-shell-invites-pagination-arrow {
+  width: 34px;
+  padding: 0;
+}
+
+.admin-shell-invites-rows-button-icon,
+.admin-shell-invites-pagination-arrow-icon {
+  width: 14px;
+  height: 14px;
+  color: #8ea0bc;
+}
+
+.admin-shell-groups-view {
+  display: grid;
+  gap: 28px;
+}
+
+.admin-shell-groups-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.admin-shell-groups-page-title {
+  margin: 0;
+  color: #f4f7fb;
+  font-size: 1.9rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.admin-shell-groups-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.admin-shell-groups-top-search {
+  min-width: 360px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border: 1px solid rgba(39, 52, 78, 0.95);
+  border-radius: 14px;
+  background: #0d1727;
+}
+
+.admin-shell-groups-top-search input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #dce6f8;
+  font-size: 0.84rem;
+  outline: none;
+}
+
+.admin-shell-groups-top-search input::placeholder {
+  color: #7f91ad;
+}
+
+.admin-shell-groups-top-search-icon {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  color: #8ea0bc;
+}
+
+.admin-shell-groups-create-button {
+  justify-self: end;
+}
+
+.admin-shell-groups-create-button-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.admin-shell-groups-table-card {
+  display: grid;
+  padding: 20px 28px 22px;
+  border: 1px solid rgba(38, 52, 78, 0.92);
+  border-radius: 28px;
+  background: rgba(10, 18, 33, 0.92);
+}
+
+.admin-shell-groups-table-shell {
+  overflow: hidden;
+  border-radius: 18px;
+  background: rgba(9, 16, 29, 0.65);
+}
+
+.admin-shell-groups-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.admin-shell-groups-table thead th {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(34, 48, 74, 0.9);
+  color: #8fa0bc;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.admin-shell-groups-table tbody td {
+  padding: 15px 16px;
+  border-bottom: 1px solid rgba(24, 35, 56, 0.7);
+  color: #dce4f4;
+  font-size: 0.84rem;
+  vertical-align: middle;
+}
+
+.admin-shell-groups-row-even {
+  background: rgba(15, 23, 38, 0.94);
+}
+
+.admin-shell-groups-row-odd {
+  background: rgba(12, 19, 32, 0.96);
+}
+
+.admin-shell-groups-checkbox-cell {
+  width: 54px;
+}
+
+.admin-shell-groups-checkbox-cell input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid rgba(72, 88, 116, 0.95);
+  border-radius: 3px;
+  background: #111a2c;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 8px 8px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+}
+
+.admin-shell-groups-checkbox-cell input:checked {
+  border-color: #3be0af;
+  background: #3be0af;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2.2 6.25 4.75 8.8 9.8 3.75' stroke='white' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  box-shadow: none;
+}
+
+.admin-shell-groups-checkbox-cell input:focus-visible {
+  outline: 2px solid rgba(88, 198, 255, 0.34);
+  outline-offset: 2px;
+}
+
+.admin-shell-groups-sort-label {
+  display: inline-flex;
+  align-items: center;
+}
+
+.admin-shell-groups-sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.admin-shell-groups-sort-icon {
+  width: 12px;
+  height: 12px;
+  color: #6f84a6;
+}
+
+.admin-shell-groups-name-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-shell-groups-name-text,
+.admin-shell-groups-created-date-cell {
+  color: #eef4ff;
+}
+
+.admin-shell-groups-name-meta {
+  color: #8ea0bc;
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.admin-shell-groups-access-chip {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid rgba(58, 73, 101, 0.95);
+  border-radius: 12px;
+  background: rgba(13, 23, 39, 0.95);
+  color: #dce6f8;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-shell-groups-access-chip-icon {
+  width: 14px;
+  height: 14px;
+  color: #8ea0bc;
+}
+
+.admin-shell-groups-status-badge {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: rgba(35, 120, 86, 0.22);
+  color: #66efbf;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.admin-shell-groups-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.admin-shell-groups-actions-cell {
+  width: 48px;
+  text-align: right;
+}
+
+.admin-shell-groups-row-menu {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #8ea0bc;
+  cursor: pointer;
+}
+
+.admin-shell-groups-row-menu-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.admin-shell-groups-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  color: #8193af;
+  font-size: 0.8rem;
+}
+
+.admin-shell-groups-pagination-count,
+.admin-shell-groups-pagination-label {
+  color: #8193af;
+}
+
+.admin-shell-groups-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-shell-groups-rows-button,
+.admin-shell-groups-pagination-arrow {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid rgba(39, 52, 78, 0.95);
+  border-radius: 12px;
+  background: #0d1727;
+  color: #dce6f8;
+}
+
+.admin-shell-groups-pagination-arrow {
+  width: 34px;
+  padding: 0;
+}
+
+.admin-shell-groups-rows-button-icon,
+.admin-shell-groups-pagination-arrow-icon {
+  width: 14px;
+  height: 14px;
+  color: #8ea0bc;
+}
+
+.admin-shell-rankings-view {
+  display: grid;
+  gap: 28px;
+}
+
+.admin-shell-rankings-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.admin-shell-rankings-page-title {
+  margin: 0;
+  color: #f4f7fb;
+  font-size: 1.9rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.admin-shell-rankings-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.admin-shell-rankings-top-search {
+  min-width: 360px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border: 1px solid rgba(39, 52, 78, 0.95);
+  border-radius: 14px;
+  background: #0d1727;
+}
+
+.admin-shell-rankings-top-search input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #dce6f8;
+  font-size: 0.84rem;
+  outline: none;
+}
+
+.admin-shell-rankings-top-search input::placeholder {
+  color: #7f91ad;
+}
+
+.admin-shell-rankings-top-search-icon {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  color: #8ea0bc;
+}
+
+.admin-shell-rankings-table-card {
+  display: grid;
+  padding: 20px 28px 22px;
+  border: 1px solid rgba(38, 52, 78, 0.92);
+  border-radius: 28px;
+  background: rgba(10, 18, 33, 0.92);
+}
+
+.admin-shell-rankings-table-shell {
+  overflow: hidden;
+  border-radius: 18px;
+  background: rgba(9, 16, 29, 0.65);
+}
+
+.admin-shell-rankings-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.admin-shell-rankings-table thead th {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(34, 48, 74, 0.9);
+  color: #8fa0bc;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.admin-shell-rankings-table tbody td {
+  padding: 15px 16px;
+  border-bottom: 1px solid rgba(24, 35, 56, 0.7);
+  color: #dce4f4;
+  font-size: 0.84rem;
+  vertical-align: middle;
+}
+
+.admin-shell-rankings-row-even {
+  background: rgba(15, 23, 38, 0.94);
+}
+
+.admin-shell-rankings-row-odd {
+  background: rgba(12, 19, 32, 0.96);
+}
+
+.admin-shell-rankings-checkbox-cell {
+  width: 54px;
+}
+
+.admin-shell-rankings-checkbox-cell input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid rgba(72, 88, 116, 0.95);
+  border-radius: 3px;
+  background: #111a2c;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 8px 8px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+}
+
+.admin-shell-rankings-checkbox-cell input:checked {
+  border-color: #3be0af;
+  background: #3be0af;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2.2 6.25 4.75 8.8 9.8 3.75' stroke='white' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  box-shadow: none;
+}
+
+.admin-shell-rankings-checkbox-cell input:focus-visible {
+  outline: 2px solid rgba(88, 198, 255, 0.34);
+  outline-offset: 2px;
+}
+
+.admin-shell-rankings-rank-cell {
+  width: 56px;
+  text-align: center;
+}
+
+.admin-shell-rankings-rank-badge-image {
+  width: 28px;
+  height: 28px;
+  display: inline-block;
+}
+
+.admin-shell-rankings-rank-number {
+  color: #dce6f8;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.admin-shell-rankings-sort-label {
+  display: inline-flex;
+  align-items: center;
+}
+
+.admin-shell-rankings-sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.admin-shell-rankings-sort-icon {
+  width: 12px;
+  height: 12px;
+  color: #6f84a6;
+}
+
+.admin-shell-rankings-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-shell-rankings-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #f4f7fb;
+  object-fit: cover;
+  padding: 4px;
+}
+
+.admin-shell-rankings-name-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-shell-rankings-name-text,
+.admin-shell-rankings-program-cell,
+.admin-shell-rankings-last-active-cell {
+  color: #eef4ff;
+}
+
+.admin-shell-rankings-name-meta {
+  color: #8ea0bc;
+  font-size: 0.72rem;
+  line-height: 1.3;
+}
+
+.admin-shell-rankings-workouts-cell {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-shell-rankings-workouts-label {
+  color: #eef4ff;
+  font-weight: 600;
+}
+
+.admin-shell-rankings-progress-track {
+  width: 108px;
+  height: 7px;
+  display: block;
+  border-radius: 999px;
+  background: rgba(32, 48, 72, 0.95);
+  overflow: hidden;
+}
+
+.admin-shell-rankings-progress-fill {
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+  background: #3be0af;
+}
+
+.admin-shell-rankings-status-badge {
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: rgba(35, 120, 86, 0.22);
+  color: #66efbf;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.admin-shell-rankings-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.admin-shell-rankings-actions-cell {
+  width: 48px;
+  text-align: right;
+}
+
+.admin-shell-rankings-row-menu {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #8ea0bc;
+  cursor: pointer;
+}
+
+.admin-shell-rankings-row-menu-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.admin-shell-rankings-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  color: #8193af;
+  font-size: 0.8rem;
+}
+
+.admin-shell-rankings-pagination-count,
+.admin-shell-rankings-pagination-label {
+  color: #8193af;
+}
+
+.admin-shell-rankings-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-shell-rankings-rows-button,
+.admin-shell-rankings-pagination-arrow {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid rgba(39, 52, 78, 0.95);
+  border-radius: 12px;
+  background: #0d1727;
+  color: #dce6f8;
+}
+
+.admin-shell-rankings-pagination-arrow {
+  width: 34px;
+  padding: 0;
+}
+
+.admin-shell-rankings-rows-button-icon,
+.admin-shell-rankings-pagination-arrow-icon {
+  width: 14px;
+  height: 14px;
+  color: #8ea0bc;
 }
 
 @media (max-width: 1100px) {

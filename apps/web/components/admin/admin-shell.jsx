@@ -11,7 +11,11 @@ import {
 import Sidebar from '../ui/sidebar'
 import SidebarLayout from '../ui/sidebar-layout'
 import { adminBottomNavigation, adminNavigation, findAdminRoute } from './admin-navigation'
+import AthletesListView from './athletes-list-view'
 import DashboardOverview from './dashboard-overview'
+import GroupsListView from './groups-list-view'
+import InvitesListView from './invites-list-view'
+import RankingsListView from './rankings-list-view'
 
 const iconMap = {
   'calendar-range': CalendarRange,
@@ -49,6 +53,10 @@ export default function AdminShell({ currentPath = '' }) {
   const pageDescription = currentItem.description
   const sectionLabel = currentGroup.label
   const isDashboardOverview = currentPath === '/admin/dashboard'
+  const isAllAthletesView = currentPath === '/admin/athletes'
+  const isAthleteInvitesView = currentPath === '/admin/athletes/invites'
+  const isAthleteGroupsView = currentPath === '/admin/athletes/groups'
+  const isAthleteRankingsView = currentPath === '/admin/athletes/rankings'
 
   return (
     <SidebarLayout
@@ -66,7 +74,7 @@ export default function AdminShell({ currentPath = '' }) {
       }
     >
       <main className="admin-shell-workspace">
-        {!isDashboardOverview && (
+        {!isDashboardOverview && !isAllAthletesView && !isAthleteInvitesView && !isAthleteGroupsView && !isAthleteRankingsView && (
           <div className="admin-shell-workspace-header">
             <span className="admin-shell-workspace-kicker">{sectionLabel}</span>
             <h1 className="admin-shell-workspace-title">{pageTitle}</h1>
@@ -76,6 +84,14 @@ export default function AdminShell({ currentPath = '' }) {
 
         {isDashboardOverview ? (
           <DashboardOverview />
+        ) : isAllAthletesView ? (
+          <AthletesListView />
+        ) : isAthleteInvitesView ? (
+          <InvitesListView />
+        ) : isAthleteGroupsView ? (
+          <GroupsListView />
+        ) : isAthleteRankingsView ? (
+          <RankingsListView />
         ) : (
           <section className="admin-shell-workspace-panel">
             <h2 className="admin-shell-workspace-panel-title">{pageTitle} workspace</h2>
