@@ -54,14 +54,14 @@ export const adminNavigation = [
     href: '/admin/programs',
     defaultHref: '/admin/programs',
     title: 'Program library',
-    description: 'Manage the program library, assignments, and reusable program templates.',
+    description: 'Browse the programs library table reference view.',
     items: [
       {
         id: 'programs-library',
         label: 'Library',
         href: '/admin/programs',
         title: 'Program library',
-        description: 'Manage the program library, assignments, and reusable program templates.',
+        description: 'Browse the programs library table reference view.',
       },
       {
         id: 'programs-assigned',
