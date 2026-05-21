@@ -1,208 +1,171 @@
-const sections = [
-  { key: 'dashboard', label: 'Dashboard' },
-  { key: 'athletes', label: 'Athletes' },
-  { key: 'programs', label: 'Programs' },
-  { key: 'workouts', label: 'Workouts' },
-  { key: 'exercises', label: 'Exercises' },
-  { key: 'analytics', label: 'Analytics' }
-];
+import AdminButton from '../components/admin/ui/admin-button'
+import AdminCard from '../components/admin/ui/admin-card'
+import AdminInput from '../components/admin/ui/admin-input'
+import AdminLabel from '../components/admin/ui/admin-label'
+import AdminPageShell from '../components/admin/ui/admin-page-shell'
 
-const coachCards = [
-  {
-    title: 'Athletes',
-    value: '24',
-    detail: 'Active athletes managed through PPLUS Training'
-  },
-  {
-    title: 'Programs',
-    value: '12',
-    detail: 'Current assigned and draft training programs'
-  },
-  {
-    title: 'Sessions this week',
-    value: '87',
-    detail: 'Completed workout sessions ready for analytics'
-  }
-];
-
-function SectionPanel({ title, copy }) {
+function EyeIcon() {
   return (
-    <section style={styles.panel}>
-      <h2 style={styles.panelTitle}>{title}</h2>
-      <p style={styles.panelCopy}>{copy}</p>
-    </section>
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12 18 18.75 12 18.75 2.25 12 2.25 12Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="12" r="3.1" fill="none" stroke="currentColor" strokeWidth="1.7" />
+    </svg>
   );
 }
 
 export default function HomePage() {
   return (
-    <main style={styles.page}>
-      <aside style={styles.sidebar}>
-        <div>
-          <p style={styles.brandEyebrow}>PPLUS Training</p>
-          <h1 style={styles.brandTitle}>Coach OS</h1>
-        </div>
-        <nav style={styles.nav}>
-          {sections.map((section) => (
-            <div key={section.key} style={styles.navItem}>
-              {section.label}
-            </div>
-          ))}
-        </nav>
-      </aside>
+    <AdminPageShell>
+      <div className="admin-login-pattern" aria-hidden="true" />
 
-      <section style={styles.content}>
-        <section style={styles.hero}>
-          <div>
-            <p style={styles.eyebrow}>Dashboard</p>
-            <h2 style={styles.heading}>Coach dashboard scaffold</h2>
-            <p style={styles.subheading}>
-              The athlete app now has a more meaningful Progress surface, so training execution and performance feedback are both represented in the shell.
-            </p>
+      <div className="admin-auth-frame">
+        <input
+          id="auth-theme-dark"
+          className="admin-auth-theme-input"
+          type="radio"
+          name="auth-theme"
+          defaultChecked
+        />
+        <input
+          id="auth-theme-light"
+          className="admin-auth-theme-input"
+          type="radio"
+          name="auth-theme"
+        />
+
+        <section className="admin-auth-marketing" aria-label="PPLUS Training marketing">
+          <div className="admin-auth-marketing-inner">
+            <div className="admin-auth-marketing-badge">
+              <img src="/admin/auth_trophy.svg" alt="" aria-hidden="true" />
+              <span>The Best Hockey Training App</span>
+            </div>
+
+            <div className="admin-auth-marketing-copy">
+              <p className="admin-auth-marketing-kicker">ELITE HOCKEY TRAINING</p>
+              <div className="admin-auth-marketing-headline">
+                <h2>Off-Ice Work</h2>
+                <h2 className="admin-auth-marketing-headline-accent">On-Ice Results</h2>
+              </div>
+              <p className="admin-auth-marketing-description">
+                PPLUS Training helps hockey athletes stay locked in off the ice with guided trainings, simple tracking, and a clear plan built for long-term development.
+              </p>
+            </div>
+
+            <img
+              className="admin-auth-app-store-badge"
+              src="/admin/auth_app_store_badge.svg"
+              alt="Download on the App Store"
+            />
           </div>
         </section>
 
-        <section style={styles.cardGrid}>
-          {coachCards.map((card) => (
-            <article key={card.title} style={styles.metricCard}>
-              <p style={styles.metricLabel}>{card.title}</p>
-              <h3 style={styles.metricValue}>{card.value}</h3>
-              <p style={styles.metricDetail}>{card.detail}</p>
-            </article>
-          ))}
-        </section>
+        <AdminCard
+          aria-label="Admin login"
+          className="admin-auth-signin-shell"
+          layout="auth"
+          padding="auth"
+        >
+          <div className="admin-auth-theme-toggle-row">
+            <img
+              className="admin-auth-theme-toggle"
+              src="/admin/auth_theme_toggle.svg"
+              alt=""
+              aria-hidden="true"
+            />
 
-        <section style={styles.twoColumn}>
-          <SectionPanel
-            title="Athletes"
-            copy="Athlete list, athlete detail, assigned programs, recent sessions, and progress review will live here."
-          />
-          <SectionPanel
-            title="Programs"
-            copy="Program authoring, week/day scheduling, and assignment flows will live here."
-          />
-          <SectionPanel
-            title="Workouts"
-            copy="Workout template creation and set composition will live here."
-          />
-          <SectionPanel
-            title="Exercises"
-            copy="Exercise library, muscle maps, and sub-muscle maps will live here."
-          />
-          <SectionPanel
-            title="Analytics"
-            copy="Fatigue, performance, compliance, and workload summaries will live here, aligned with the athlete Progress surface."
-          />
-        </section>
-      </section>
-    </main>
+            <img
+              className="admin-auth-theme-toggle admin-auth-theme-toggle-light"
+              src="/admin/auth_theme_toggle_light.svg"
+              alt=""
+              aria-hidden="true"
+            />
+
+            <label
+              className="admin-auth-theme-hit admin-auth-theme-hit-light"
+              htmlFor="auth-theme-light"
+              aria-label="Switch to light mode"
+            />
+
+            <label
+              className="admin-auth-theme-hit admin-auth-theme-hit-dark"
+              htmlFor="auth-theme-dark"
+              aria-label="Switch to dark mode"
+            />
+          </div>
+
+          <div className="admin-auth-signin-body">
+            <div className="admin-auth-signin-logo-row">
+              <img
+                className="admin-auth-signin-logo admin-auth-signin-logo-dark"
+                src="/admin/logo_pplus_training.svg"
+                alt="PPLUS Training"
+              />
+              <img
+                className="admin-auth-signin-logo admin-auth-signin-logo-light"
+                src="/admin/logo_ppht_light_mode.svg"
+                alt="PPLUS Training"
+              />
+            </div>
+
+            <div className="admin-auth-flow">
+              <div className="admin-auth-title-row">
+                <h1 className="admin-auth-title">Welcome back 👋🏻</h1>
+              </div>
+
+              <form className="admin-login-form">
+                <div className="admin-login-field-group">
+                  <AdminLabel className="admin-auth-sr-only" htmlFor="email">
+                    Email
+                  </AdminLabel>
+                  <AdminInput
+                    id="email"
+                    type="email"
+                    placeholder="Email"
+                  />
+                </div>
+
+                <div className="admin-login-field-group">
+                  <AdminLabel className="admin-auth-sr-only" htmlFor="password">
+                    Password
+                  </AdminLabel>
+                  <div className="admin-login-password-shell">
+                    <AdminInput
+                      id="password"
+                      className="admin-login-input-password"
+                      type="password"
+                      placeholder="Password"
+                    />
+                    <button
+                      type="button"
+                      className="admin-login-password-toggle"
+                      aria-label="Toggle password visibility"
+                    >
+                      <EyeIcon />
+                    </button>
+                  </div>
+                </div>
+
+                <AdminButton type="submit" size="default" className="admin-auth-submit-button w-full">
+                  <span>Sign in</span>
+                </AdminButton>
+              </form>
+            </div>
+
+            <div className="admin-login-forgot-row">
+              <a href="#" className="admin-login-forgot">
+                Forgot Password
+              </a>
+            </div>
+          </div>
+        </AdminCard>
+      </div>
+    </AdminPageShell>
   );
 }
-
-const styles = {
-  page: {
-    minHeight: '100vh',
-    background: '#08111f',
-    color: '#f8fafc',
-    display: 'grid',
-    gridTemplateColumns: '240px 1fr'
-  },
-  sidebar: {
-    background: '#020617',
-    borderRight: '1px solid #1e293b',
-    padding: '24px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '24px'
-  },
-  brandEyebrow: {
-    color: '#93c5fd',
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-    fontSize: '12px'
-  },
-  brandTitle: {
-    margin: '8px 0 0'
-  },
-  nav: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px'
-  },
-  navItem: {
-    padding: '12px 14px',
-    borderRadius: '12px',
-    background: '#0f172a',
-    color: '#dbeafe',
-    fontWeight: 600
-  },
-  content: {
-    padding: '32px'
-  },
-  hero: {
-    background: 'linear-gradient(135deg, #0f172a, #1d4ed8)',
-    borderRadius: '24px',
-    padding: '32px',
-    marginBottom: '24px'
-  },
-  eyebrow: {
-    color: '#93c5fd',
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-    fontSize: '12px'
-  },
-  heading: {
-    margin: '8px 0 12px',
-    fontSize: '40px'
-  },
-  subheading: {
-    maxWidth: '760px',
-    lineHeight: 1.5,
-    color: '#dbeafe'
-  },
-  cardGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-    gap: '16px',
-    marginBottom: '24px'
-  },
-  metricCard: {
-    background: '#0f172a',
-    border: '1px solid #1e293b',
-    borderRadius: '20px',
-    padding: '20px'
-  },
-  metricLabel: {
-    color: '#94a3b8',
-    marginBottom: '8px'
-  },
-  metricValue: {
-    fontSize: '32px',
-    margin: '0 0 8px'
-  },
-  metricDetail: {
-    color: '#cbd5e1',
-    lineHeight: 1.5,
-    margin: 0
-  },
-  twoColumn: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-    gap: '16px'
-  },
-  panel: {
-    background: '#0f172a',
-    border: '1px solid #1e293b',
-    borderRadius: '20px',
-    padding: '24px'
-  },
-  panelTitle: {
-    marginTop: 0,
-    marginBottom: '12px'
-  },
-  panelCopy: {
-    margin: 0,
-    color: '#dbeafe',
-    lineHeight: 1.7
-  }
-};
