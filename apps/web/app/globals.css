@@ -3871,7 +3871,8 @@ button {
   color: #8ea0bc;
 }
 
-.admin-shell-programs-library-view {
+.admin-shell-programs-library-view,
+.admin-shell-workouts-library-view {
   display: grid;
   gap: 28px;
 }

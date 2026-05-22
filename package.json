@@ -12,7 +12,7 @@
     "dev:mobile:phone": "pnpm --dir apps/mobile dev:phone",
     "dev:mobile:phone:warm": "pnpm --dir apps/mobile dev:phone:warm",
     "dev:web": "pnpm --dir apps/web dev",
-    "supabase:db:push": "supabase db push --workdir infra/supabase",
+    "supabase:db:push": "supabase db push --workdir infra",
     "supabase:functions:serve:invite": "supabase functions serve send-athlete-invitation --workdir infra/supabase --env-file infra/supabase/.env.example",
     "supabase:functions:deploy:invite": "supabase functions deploy send-athlete-invitation --workdir infra/supabase",
     "lint": "pnpm -r lint",

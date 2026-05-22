@@ -29,5 +29,17 @@ The backend should cover:
 3. apply migrations to Supabase once the project is connected
 4. add seed/import scripts once exercise and program import begins
 
+## CLI path note
+For this repo, the working `db push` command is:
+`supabase db push --workdir infra`
+
+That makes the CLI read migrations from:
+- `infra/supabase/migrations/`
+
+Using `--workdir infra/supabase` points the CLI one level too deep and makes it read from:
+- `infra/supabase/supabase/migrations/`
+
+That nested path was the source of the calendar migration confusion.
+
 ## Current priority
 Turn the documented schema into a real SQL foundation that can be applied to Supabase cleanly.

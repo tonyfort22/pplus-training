@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
   BadgeCheck,
   CalendarRange,
@@ -54,6 +55,8 @@ import GroupsListView from './groups-list-view'
 import InvitesListView from './invites-list-view'
 import ProgramsLibraryView from './programs-library-view'
 import RankingsListView from './rankings-list-view'
+import WorkoutsCalendarView from './workouts-calendar-view'
+import WorkoutsLibraryView from './workouts-library-view'
 
 const iconMap = {
   'calendar-range': CalendarRange,
@@ -76,6 +79,104 @@ const accountMenuItems = [
   { id: 'settings', label: 'Settings' },
   { id: 'keyboard-shortcuts', label: 'Keyboard shortcuts' },
 ]
+
+const SELECTED_ADMIN_ATHLETE_STORAGE_KEY = 'pplus-admin-selected-athlete-id'
+
+function buildAthleteQueryString(searchParams, athleteId) {
+  const nextSearchParams = new URLSearchParams(searchParams?.toString() || '')
+
+  if (athleteId) {
+    nextSearchParams.set('athleteId', athleteId)
+  } else {
+    nextSearchParams.delete('athleteId')
+  }
+
+  const queryString = nextSearchParams.toString()
+  return queryString ? `?${queryString}` : ''
+}
+
+function getAthleteInitials(athlete) {
+  if (!athlete) {
+    return 'AT'
+  }
+
+  const firstInitial = athlete.firstName?.trim()?.[0] || athlete.fullName?.trim()?.[0] || ''
+  const lastInitial = athlete.lastName?.trim()?.[0] || ''
+  const initials = `${firstInitial}${lastInitial}`.trim().toUpperCase()
+
+  return initials || 'AT'
+}
+
+function formatAthleteDateOfBirth(dateOfBirth) {
+  if (!dateOfBirth) {
+    return 'Date of birth unavailable'
+  }
+
+  const [year, month, day] = String(dateOfBirth).split('-').map((value) => Number.parseInt(value, 10))
+
+  if (!year || !month || !day) {
+    return 'Date of birth unavailable'
+  }
+
+  return `${day}/${String(month).padStart(2, '0')}/${year}`
+}
+
+function getAthleteAge(dateOfBirth) {
+  if (!dateOfBirth) {
+    return null
+  }
+
+  const [year, month, day] = String(dateOfBirth).split('-').map((value) => Number.parseInt(value, 10))
+
+  if (!year || !month || !day) {
+    return null
+  }
+
+  const today = new Date()
+  const birthDate = new Date(year, month - 1, day)
+
+  if (Number.isNaN(birthDate.getTime())) {
+    return null
+  }
+
+  let age = today.getFullYear() - birthDate.getFullYear()
+  const hasHadBirthdayThisYear = (
+    today.getMonth() > birthDate.getMonth()
+    || (today.getMonth() === birthDate.getMonth() && today.getDate() >= birthDate.getDate())
+  )
+
+  if (!hasHadBirthdayThisYear) {
+    age -= 1
+  }
+
+  return age >= 0 ? age : null
+}
+
+function formatAthleteBirthSummary(athlete) {
+  const formattedDateOfBirth = formatAthleteDateOfBirth(athlete?.dateOfBirth)
+  const age = getAthleteAge(athlete?.dateOfBirth)
+
+  if (age === null) {
+    return formattedDateOfBirth
+  }
+
+  return `${formattedDateOfBirth} (${age} year old)`
+}
+
+async function requestAdminAthletes() {
+  const response = await fetch('/api/admin/athletes', {
+    method: 'GET',
+    cache: 'no-store',
+  })
+
+  const payload = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    throw new Error(payload?.error || 'Failed to load admin athletes.')
+  }
+
+  return Array.isArray(payload.athletes) ? payload.athletes : []
+}
 
 function isPathActive(currentPath = '', href = '') {
   if (!href) return false
@@ -222,29 +323,49 @@ function SidebarBrandLogo() {
   )
 }
 
-function SidebarWorkspaceSwitcher() {
-  const workspaceSwitcher = {
-    name: 'PPLUS Training',
-    plan: 'Admin workspace',
-  }
+function SidebarWorkspaceSwitcher({
+  athletes = [],
+  athleteSearchQuery = '',
+  onAthleteSearchQueryChange = () => {},
+  selectedAthlete = null,
+  onSelectAthlete = () => {},
+  loadingState = 'idle',
+}) {
+  const filteredAthletes = athletes.filter((athlete) => {
+    const normalizedQuery = athleteSearchQuery.trim().toLowerCase()
 
-  const shortcutItems = [
-    { id: 'dashboard', label: 'Dashboard', shortcut: '⌘B' },
-    { id: 'new-program', label: 'New program', shortcut: '⌘N' },
-    { id: 'open-profile', label: 'Open profile', shortcut: '⌘P' },
-  ]
+    if (!normalizedQuery) {
+      return true
+    }
+
+    return athlete.fullName.toLowerCase().includes(normalizedQuery)
+      || athlete.shortcutCode.toLowerCase().includes(normalizedQuery)
+  })
+
+  const workspaceSwitcher = {
+    name: selectedAthlete?.fullName || 'Select athlete',
+    birthSummary: formatAthleteBirthSummary(selectedAthlete),
+  }
 
   return (
     <SidebarMenuItem>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <SidebarMenuButton size="lg" className="h-14 w-full rounded-2xl border border-[#24334A] bg-[#111D30] px-3 hover:bg-[#15233a] hover:text-[#eef4ff] group-data-[collapsible=icon]:hidden">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#0B1120] ring-1 ring-[#24334A]">
-              <img className="h-5 w-auto" src="/admin/logo_pplus_training.svg" alt="PPLUS Training" />
-            </span>
+            {selectedAthlete?.avatarUrl ? (
+              <img
+                src={selectedAthlete.avatarUrl}
+                alt={selectedAthlete.fullName}
+                className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-[#24334A]"
+              />
+            ) : (
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0B1120] ring-1 ring-[#24334A] text-[11px] font-semibold text-[#3BE0AF]">
+                {getAthleteInitials(selectedAthlete)}
+              </span>
+            )}
             <span className="grid min-w-0 flex-1 text-left text-[13px] leading-tight">
               <span className="truncate font-semibold text-[#EEF4FF]">{workspaceSwitcher.name}</span>
-              <span className="truncate text-[11px] text-[#8EA0BC]">{workspaceSwitcher.plan}</span>
+              <span className="truncate text-[11px] text-[#8EA0BC]">{workspaceSwitcher.birthSummary}</span>
             </span>
             <ChevronsUpDown className="ml-auto h-4 w-4 shrink-0 text-[#8EA0BC]" />
           </SidebarMenuButton>
@@ -254,18 +375,52 @@ function SidebarWorkspaceSwitcher() {
           side="right"
           align="start"
           sideOffset={12}
-          className="w-[220px] rounded-2xl border border-[#24334A] bg-[#111D30] p-2 text-[#DCE6F8] shadow-[0_16px_40px_rgba(0,0,0,0.45)]"
+          className="w-[280px] rounded-2xl border border-[#24334A] bg-[#111D30] p-2 text-[#DCE6F8] shadow-[0_16px_40px_rgba(0,0,0,0.45)]"
         >
-          <DropdownMenuLabel>Shortcuts</DropdownMenuLabel>
+          <DropdownMenuLabel>Athletes</DropdownMenuLabel>
+          <div className="px-2 pb-2 pt-1">
+            <Input
+              value={athleteSearchQuery}
+              onChange={(event) => onAthleteSearchQueryChange(event.target.value)}
+              placeholder="Search athlete or shortcut"
+              aria-label="Search athlete selector"
+              className="h-[35px] max-h-[35px] flex-1 rounded-[12px] border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
+            />
+          </div>
           <DropdownMenuSeparator />
-          {shortcutItems.map((item) => (
-            <DropdownMenuItem key={item.id}>
-              <span>{item.label}</span>
-              <DropdownMenuShortcut>{item.shortcut}</DropdownMenuShortcut>
+          {loadingState === 'loading' ? (
+            <DropdownMenuItem disabled>
+              <span>Loading athletes…</span>
             </DropdownMenuItem>
-          ))}
-          <DropdownMenuSeparator />
-          <DropdownMenuLabel className="pt-2 text-[11px] normal-case tracking-normal text-[#70809E]">Shortcut items</DropdownMenuLabel>
+          ) : filteredAthletes.length ? (
+            filteredAthletes.map((athlete) => (
+              <DropdownMenuItem key={athlete.id} onSelect={() => onSelectAthlete(athlete.id)} className="gap-3 rounded-xl px-3 py-2">
+                {athlete.avatarUrl ? (
+                  <img
+                    src={athlete.avatarUrl}
+                    alt={athlete.fullName}
+                    className="h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-[#24334A]"
+                  />
+                ) : (
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#0B1120] text-[11px] font-semibold text-[#3BE0AF] ring-1 ring-[#24334A]">
+                    {getAthleteInitials(athlete)}
+                  </span>
+                )}
+                <span className="grid min-w-0 flex-1 text-left leading-tight">
+                  <span className="truncate text-[13px] font-medium text-[#EEF4FF]">{athlete.fullName}</span>
+                  <span className="truncate text-[11px] text-[#8EA0BC]">{formatAthleteBirthSummary(athlete)}</span>
+                </span>
+                <div className="ml-auto flex items-center gap-2">
+                  <DropdownMenuShortcut className="ml-0 text-[11px] font-semibold tracking-[0.12em] text-[#8EA0BC]">{athlete.shortcutCode}</DropdownMenuShortcut>
+                  {selectedAthlete?.id === athlete.id ? <BadgeCheck className="h-4 w-4 shrink-0 text-[#3BE0AF]" /> : null}
+                </div>
+              </DropdownMenuItem>
+            ))
+          ) : (
+            <DropdownMenuItem disabled>
+              <span>No athletes match this search.</span>
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </SidebarMenuItem>
@@ -311,7 +466,15 @@ function SidebarAccountSwitcher() {
   )
 }
 
-function AdminDashboardSidebar({ currentPath = '' }) {
+function AdminDashboardSidebar({
+  athletes = [],
+  athleteSearchQuery = '',
+  currentPath = '',
+  loadingState = 'idle',
+  onAthleteSearchQueryChange = () => {},
+  onSelectAthlete = () => {},
+  selectedAthlete = null,
+}) {
   const topSections = [...adminNavigation, ...adminBottomNavigation]
 
   return (
@@ -327,7 +490,14 @@ function AdminDashboardSidebar({ currentPath = '' }) {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="gap-1">
-              <SidebarWorkspaceSwitcher />
+              <SidebarWorkspaceSwitcher
+                athletes={athletes}
+                athleteSearchQuery={athleteSearchQuery}
+                loadingState={loadingState}
+                onAthleteSearchQueryChange={onAthleteSearchQueryChange}
+                onSelectAthlete={onSelectAthlete}
+                selectedAthlete={selectedAthlete}
+              />
               {topSections.map((group) => (
                 <AdminSidebarNavItem key={group.id} group={group} currentPath={currentPath} />
               ))}
@@ -346,9 +516,114 @@ function AdminDashboardSidebar({ currentPath = '' }) {
 }
 
 export default function AdminShell({ currentPath = '', contentOverride = null }) {
+  const pathname = usePathname()
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [topbarSearchQuery, setTopbarSearchQuery] = useState('')
+  const [athleteSearchQuery, setAthleteSearchQuery] = useState('')
+  const [athleteLoadState, setAthleteLoadState] = useState('idle')
+  const [availableAthletes, setAvailableAthletes] = useState([])
+  const [selectedAthleteId, setSelectedAthleteId] = useState(() => searchParams.get('athleteId') || '')
   const resolvedRoute = findAdminRoute(currentPath)
   const shouldRenderContentOverride = Boolean(contentOverride)
+
+  useEffect(() => {
+    let active = true
+
+    async function loadAthletes() {
+      setAthleteLoadState('loading')
+
+      try {
+        const athletes = await requestAdminAthletes()
+
+        if (!active) {
+          return
+        }
+
+        setAvailableAthletes(athletes)
+        setAthleteLoadState('ready')
+      } catch (error) {
+        if (!active) {
+          return
+        }
+
+        setAvailableAthletes([])
+        setAthleteLoadState('error')
+      }
+    }
+
+    loadAthletes()
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  useEffect(() => {
+    const athleteIdFromUrl = searchParams.get('athleteId') || ''
+
+    if (athleteIdFromUrl && athleteIdFromUrl !== selectedAthleteId) {
+      setSelectedAthleteId(athleteIdFromUrl)
+    }
+  }, [searchParams, selectedAthleteId])
+
+  useEffect(() => {
+    if (!availableAthletes.length) {
+      return
+    }
+
+    const athleteIdFromUrl = searchParams.get('athleteId') || ''
+    const athleteExists = (athleteId) => availableAthletes.some((athlete) => athlete.id === athleteId)
+
+    if (athleteIdFromUrl && athleteExists(athleteIdFromUrl)) {
+      if (selectedAthleteId !== athleteIdFromUrl) {
+        setSelectedAthleteId(athleteIdFromUrl)
+      }
+      return
+    }
+
+    const storedAthleteId = typeof window !== 'undefined'
+      ? window.localStorage.getItem(SELECTED_ADMIN_ATHLETE_STORAGE_KEY) || ''
+      : ''
+
+    const fallbackAthleteId = athleteExists(storedAthleteId)
+      ? storedAthleteId
+      : availableAthletes[0]?.id || ''
+
+    if (!fallbackAthleteId) {
+      return
+    }
+
+    if (fallbackAthleteId !== selectedAthleteId) {
+      setSelectedAthleteId(fallbackAthleteId)
+    }
+
+    const nextQueryString = buildAthleteQueryString(searchParams, fallbackAthleteId)
+    router.replace(`${pathname}${nextQueryString}`, { scroll: false })
+  }, [availableAthletes, pathname, router, searchParams, selectedAthleteId])
+
+  useEffect(() => {
+    if (!selectedAthleteId || typeof window === 'undefined') {
+      return
+    }
+
+    window.localStorage.setItem(SELECTED_ADMIN_ATHLETE_STORAGE_KEY, selectedAthleteId)
+  }, [selectedAthleteId])
+
+  const selectedAthlete = useMemo(() => {
+    return availableAthletes.find((athlete) => athlete.id === selectedAthleteId) ?? null
+  }, [availableAthletes, selectedAthleteId])
+
+  function handleSelectAthlete(nextAthleteId) {
+    setSelectedAthleteId(nextAthleteId)
+
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(SELECTED_ADMIN_ATHLETE_STORAGE_KEY, nextAthleteId)
+    }
+
+    const nextQueryString = buildAthleteQueryString(searchParams, nextAthleteId)
+    router.replace(`${pathname}${nextQueryString}`, { scroll: false })
+  }
 
   if (!resolvedRoute) {
     return null
@@ -364,16 +639,26 @@ export default function AdminShell({ currentPath = '', contentOverride = null })
   const isAthleteGroupsView = currentPath === '/admin/athletes/groups'
   const isAthleteRankingsView = currentPath === '/admin/athletes/rankings'
   const isProgramsLibraryView = currentPath === '/admin/programs'
+  const isWorkoutsLibraryView = currentPath === '/admin/workouts'
+  const isWorkoutsCalendarView = currentPath === '/admin/workouts/calendar'
 
   return (
     <SidebarProvider defaultOpen>
-      <AdminDashboardSidebar currentPath={currentPath} />
+      <AdminDashboardSidebar
+        athletes={availableAthletes}
+        athleteSearchQuery={athleteSearchQuery}
+        currentPath={currentPath}
+        loadingState={athleteLoadState}
+        onAthleteSearchQueryChange={setAthleteSearchQuery}
+        onSelectAthlete={handleSelectAthlete}
+        selectedAthlete={selectedAthlete}
+      />
       <SidebarInset className="bg-[#0b1120] shadow-none md:m-0 md:rounded-none">
         <DashboardShellHeader searchQuery={topbarSearchQuery} onSearchQueryChange={setTopbarSearchQuery} />
 
         <div className="flex-1">
           <main className={['admin-shell-workspace', isDashboardOverview ? 'admin-shell-workspace-dashboard' : ''].filter(Boolean).join(' ')}>
-            {!isDashboardOverview && !isAllAthletesView && !isAthleteInvitesView && !isAthleteGroupsView && !isAthleteRankingsView && !isProgramsLibraryView && (
+            {!isDashboardOverview && !isAllAthletesView && !isAthleteInvitesView && !isAthleteGroupsView && !isAthleteRankingsView && !isProgramsLibraryView && !isWorkoutsLibraryView && !isWorkoutsCalendarView && (
               <div className="admin-shell-workspace-header">
                 <span className="admin-shell-workspace-kicker">{sectionLabel}</span>
                 <h1 className="admin-shell-workspace-title">{pageTitle}</h1>
@@ -397,6 +682,10 @@ export default function AdminShell({ currentPath = '', contentOverride = null })
               ) : (
                 <ProgramsLibraryView searchQuery={topbarSearchQuery} />
               )
+            ) : isWorkoutsLibraryView ? (
+              <WorkoutsLibraryView searchQuery={topbarSearchQuery} />
+            ) : isWorkoutsCalendarView ? (
+              <WorkoutsCalendarView selectedAthleteId={selectedAthleteId} />
             ) : (
               <section className="admin-shell-workspace-panel">
                 <h2 className="admin-shell-workspace-panel-title">{pageTitle} workspace</h2>
