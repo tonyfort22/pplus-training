@@ -270,6 +270,9 @@ create table if not exists program_workouts (
   notes text,
   status text not null check (status in ('scheduled', 'available', 'in_progress', 'completed', 'missed', 'skipped')),
   sort_order integer,
+  scheduled_date date,
+  scheduled_start_time time,
+  scheduled_end_time time,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
