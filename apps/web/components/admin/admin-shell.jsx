@@ -226,7 +226,7 @@ function AdminSidebarNavItem({ currentPath = '', group }) {
                   <SidebarMenuSubButton
                     asChild
                     isActive={itemCurrent}
-                    className="h-8 rounded-xl px-3 text-[12px] text-[#8ea0bc] data-[active=true]:bg-[#2d4c4c] data-[active=true]:font-medium data-[active=true]:text-[#3BE0AF] hover:bg-[#111d30] hover:text-[#eef4ff]"
+                    className="h-8 rounded-xl px-3 text-[12px] text-[#8ea0bc] bg-transparent data-[active=true]:bg-transparent data-[active=true]:font-medium data-[active=true]:text-[#3BE0AF] hover:bg-transparent hover:text-[#3BE0AF] active:bg-transparent"
                   >
                     <Link href={item.href}>{item.label}</Link>
                   </SidebarMenuSubButton>
@@ -479,7 +479,7 @@ function AdminDashboardSidebar({
   const topSections = [...adminNavigation, ...adminBottomNavigation]
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+    <Sidebar collapsible="icon" className="data-[side=left]:border-r data-[side=right]:border-l border-[#24334A]">
       <SidebarHeader className="gap-4 px-3 py-4 group-data-[collapsible=icon]:px-2">
         <SidebarBrandLogo />
       </SidebarHeader>

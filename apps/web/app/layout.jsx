@@ -1,5 +1,7 @@
 import { Geist } from 'next/font/google'
+import { NuqsAdapter } from 'nuqs/adapters/next/app'
 
+import { ToastProvider, ToastViewport } from '@/components/ui/base-toast'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
 import './globals.css';
@@ -18,7 +20,10 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" data-theme="dark" suppressHydrationWarning>
       <body className={`${geist.variable} isolate text-base antialiased`}>
-        <TooltipProvider>{children}</TooltipProvider>
+        <ToastProvider>
+          <TooltipProvider><NuqsAdapter>{children}</NuqsAdapter></TooltipProvider>
+          <ToastViewport />
+        </ToastProvider>
       </body>
     </html>
   );
