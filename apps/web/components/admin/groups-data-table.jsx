@@ -158,7 +158,7 @@ export default function GroupsDataTable({ searchQuery = '' }) {
   const [rowSelection, setRowSelection] = useState({})
   const [columnFilters, setColumnFilters] = useState([])
   const [columnVisibility, setColumnVisibility] = useState({})
-  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 5 })
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 })
 
   useEffect(() => {
     let cancelled = false
@@ -432,6 +432,11 @@ export default function GroupsDataTable({ searchQuery = '' }) {
   }
 
   const emptyStateMessage = loading ? 'Loading groups...' : error || 'No groups found.'
+  const pageSizeOptions = [5, 10, 20, 30]
+  const totalRows = table.getFilteredRowModel().rows.length
+  const pageStart = totalRows === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1
+  const pageEnd = Math.min((pagination.pageIndex + 1) * pagination.pageSize, totalRows)
+  const pageNumbers = Array.from({ length: table.getPageCount() }, (_, index) => index)
 
   return (
     <div className="admin-shell-athletes-table-example">
@@ -455,7 +460,7 @@ export default function GroupsDataTable({ searchQuery = '' }) {
       </div>
 
       <Dialog open={isCreateEditGroupDialogOpen} onOpenChange={setIsCreateEditGroupDialogOpen}>
-        <DialogContent className="admin-shell-athletes-invite-dialog border border-[#24334A] bg-[#0F1728] p-0 text-[#DCE6F8] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[720px]">
+        <DialogContent pageScrollable className="admin-shell-athletes-invite-dialog border border-[#24334A] bg-[#0F1728] p-0 text-[#DCE6F8] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[720px]">
           <div className="border-b border-[#24334A] px-6 py-5">
             <DialogHeader>
               <DialogTitle>{groupDialogMode === 'edit' ? 'Edit group' : 'Create a group'}</DialogTitle>
@@ -485,7 +490,7 @@ export default function GroupsDataTable({ searchQuery = '' }) {
                 <h3 className="text-sm font-medium text-[#EEF4FF]">Manage memberships</h3>
                 <p className="mt-1 text-sm text-[#8EA0BC]">Add or remove athlete memberships for this group.</p>
               </div>
-              <div className="max-h-[280px] overflow-y-auto rounded-[16px] border border-[#24334A] bg-[#111D30] p-3">
+              <div className="max-h-[280px] overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                 <div className="grid gap-2">
                   {athleteOptions.length ? athleteOptions.map((athlete) => {
                     const isChecked = groupFormValues.athleteIds.includes(athlete.id)
@@ -593,12 +598,47 @@ export default function GroupsDataTable({ searchQuery = '' }) {
         </Table>
       </div>
 
-      <div className="flex items-center justify-between py-4 text-sm text-[#8EA0BC]">
-        <div>{table.getFilteredRowModel().rows.length} group(s)</div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>Previous</Button>
-          <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>Next</Button>
-        </div>
+      <div className="flex items-center justify-end gap-3 py-4 text-sm text-[#8EA0BC]">
+        <span>Rows per page</span>
+        <Select value={String(pagination.pageSize)} onValueChange={(value) => table.setPageSize(Number(value))}>
+          <SelectTrigger className="h-9 w-[76px] rounded-[10px] !border-[#24334A] bg-[#111D30] px-3 text-sm text-[#DCE6F8]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {pageSizeOptions.map((option) => (
+              <SelectItem key={option} value={String(option)}>{option}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span>{pageStart} - {pageEnd} of {totalRows}</span>
+        <button
+          type="button"
+          aria-label="Go to previous page"
+          className="admin-shell-athletes-example-pagination-button"
+          onClick={() => table.previousPage()}
+          disabled={!table.getCanPreviousPage()}
+        >
+          ‹
+        </button>
+        {pageNumbers.map((pageNumber) => (
+          <button
+            key={`page-${pageNumber}`}
+            type="button"
+            className={`admin-shell-athletes-example-pagination-button ${pagination.pageIndex === pageNumber ? 'bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]' : ''}`}
+            onClick={() => table.setPageIndex(pageNumber)}
+          >
+            {pageNumber + 1}
+          </button>
+        ))}
+        <button
+          type="button"
+          aria-label="Go to next page"
+          className="admin-shell-athletes-example-pagination-button"
+          onClick={() => table.nextPage()}
+          disabled={!table.getCanNextPage()}
+        >
+          ›
+        </button>
       </div>
     </div>
   )
