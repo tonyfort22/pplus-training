@@ -223,7 +223,7 @@ create table if not exists workout_template_sets (
 
 create table if not exists programs (
   id uuid primary key default gen_random_uuid(),
-  athlete_id uuid not null references athlete_profiles(id) on delete cascade,
+  athlete_id uuid references athlete_profiles(id) on delete set null,
   coach_id uuid references coach_profiles(id) on delete set null,
   name text not null,
   description text,

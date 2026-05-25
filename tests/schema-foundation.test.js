@@ -121,6 +121,16 @@ for (const sqlName of ['schema-v1.sql', '0001_initial_schema.sql']) {
     expectColumn(sql, 'program_workouts', 'notes')
   })
 
+  test(`${sqlName} allows coach-authored programs to start unassigned`, () => {
+    const normalized = normalize(sql)
+    const tableStart = normalized.indexOf('create table if not exists programs (')
+    assert.notEqual(tableStart, -1, 'missing table programs')
+    const nextCreate = normalized.indexOf('create table if not exists ', tableStart + 1)
+    const tableBody = nextCreate === -1 ? normalized.slice(tableStart) : normalized.slice(tableStart, nextCreate)
+    assert.match(tableBody, / athlete_id uuid references athlete_profiles\(id\) on delete set null/)
+    assert.doesNotMatch(tableBody, / athlete_id uuid not null references athlete_profiles\(id\) on delete cascade/)
+  })
+
   test(`${sqlName} provisions public coach avatar storage with coach-owned write policies`, () => {
     const normalized = normalize(sql)
     assert.match(normalized, /insert into storage\.buckets \(id, name, public, file_size_limit, allowed_mime_types\) values \('coach-avatars', 'coach-avatars', true, 5242880, array\['image\/jpeg', 'image\/png', 'image\/webp'\]\)/)

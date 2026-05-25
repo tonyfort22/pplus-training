@@ -439,9 +439,9 @@ Layer 5 does **not** store the authoritative performed set history.
 Once a workout is started, Layer 6 becomes the execution source of truth.
 
 ## programs
-Assigned athlete programs.
+Coach-authored program plans. A program may start unassigned and later be attached to an athlete, while assigned athlete views still consume athlete-linked programs.
 - id
-- athlete_id
+- athlete_id nullable
 - coach_id
 - content_collection_id nullable
 - name
