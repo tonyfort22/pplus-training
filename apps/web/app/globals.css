@@ -3872,7 +3872,8 @@ button {
 }
 
 .admin-shell-programs-library-view,
-.admin-shell-workouts-library-view {
+.admin-shell-workouts-library-view,
+.admin-shell-exercises-library-view {
   display: grid;
   gap: 28px;
 }

@@ -10,8 +10,6 @@ import {
 } from '@tanstack/react-table'
 import { ChevronDown, MoreHorizontal } from 'lucide-react'
 
-import Avatar from '@/components/ui/avatar'
-import Badge from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import Checkbox from '@/components/ui/checkbox'
 import {
@@ -20,65 +18,19 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
-function getInitials(name) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('')
-}
-
-function NameCell({ name, email }) {
+function ExerciseCell({ name }) {
   return (
-    <div className="admin-shell-athletes-name-cell">
-      <Avatar alt={name} className="admin-shell-athletes-avatar" initials={getInitials(name)} />
-      <div className="admin-shell-athletes-name-copy">
-        <span className="admin-shell-athletes-name-text">{name}</span>
-        <span className="admin-shell-athletes-name-meta">{email}</span>
-      </div>
+    <div className="admin-shell-athletes-name-copy">
+      <span className="admin-shell-athletes-name-text">{name}</span>
     </div>
   )
 }
 
-function StatusCell({ status }) {
-  const tone = status === 'Accepted' ? 'success' : status === 'Pending' ? 'warning' : 'danger'
-  const className =
-    status === 'Accepted'
-      ? 'border-transparent bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/20 normal-case tracking-normal'
-      : status === 'Pending'
-        ? 'border-transparent bg-amber-500/15 text-amber-300 hover:bg-amber-500/20 normal-case tracking-normal'
-        : 'border-transparent bg-red-500/15 text-red-300 hover:bg-red-500/20 normal-case tracking-normal'
-
-  return (
-    <Badge tone={tone} className={className}>
-      {status}
-    </Badge>
-  )
-}
-
-function RoleCell({ role }) {
-  return (
-    <Badge tone="neutral" className="border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] normal-case tracking-normal">
-      {role}
-    </Badge>
-  )
-}
-
-function RowActionsCell({ onResendInvite = () => {}, onCancelInvite = () => {} }) {
+function RowActionsCell() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -89,52 +41,49 @@ function RowActionsCell({ onResendInvite = () => {}, onCancelInvite = () => {} }
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-        <DropdownMenuItem onSelect={onResendInvite}>Resend invite</DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={onCancelInvite}>Cancel invite</DropdownMenuItem>
+        <DropdownMenuItem>Edit</DropdownMenuItem>
+        <DropdownMenuItem>Delete</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
 }
 
-export default function InvitesDataTable({ searchQuery = '' }) {
-  const [invites, setInvites] = useState([])
+export default function ExercisesDataTable({ searchQuery = '' }) {
+  const [exercises, setExercises] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false)
-  const [isCancelInviteDialogOpen, setIsCancelInviteDialogOpen] = useState(false)
   const [rowSelection, setRowSelection] = useState({})
   const [columnFilters, setColumnFilters] = useState([])
   const [columnVisibility, setColumnVisibility] = useState({})
   const [pagination, setPagination] = useState({
     pageIndex: 0,
-    pageSize: 5,
+    pageSize: 10,
   })
 
   useEffect(() => {
     let cancelled = false
 
-    async function loadInvites() {
+    async function loadExercises() {
       setLoading(true)
       setError('')
 
       try {
-        const response = await fetch('/api/admin/invites', {
+        const response = await fetch('/api/admin/exercises', {
           cache: 'no-store',
         })
         const payload = await response.json()
 
         if (!response.ok) {
-          throw new Error(payload?.error || 'Failed to load invites.')
+          throw new Error(payload?.error || 'Failed to load exercises.')
         }
 
         if (!cancelled) {
-          setInvites(Array.isArray(payload?.invites) ? payload.invites : [])
+          setExercises(Array.isArray(payload?.exercises) ? payload.exercises : [])
         }
       } catch (loadError) {
         if (!cancelled) {
-          setInvites([])
-          setError(loadError?.message || 'Failed to load invites.')
+          setExercises([])
+          setError(loadError?.message || 'Failed to load exercises.')
         }
       } finally {
         if (!cancelled) {
@@ -143,7 +92,7 @@ export default function InvitesDataTable({ searchQuery = '' }) {
       }
     }
 
-    loadInvites()
+    loadExercises()
 
     return () => {
       cancelled = true
@@ -179,37 +128,50 @@ export default function InvitesDataTable({ searchQuery = '' }) {
       },
       {
         accessorKey: 'name',
-        header: 'Name',
-        meta: { label: 'Name' },
-        cell: ({ row }) => <NameCell name={row.original.name} email={row.original.email} />,
+        header: 'Exercise',
+        meta: { label: 'Exercise' },
+        cell: ({ row }) => <ExerciseCell name={row.original.name} />,
       },
       {
-        accessorKey: 'role',
-        header: 'Role',
-        meta: { label: 'Role' },
-        cell: ({ row }) => <RoleCell role={row.original.role} />,
+        accessorKey: 'muscle',
+        header: 'Muscle',
+        meta: { label: 'Muscle' },
+        cell: ({ row }) => <span className="admin-shell-athletes-program-cell">{row.original.muscle}</span>,
       },
       {
-        accessorKey: 'sent',
-        header: 'Sent',
-        meta: { label: 'Sent' },
-        cell: ({ row }) => <span className="admin-shell-athletes-last-active-cell">{row.original.sent}</span>,
+        accessorKey: 'equipment',
+        header: 'Equipment',
+        meta: { label: 'Equipment' },
       },
       {
-        accessorKey: 'status',
-        header: 'Status',
-        meta: { label: 'Status' },
-        cell: ({ row }) => <StatusCell status={row.original.status} />,
+        accessorKey: 'sets',
+        header: 'Sets',
+        meta: { label: 'Sets' },
+      },
+      {
+        accessorKey: 'reps',
+        header: 'Reps',
+        meta: { label: 'Reps' },
+      },
+      {
+        accessorKey: 'duration',
+        header: 'Duration',
+        meta: { label: 'Duration' },
+      },
+      {
+        accessorKey: 'distance',
+        header: 'Distance',
+        meta: { label: 'Distance' },
+      },
+      {
+        accessorKey: 'rest',
+        header: 'Rest',
+        meta: { label: 'Rest' },
       },
       {
         id: 'actions',
         header: () => <span className="sr-only">Actions</span>,
-        cell: () => (
-          <RowActionsCell
-            onResendInvite={() => setIsInviteDialogOpen(true)}
-            onCancelInvite={() => setIsCancelInviteDialogOpen(true)}
-          />
-        ),
+        cell: () => <RowActionsCell />,
         enableSorting: false,
         enableHiding: false,
       },
@@ -218,7 +180,7 @@ export default function InvitesDataTable({ searchQuery = '' }) {
   )
 
   const table = useReactTable({
-    data: invites,
+    data: exercises,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -239,7 +201,9 @@ export default function InvitesDataTable({ searchQuery = '' }) {
     table.getColumn('name')?.setFilterValue(searchQuery)
   }, [searchQuery, table])
 
-  const emptyStateMessage = loading ? 'Loading invites...' : error || 'No invites found.'
+  const emptyStateMessage = loading
+    ? 'Loading exercises...'
+    : error || 'No exercises found.'
 
   return (
     <div className="admin-shell-athletes-table-example">
@@ -267,84 +231,14 @@ export default function InvitesDataTable({ searchQuery = '' }) {
               ))}
           </DropdownMenuContent>
         </DropdownMenu>
+
         <Button
           type="button"
-          onClick={() => setIsInviteDialogOpen(true)}
           className="admin-shell-athletes-invite-button bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d] rounded-[12px] min-h-[40px]"
         >
-          Invite an athlete
+          Create exercise
         </Button>
       </div>
-
-      <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
-        <DialogContent className="admin-shell-athletes-invite-dialog border border-[#24334A] bg-[#0F1728] p-0 text-[#DCE6F8] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[560px]">
-          <div className="border-b border-[#24334A] px-6 py-5">
-            <DialogHeader>
-              <DialogTitle>Invite an athlete</DialogTitle>
-              <DialogDescription>Bring a coach-managed athlete into the workspace.</DialogDescription>
-            </DialogHeader>
-          </div>
-
-          <div className="grid gap-5 px-6 py-6">
-            <div className="grid gap-2">
-              <label className="text-sm font-medium text-[#DCE6F8]" htmlFor="invite-athlete-email">
-                Email address
-              </label>
-              <input
-                id="invite-athlete-email"
-                className="h-11 rounded-[12px] border border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] outline-none placeholder:text-[#70809E] focus:border-[#3BE0AF]"
-                placeholder="athlete@email.com"
-                type="email"
-              />
-            </div>
-          </div>
-
-          <DialogFooter className="border-t border-[#24334A] px-6 py-5 sm:justify-end gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-[12px] min-h-[40px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
-              onClick={() => setIsInviteDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              className="rounded-[12px] min-h-[40px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]"
-            >
-              Send invite
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isCancelInviteDialogOpen} onOpenChange={setIsCancelInviteDialogOpen}>
-        <DialogContent className="admin-shell-athletes-invite-dialog border border-[#24334A] bg-[#0F1728] p-0 text-[#DCE6F8] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[560px]">
-          <div className="px-6 py-5">
-            <DialogHeader>
-              <DialogTitle>Cancel invite</DialogTitle>
-              <DialogDescription>This invite will be canceled and removed from the invites list.</DialogDescription>
-            </DialogHeader>
-          </div>
-
-          <DialogFooter className="border-t border-[#24334A] px-6 py-5 sm:justify-end gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-[12px] min-h-[40px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
-              onClick={() => setIsCancelInviteDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              className="rounded-[12px] min-h-[40px] bg-red-500/90 text-white hover:bg-red-500"
-            >
-              Cancel invite
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <div className="admin-shell-athletes-table-shell">
         <Table className="admin-shell-athletes-table">
@@ -392,7 +286,7 @@ export default function InvitesDataTable({ searchQuery = '' }) {
       </div>
 
       <div className="flex items-center justify-between py-4 text-sm text-[#8EA0BC]">
-        <div>{table.getFilteredRowModel().rows.length} invite(s)</div>
+        <div>{table.getFilteredRowModel().rows.length} exercise(s)</div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
             Previous

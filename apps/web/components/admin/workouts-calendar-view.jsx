@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import {
   closestCenter,
   DndContext,
@@ -94,27 +95,28 @@ const ASSIGNABLE_WORKOUTS = [
   },
 ]
 
-function createAssignmentDraft(date = null, hour = '') {
+const DEBUG_DENSE_DAY_EVENTS = [
+  { id: 'debug-dense-day-1', title: 'Edge Warmup Flow', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), tone: 'green', startHour: '06:00', endHour: '07:00', workoutTemplateId: 'assignable-workout-1', typeLabel: 'Skating', persisted: false },
+  { id: 'debug-dense-day-2', title: 'Explosive Start Circuit', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), tone: 'blue', startHour: '06:00', endHour: '07:00', workoutTemplateId: 'assignable-workout-2', typeLabel: 'Speed', persisted: false },
+  { id: 'debug-dense-day-3', title: 'Crossover Timing Builder', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), tone: 'amber', startHour: '07:00', endHour: '08:00', workoutTemplateId: 'assignable-workout-3', typeLabel: 'Skill', persisted: false },
+  { id: 'debug-dense-day-4', title: 'Goal Line Escape Reps', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), tone: 'green', startHour: '07:00', endHour: '08:00', workoutTemplateId: 'assignable-workout-1', typeLabel: 'Skating', persisted: false },
+  { id: 'debug-dense-day-5', title: 'Blue Line Quick Feet', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), tone: 'blue', startHour: '08:00', endHour: '09:00', workoutTemplateId: 'assignable-workout-2', typeLabel: 'Speed', persisted: false },
+  { id: 'debug-dense-day-6', title: 'Inside Edge Recovery Block', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), tone: 'amber', startHour: '08:00', endHour: '09:00', workoutTemplateId: 'assignable-workout-3', typeLabel: 'Recovery', persisted: false },
+  { id: 'debug-dense-day-7', title: 'Neutral Zone Burst Ladder', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), tone: 'green', startHour: '09:00', endHour: '10:00', workoutTemplateId: 'assignable-workout-1', typeLabel: 'Skating', persisted: false },
+  { id: 'debug-dense-day-8', title: 'Transition Pace Builder', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), tone: 'blue', startHour: '09:00', endHour: '10:00', workoutTemplateId: 'assignable-workout-2', typeLabel: 'Pace', persisted: false },
+  { id: 'debug-dense-day-9', title: 'Overspeed Push Set', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), tone: 'amber', startHour: '10:00', endHour: '11:00', workoutTemplateId: 'assignable-workout-3', typeLabel: 'Speed', persisted: false },
+  { id: 'debug-dense-day-10', title: 'Corner Battle Footwork', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), tone: 'green', startHour: '10:00', endHour: '11:00', workoutTemplateId: 'assignable-workout-1', typeLabel: 'Skill', persisted: false },
+  { id: 'debug-dense-day-11', title: 'High Tempo Relay', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), tone: 'blue', startHour: '11:00', endHour: '12:00', workoutTemplateId: 'assignable-workout-2', typeLabel: 'Tempo', persisted: false },
+  { id: 'debug-dense-day-12', title: 'Stride Reset Cooldown', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), tone: 'amber', startHour: '12:00', endHour: '13:00', workoutTemplateId: 'assignable-workout-3', typeLabel: 'Recovery', persisted: false },
+]
+
+const DEBUG_DENSE_DAY_DATE = new Date(2026, 4, 18)
+
+function createAssignmentDraft(date = null, hour = '', selectedWorkoutId = ASSIGNABLE_WORKOUTS[0].id) {
   return {
     date,
     hour,
-    selectedWorkoutId: ASSIGNABLE_WORKOUTS[0].id,
-  }
-}
-
-function createEventDraft(event = null) {
-  if (!event) {
-    return {
-      selectedWorkoutId: ASSIGNABLE_WORKOUTS[0].id,
-      hour: '',
-    }
-  }
-
-  const matchedTemplate = ASSIGNABLE_WORKOUTS.find((workout) => workout.title === event.title && workout.tone === event.tone)
-
-  return {
-    selectedWorkoutId: matchedTemplate?.id ?? ASSIGNABLE_WORKOUTS[0].id,
-    hour: event.startHour,
+    selectedWorkoutId,
   }
 }
 
@@ -336,6 +338,48 @@ function getEventToneClasses(tone) {
   return 'border-[#29496B] bg-[#142235] text-[#8FC7FF]'
 }
 
+function getEventDotClasses(tone) {
+  if (tone === 'green') {
+    return 'bg-[#3BE0AF]'
+  }
+
+  if (tone === 'amber') {
+    return 'bg-[#F5D08A]'
+  }
+
+  return 'bg-[#8FC7FF]'
+}
+
+function getEventTypeLabel(event) {
+  if (event.typeLabel) {
+    return event.typeLabel
+  }
+
+  if (event.tone === 'green') {
+    return 'Skating'
+  }
+
+  if (event.tone === 'amber') {
+    return 'Recovery'
+  }
+
+  return 'Speed'
+}
+
+function buildDayPlaylistEventIds(events) {
+  const playlistKeys = new Set()
+
+  return events.flatMap((event) => {
+    const playlistKey = `${event.startHour ?? '06:00'}-${event.title.trim().toLowerCase()}`
+    if (playlistKeys.has(playlistKey)) {
+      return []
+    }
+
+    playlistKeys.add(playlistKey)
+    return [event.id]
+  })
+}
+
 function DraggableWeekEventCard({ event, onOpenEventDialog }) {
   const draggable = useDraggable({
     id: event.id,
@@ -357,30 +401,25 @@ function DraggableWeekEventCard({ event, onOpenEventDialog }) {
         transform,
         opacity: draggable.isDragging ? 0.55 : 1,
       }}
-      className="grid gap-2"
+      className="grid"
+      {...draggable.listeners}
+      {...draggable.attributes}
     >
       <button
         type="button"
         aria-label="Open event editor"
         className={[
-          'grid w-full gap-1 rounded-[16px] border px-3 py-3 text-left shadow-[0_10px_24px_rgba(0,0,0,0.18)] transition-opacity hover:opacity-95',
+          'grid w-full min-w-0 overflow-hidden gap-2 rounded-[18px] border px-4 py-4 text-left shadow-[0_10px_24px_rgba(0,0,0,0.18)] transition-all hover:-translate-y-[1px] hover:opacity-95',
           getEventToneClasses(event.tone),
         ].join(' ')}
         onClick={() => onOpenEventDialog(event.id)}
       >
-        <div className="text-xs font-semibold uppercase tracking-[0.12em]">{event.startHour}</div>
-        <div className="text-sm font-semibold leading-tight">{event.title}</div>
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.18em] opacity-80">{event.startHour}</div>
+          <div className="max-w-full rounded-full border border-current/20 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] opacity-80">Scheduled</div>
+        </div>
+        <div className="min-w-0 break-words text-[13px] font-semibold leading-[1.35] text-[#F8FBFF] line-clamp-2">{event.title}</div>
         <div className="text-xs opacity-80">Ends {event.endHour}</div>
-      </button>
-
-      <button
-        type="button"
-        aria-label="Drag workout"
-        className="rounded-[12px] border border-[#24334A] bg-[#0F1728] px-3 py-2 text-[11px] font-medium text-[#DCE6F8] transition-colors hover:border-[#3BE0AF] hover:bg-[#15233A]"
-        {...draggable.listeners}
-        {...draggable.attributes}
-      >
-        Drag workout
       </button>
     </div>
   )
@@ -425,52 +464,33 @@ function EventOverlayCard({ event }) {
   )
 }
 
-function StaticEventCard({ event, onOpenEventDialog, showMoveControls = false, moveEventByHours = null }) {
+function StaticEventCard({ event, onOpenEventDialog }) {
   return (
-    <div key={event.id} className="grid gap-2">
+    <div key={event.id} className="grid">
       <button
         type="button"
         aria-label="Open event editor"
         data-week-event={event.id}
         className={[
-          'grid w-full gap-1 rounded-[16px] border px-3 py-3 text-left shadow-[0_10px_24px_rgba(0,0,0,0.18)] transition-opacity hover:opacity-95',
+          'grid w-full min-w-0 overflow-hidden gap-1.5 rounded-[16px] border px-3 py-3 text-left shadow-[0_10px_24px_rgba(0,0,0,0.18)] transition-all hover:-translate-y-[1px] hover:opacity-95',
           getEventToneClasses(event.tone),
         ].join(' ')}
         onClick={() => onOpenEventDialog(event.id)}
       >
-        <div className="text-xs font-semibold uppercase tracking-[0.12em]">{event.startHour}</div>
-        <div className="text-sm font-semibold leading-tight">{event.title}</div>
-        <div className="text-xs opacity-80">Ends {event.endHour}</div>
+        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] opacity-80">{event.startHour}</div>
+        <div className="min-w-0 break-words text-[13px] font-semibold leading-[1.35] text-[#F8FBFF] line-clamp-2">{event.title}</div>
       </button>
-
-      {showMoveControls && moveEventByHours ? (
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            className="rounded-[12px] border border-[#24334A] bg-[#0F1728] px-2 py-2 text-[11px] font-medium text-[#DCE6F8] transition-colors hover:border-[#3BE0AF] hover:bg-[#15233A]"
-            onClick={() => moveEventByHours(event.id, -1)}
-          >
-            Move earlier
-          </button>
-          <button
-            type="button"
-            className="rounded-[12px] border border-[#24334A] bg-[#0F1728] px-2 py-2 text-[11px] font-medium text-[#DCE6F8] transition-colors hover:border-[#3BE0AF] hover:bg-[#15233A]"
-            onClick={() => moveEventByHours(event.id, 1)}
-          >
-            Move later
-          </button>
-        </div>
-      ) : null}
     </div>
   )
 }
 
-function renderMonthGrid(selectedDate, scheduledEvents, openEventDialog) {
+function renderMonthGrid(selectedDate, scheduledEvents, openEventDialog, openMonthOverflow) {
   const cells = createCalendarCells(selectedDate)
 
   return (
-    <div className="overflow-hidden rounded-[24px] border border-[#24334A] bg-[#111827] shadow-[0_18px_40px_rgba(0,0,0,0.26)]">
-      <div className="grid grid-cols-7 border-b border-[#24334A] bg-[#0F1728]">
+    <div className="overflow-x-auto rounded-[24px] border border-[#24334A] bg-[#111827] shadow-[0_18px_40px_rgba(0,0,0,0.26)]">
+      <div className="min-w-[720px]">
+        <div className="grid grid-cols-7 border-b border-[#24334A] bg-[#0F1728]">
         {WEEK_DAYS.map((day) => (
           <div key={day} className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">
             {day}
@@ -478,45 +498,59 @@ function renderMonthGrid(selectedDate, scheduledEvents, openEventDialog) {
         ))}
       </div>
 
-      <div className="grid grid-cols-7">
-        {cells.map((cell) => {
-          const events = getEventsForDate(cell.date, scheduledEvents)
-          const isToday = isSameDay(cell.date, new Date())
+        <div className="grid grid-cols-7">
+          {cells.map((cell) => {
+            const events = getEventsForDate(cell.date, scheduledEvents)
+            const isToday = isSameDay(cell.date, new Date())
 
-          return (
-            <div
-              key={cell.date.toISOString()}
-              className={[
-                'min-h-[148px] border-r border-b border-[#24334A] px-3 py-3',
-                cell.currentMonth ? 'bg-[#111827]' : 'bg-[#0F1728]/70',
-              ].join(' ')}
-            >
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <span
-                  className={[
-                    'inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold',
-                    cell.currentMonth ? 'text-[#EEF4FF]' : 'text-[#5D708F]',
-                    isToday ? 'bg-[#3BE0AF] text-[#0B1120]' : '',
-                  ].join(' ')}
-                >
-                  {cell.date.getDate()}
-                </span>
-              </div>
+            return (
+              <div
+                key={cell.date.toISOString()}
+                className={[
+                  'min-h-[148px] border-r border-b border-[#24334A] px-3 py-3',
+                  cell.currentMonth ? 'bg-[#111827]' : 'bg-[#0F1728]/70',
+                ].join(' ')}
+              >
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <span
+                    className={[
+                      'inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold',
+                      cell.currentMonth ? 'text-[#EEF4FF]' : 'text-[#5D708F]',
+                      isToday ? 'bg-[#3BE0AF] text-[#0B1120]' : '',
+                    ].join(' ')}
+                  >
+                    {cell.date.getDate()}
+                  </span>
+                </div>
 
-              <div className="grid gap-2">
-                {events.length
-                  ? events.map((event) => (
-                      <StaticEventCard key={event.id} event={event} onOpenEventDialog={openEventDialog} />
-                    ))
-                  : (
-                    <div className="rounded-[14px] border border-dashed border-[#24334A] px-3 py-2 text-xs text-[#5D708F]">
-                      No workout
-                    </div>
-                  )}
+                <div className="grid gap-2">
+                  {events.length
+                    ? (
+                      <>
+                        {events.slice(0, 2).map((event) => (
+                          <StaticEventCard key={event.id} event={event} onOpenEventDialog={openEventDialog} />
+                        ))}
+                        {events.length > 2 ? (
+                          <button
+                            type="button"
+                            aria-label="Open workout overflow for day"
+                            className="rounded-[14px] border border-dashed border-[#29496B] bg-[#142235] px-3 py-2 text-left text-xs font-medium text-[#8FC7FF] transition-colors hover:border-[#8FC7FF] hover:bg-[#19304A]"
+                            onClick={() => openMonthOverflow(cell.date)}
+                          >
+                            +{events.length - 2} more
+                          </button>
+                        ) : null}
+                      </>
+                    ) : (
+                      <div className="rounded-[14px] border border-dashed border-[#24334A] px-3 py-2 text-xs text-[#5D708F]">
+                        No workout
+                      </div>
+                    )}
+                </div>
               </div>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
     </div>
   )
@@ -533,12 +567,13 @@ function renderWeekGrid(
   const weekDays = createWeekDays(selectedDate)
 
   return (
-    <div className="overflow-hidden rounded-[24px] border border-[#24334A] bg-[#111827] shadow-[0_18px_40px_rgba(0,0,0,0.26)]">
-      <div className="border-b border-[#24334A] bg-[#0F1728] px-5 py-4">
-        <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">Weekly schedule</div>
-      </div>
+    <div className="overflow-x-auto rounded-[24px] border border-[#24334A] bg-[#111827] shadow-[0_18px_40px_rgba(0,0,0,0.26)]">
+      <div className="min-w-[720px]">
+        <div className="border-b border-[#24334A] bg-[#0F1728] px-5 py-4">
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">Weekly schedule</div>
+        </div>
 
-      <div className="grid grid-cols-[92px_repeat(7,minmax(0,1fr))] border-b border-[#24334A] bg-[#0F1728]">
+        <div className="grid grid-cols-[92px_repeat(7,minmax(0,1fr))] border-b border-[#24334A] bg-[#0F1728]">
         <div className="border-r border-[#24334A] px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">Time</div>
         {weekDays.map((day) => {
           const isToday = isSameDay(day, new Date())
@@ -552,73 +587,64 @@ function renderWeekGrid(
         })}
       </div>
 
-      <div className="grid">
-        {WEEK_HOURS.map((hour) => (
-          <div key={hour} className="grid grid-cols-[92px_repeat(7,minmax(0,1fr))]">
-            <div className="border-r border-b border-[#24334A] bg-[#0F1728] px-4 py-4 text-xs font-medium text-[#8EA0BC]">{hour}</div>
-            {weekDays.map((day) => {
-              const slotId = encodeWeekSlotId(day, hour)
-              const event = getEventsForDate(day, scheduledEvents).find((entry) => entry.startHour === hour)
-              const showDropHint = Boolean(activeDragEventId) && activeDragEventId !== event?.id
+        <div className="grid">
+          {WEEK_HOURS.map((hour) => (
+            <div key={hour} className="grid grid-cols-[92px_repeat(7,minmax(0,1fr))]">
+              <div className="border-r border-b border-[#24334A] bg-[#0F1728] px-4 py-4 text-xs font-medium text-[#8EA0BC]">{hour}</div>
+              {weekDays.map((day) => {
+                const slotId = encodeWeekSlotId(day, hour)
+                const event = getEventsForDate(day, scheduledEvents).find((entry) => entry.startHour === hour)
+                const showDropHint = Boolean(activeDragEventId) && activeDragEventId !== event?.id
 
-              return (
-                <div key={`${day.toISOString()}-${hour}`} className="border-r border-b border-[#24334A] px-3 py-3">
-                  <WeekSlotDropZone slotId={slotId} showDropHint={showDropHint}>
-                    {event ? (
-                      <div className="min-h-[92px]">
-                        <DraggableWeekEventCard event={event} onOpenEventDialog={openEventDialog} />
-                        <div className="mt-2 grid grid-cols-2 gap-2">
+                return (
+                  <div key={`${day.toISOString()}-${hour}`} className="border-r border-b border-[#24334A] px-3 py-3">
+                    <WeekSlotDropZone slotId={slotId} showDropHint={showDropHint}>
+                      {event ? (
+                        <div className="min-h-[92px]">
+                          <DraggableWeekEventCard event={event} onOpenEventDialog={openEventDialog} />
+                        </div>
+                      ) : (
+                        <div className="min-h-[92px]">
                           <button
                             type="button"
-                            className="rounded-[12px] border border-[#24334A] bg-[#0F1728] px-2 py-2 text-[11px] font-medium text-[#DCE6F8] transition-colors hover:border-[#3BE0AF] hover:bg-[#15233A]"
-                            onClick={() => moveEventByHours(event.id, -1)}
+                            aria-label="Open assignment composer"
+                            className="w-full rounded-[14px] border border-dashed border-[#24334A] px-3 py-2 text-left text-xs text-[#5D708F] transition-colors hover:border-[#3BE0AF] hover:text-[#DCE6F8]"
+                            onClick={() => openAssignmentDialog(day, hour)}
                           >
-                            Move earlier
-                          </button>
-                          <button
-                            type="button"
-                            className="rounded-[12px] border border-[#24334A] bg-[#0F1728] px-2 py-2 text-[11px] font-medium text-[#DCE6F8] transition-colors hover:border-[#3BE0AF] hover:bg-[#15233A]"
-                            onClick={() => moveEventByHours(event.id, 1)}
-                          >
-                            Move later
+                            Assign workout
                           </button>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="min-h-[92px]">
-                        <button
-                          type="button"
-                          aria-label="Open assignment composer"
-                          className="w-full rounded-[14px] border border-dashed border-[#24334A] px-3 py-2 text-left text-xs text-[#5D708F] transition-colors hover:border-[#3BE0AF] hover:text-[#DCE6F8]"
-                          onClick={() => openAssignmentDialog(day, hour)}
-                        >
-                          Assign workout
-                        </button>
-                      </div>
-                    )}
-                  </WeekSlotDropZone>
-                </div>
-              )
-            })}
-          </div>
-        ))}
+                      )}
+                    </WeekSlotDropZone>
+                  </div>
+                )
+              })}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )
 }
 
 export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
+  const searchParams = useSearchParams()
+  const forceDenseDayPreview = searchParams.get('debugDenseDay') === '1'
   const [selectedDate, setSelectedDate] = useState(() => new Date(2026, 4, 4))
   const [currentView, setCurrentView] = useState('month')
   const [scheduledEvents, setScheduledEvents] = useState(WORKOUT_EVENTS)
   const [hydrationState, setHydrationState] = useState('idle')
   const [isAssignmentDialogOpen, setIsAssignmentDialogOpen] = useState(false)
-  const [isEventDialogOpen, setIsEventDialogOpen] = useState(false)
   const [assignmentDraft, setAssignmentDraft] = useState(() => createAssignmentDraft())
   const [selectedEventId, setSelectedEventId] = useState(null)
+  const [isMonthOverflowDialogOpen, setIsMonthOverflowDialogOpen] = useState(false)
+  const [monthOverflowDate, setMonthOverflowDate] = useState(null)
+  const [dayPlaylistEventIds, setDayPlaylistEventIds] = useState([])
+  const [dayPlaylistRawCount, setDayPlaylistRawCount] = useState(0)
+  const [dayPlaylistIndex, setDayPlaylistIndex] = useState(0)
+  const [completedDayPlaylistEventIds, setCompletedDayPlaylistEventIds] = useState([])
   const [assignmentConflictMessage, setAssignmentConflictMessage] = useState('')
   const [eventConflictMessage, setEventConflictMessage] = useState('')
-  const [eventDraft, setEventDraft] = useState(() => createEventDraft())
   const [activeDragEventId, setActiveDragEventId] = useState(null)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
@@ -631,17 +657,61 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
     return ASSIGNABLE_WORKOUTS.find((workout) => workout.id === assignmentDraft.selectedWorkoutId) ?? ASSIGNABLE_WORKOUTS[0]
   }, [assignmentDraft.selectedWorkoutId])
 
-  const selectedEvent = useMemo(() => {
-    return scheduledEvents.find((event) => event.id === selectedEventId) ?? null
-  }, [scheduledEvents, selectedEventId])
+  const calendarEvents = useMemo(() => {
+    if (!forceDenseDayPreview) {
+      return scheduledEvents
+    }
 
-  const selectedEventTemplate = useMemo(() => {
-    return ASSIGNABLE_WORKOUTS.find((workout) => workout.id === eventDraft.selectedWorkoutId) ?? ASSIGNABLE_WORKOUTS[0]
-  }, [eventDraft.selectedWorkoutId])
+    const scheduledEventIds = new Set(scheduledEvents.map((event) => event.id))
+    return [...scheduledEvents, ...DEBUG_DENSE_DAY_EVENTS.filter((event) => !scheduledEventIds.has(event.id))]
+  }, [forceDenseDayPreview, scheduledEvents])
+
+  const selectedEvent = useMemo(() => {
+    return calendarEvents.find((event) => event.id === selectedEventId) ?? null
+  }, [calendarEvents, selectedEventId])
+
+  const monthOverflowEvents = useMemo(() => {
+    if (!monthOverflowDate) {
+      return []
+    }
+
+    return [...getEventsForDate(monthOverflowDate, calendarEvents)].sort((left, right) => {
+      const leftHour = left.startHour ?? '06:00'
+      const rightHour = right.startHour ?? '06:00'
+      return leftHour.localeCompare(rightHour)
+    })
+  }, [calendarEvents, monthOverflowDate])
+
+  const activeDayPlaylistEvents = useMemo(() => {
+    return dayPlaylistEventIds
+      .map((eventId) => calendarEvents.find((event) => event.id === eventId) ?? null)
+      .filter(Boolean)
+  }, [calendarEvents, dayPlaylistEventIds])
+
+  const unresolvedDayPlaylistEventIds = useMemo(() => {
+    return activeDayPlaylistEvents
+      .map((event) => event.id)
+      .filter((eventId) => !completedDayPlaylistEventIds.includes(eventId))
+  }, [activeDayPlaylistEvents, completedDayPlaylistEventIds])
+
+  const activeDayPlaylistDedupedCount = activeDayPlaylistEvents.length
+  const activeDayPlaylistRawCount = dayPlaylistRawCount
+  const isDayPlaylistActive = activeDayPlaylistEvents.length > 1
 
   const activeDragEvent = useMemo(() => {
-    return scheduledEvents.find((event) => event.id === activeDragEventId) ?? null
-  }, [activeDragEventId, scheduledEvents])
+    return calendarEvents.find((event) => event.id === activeDragEventId) ?? null
+  }, [activeDragEventId, calendarEvents])
+
+  useEffect(() => {
+    if (!forceDenseDayPreview) {
+      return
+    }
+
+    setCurrentView('month')
+    setSelectedDate(new Date(DEBUG_DENSE_DAY_DATE.getFullYear(), DEBUG_DENSE_DAY_DATE.getMonth(), 1))
+    setMonthOverflowDate(new Date(DEBUG_DENSE_DAY_DATE))
+    setIsMonthOverflowDialogOpen(true)
+  }, [forceDenseDayPreview])
 
   async function loadPersistedCalendarAssignments() {
     if (!selectedAthleteId) {
@@ -702,22 +772,83 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
     })
   }
 
+  function openMonthOverflow(date) {
+    setMonthOverflowDate(date)
+    setIsMonthOverflowDialogOpen(true)
+  }
+
+  function openAllDayWorkouts(events) {
+    const firstEvent = events[0]
+    if (!firstEvent) {
+      return
+    }
+
+    const eventIds = buildDayPlaylistEventIds(events)
+    setDayPlaylistEventIds(eventIds)
+    setDayPlaylistRawCount(events.length)
+    setCompletedDayPlaylistEventIds([])
+    setDayPlaylistIndex(0)
+    openEventDialog(firstEvent.id, { dayPlaylistEventIds: eventIds, dayPlaylistIndex: 0, dayPlaylistRawCount: events.length })
+  }
+
   function openAssignmentDialog(date, hour) {
+    setSelectedEventId(null)
+    setDayPlaylistEventIds([])
+    setDayPlaylistRawCount(0)
+    setCompletedDayPlaylistEventIds([])
+    setDayPlaylistIndex(0)
     setAssignmentDraft(createAssignmentDraft(date, hour))
     setAssignmentConflictMessage('')
+    setEventConflictMessage('')
     setIsAssignmentDialogOpen(true)
   }
 
-  function openEventDialog(eventId) {
-    const event = scheduledEvents.find((entry) => entry.id === eventId)
+  function openEventDialog(
+    eventId,
+    { dayPlaylistEventIds: nextPlaylistEventIds = [], dayPlaylistIndex: nextDayPlaylistIndex = 0, dayPlaylistRawCount: nextDayPlaylistRawCount = 0 } = {},
+  ) {
+    const event = calendarEvents.find((entry) => entry.id === eventId)
     if (!event) {
       return
     }
 
+    setIsMonthOverflowDialogOpen(false)
+    setMonthOverflowDate(null)
     setSelectedEventId(eventId)
-    setEventDraft(createEventDraft(event))
+    setDayPlaylistEventIds(nextPlaylistEventIds)
+    setDayPlaylistRawCount(nextDayPlaylistRawCount || nextPlaylistEventIds.length)
+    if (!nextPlaylistEventIds.length) {
+      setCompletedDayPlaylistEventIds([])
+    }
+    setDayPlaylistIndex(nextDayPlaylistIndex)
+    setAssignmentDraft(createAssignmentDraft(event.startDate, event.startHour, event.workoutTemplateId))
+    setAssignmentConflictMessage('')
     setEventConflictMessage('')
-    setIsEventDialogOpen(true)
+    setIsAssignmentDialogOpen(true)
+  }
+
+  function goToDayPlaylistEvent(nextIndex) {
+    const nextEvent = activeDayPlaylistEvents[nextIndex]
+    if (!nextEvent) {
+      return
+    }
+
+    setDayPlaylistIndex(nextIndex)
+    setSelectedEventId(nextEvent.id)
+    setAssignmentDraft(createAssignmentDraft(nextEvent.startDate, nextEvent.startHour, nextEvent.workoutTemplateId))
+    setAssignmentConflictMessage('')
+    setEventConflictMessage('')
+  }
+
+  function reopenMonthOverflowFromPlaylist() {
+    const overflowDate = selectedEvent?.startDate ?? monthOverflowDate
+    if (!overflowDate) {
+      return
+    }
+
+    setIsAssignmentDialogOpen(false)
+    setMonthOverflowDate(new Date(overflowDate))
+    setIsMonthOverflowDialogOpen(true)
   }
 
   async function moveEventToSlot(eventId, date, hour) {
@@ -828,36 +959,36 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
     }
   }
 
-  async function updateScheduledEvent() {
-    if (!selectedEvent || !eventDraft.hour) {
-      return
+  async function updateScheduledEvent({ advanceToNext = false } = {}) {
+    if (!selectedEvent || !assignmentDraft.hour) {
+      return false
     }
 
     if (hydrationState !== 'ready') {
       setEventConflictMessage(getPersistenceUnavailableMessage())
-      return
+      return false
     }
 
     if (
       hasSchedulingConflict({
         events: scheduledEvents,
         date: selectedEvent.startDate,
-        startHour: eventDraft.hour,
+        startHour: assignmentDraft.hour,
         excludeEventId: selectedEvent.id,
       })
     ) {
       setEventConflictMessage('Another workout is already scheduled in this slot.')
-      return
+      return false
     }
 
     try {
       const updatedEvent = await updatePersistedAssignment({
         ...selectedEvent,
-        title: selectedEventTemplate.title,
-        tone: selectedEventTemplate.tone,
-        startHour: eventDraft.hour,
-        endHour: getEventEndHour(eventDraft.hour, selectedEventTemplate.durationHours),
-        workoutTemplateId: selectedEventTemplate.id,
+        title: selectedTemplate.title,
+        tone: selectedTemplate.tone,
+        startHour: assignmentDraft.hour,
+        endHour: getEventEndHour(assignmentDraft.hour, selectedTemplate.durationHours),
+        workoutTemplateId: selectedTemplate.id,
       })
       setScheduledEvents((currentEvents) => currentEvents.map((event) => {
         if (event.id !== updatedEvent.id) {
@@ -867,12 +998,36 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
         return updatedEvent
       }))
       setEventConflictMessage('')
-      setIsEventDialogOpen(false)
+      setAssignmentConflictMessage('')
+      setCompletedDayPlaylistEventIds((currentIds) => currentIds.includes(selectedEvent.id) ? currentIds : [...currentIds, selectedEvent.id])
+
+      if (advanceToNext && dayPlaylistIndex < activeDayPlaylistEvents.length - 1) {
+        const nextUnresolvedEventId = unresolvedDayPlaylistEventIds.find((eventId) => eventId !== selectedEvent.id)
+        const nextEventId = nextUnresolvedEventId ?? activeDayPlaylistEvents[dayPlaylistIndex + 1]?.id ?? null
+        if (nextEventId) {
+          const nextIndex = activeDayPlaylistEvents.findIndex((event) => event.id === nextEventId)
+          const nextEvent = activeDayPlaylistEvents[nextIndex]
+          if (nextEvent && nextIndex >= 0) {
+            setSelectedEventId(nextEvent.id)
+            setDayPlaylistIndex(nextIndex)
+            setAssignmentDraft(createAssignmentDraft(nextEvent.startDate, nextEvent.startHour, nextEvent.workoutTemplateId))
+            return true
+          }
+        }
+      }
+
       setSelectedEventId(null)
-      setEventDraft(createEventDraft())
+      setAssignmentDraft(createAssignmentDraft())
+      setIsAssignmentDialogOpen(false)
+      return true
     } catch (error) {
       setEventConflictMessage(error?.message || 'Failed to persist scheduled workout changes.')
+      return false
     }
+  }
+
+  async function saveAndAdvanceDayPlaylist() {
+    await updateScheduledEvent({ advanceToNext: true })
   }
 
   async function deleteScheduledEvent() {
@@ -889,9 +1044,10 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
       await deletePersistedAssignment(selectedEvent.id)
       setScheduledEvents((currentEvents) => currentEvents.filter((event) => event.id !== selectedEvent.id))
       setEventConflictMessage('')
-      setIsEventDialogOpen(false)
+      setAssignmentConflictMessage('')
       setSelectedEventId(null)
-      setEventDraft(createEventDraft())
+      setAssignmentDraft(createAssignmentDraft())
+      setIsAssignmentDialogOpen(false)
     } catch (error) {
       setEventConflictMessage(error?.message || 'Failed to delete persisted workout assignment.')
     }
@@ -924,14 +1080,20 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
   return (
     <>
       <section className="admin-shell-workouts-calendar-view grid gap-5" aria-label="Workout calendar admin view">
-        <div className="admin-shell-workouts-calendar-header grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
-          <div className="grid gap-1">
+        <div className="admin-shell-workouts-calendar-header grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
+          <div className="min-w-0 grid gap-1">
             <h1 className="admin-shell-athletes-page-title">Workout Calendar</h1>
             <p className="text-sm text-[#8EA0BC]">
               {currentView === 'week'
                 ? 'Review scheduled workouts and open slots in a weekly schedule.'
                 : 'Review scheduled workouts and upcoming workload in a month view.'}
             </p>
+            {forceDenseDayPreview ? (
+              <div className="mt-2 inline-flex w-fit items-center gap-2 rounded-full border border-[#6A4A1A] bg-[#3D2B12] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#F5D08A]">
+                <span>Preview mode</span>
+                <span className="rounded-full border border-current/25 px-2 py-0.5 text-[10px]">Debug dense day</span>
+              </div>
+            ) : null}
             {eventConflictMessage ? (
               <div className="mt-2 rounded-[14px] border border-[#6A4A1A] bg-[#3D2B12] px-3 py-2 text-sm text-[#F5D08A]">
                 {eventConflictMessage}
@@ -939,77 +1101,187 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
             ) : null}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-[12px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
-              onClick={() => setSelectedDate(new Date(2026, 4, 4))}
-            >
-              Today
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-[12px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
-              onClick={() => shiftDate(-1)}
-            >
-              Previous
-            </Button>
-            <div className="min-w-[220px] text-center text-sm font-semibold text-[#EEF4FF]">{rangeLabel}</div>
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-[12px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
-              onClick={() => shiftDate(1)}
-            >
-              Next
-            </Button>
-            <div className="flex items-center gap-1 rounded-[14px] border border-[#24334A] bg-[#111D30] p-1">
-              <button
+          <div className="grid w-full gap-3 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center xl:w-auto justify-self-start xl:justify-self-end">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
                 type="button"
-                className={[
-                  'rounded-[10px] px-3 py-2 text-sm font-medium transition-colors',
-                  currentView === 'month' ? 'bg-[#3BE0AF] text-[#0B1120]' : 'text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]',
-                ].join(' ')}
-                onClick={() => setCurrentView('month')}
+                variant="outline"
+                className="rounded-[12px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
+                onClick={() => setSelectedDate(new Date(2026, 4, 4))}
               >
-                Month
-              </button>
-              <button
+                Today
+              </Button>
+              <Button
                 type="button"
-                className={[
-                  'rounded-[10px] px-3 py-2 text-sm font-medium transition-colors',
-                  currentView === 'week' ? 'bg-[#3BE0AF] text-[#0B1120]' : 'text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]',
-                ].join(' ')}
-                onClick={() => setCurrentView('week')}
+                variant="outline"
+                className="rounded-[12px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
+                onClick={() => shiftDate(-1)}
               >
-                Week
-              </button>
+                Previous
+              </Button>
+            </div>
+
+            <div className="order-last w-full text-left text-sm font-semibold text-[#EEF4FF] lg:order-none lg:min-w-[220px] lg:text-center">{rangeLabel}</div>
+
+            <div className="flex flex-wrap items-center justify-self-start gap-2 xl:justify-self-end">
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-[12px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
+                onClick={() => shiftDate(1)}
+              >
+                Next
+              </Button>
+              <div className="flex items-center gap-1 rounded-[14px] border border-[#24334A] bg-[#111D30] p-1">
+                <button
+                  type="button"
+                  className={[
+                    'rounded-[10px] px-3 py-2 text-sm font-medium transition-colors',
+                    currentView === 'month' ? 'bg-[#3BE0AF] text-[#0B1120]' : 'text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]',
+                  ].join(' ')}
+                  onClick={() => setCurrentView('month')}
+                >
+                  Month
+                </button>
+                <button
+                  type="button"
+                  className={[
+                    'rounded-[10px] px-3 py-2 text-sm font-medium transition-colors',
+                    currentView === 'week' ? 'bg-[#3BE0AF] text-[#0B1120]' : 'text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]',
+                  ].join(' ')}
+                  onClick={() => setCurrentView('week')}
+                >
+                  Week
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        {currentView === 'week' ? (
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleWeekEventDragStart} onDragEnd={handleWeekEventDragEnd}>
-            {renderWeekGrid(
-              selectedDate,
-              scheduledEvents,
-              openAssignmentDialog,
-              openEventDialog,
-              moveEventByHours,
-              activeDragEventId,
+        <div className="grid min-w-0 gap-5">
+          <div className="grid gap-5">
+            {currentView === 'week' ? (
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleWeekEventDragStart} onDragEnd={handleWeekEventDragEnd}>
+                {renderWeekGrid(
+                  selectedDate,
+                  scheduledEvents,
+                  openAssignmentDialog,
+                  openEventDialog,
+                  moveEventByHours,
+                  activeDragEventId,
+                )}
+                <DragOverlay>
+                  <EventOverlayCard event={activeDragEvent} />
+                </DragOverlay>
+              </DndContext>
+            ) : (
+              renderMonthGrid(selectedDate, calendarEvents, openEventDialog, openMonthOverflow)
             )}
-            <DragOverlay>
-              <EventOverlayCard event={activeDragEvent} />
-            </DragOverlay>
-          </DndContext>
-        ) : (
-          renderMonthGrid(selectedDate, scheduledEvents, openEventDialog)
-        )}
+          </div>
+        </div>
       </section>
 
-      <Dialog open={isAssignmentDialogOpen} onOpenChange={setIsAssignmentDialogOpen}>
+      <Dialog open={isMonthOverflowDialogOpen} onOpenChange={(open) => {
+        setIsMonthOverflowDialogOpen(open)
+        if (!open) {
+          setMonthOverflowDate(null)
+        }
+      }}>
+        <DialogContent className="fixed inset-x-2 bottom-2 top-auto z-50 grid w-full max-w-[calc(100%-1rem)] translate-y-0 gap-4 rounded-t-[28px] rounded-b-[18px] border border-[#24334A] bg-[#111827] p-5 text-[#EEF4FF] shadow-[0_-24px_80px_rgba(0,0,0,0.5)] duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-bottom-[18%] data-[state=open]:slide-in-from-bottom-[18%] sm:left-1/2 sm:right-auto sm:bottom-auto sm:top-[50%] sm:max-w-[420px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[28px] sm:shadow-[0_24px_80px_rgba(0,0,0,0.5)]">
+          <DialogHeader>
+            <DialogTitle>{monthOverflowEvents.length} workout{monthOverflowEvents.length === 1 ? '' : 's'}</DialogTitle>
+            <DialogDescription className="text-[#8EA0BC]">
+              Review the hidden workouts for this day and open any one to edit it.
+            </DialogDescription>
+          </DialogHeader>
+
+            <div className="grid gap-3 py-2">
+              {monthOverflowDate ? (
+                <div className="grid gap-2 rounded-[18px] border border-[#24334A] bg-[#0F1728] px-4 py-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">Day</div>
+                      <div className="mt-1 text-sm font-semibold text-[#EEF4FF]">{new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).format(monthOverflowDate)}</div>
+                    </div>
+                    <div className="rounded-full border border-[#29496B] bg-[#142235] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8FC7FF]">
+                      Sorted by time
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="flex items-center justify-between gap-3 border-t border-[#24334A] pt-3">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">Workout count</div>
+                  <div className="mt-1 text-sm font-semibold text-[#EEF4FF]">{monthOverflowEvents.length} total workouts</div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-[12px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
+                  onClick={() => openAllDayWorkouts(monthOverflowEvents)}
+                >
+                  Open all in day
+                </Button>
+              </div>
+
+              <div className="grid gap-2">
+{monthOverflowEvents.map((event) => {
+                const typeLabel = event.typeLabel ?? getEventTypeLabel(event)
+
+                return (
+                <button
+                  key={event.id}
+                  type="button"
+                  aria-label="Open event editor"
+                  className={[
+                    'grid w-full min-w-0 overflow-hidden gap-1.5 rounded-[16px] border px-3 py-3 text-left transition-all hover:-translate-y-[1px] hover:opacity-95',
+                    getEventToneClasses(event.tone),
+                  ].join(' ')}
+                  onClick={() => openEventDialog(event.id)}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] opacity-80">{event.startHour}</div>
+                    <div className="flex items-center gap-2">
+                      <span className={["rounded-full h-2.5 w-2.5", getEventDotClasses(event.tone)].join(' ')} />
+                      <span className="rounded-full border border-current/20 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] opacity-80">{typeLabel}</span>
+                    </div>
+                  </div>
+                  <div className="min-w-0 break-words text-[13px] font-semibold leading-[1.35] text-[#F8FBFF] line-clamp-2">{event.title}</div>
+                  <div className="text-[11px] text-inherit opacity-75">Ends {event.endHour}</div>
+                </button>
+              )})}
+            </div>
+          </div>
+
+          <DialogFooter className="sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-[12px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
+              onClick={() => {
+                setIsMonthOverflowDialogOpen(false)
+                setMonthOverflowDate(null)
+              }}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAssignmentDialogOpen} onOpenChange={(open) => {
+        setIsAssignmentDialogOpen(open)
+        if (!open) {
+          setSelectedEventId(null)
+          setDayPlaylistEventIds([])
+          setCompletedDayPlaylistEventIds([])
+          setDayPlaylistIndex(0)
+          setAssignmentDraft(createAssignmentDraft())
+          setAssignmentConflictMessage('')
+          setEventConflictMessage('')
+        }
+      }}>
         <DialogContent className="border-[#24334A] bg-[#111827] text-[#EEF4FF] sm:max-w-[560px]">
           <DialogHeader>
             <DialogTitle>Schedule workout</DialogTitle>
@@ -1019,14 +1291,61 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
           </DialogHeader>
 
           <div className="grid gap-4 py-2">
+            {isDayPlaylistActive ? (
+              <div className="rounded-[16px] border border-[#24334A] bg-[#0F1728] px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">Day playlist</div>
+                    <div className="mt-1 text-sm font-semibold text-[#EEF4FF]">Workout {dayPlaylistIndex + 1} of {activeDayPlaylistDedupedCount}</div>
+                    {activeDayPlaylistRawCount > activeDayPlaylistDedupedCount ? (
+                      <div className="mt-1 text-xs text-[#8EA0BC]">Deduped from {activeDayPlaylistRawCount} to {activeDayPlaylistDedupedCount}</div>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="rounded-[12px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
+                      onClick={reopenMonthOverflowFromPlaylist}
+                    >
+                      Back to overflow list
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="rounded-[12px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
+                      onClick={() => goToDayPlaylistEvent(dayPlaylistIndex - 1)}
+                      disabled={dayPlaylistIndex === 0}
+                    >
+                      Previous workout
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="rounded-[12px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
+                      onClick={() => goToDayPlaylistEvent(dayPlaylistIndex + 1)}
+                      disabled={dayPlaylistIndex === activeDayPlaylistEvents.length - 1}
+                    >
+                      Next workout
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="rounded-[16px] border border-[#24334A] bg-[#0F1728] px-4 py-3">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">Workout</div>
+              <div className="mt-1 text-sm font-semibold text-[#EEF4FF]">{selectedEvent ? selectedEvent.title : selectedTemplate.title}</div>
+            </div>
+
             <div className="rounded-[16px] border border-[#24334A] bg-[#0F1728] px-4 py-3">
               <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">Slot</div>
               <div className="mt-1 text-sm font-semibold text-[#EEF4FF]">{formatAssignmentSlot(assignmentDraft.date, assignmentDraft.hour)}</div>
             </div>
 
-            {assignmentConflictMessage ? (
+            {(assignmentConflictMessage || eventConflictMessage) ? (
               <div className="rounded-[14px] border border-[#6A4A1A] bg-[#3D2B12] px-3 py-2 text-sm text-[#F5D08A]">
-                {assignmentConflictMessage}
+                {assignmentConflictMessage || eventConflictMessage}
               </div>
             ) : null}
 
@@ -1049,79 +1368,6 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
                       onClick={() => {
                         setAssignmentDraft((currentDraft) => ({ ...currentDraft, selectedWorkoutId: workout.id }))
                         setAssignmentConflictMessage('')
-                      }}
-                    >
-                      <div className="text-sm font-semibold">{workout.title}</div>
-                      <div className="mt-1 text-xs text-inherit opacity-80">{workout.durationHours} hour block</div>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter className="gap-3 sm:justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-[12px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
-              onClick={() => {
-                setIsAssignmentDialogOpen(false)
-                setAssignmentConflictMessage('')
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              className="rounded-[12px] border border-[#3BE0AF] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]"
-              onClick={createAssignment}
-            >
-              Save assignment
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isEventDialogOpen} onOpenChange={setIsEventDialogOpen}>
-        <DialogContent className="border-[#24334A] bg-[#111827] text-[#EEF4FF] sm:max-w-[560px]">
-          <DialogHeader>
-            <DialogTitle>Edit scheduled workout</DialogTitle>
-            <DialogDescription className="text-[#8EA0BC]">
-              Update or remove this scheduled workout from the calendar.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid gap-4 py-2">
-            <div className="rounded-[16px] border border-[#24334A] bg-[#0F1728] px-4 py-3">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">Current slot</div>
-              <div className="mt-1 text-sm font-semibold text-[#EEF4FF]">{selectedEvent ? formatAssignmentSlot(selectedEvent.startDate, selectedEvent.startHour) : 'No event selected'}</div>
-            </div>
-
-            {eventConflictMessage ? (
-              <div className="rounded-[14px] border border-[#6A4A1A] bg-[#3D2B12] px-3 py-2 text-sm text-[#F5D08A]">
-                {eventConflictMessage}
-              </div>
-            ) : null}
-
-            <div className="grid gap-2">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">Workout templates</div>
-              <div className="grid gap-2">
-                {ASSIGNABLE_WORKOUTS.map((workout) => {
-                  const isSelected = workout.id === eventDraft.selectedWorkoutId
-
-                  return (
-                    <button
-                      key={workout.id}
-                      type="button"
-                      className={[
-                        'rounded-[16px] border px-4 py-3 text-left transition-colors',
-                        isSelected
-                          ? 'border-[#3BE0AF] bg-[#153C35] text-[#EEF4FF]'
-                          : 'border-[#24334A] bg-[#0F1728] text-[#DCE6F8] hover:border-[#3BE0AF] hover:bg-[#15233A]',
-                      ].join(' ')}
-                      onClick={() => {
-                        setEventDraft((currentDraft) => ({ ...currentDraft, selectedWorkoutId: workout.id }))
                         setEventConflictMessage('')
                       }}
                     >
@@ -1134,11 +1380,10 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
             </div>
 
             <div className="grid gap-2">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">Start time</div>
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">Time options</div>
               <div className="flex flex-wrap gap-2">
                 {WEEK_HOURS.map((hour) => {
-                  const isSelected = hour === eventDraft.hour
-
+                  const isSelected = hour === assignmentDraft.hour
                   return (
                     <button
                       key={hour}
@@ -1150,7 +1395,8 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
                           : 'border-[#24334A] bg-[#0F1728] text-[#DCE6F8] hover:border-[#3BE0AF] hover:bg-[#15233A]',
                       ].join(' ')}
                       onClick={() => {
-                        setEventDraft((currentDraft) => ({ ...currentDraft, hour }))
+                        setAssignmentDraft((currentDraft) => ({ ...currentDraft, hour }))
+                        setAssignmentConflictMessage('')
                         setEventConflictMessage('')
                       }}
                     >
@@ -1162,33 +1408,53 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
             </div>
           </div>
 
-          <DialogFooter className="gap-3 sm:justify-between">
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-[12px] border-[#7A2430] bg-[#2B1117] text-[#F5B7C0] hover:bg-[#34151C] hover:text-[#FFD4DB]"
-              onClick={deleteScheduledEvent}
-            >
-              Delete workout
-            </Button>
-            <div className="flex gap-3">
+          <DialogFooter className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap gap-3">
+              {selectedEvent ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-[12px] border-[#7A2430] bg-[#2B1117] text-[#F5B7C0] hover:bg-[#34151C] hover:text-[#FFD4DB]"
+                  onClick={deleteScheduledEvent}
+                >
+                  Delete workout
+                </Button>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap gap-3 sm:justify-end">
               <Button
                 type="button"
                 variant="outline"
                 className="rounded-[12px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
                 onClick={() => {
-                  setIsEventDialogOpen(false)
+                  setIsAssignmentDialogOpen(false)
+                  setSelectedEventId(null)
+                  setDayPlaylistEventIds([])
+                  setCompletedDayPlaylistEventIds([])
+                  setDayPlaylistIndex(0)
+                  setAssignmentDraft(createAssignmentDraft())
+                  setAssignmentConflictMessage('')
                   setEventConflictMessage('')
                 }}
               >
-                Cancel
+                Close
               </Button>
+              {selectedEvent && isDayPlaylistActive && dayPlaylistIndex < activeDayPlaylistEvents.length - 1 ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-[12px] border-[#3BE0AF] bg-[#153C35] text-[#EEF4FF] hover:bg-[#1B4B42]"
+                  onClick={saveAndAdvanceDayPlaylist}
+                >
+                  Save & next
+                </Button>
+              ) : null}
               <Button
                 type="button"
                 className="rounded-[12px] border border-[#3BE0AF] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]"
-                onClick={updateScheduledEvent}
+                onClick={selectedEvent ? updateScheduledEvent : createAssignment}
               >
-                Save changes
+                {selectedEvent ? 'Save changes' : 'Save assignment'}
               </Button>
             </div>
           </DialogFooter>

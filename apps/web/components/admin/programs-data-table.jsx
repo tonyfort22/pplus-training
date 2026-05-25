@@ -44,19 +44,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import Textarea from '@/components/ui/textarea'
 
-const programs = [
-  { id: 'program-1', name: 'Program 1', athletesLabel: '7 athletes', duration: '12 weeks', workouts: '24', exercises: '118', createdDate: '5/17/2026', status: 'Active' },
-  { id: 'program-2', name: 'Program 2', athletesLabel: '7 athletes', duration: '10 weeks', workouts: '20', exercises: '96', createdDate: '5/17/2026', status: 'Active' },
-  { id: 'program-3', name: 'Program 3', athletesLabel: '7 athletes', duration: '8 weeks', workouts: '18', exercises: '88', createdDate: '5/17/2026', status: 'Active' },
-  { id: 'program-4', name: 'Program 4', athletesLabel: '7 athletes', duration: '12 weeks', workouts: '22', exercises: '104', createdDate: '5/17/2026', status: 'Active' },
-  { id: 'program-5', name: 'Program 5', athletesLabel: '7 athletes', duration: '6 weeks', workouts: '14', exercises: '72', createdDate: '5/17/2026', status: 'Active' },
-  { id: 'program-6', name: 'Program 6', athletesLabel: '7 athletes', duration: '8 weeks', workouts: '16', exercises: '80', createdDate: '5/17/2026', status: 'Active' },
-  { id: 'program-7', name: 'Program 7', athletesLabel: '7 athletes', duration: '10 weeks', workouts: '20', exercises: '100', createdDate: '5/17/2026', status: 'Active' },
-  { id: 'program-8', name: 'Program 8', athletesLabel: '7 athletes', duration: '12 weeks', workouts: '24', exercises: '112', createdDate: '5/17/2026', status: 'Active' },
-  { id: 'program-9', name: 'Program 9', athletesLabel: '7 athletes', duration: '6 weeks', workouts: '12', exercises: '64', createdDate: '5/17/2026', status: 'Active' },
-  { id: 'program-10', name: 'Program 10', athletesLabel: '7 athletes', duration: '4 weeks', workouts: '8', exercises: '40', createdDate: '5/17/2026', status: 'Active' },
-]
-
 const programAthleteCandidates = [
   {
     id: 'program-athlete-01',
@@ -144,6 +131,9 @@ function RowActionsCell({
 }
 
 export default function ProgramsDataTable({ searchQuery = '' }) {
+  const [programs, setPrograms] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [isCreateProgramDialogOpen, setIsCreateProgramDialogOpen] = useState(false)
   const [programDialogMode, setProgramDialogMode] = useState('create')
   const [selectedProgramId, setSelectedProgramId] = useState(null)
@@ -177,6 +167,45 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
     setProgramFormValues(createProgramFormValues(selectedProgram))
     setIsCreateProgramDialogOpen(true)
   }
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadPrograms() {
+      setLoading(true)
+      setError('')
+
+      try {
+        const response = await fetch('/api/admin/programs', {
+          cache: 'no-store',
+        })
+        const payload = await response.json()
+
+        if (!response.ok) {
+          throw new Error(payload?.error || 'Failed to load programs.')
+        }
+
+        if (!cancelled) {
+          setPrograms(Array.isArray(payload?.programs) ? payload.programs : [])
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setPrograms([])
+          setError(loadError?.message || 'Failed to load programs.')
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadPrograms()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const columns = useMemo(
     () => [
@@ -287,6 +316,10 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
 
     setPendingRowAction(null)
   }, [openRowActionMenuId, pendingRowAction])
+
+  const emptyStateMessage = loading
+    ? 'Loading programs...'
+    : error || 'No programs found.'
 
   return (
     <div className="admin-shell-athletes-table-example">
@@ -513,7 +546,7 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center text-[#8EA0BC]">
-                  No programs found.
+                  {emptyStateMessage}
                 </TableCell>
               </TableRow>
             )}

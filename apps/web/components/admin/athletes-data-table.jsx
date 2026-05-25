@@ -43,59 +43,6 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-const athletes = [
-  {
-    id: 'athlete-01',
-    name: 'Mason Lee',
-    program: 'Speed Development',
-    workoutsCompleted: 10,
-    workoutsTarget: 100,
-    workoutsPercentage: 10,
-    lastActive: 'Today, 8:30 AM',
-    status: 'Active',
-  },
-  {
-    id: 'athlete-02',
-    name: 'Noah Smith',
-    program: 'Off-Season Strength',
-    workoutsCompleted: 24,
-    workoutsTarget: 100,
-    workoutsPercentage: 24,
-    lastActive: 'Yesterday, 4:10 PM',
-    status: 'Active',
-  },
-  {
-    id: 'athlete-03',
-    name: 'Ethan Carter',
-    program: 'Preseason Ramp-Up',
-    workoutsCompleted: 41,
-    workoutsTarget: 100,
-    workoutsPercentage: 41,
-    lastActive: 'May 16, 10:05 AM',
-    status: 'Needs review',
-  },
-  {
-    id: 'athlete-04',
-    name: 'Lucas Bennett',
-    program: 'Return to Play',
-    workoutsCompleted: 63,
-    workoutsTarget: 100,
-    workoutsPercentage: 63,
-    lastActive: 'May 14, 6:45 PM',
-    status: 'Inactive',
-  },
-  {
-    id: 'athlete-05',
-    name: 'Oliver James',
-    program: 'In-Season Maintenance',
-    workoutsCompleted: 82,
-    workoutsTarget: 100,
-    workoutsPercentage: 82,
-    lastActive: 'May 13, 7:20 AM',
-    status: 'Active',
-  },
-]
-
 function getInitials(name) {
   return name
     .split(' ')
@@ -105,13 +52,38 @@ function getInitials(name) {
     .join('')
 }
 
-function NameCell({ name }) {
+function formatAthleteDateOfBirthSummary(dateOfBirth) {
+  if (!dateOfBirth) return 'Date of birth unavailable'
+
+  const date = new Date(`${dateOfBirth}T12:00:00Z`)
+  if (Number.isNaN(date.getTime())) return 'Date of birth unavailable'
+
+  const now = new Date()
+  let age = now.getUTCFullYear() - date.getUTCFullYear()
+  const monthDelta = now.getUTCMonth() - date.getUTCMonth()
+  const dayDelta = now.getUTCDate() - date.getUTCDate()
+
+  if (monthDelta < 0 || (monthDelta === 0 && dayDelta < 0)) {
+    age -= 1
+  }
+
+  const label = date.toLocaleDateString('en-CA', {
+    timeZone: 'America/Toronto',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+  })
+
+  return `${label} (${age} year old)`
+}
+
+function NameCell({ name, avatarUrl = '', dateOfBirth = null }) {
   return (
     <div className="admin-shell-athletes-name-cell">
-      <Avatar alt={name} className="admin-shell-athletes-avatar" initials={getInitials(name)} />
+      <Avatar alt={name} className="admin-shell-athletes-avatar" initials={getInitials(name)} src={avatarUrl || undefined} />
       <div className="admin-shell-athletes-name-copy">
         <span className="admin-shell-athletes-name-text">{name}</span>
-        <span className="admin-shell-athletes-name-meta">1/01/2011 (15 year old)</span>
+        <span className="admin-shell-athletes-name-meta">{formatAthleteDateOfBirthSummary(dateOfBirth)}</span>
       </div>
     </div>
   )
@@ -247,6 +219,9 @@ function CreateAthletePhotoUploader({
 }
 
 export default function AthletesDataTable({ searchQuery = '' }) {
+  const [athletes, setAthletes] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false)
   const [isCreateEditAthleteDialogOpen, setIsCreateEditAthleteDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -263,6 +238,45 @@ export default function AthletesDataTable({ searchQuery = '' }) {
     pageIndex: 0,
     pageSize: 5,
   })
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadAthletes() {
+      setLoading(true)
+      setError('')
+
+      try {
+        const response = await fetch('/api/admin/athletes', {
+          cache: 'no-store',
+        })
+        const payload = await response.json()
+
+        if (!response.ok) {
+          throw new Error(payload?.error || 'Failed to load athletes.')
+        }
+
+        if (!cancelled) {
+          setAthletes(Array.isArray(payload?.athletes) ? payload.athletes : [])
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setAthletes([])
+          setError(loadError?.message || 'Failed to load athletes.')
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadAthletes()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const columns = useMemo(
     () => [
@@ -295,7 +309,7 @@ export default function AthletesDataTable({ searchQuery = '' }) {
         accessorKey: 'name',
         header: 'Name',
         meta: { label: 'Name' },
-        cell: ({ row }) => <NameCell name={row.original.name} />,
+        cell: ({ row }) => <NameCell name={row.original.name} avatarUrl={row.original.avatarUrl} dateOfBirth={row.original.dateOfBirth} />,
       },
       {
         accessorKey: 'program',
@@ -403,6 +417,7 @@ export default function AthletesDataTable({ searchQuery = '' }) {
   }
 
   const createAthleteNamePreview = [createAthleteFirstName, createAthleteLastName].filter(Boolean).join(' ')
+  const emptyStateMessage = loading ? 'Loading athletes...' : error || 'No results.'
 
   return (
     <div className="admin-shell-athletes-table-example">
@@ -692,7 +707,7 @@ export default function AthletesDataTable({ searchQuery = '' }) {
             ) : (
               <TableRow className="admin-shell-athletes-row-even">
                 <TableCell colSpan={columns.length} className="py-10 text-center text-[#8EA0BC]">
-                  No results.
+                  {emptyStateMessage}
                 </TableCell>
               </TableRow>
             )}

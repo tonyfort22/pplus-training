@@ -547,9 +547,36 @@ Table body_metric_logs {
   created_at timestamptz [not null]
 }
 
+Table athlete_groups {
+  id uuid [pk]
+  coach_id uuid [not null]
+  name text [not null]
+  description text
+  access_level text [not null]
+  status text [not null]
+  created_by_user_id uuid
+  archived_at timestamptz
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
+Table athlete_group_memberships {
+  id uuid [pk]
+  athlete_group_id uuid [not null]
+  athlete_id uuid [not null]
+  added_by_user_id uuid
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
 Ref: coach_profiles.user_id > users.id
 Ref: athlete_profiles.user_id > users.id
 Ref: athlete_profiles.coach_id > coach_profiles.id
+Ref: athlete_groups.coach_id > coach_profiles.id
+Ref: athlete_groups.created_by_user_id > users.id
+Ref: athlete_group_memberships.athlete_group_id > athlete_groups.id
+Ref: athlete_group_memberships.athlete_id > athlete_profiles.id
+Ref: athlete_group_memberships.added_by_user_id > users.id
 
 Ref: content_collections.content_source_id > content_sources.id
 Ref: content_collections.parent_collection_id > content_collections.id

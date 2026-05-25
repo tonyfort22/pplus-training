@@ -51,6 +51,7 @@ import {
 import { adminBottomNavigation, adminNavigation, findAdminRoute } from './admin-navigation'
 import AthletesListView from './athletes-list-view'
 import DashboardOverview from './dashboard-overview'
+import ExercisesLibraryView from './exercises-library-view'
 import GroupsListView from './groups-list-view'
 import InvitesListView from './invites-list-view'
 import ProgramsLibraryView from './programs-library-view'
@@ -207,7 +208,7 @@ function AdminSidebarNavItem({ currentPath = '', group }) {
           <SidebarMenuButton
             asChild
             isActive={isActive}
-            className="min-h-10 rounded-2xl px-3 text-[13px] font-medium text-[#dbe4ef] data-[active=true]:bg-[#111d30] data-[active=true]:text-[#eef4ff] hover:bg-[#111d30] hover:text-[#eef4ff] group-data-[collapsible=icon]:!size-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:px-0"
+            className="min-h-10 rounded-2xl px-3 text-[13px] font-medium text-[#dbe4ef] data-[active=true]:bg-[#2d4c4c] data-[active=true]:text-[#3BE0AF] hover:bg-[#111d30] hover:text-[#eef4ff] group-data-[collapsible=icon]:!size-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:px-0"
             tooltip={group.label}
           >
             <summary className="list-none [&::-webkit-details-marker]:hidden">
@@ -225,7 +226,7 @@ function AdminSidebarNavItem({ currentPath = '', group }) {
                   <SidebarMenuSubButton
                     asChild
                     isActive={itemCurrent}
-                    className="h-8 rounded-xl px-3 text-[12px] text-[#8ea0bc] data-[active=true]:bg-[#111d30] data-[active=true]:font-medium data-[active=true]:text-[#eef4ff] hover:bg-[#111d30] hover:text-[#eef4ff]"
+                    className="h-8 rounded-xl px-3 text-[12px] text-[#8ea0bc] data-[active=true]:bg-[#2d4c4c] data-[active=true]:font-medium data-[active=true]:text-[#3BE0AF] hover:bg-[#111d30] hover:text-[#eef4ff]"
                   >
                     <Link href={item.href}>{item.label}</Link>
                   </SidebarMenuSubButton>
@@ -243,7 +244,7 @@ function AdminSidebarNavItem({ currentPath = '', group }) {
       <SidebarMenuButton
         asChild
         isActive={isActive}
-        className="min-h-10 rounded-2xl px-3 text-[13px] font-medium text-[#dbe4ef] data-[active=true]:bg-[#111d30] data-[active=true]:text-[#eef4ff] hover:bg-[#111d30] hover:text-[#eef4ff] group-data-[collapsible=icon]:!size-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:px-0"
+        className="min-h-10 rounded-2xl px-3 text-[13px] font-medium text-[#dbe4ef] data-[active=true]:bg-[#2d4c4c] data-[active=true]:text-[#3BE0AF] hover:bg-[#111d30] hover:text-[#eef4ff] group-data-[collapsible=icon]:!size-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:px-0"
         tooltip={group.label}
       >
         <Link href={groupHref}>
@@ -641,6 +642,7 @@ export default function AdminShell({ currentPath = '', contentOverride = null })
   const isProgramsLibraryView = currentPath === '/admin/programs'
   const isWorkoutsLibraryView = currentPath === '/admin/workouts'
   const isWorkoutsCalendarView = currentPath === '/admin/workouts/calendar'
+  const isExercisesLibraryView = currentPath === '/admin/exercises'
 
   return (
     <SidebarProvider defaultOpen>
@@ -658,7 +660,7 @@ export default function AdminShell({ currentPath = '', contentOverride = null })
 
         <div className="flex-1">
           <main className={['admin-shell-workspace', isDashboardOverview ? 'admin-shell-workspace-dashboard' : ''].filter(Boolean).join(' ')}>
-            {!isDashboardOverview && !isAllAthletesView && !isAthleteInvitesView && !isAthleteGroupsView && !isAthleteRankingsView && !isProgramsLibraryView && !isWorkoutsLibraryView && !isWorkoutsCalendarView && (
+            {!isDashboardOverview && !isAllAthletesView && !isAthleteInvitesView && !isAthleteGroupsView && !isAthleteRankingsView && !isProgramsLibraryView && !isWorkoutsLibraryView && !isWorkoutsCalendarView && !isExercisesLibraryView && (
               <div className="admin-shell-workspace-header">
                 <span className="admin-shell-workspace-kicker">{sectionLabel}</span>
                 <h1 className="admin-shell-workspace-title">{pageTitle}</h1>
@@ -686,6 +688,8 @@ export default function AdminShell({ currentPath = '', contentOverride = null })
               <WorkoutsLibraryView searchQuery={topbarSearchQuery} />
             ) : isWorkoutsCalendarView ? (
               <WorkoutsCalendarView selectedAthleteId={selectedAthleteId} />
+            ) : isExercisesLibraryView ? (
+              <ExercisesLibraryView searchQuery={topbarSearchQuery} />
             ) : (
               <section className="admin-shell-workspace-panel">
                 <h2 className="admin-shell-workspace-panel-title">{pageTitle} workspace</h2>

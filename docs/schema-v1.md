@@ -105,6 +105,30 @@ New auth signups should automatically provision the correct profile row through 
 - created_at
 - updated_at
 
+## athlete_groups
+Coach-owned athlete collections used for admin organization, filtering, and bulk assignment targeting.
+These groups are not community chat rooms or public social spaces.
+- id
+- coach_id
+- name
+- description nullable
+- access_level (`private`, `public`)
+- status (`active`, `archived`)
+- created_by_user_id nullable
+- archived_at nullable
+- created_at
+- updated_at
+
+## athlete_group_memberships
+Current membership rows linking athletes into coach-owned groups.
+This seam is for admin organization and targeting, not social following or chat presence.
+- id
+- athlete_group_id
+- athlete_id
+- added_by_user_id nullable
+- created_at
+- updated_at
+
 ---
 
 # Layer 2: Source content library
@@ -874,7 +898,7 @@ Never create fatigue, load, recovery, or performance rows from:
 
 ## Can be deferred to v1.5+
 - rich messaging/inbox schema
-- team/community schema
+- team/community chat schema beyond coach-managed athlete groups
 - entitlement/paywall schema
 - advanced video hosting metadata
 - fully canonical content taxonomy if aliases are good enough for now
