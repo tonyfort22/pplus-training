@@ -24,6 +24,7 @@ test('complete-athlete-invitation handler surfaces nested existing-account sign-
       SUPABASE_ANON_KEY: 'anon-key',
       SUPABASE_SERVICE_ROLE_KEY: 'service-role-key',
     },
+    now: () => new Date('2026-05-12T16:30:00.000Z'),
     invitationRepositoryFactory() {
       return {
         async getActiveInvitationByCode() {

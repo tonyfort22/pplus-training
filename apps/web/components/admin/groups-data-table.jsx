@@ -1,0 +1,605 @@
+'use client'
+
+import { useEffect, useMemo, useState } from 'react'
+import {
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  useReactTable,
+} from '@tanstack/react-table'
+import { ChevronDown, MoreHorizontal } from 'lucide-react'
+
+import Badge from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import Checkbox from '@/components/ui/checkbox'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import Textarea from '@/components/ui/textarea'
+
+function formatAthletePreview(athleteNames = []) {
+  if (!Array.isArray(athleteNames) || athleteNames.length === 0) return 'No athlete memberships yet'
+  if (athleteNames.length <= 2) return athleteNames.join(', ')
+  return `${athleteNames.slice(0, 2).join(', ')} +${athleteNames.length - 2} more`
+}
+
+function GroupCell({ name, athleteCountLabel, athleteNames = [], description = '' }) {
+  return (
+    <div className="admin-shell-athletes-name-copy gap-1">
+      <span className="admin-shell-athletes-name-text">{name}</span>
+      <span className="admin-shell-athletes-name-meta">{athleteCountLabel}</span>
+      <span className="text-xs text-[#8EA0BC]">{formatAthletePreview(athleteNames)}</span>
+      {description ? <span className="text-xs text-[#70809E] line-clamp-2">{description}</span> : null}
+    </div>
+  )
+}
+
+function AccessCell({ access }) {
+  return (
+    <Badge tone="neutral" className="border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] normal-case tracking-normal">
+      {access}
+    </Badge>
+  )
+}
+
+function StatusCell({ status }) {
+  const isArchived = status === 'Archived'
+  return (
+    <Badge
+      tone={isArchived ? 'warning' : 'success'}
+      className={
+        isArchived
+          ? 'border-transparent bg-amber-500/15 text-amber-300 hover:bg-amber-500/20 normal-case tracking-normal'
+          : 'border-transparent bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/20 normal-case tracking-normal'
+      }
+    >
+      {status}
+    </Badge>
+  )
+}
+
+function GroupDialogField({ htmlFor, label, children }) {
+  return (
+    <div className="grid gap-2">
+      <label className="text-sm font-medium text-[#DCE6F8]" htmlFor={htmlFor}>
+        {label}
+      </label>
+      {children}
+    </div>
+  )
+}
+
+function RowActionsCell({
+  status = 'Active',
+  isOpen = false,
+  onOpenChange = () => {},
+  onEditAction = () => {},
+  onAssignProgramAction = () => {},
+  onArchiveAction = () => {},
+  onUnarchiveAction = () => {},
+  onDeleteAction = () => {},
+}) {
+  return (
+    <DropdownMenu open={isOpen} onOpenChange={onOpenChange}>
+      <DropdownMenuTrigger asChild>
+        <button type="button" className="admin-shell-athletes-row-menu" aria-label="Open menu">
+          <span className="sr-only">Open menu</span>
+          <MoreHorizontal className="admin-shell-athletes-row-menu-icon" aria-hidden="true" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+        <DropdownMenuItem onSelect={() => { onEditAction(); onOpenChange(false) }}>Edit</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => { onAssignProgramAction(); onOpenChange(false) }}>Assign program</DropdownMenuItem>
+        {status === 'Archived' ? (
+          <DropdownMenuItem onSelect={() => { onUnarchiveAction(); onOpenChange(false) }}>Unarchive</DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem onSelect={() => { onArchiveAction(); onOpenChange(false) }}>Archive</DropdownMenuItem>
+        )}
+        <DropdownMenuItem onSelect={() => { onDeleteAction(); onOpenChange(false) }}>Delete</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+function createGroupFormValues(group = null) {
+  return {
+    name: group?.name ?? '',
+    description: group?.description ?? '',
+    accessLevel: group?.accessLevel ?? 'private',
+    athleteIds: Array.isArray(group?.athleteIds) ? group.athleteIds : [],
+  }
+}
+
+export default function GroupsDataTable({ searchQuery = '' }) {
+  const [groups, setGroups] = useState([])
+  const [athleteOptions, setAthleteOptions] = useState([])
+  const [programOptions, setProgramOptions] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [isCreateEditGroupDialogOpen, setIsCreateEditGroupDialogOpen] = useState(false)
+  const [isArchiveGroupDialogOpen, setIsArchiveGroupDialogOpen] = useState(false)
+  const [isDeleteGroupDialogOpen, setIsDeleteGroupDialogOpen] = useState(false)
+  const [isAssignProgramDialogOpen, setIsAssignProgramDialogOpen] = useState(false)
+  const [groupDialogMode, setGroupDialogMode] = useState('create')
+  const [selectedGroupId, setSelectedGroupId] = useState(null)
+  const [selectedProgramId, setSelectedProgramId] = useState('')
+  const [groupFormValues, setGroupFormValues] = useState(() => createGroupFormValues())
+  const [isSavingGroup, setIsSavingGroup] = useState(false)
+  const [isArchivingGroup, setIsArchivingGroup] = useState(false)
+  const [isDeletingGroup, setIsDeletingGroup] = useState(false)
+  const [isAssigningProgram, setIsAssigningProgram] = useState(false)
+  const [openRowActionMenuId, setOpenRowActionMenuId] = useState(null)
+  const [pendingRowAction, setPendingRowAction] = useState(null)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [rowSelection, setRowSelection] = useState({})
+  const [columnFilters, setColumnFilters] = useState([])
+  const [columnVisibility, setColumnVisibility] = useState({})
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 5 })
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadGroups() {
+      setLoading(true)
+      setError('')
+      try {
+        const response = await fetch('/api/admin/groups', { cache: 'no-store' })
+        const payload = await response.json()
+        if (!response.ok) throw new Error(payload?.error || 'Failed to load groups.')
+        if (!cancelled) {
+          setGroups(Array.isArray(payload?.groups) ? payload.groups : [])
+          setAthleteOptions(Array.isArray(payload?.athleteOptions) ? payload.athleteOptions : [])
+          setProgramOptions(Array.isArray(payload?.programOptions) ? payload.programOptions : [])
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setGroups([])
+          setAthleteOptions([])
+          setProgramOptions([])
+          setError(loadError?.message || 'Failed to load groups.')
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    loadGroups()
+    return () => { cancelled = true }
+  }, [refreshKey])
+
+  const selectedGroup = useMemo(() => groups.find((group) => group.id === selectedGroupId) ?? null, [groups, selectedGroupId])
+
+  const columns = useMemo(() => [
+    {
+      id: 'select',
+      header: ({ table }) => (
+        <div className="admin-shell-athletes-checkbox-cell">
+          <Checkbox className="admin-shell-athletes-checkbox-input" checked={table.getIsAllPageRowsSelected()} onChange={(event) => table.toggleAllPageRowsSelected(event.target.checked)} aria-label="Select all" />
+        </div>
+      ),
+      cell: ({ row }) => (
+        <div className="admin-shell-athletes-checkbox-cell">
+          <Checkbox className="admin-shell-athletes-checkbox-input" checked={row.getIsSelected()} onChange={(event) => row.toggleSelected(event.target.checked)} aria-label="Select row" />
+        </div>
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
+    {
+      accessorKey: 'name',
+      header: 'Group',
+      meta: { label: 'Group' },
+      cell: ({ row }) => <GroupCell name={row.original.name} athleteCountLabel={row.original.athleteCountLabel} athleteNames={row.original.athleteNames} description={row.original.description} />,
+    },
+    {
+      accessorKey: 'athleteCountLabel',
+      header: 'Athletes',
+      meta: { label: 'Athletes' },
+      cell: ({ row }) => <span className="admin-shell-athletes-program-cell">{row.original.athleteCountLabel}</span>,
+    },
+    {
+      accessorKey: 'access',
+      header: 'Access',
+      meta: { label: 'Access' },
+      cell: ({ row }) => <AccessCell access={row.original.access} />,
+    },
+    {
+      accessorKey: 'updated',
+      header: 'Updated',
+      meta: { label: 'Updated' },
+      cell: ({ row }) => <span className="admin-shell-athletes-last-active-cell">{row.original.updated}</span>,
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      meta: { label: 'Status' },
+      cell: ({ row }) => <StatusCell status={row.original.status} />,
+    },
+    {
+      id: 'actions',
+      header: () => <span className="sr-only">Actions</span>,
+      cell: ({ row }) => (
+        <RowActionsCell
+          status={row.original.status}
+          isOpen={openRowActionMenuId === row.original.id}
+          onOpenChange={(isOpen) => setOpenRowActionMenuId(isOpen ? row.original.id : null)}
+          onEditAction={() => setPendingRowAction({ type: 'edit', groupId: row.original.id })}
+          onAssignProgramAction={() => setPendingRowAction({ type: 'assign-program', groupId: row.original.id })}
+          onArchiveAction={() => setPendingRowAction({ type: 'archive', groupId: row.original.id })}
+          onUnarchiveAction={() => setPendingRowAction({ type: 'unarchive', groupId: row.original.id })}
+          onDeleteAction={() => setPendingRowAction({ type: 'delete', groupId: row.original.id })}
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
+  ], [openRowActionMenuId])
+
+  const table = useReactTable({
+    data: groups,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    onRowSelectionChange: setRowSelection,
+    onColumnFiltersChange: setColumnFilters,
+    onColumnVisibilityChange: setColumnVisibility,
+    onPaginationChange: setPagination,
+    state: { rowSelection, columnFilters, columnVisibility, pagination },
+  })
+
+  useEffect(() => {
+    table.getColumn('name')?.setFilterValue(searchQuery)
+  }, [searchQuery, table])
+
+  useEffect(() => {
+    if (openRowActionMenuId || !pendingRowAction) return
+    if (pendingRowAction.type === 'edit') {
+      openEditGroupDialog(pendingRowAction.groupId)
+    } else if (pendingRowAction.type === 'archive') {
+      setSelectedGroupId(pendingRowAction.groupId)
+      setIsArchiveGroupDialogOpen(true)
+    } else if (pendingRowAction.type === 'unarchive') {
+      void handleUnarchiveGroup(pendingRowAction.groupId)
+    } else if (pendingRowAction.type === 'delete') {
+      setSelectedGroupId(pendingRowAction.groupId)
+      setIsDeleteGroupDialogOpen(true)
+    } else if (pendingRowAction.type === 'assign-program') {
+      setSelectedGroupId(pendingRowAction.groupId)
+      setSelectedProgramId('')
+      setIsAssignProgramDialogOpen(true)
+    }
+    setPendingRowAction(null)
+  }, [openRowActionMenuId, pendingRowAction])
+
+  function openCreateGroupDialog() {
+    setGroupDialogMode('create')
+    setSelectedGroupId(null)
+    setGroupFormValues(createGroupFormValues())
+    setIsCreateEditGroupDialogOpen(true)
+  }
+
+  function openEditGroupDialog(groupId) {
+    const group = groups.find((item) => item.id === groupId) ?? null
+    setGroupDialogMode('edit')
+    setSelectedGroupId(groupId)
+    setGroupFormValues(createGroupFormValues(group))
+    setIsCreateEditGroupDialogOpen(true)
+  }
+
+  function updateGroupFormValue(key, value) {
+    setGroupFormValues((currentValues) => ({ ...currentValues, [key]: value }))
+  }
+
+  function toggleAthleteMembership(athleteId) {
+    setGroupFormValues((currentValues) => {
+      const hasAthlete = currentValues.athleteIds.includes(athleteId)
+      return {
+        ...currentValues,
+        athleteIds: hasAthlete ? currentValues.athleteIds.filter((currentId) => currentId !== athleteId) : [...currentValues.athleteIds, athleteId],
+      }
+    })
+  }
+
+  async function handleGroupSubmit() {
+    setIsSavingGroup(true)
+    setError('')
+    try {
+      const response = await fetch('/api/admin/groups', {
+        method: groupDialogMode === 'edit' ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(groupDialogMode === 'edit' ? { action: 'update', groupId: selectedGroupId, ...groupFormValues } : groupFormValues),
+      })
+      const payload = await response.json()
+      if (!response.ok) throw new Error(payload?.error || 'Failed to save group.')
+      setIsCreateEditGroupDialogOpen(false)
+      setSelectedGroupId(null)
+      setGroupDialogMode('create')
+      setGroupFormValues(createGroupFormValues())
+      setRefreshKey((currentValue) => currentValue + 1)
+    } catch (submitError) {
+      setError(submitError?.message || 'Failed to save group.')
+    } finally {
+      setIsSavingGroup(false)
+    }
+  }
+
+  async function handleArchiveGroup() {
+    if (!selectedGroupId) return
+    setIsArchivingGroup(true)
+    setError('')
+    try {
+      const response = await fetch('/api/admin/groups', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'archive', groupId: selectedGroupId }),
+      })
+      const payload = await response.json()
+      if (!response.ok) throw new Error(payload?.error || 'Failed to archive group.')
+      setIsArchiveGroupDialogOpen(false)
+      setSelectedGroupId(null)
+      setRefreshKey((currentValue) => currentValue + 1)
+    } catch (archiveError) {
+      setError(archiveError?.message || 'Failed to archive group.')
+    } finally {
+      setIsArchivingGroup(false)
+    }
+  }
+
+  async function handleUnarchiveGroup(groupId = selectedGroupId) {
+    if (!groupId) return
+    setError('')
+    try {
+      const response = await fetch('/api/admin/groups', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'unarchive', groupId }),
+      })
+      const payload = await response.json()
+      if (!response.ok) throw new Error(payload?.error || 'Failed to unarchive group.')
+      setSelectedGroupId(null)
+      setRefreshKey((currentValue) => currentValue + 1)
+    } catch (unarchiveError) {
+      setError(unarchiveError?.message || 'Failed to unarchive group.')
+    }
+  }
+
+  async function handleDeleteGroup() {
+    if (!selectedGroupId) return
+    setIsDeletingGroup(true)
+    setError('')
+    try {
+      const response = await fetch('/api/admin/groups', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', groupId: selectedGroupId }),
+      })
+      const payload = await response.json()
+      if (!response.ok) throw new Error(payload?.error || 'Failed to delete group.')
+      setIsDeleteGroupDialogOpen(false)
+      setSelectedGroupId(null)
+      setRefreshKey((currentValue) => currentValue + 1)
+    } catch (deleteError) {
+      setError(deleteError?.message || 'Failed to delete group.')
+    } finally {
+      setIsDeletingGroup(false)
+    }
+  }
+
+  async function handleAssignProgram() {
+    if (!selectedGroupId || !selectedProgramId) return
+    setIsAssigningProgram(true)
+    setError('')
+    try {
+      const response = await fetch('/api/admin/groups', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'assign-program', groupId: selectedGroupId, sourceProgramId: selectedProgramId }),
+      })
+      const payload = await response.json()
+      if (!response.ok) throw new Error(payload?.error || 'Failed to assign program.')
+      setIsAssignProgramDialogOpen(false)
+      setSelectedProgramId('')
+      setSelectedGroupId(null)
+      setRefreshKey((currentValue) => currentValue + 1)
+    } catch (assignError) {
+      setError(assignError?.message || 'Failed to assign program.')
+    } finally {
+      setIsAssigningProgram(false)
+    }
+  }
+
+  const emptyStateMessage = loading ? 'Loading groups...' : error || 'No groups found.'
+
+  return (
+    <div className="admin-shell-athletes-table-example">
+      <div className="admin-shell-athletes-example-controls flex items-center justify-between gap-3">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button type="button" className="admin-shell-athletes-example-columns-button">
+              Columns
+              <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {table.getAllColumns().filter((column) => column.getCanHide()).map((column) => (
+              <DropdownMenuCheckboxItem key={column.id} className="capitalize" checked={column.getIsVisible()} onCheckedChange={(value) => column.toggleVisibility(!!value)}>
+                {column.columnDef.meta?.label ?? column.id}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <Button type="button" onClick={openCreateGroupDialog} className="admin-shell-athletes-invite-button bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d] rounded-[12px] min-h-[40px]">Create group</Button>
+      </div>
+
+      <Dialog open={isCreateEditGroupDialogOpen} onOpenChange={setIsCreateEditGroupDialogOpen}>
+        <DialogContent className="admin-shell-athletes-invite-dialog border border-[#24334A] bg-[#0F1728] p-0 text-[#DCE6F8] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[720px]">
+          <div className="border-b border-[#24334A] px-6 py-5">
+            <DialogHeader>
+              <DialogTitle>{groupDialogMode === 'edit' ? 'Edit group' : 'Create a group'}</DialogTitle>
+              <DialogDescription>{groupDialogMode === 'edit' ? 'Manage memberships, access, and naming for this group.' : 'Create a new coach-managed athlete group.'}</DialogDescription>
+            </DialogHeader>
+          </div>
+          <div className="grid gap-5 px-6 py-6">
+            <div className="grid gap-4 md:grid-cols-2">
+              <GroupDialogField htmlFor="create-group-name" label="Name">
+                <Input id="create-group-name" className="h-11 rounded-[12px] border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20" placeholder="Off-season forwards" value={groupFormValues.name} onChange={(event) => updateGroupFormValue('name', event.target.value)} />
+              </GroupDialogField>
+              <GroupDialogField htmlFor="create-group-access-level" label="Access">
+                <Select value={groupFormValues.accessLevel} onValueChange={(value) => updateGroupFormValue('accessLevel', value)}>
+                  <SelectTrigger id="create-group-access-level" className="h-11 rounded-[12px]"><SelectValue placeholder="Select access" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="private">Private</SelectItem>
+                    <SelectItem value="public">Public</SelectItem>
+                  </SelectContent>
+                </Select>
+              </GroupDialogField>
+            </div>
+            <GroupDialogField htmlFor="create-group-description" label="Description">
+              <Textarea id="create-group-description" className="min-h-[120px] rounded-[12px] border-[#24334A] bg-[#111D30] px-4 py-3 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20" placeholder="Optional notes about who belongs in this group." value={groupFormValues.description} onChange={(event) => updateGroupFormValue('description', event.target.value)} />
+            </GroupDialogField>
+            <div className="grid gap-3">
+              <div>
+                <h3 className="text-sm font-medium text-[#EEF4FF]">Manage memberships</h3>
+                <p className="mt-1 text-sm text-[#8EA0BC]">Add or remove athlete memberships for this group.</p>
+              </div>
+              <div className="max-h-[280px] overflow-y-auto rounded-[16px] border border-[#24334A] bg-[#111D30] p-3">
+                <div className="grid gap-2">
+                  {athleteOptions.length ? athleteOptions.map((athlete) => {
+                    const isChecked = groupFormValues.athleteIds.includes(athlete.id)
+                    return (
+                      <label key={athlete.id} className="flex items-center justify-between gap-3 rounded-[12px] border border-[#24334A] bg-[#0F1728] px-3 py-3 text-sm text-[#DCE6F8]">
+                        <span>{athlete.name}</span>
+                        <Checkbox className="admin-shell-athletes-checkbox-input" checked={isChecked} onChange={() => toggleAthleteMembership(athlete.id)} aria-label={`Toggle ${athlete.name} membership`} />
+                      </label>
+                    )
+                  }) : <div className="rounded-[12px] border border-[#24334A] bg-[#0F1728] px-3 py-4 text-sm text-[#8EA0BC]">No athletes available.</div>}
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="border-t border-[#24334A] px-6 py-5 sm:justify-end gap-3">
+            <Button type="button" variant="outline" className="rounded-[12px] min-h-[40px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]" onClick={() => setIsCreateEditGroupDialogOpen(false)}>Cancel</Button>
+            <Button type="button" disabled={isSavingGroup} className="rounded-[12px] min-h-[40px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]" onClick={handleGroupSubmit}>{isSavingGroup ? 'Saving...' : groupDialogMode === 'edit' ? 'Save group' : 'Create group'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAssignProgramDialogOpen} onOpenChange={setIsAssignProgramDialogOpen}>
+        <DialogContent className="admin-shell-athletes-invite-dialog border border-[#24334A] bg-[#0F1728] p-0 text-[#DCE6F8] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[620px]">
+          <div className="border-b border-[#24334A] px-6 py-5">
+            <DialogHeader>
+              <DialogTitle>Assign program</DialogTitle>
+              <DialogDescription>Clone a source program to each athlete in this group as a bulk action.</DialogDescription>
+            </DialogHeader>
+          </div>
+          <div className="grid gap-5 px-6 py-6">
+            <div className="rounded-[12px] border border-[#24334A] bg-[#111D30] px-4 py-3 text-sm text-[#8EA0BC]">
+              <div className="text-[#EEF4FF] font-medium">{selectedGroup?.name ?? 'Selected group'}</div>
+              <div className="mt-1">{formatAthletePreview(selectedGroup?.athleteNames ?? [])}</div>
+            </div>
+            <GroupDialogField htmlFor="assign-program-select" label="Program">
+              <Select value={selectedProgramId} onValueChange={setSelectedProgramId}>
+                <SelectTrigger id="assign-program-select" className="h-11 rounded-[12px]"><SelectValue placeholder="Select a program" /></SelectTrigger>
+                <SelectContent>
+                  {programOptions.map((program) => <SelectItem key={program.id} value={program.id}>{program.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </GroupDialogField>
+          </div>
+          <DialogFooter className="border-t border-[#24334A] px-6 py-5 sm:justify-end gap-3">
+            <Button type="button" variant="outline" className="rounded-[12px] min-h-[40px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]" onClick={() => setIsAssignProgramDialogOpen(false)}>Cancel</Button>
+            <Button type="button" disabled={isAssigningProgram || !selectedProgramId} className="rounded-[12px] min-h-[40px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]" onClick={handleAssignProgram}>{isAssigningProgram ? 'Assigning...' : 'Assign program'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isArchiveGroupDialogOpen} onOpenChange={setIsArchiveGroupDialogOpen}>
+        <DialogContent className="admin-shell-athletes-invite-dialog border border-[#24334A] bg-[#0F1728] p-0 text-[#DCE6F8] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[560px]">
+          <div className="px-6 py-5">
+            <DialogHeader>
+              <DialogTitle>Archive group</DialogTitle>
+              <DialogDescription>Archive this group and remove it from active access.</DialogDescription>
+            </DialogHeader>
+          </div>
+          <DialogFooter className="border-t border-[#24334A] px-6 py-5 sm:justify-end gap-3">
+            <Button type="button" variant="outline" className="rounded-[12px] min-h-[40px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]" onClick={() => setIsArchiveGroupDialogOpen(false)}>Cancel</Button>
+            <Button type="button" disabled={isArchivingGroup} className="rounded-[12px] min-h-[40px] bg-red-500/90 text-white hover:bg-red-500" onClick={handleArchiveGroup}>{isArchivingGroup ? 'Archiving...' : 'Archive group'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteGroupDialogOpen} onOpenChange={setIsDeleteGroupDialogOpen}>
+        <DialogContent className="admin-shell-athletes-invite-dialog border border-[#24334A] bg-[#0F1728] p-0 text-[#DCE6F8] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[560px]">
+          <div className="px-6 py-5">
+            <DialogHeader>
+              <DialogTitle>Delete group</DialogTitle>
+              <DialogDescription>Permanently delete this group and remove all memberships.</DialogDescription>
+            </DialogHeader>
+          </div>
+          <DialogFooter className="border-t border-[#24334A] px-6 py-5 sm:justify-end gap-3">
+            <Button type="button" variant="outline" className="rounded-[12px] min-h-[40px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]" onClick={() => setIsDeleteGroupDialogOpen(false)}>Cancel</Button>
+            <Button type="button" disabled={isDeletingGroup} className="rounded-[12px] min-h-[40px] bg-red-500/90 text-white hover:bg-red-500" onClick={handleDeleteGroup}>{isDeletingGroup ? 'Deleting...' : 'Delete group'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <div className="admin-shell-athletes-table-shell">
+        <Table className="admin-shell-athletes-table">
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id} className={header.column.id === 'actions' ? 'admin-shell-athletes-actions-cell' : ''}>
+                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows?.length ? table.getRowModel().rows.map((row, index) => (
+              <TableRow key={row.id} data-state={row.getIsSelected() ? 'selected' : undefined} className={index % 2 === 0 ? 'admin-shell-athletes-row-even' : 'admin-shell-athletes-row-odd'}>
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id} className={cell.column.id === 'actions' ? 'admin-shell-athletes-actions-cell' : ''}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                ))}
+              </TableRow>
+            )) : (
+              <TableRow><TableCell colSpan={columns.length} className="h-24 text-center text-[#8EA0BC]">{emptyStateMessage}</TableCell></TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <div className="flex items-center justify-between py-4 text-sm text-[#8EA0BC]">
+        <div>{table.getFilteredRowModel().rows.length} group(s)</div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>Previous</Button>
+          <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>Next</Button>
+        </div>
+      </div>
+    </div>
+  )
+}
