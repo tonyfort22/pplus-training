@@ -20,6 +20,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 function ExerciseCell({ name }) {
@@ -204,6 +205,11 @@ export default function ExercisesDataTable({ searchQuery = '' }) {
   const emptyStateMessage = loading
     ? 'Loading exercises...'
     : error || 'No exercises found.'
+  const pageSizeOptions = [5, 10, 20, 30]
+  const totalRows = table.getFilteredRowModel().rows.length
+  const pageStart = totalRows === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1
+  const pageEnd = Math.min((pagination.pageIndex + 1) * pagination.pageSize, totalRows)
+  const pageNumbers = Array.from({ length: table.getPageCount() }, (_, index) => index)
 
   return (
     <div className="admin-shell-athletes-table-example">
@@ -285,16 +291,51 @@ export default function ExercisesDataTable({ searchQuery = '' }) {
         </Table>
       </div>
 
-      <div className="flex items-center justify-between py-4 text-sm text-[#8EA0BC]">
-        <div>{table.getFilteredRowModel().rows.length} exercise(s)</div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
-            Previous
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
-            Next
-          </Button>
-        </div>
+      <div className="flex items-center justify-end gap-3 py-4 text-sm text-[#8EA0BC]">
+        <span>Rows per page</span>
+        <Select value={String(pagination.pageSize)} onValueChange={(value) => table.setPageSize(Number(value))}>
+          <SelectTrigger className="h-9 w-[76px] rounded-[10px] !border-[#24334A] bg-[#111D30] px-3 text-sm text-[#DCE6F8]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {pageSizeOptions.map((pageSizeOption) => (
+              <SelectItem key={pageSizeOption} value={String(pageSizeOption)}>
+                {pageSizeOption}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span>{pageStart} - {pageEnd} of {totalRows}</span>
+        <button
+          type="button"
+          aria-label="Go to previous page"
+          className="admin-shell-athletes-example-pagination-button"
+          onClick={() => table.previousPage()}
+          disabled={!table.getCanPreviousPage()}
+        >
+          <span aria-hidden="true">‹</span>
+        </button>
+        {pageNumbers.map((pageNumber) => (
+          <button
+            key={pageNumber}
+            type="button"
+            className={`admin-shell-athletes-example-pagination-button ${pageNumber === pagination.pageIndex ? 'admin-shell-athletes-example-pagination-button-active' : ''}`}
+            onClick={() => table.setPageIndex(pageNumber)}
+            aria-label={`Go to page ${pageNumber + 1}`}
+            aria-current={pageNumber === pagination.pageIndex ? 'page' : undefined}
+          >
+            {pageNumber + 1}
+          </button>
+        ))}
+        <button
+          type="button"
+          aria-label="Go to next page"
+          className="admin-shell-athletes-example-pagination-button"
+          onClick={() => table.nextPage()}
+          disabled={!table.getCanNextPage()}
+        >
+          <span aria-hidden="true">›</span>
+        </button>
       </div>
     </div>
   )

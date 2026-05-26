@@ -37,6 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import Textarea from '@/components/ui/textarea'
 
@@ -431,12 +432,13 @@ export default function GroupsDataTable({ searchQuery = '' }) {
     }
   }
 
-  const emptyStateMessage = loading ? 'Loading groups...' : error || 'No groups found.'
+  const emptyStateMessage = error || 'No groups found.'
   const pageSizeOptions = [5, 10, 20, 30]
   const totalRows = table.getFilteredRowModel().rows.length
   const pageStart = totalRows === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1
   const pageEnd = Math.min((pagination.pageIndex + 1) * pagination.pageSize, totalRows)
   const pageNumbers = Array.from({ length: table.getPageCount() }, (_, index) => index)
+  const skeletonRows = Array.from({ length: pagination.pageSize }, (_, rowIndex) => rowIndex)
 
   return (
     <div className="admin-shell-athletes-table-example">
@@ -585,7 +587,35 @@ export default function GroupsDataTable({ searchQuery = '' }) {
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? table.getRowModel().rows.map((row, index) => (
+            {loading ? skeletonRows.map((rowIndex) => (
+              <TableRow key={`skeleton-${rowIndex}`} className={rowIndex % 2 === 0 ? 'admin-shell-athletes-row-even' : 'admin-shell-athletes-row-odd'}>
+                <TableCell>
+                  <Skeleton className="h-4 w-4 rounded-[4px]" />
+                </TableCell>
+                <TableCell>
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-[140px]" />
+                    <Skeleton className="h-3 w-[110px]" />
+                    <Skeleton className="h-3 w-[180px]" />
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-[72px]" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-8 w-[88px] rounded-full" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-[88px]" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-8 w-[96px] rounded-full" />
+                </TableCell>
+                <TableCell className="admin-shell-athletes-actions-cell">
+                  <Skeleton className="ml-auto h-8 w-8 rounded-full" />
+                </TableCell>
+              </TableRow>
+            )) : table.getRowModel().rows?.length ? table.getRowModel().rows.map((row, index) => (
               <TableRow key={row.id} data-state={row.getIsSelected() ? 'selected' : undefined} className={index % 2 === 0 ? 'admin-shell-athletes-row-even' : 'admin-shell-athletes-row-odd'}>
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id} className={cell.column.id === 'actions' ? 'admin-shell-athletes-actions-cell' : ''}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>

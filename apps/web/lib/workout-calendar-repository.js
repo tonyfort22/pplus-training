@@ -15,6 +15,7 @@ const PROGRAM_WORKOUT_SELECT = [
   'created_at',
   'updated_at',
   'program_days(date)',
+  'workout_templates(name,training_type)',
 ].join(',')
 
 function createRepositoryError(message, status = 500, cause = null) {

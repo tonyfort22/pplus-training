@@ -1,0 +1,38 @@
+{
+  "timestamp_utc": "2026-05-26T00:00:00Z",
+  "summary": {
+    "duplicate_pairs_cleaned": 24,
+    "final_template_count": 24,
+    "remaining_duplicate_names": 0,
+    "missing_program_workout_refs": 0,
+    "missing_workout_session_refs": 0,
+    "estimated_program_workouts_remapped": 240,
+    "estimated_workout_sessions_remapped": 73
+  },
+  "pairs": [
+    { "name": "Phase 3 Edge Work A", "keep_id": "33d90a87-66ef-54c9-ba8c-4e9b4af1b7f2", "drop_id": "d91f49e1-e659-597e-bfb1-63adfbe36a73" },
+    { "name": "Phase 3 Edge Work B", "keep_id": "1cb83c77-0ba8-5033-9ac5-502199ff360d", "drop_id": "9846e515-ec03-52dd-9cd7-b8d19e1422e5" },
+    { "name": "Phase 3 Speed Accelerator A", "keep_id": "2e9897e3-ccb3-550b-adb1-a1458b5bef63", "drop_id": "3d3b6a78-0838-5690-9a95-50e75fd5c724" },
+    { "name": "Phase 3 Speed Accelerator B", "keep_id": "c723a947-49b8-554f-bed9-0ce1694e8945", "drop_id": "a548ca4d-5647-56a3-8858-2586a5d8489f" },
+    { "name": "Phase 3 Speed Accelerator C", "keep_id": "3be790d0-da82-54a4-8a7b-93249d9b0fd2", "drop_id": "ba253984-1ef9-5fe6-94c1-3951217805d5" },
+    { "name": "Phase 4 Edge Work A", "keep_id": "20079421-a245-519b-92c2-594f5a1316d6", "drop_id": "0c61b765-99e2-59d2-9ca3-4d0199104b1e" },
+    { "name": "Phase 4 Edge Work B", "keep_id": "6b8e1eba-1668-518e-a7a7-ca6bd955efad", "drop_id": "580b83dc-e106-5111-ba24-5d767183081f" },
+    { "name": "Phase 4 Speed Accelerator A", "keep_id": "fd9d1a6f-7ceb-5432-999b-764da20619d5", "drop_id": "a71e66ad-26f4-51fd-b835-283a0022a5fb" },
+    { "name": "Phase 4 Speed Accelerator B", "keep_id": "2f31ee25-6686-532b-aad0-05ca76565eee", "drop_id": "4f653048-c912-5183-8a08-e9fa1f3f4a62" },
+    { "name": "Phase 4 Speed Accelerator C", "keep_id": "14ec469d-955e-5421-9416-3761026d0f9a", "drop_id": "50aaab50-1606-5852-be14-1c75cd11899f" },
+    { "name": "Phase 5 Edge Work A", "keep_id": "3c6c4630-aaaf-5dd7-b724-6a3e000442e3", "drop_id": "62a25974-8717-56d9-a585-c386f8a3589d" },
+    { "name": "Phase 5 Edge Work B", "keep_id": "d0933d05-a67a-52e9-b4fd-79face530514", "drop_id": "223eccd6-53ee-5b6e-ad7e-0247eaeda4a4" },
+    { "name": "Phase 5 Speed Accelerator A", "keep_id": "e5955494-e042-55ae-984e-b04ffe3dd7f7", "drop_id": "f026cf7e-fa85-5577-866b-daebdac61e24" },
+    { "name": "Phase 5 Speed Accelerator B", "keep_id": "6dcdb7f9-b442-5ace-b977-d95127d9ba30", "drop_id": "2a718a2d-31fa-57c9-a5f9-06ecd678acab" },
+    { "name": "Phase 5 Speed Accelerator C", "keep_id": "d17f044e-c773-5ad8-8577-b93c64066b03", "drop_id": "9b4cd721-99c9-5096-a968-0b411b746b2f" },
+    { "name": "Phase 6 Edge Work A", "keep_id": "7e56ed74-fc7e-5ddc-8f8c-bcc437d0e20e", "drop_id": "f7926eb1-898a-5a79-a092-d561a9b565c7" },
+    { "name": "Phase 6 Edge Work B", "keep_id": "bf3b28f8-f8ff-5048-8dc7-76a8ea86d1ee", "drop_id": "2893b7d9-830a-5dc0-89a4-ba35d7e8107b" },
+    { "name": "Phase 6 Speed Accelerator A", "keep_id": "5c325cee-aeb8-530f-bf6b-32756c4a18b5", "drop_id": "536ed05c-42a7-50ac-9b3f-0bfd2dd7d7fd" },
+    { "name": "Phase 6 Speed Accelerator B", "keep_id": "390bd5a5-2bb2-5dec-8e62-783053496508", "drop_id": "a488745e-9917-5b1c-acff-4918cb8f62b1" },
+    { "name": "Phase 6 Speed Accelerator C", "keep_id": "e8e5209f-1af8-5201-bafc-226135460142", "drop_id": "eb81c023-5f22-53ea-b38e-94dc9087d5a3" },
+    { "name": "Warmup A", "keep_id": "276159d7-1521-5ea8-8546-51d3d4178433", "drop_id": "a6b890e9-cb27-55c7-a112-043cc4c42daa" },
+    { "name": "Warmup B", "keep_id": "9e4def36-08ee-5a49-8c27-47b8d02fe6be", "drop_id": "be458aa3-4dd3-5627-9ff4-67c1cd4fe734" },
+    { "name": "Warmup C", "keep_id": "cead8a47-ec03-5be1-a7d6-2880577549f9", "drop_id": "deca2bf8-5f3d-5ac7-9b86-9578954655d0" },
+    { "name": "Warmup E", "keep_id": "90d37ad6-623d-56f1-8118-22fda798d3c5", "drop_id": "f635cd3e-f91b-54cc-bb91-3fcc8b004d0c" }
+  ]
+}

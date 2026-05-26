@@ -8,8 +8,10 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { ChevronDown, MoreHorizontal } from 'lucide-react'
+import { ChevronDown, MoreHorizontal, Plus } from 'lucide-react'
+import { parseAsJson, useQueryState } from 'nuqs'
 
+import { Filters } from '@/components/reui/filters'
 import Badge from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import Checkbox from '@/components/ui/checkbox'
@@ -31,7 +33,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import MultiCombobox from '@/components/ui/multi-combobox'
-import WorkoutTrainingBuilder from '@/components/admin/workout-training-builder'
+import WorkoutEditorDialog from '@/components/admin/workout-editor-dialog'
+import { createInitialTrainingSections } from '@/components/admin/workout-training-builder'
 import {
   Select,
   SelectContent,
@@ -39,22 +42,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import Textarea from '@/components/ui/textarea'
 
-const workouts = [
-  { id: 'workout-1', name: 'Phase 3 Speed Accelerator A', duration: '60 min', sections: '--', exercises: '--', focusArea: '--', status: 'Active' },
-  { id: 'workout-2', name: 'Phase 3 Speed Accelerator B', duration: '60 min', sections: '--', exercises: '--', focusArea: '--', status: 'Active' },
-  { id: 'workout-3', name: 'Phase 3 Edge Work A', duration: '25 min', sections: '--', exercises: '--', focusArea: '--', status: 'Active' },
-  { id: 'workout-4', name: 'Phase 3 Edge Work B', duration: '25 min', sections: '--', exercises: '--', focusArea: '--', status: 'Active' },
-  { id: 'workout-5', name: 'Phase 3 Speed Accelerator C', duration: '60 min', sections: '--', exercises: '--', focusArea: '--', status: 'Active' },
-  { id: 'workout-6', name: 'Phase 4 Speed Accelerator A', duration: '60 min', sections: '--', exercises: '--', focusArea: '--', status: 'Active' },
-  { id: 'workout-7', name: 'Phase 4 Speed Accelerator B', duration: '60 min', sections: '--', exercises: '--', focusArea: '--', status: 'Active' },
-  { id: 'workout-8', name: 'Phase 4 Edge Work A', duration: '25 min', sections: '--', exercises: '--', focusArea: '--', status: 'Active' },
-  { id: 'workout-9', name: 'Phase 4 Edge Work B', duration: '25 min', sections: '--', exercises: '--', focusArea: '--', status: 'Active' },
-  { id: 'workout-10', name: 'Phase 4 Speed Accelerator C', duration: '60 min', sections: '--', exercises: '--', focusArea: '--', status: 'Active' },
-]
+function formatWorkoutDuration(minutes) {
+  const parsedMinutes = Number.parseInt(minutes ?? '', 10)
+  if (!Number.isFinite(parsedMinutes) || parsedMinutes <= 0) {
+    return '--'
+  }
+
+  return `${parsedMinutes} min`
+}
+
+function mapWorkoutTemplateToWorkoutRow(template = {}) {
+  return {
+    id: template.id,
+    name: template.name ?? 'Workout',
+    duration: formatWorkoutDuration(template.estimated_duration_minutes),
+    sections: template.section_count ?? '--',
+    exercises: template.exercise_count ?? '--',
+    exerciseCount: template.exercise_count ?? 0,
+    setCount: template.set_count ?? 0,
+    focusArea: template.training_type ?? '--',
+    status: String(template.status ?? 'active').replace(/^./, (value) => value.toUpperCase()),
+  }
+}
 
 const programOptions = [
   { value: 'program-1', label: 'Program 1' },
@@ -126,6 +140,21 @@ function StatusCell({ status }) {
   )
 }
 
+function WorkoutNameCell({ workout }) {
+  const exerciseCount = Number(workout?.exerciseCount ?? 0)
+  const setCount = Number(workout?.setCount ?? 0)
+  const exerciseCountLabel = `${exerciseCount} exercise${exerciseCount === 1 ? '' : 's'}`
+  const setCountLabel = `${setCount} set${setCount === 1 ? '' : 's'}`
+
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="font-medium text-[#EEF4FF]">{workout?.name ?? 'Workout'}</span>
+      <span className="text-xs text-[#8EA0BC]">{exerciseCountLabel}</span>
+      <span className="text-xs text-[#6F84A6]">{setCountLabel}</span>
+    </div>
+  )
+}
+
 function RowActionsCell({
   isOpen = false,
   onOpenChange = () => {},
@@ -172,10 +201,175 @@ function FieldLabel({ children, htmlFor }) {
   )
 }
 
+function normalizeWorkoutStatus(status) {
+  return String(status ?? '').trim().toLowerCase()
+}
+
+function normalizeWorkoutFocusArea(focusArea) {
+  return String(focusArea ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+}
+
+function parseWorkoutDurationValue(value) {
+  if (value === null || value === undefined) return null
+
+  const match = String(value).match(/\d+(?:\.\d+)?/)
+  if (!match) return null
+
+  const parsedValue = Number(match[0])
+  return Number.isFinite(parsedValue) ? parsedValue : null
+}
+
+function WorkoutRangeFilterValue({
+  values = [],
+  onChange = () => {},
+  operator = 'between',
+  startPlaceholder = 'Min min',
+  endPlaceholder = 'Max min',
+}) {
+  const [firstValue = '', secondValue = ''] = values
+  const singleValuePlaceholder = operator === 'greater_than' ? 'Min min' : operator === 'less_than' ? 'Max min' : 'Value'
+
+  if (operator === 'between') {
+    return (
+      <div className="flex items-center gap-2">
+        <input
+          type="number"
+          value={firstValue}
+          onChange={(event) => onChange([event.target.value, secondValue])}
+          placeholder={startPlaceholder}
+          className="h-8 w-28 rounded-[10px] !border-0 bg-[#0F1728] px-3 text-sm text-[#DCE6F8] shadow-none outline-none placeholder:text-[#70809E] focus-visible:!border-0 focus-visible:ring-0"
+        />
+        <span className="text-xs text-[#8EA0BC]">to</span>
+        <input
+          type="number"
+          value={secondValue}
+          onChange={(event) => onChange([firstValue, event.target.value])}
+          placeholder={endPlaceholder}
+          className="h-8 w-28 rounded-[10px] !border-0 bg-[#0F1728] px-3 text-sm text-[#DCE6F8] shadow-none outline-none placeholder:text-[#70809E] focus-visible:!border-0 focus-visible:ring-0"
+        />
+      </div>
+    )
+  }
+
+  return (
+    <input
+      type="number"
+      value={firstValue}
+      onChange={(event) => onChange([event.target.value])}
+      placeholder={singleValuePlaceholder}
+      className="h-8 w-28 rounded-[10px] !border-0 bg-[#0F1728] px-3 text-sm text-[#DCE6F8] shadow-none outline-none placeholder:text-[#70809E] focus-visible:!border-0 focus-visible:ring-0"
+    />
+  )
+}
+
+const workoutFilterFields = [
+  {
+    key: 'status',
+    label: 'Status',
+    field: 'status',
+    type: 'select',
+    defaultOperator: 'is',
+    options: [
+      { value: 'active', label: 'Active' },
+      { value: 'draft', label: 'Draft' },
+      { value: 'archived', label: 'Archived' },
+    ],
+  },
+  {
+    key: 'focusArea',
+    label: 'Focus area',
+    field: 'focusArea',
+    type: 'select',
+    defaultOperator: 'is',
+    options: [
+      { value: 'acceleration', label: 'Acceleration' },
+      { value: 'edge-work', label: 'Edge Work' },
+      { value: 'conditioning', label: 'Conditioning' },
+    ],
+  },
+  {
+    key: 'duration',
+    label: 'Duration',
+    field: 'duration',
+    type: 'custom',
+    defaultOperator: 'between',
+    operators: [
+      { value: 'between', label: 'between' },
+      { value: 'greater_than', label: 'greater than' },
+      { value: 'less_than', label: 'less than' },
+      { value: 'empty', label: 'is empty' },
+      { value: 'not_empty', label: 'is not empty' },
+    ],
+    customRenderer: ({ values, onChange, operator }) => (
+      <WorkoutRangeFilterValue values={values} onChange={onChange} operator={operator} startPlaceholder="Min min" endPlaceholder="Max min" />
+    ),
+  },
+]
+
+function workoutMatchesFilter(workout, filter) {
+  if (!filter?.field) return true
+
+  const values = Array.isArray(filter.values) ? filter.values : []
+  const primaryValue = values[0]
+  const secondaryValue = values[1]
+
+  switch (filter.field) {
+    case 'status': {
+      const workoutStatus = normalizeWorkoutStatus(workout.status)
+      if (filter.operator === 'empty') return !workout.status
+      if (filter.operator === 'not_empty') return Boolean(workout.status)
+      const selectedStatus = normalizeWorkoutStatus(primaryValue)
+      if (!selectedStatus) return true
+      if (filter.operator === 'is_not') return workoutStatus !== selectedStatus
+      return workoutStatus === selectedStatus
+    }
+    case 'focusArea': {
+      const workoutFocusArea = normalizeWorkoutFocusArea(workout.focusArea)
+      if (filter.operator === 'empty') return !workout.focusArea || workout.focusArea === '--'
+      if (filter.operator === 'not_empty') return Boolean(workout.focusArea) && workout.focusArea !== '--'
+      const selectedFocusArea = normalizeWorkoutFocusArea(primaryValue)
+      if (!selectedFocusArea) return true
+      if (filter.operator === 'is_not') return workoutFocusArea !== selectedFocusArea
+      return workoutFocusArea === selectedFocusArea
+    }
+    case 'duration': {
+      const workoutDuration = parseWorkoutDurationValue(workout.duration)
+      const minDuration = parseWorkoutDurationValue(primaryValue)
+      const maxDuration = parseWorkoutDurationValue(secondaryValue)
+      if (filter.operator === 'empty') return !workout.duration
+      if (filter.operator === 'not_empty') return Boolean(workout.duration)
+      if (workoutDuration === null) return false
+      if (filter.operator === 'greater_than') return minDuration === null ? true : workoutDuration > minDuration
+      if (filter.operator === 'less_than') return minDuration === null ? true : workoutDuration < minDuration
+      if (minDuration !== null && maxDuration !== null) return workoutDuration >= minDuration && workoutDuration <= maxDuration
+      if (minDuration !== null) return workoutDuration >= minDuration
+      if (maxDuration !== null) return workoutDuration <= maxDuration
+      return true
+    }
+    default:
+      return true
+  }
+}
+
+function workoutMatchesFilters(workout, filters) {
+  return filters.every((filter) => workoutMatchesFilter(workout, filter))
+}
+
 export default function WorkoutsDataTable({ searchQuery = '' }) {
+  const [workoutsData, setWorkoutsData] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [workoutFilters, setWorkoutFilters] = useQueryState(
+    'filters',
+    parseAsJson((value) => (Array.isArray(value) ? value : [])).withDefault([]),
+  )
   const [isCreateWorkoutDialogOpen, setIsCreateWorkoutDialogOpen] = useState(false)
   const [workoutDialogMode, setWorkoutDialogMode] = useState('create')
   const [selectedWorkoutId, setSelectedWorkoutId] = useState(null)
+  const [workoutTrainingSections, setWorkoutTrainingSections] = useState([])
   const [workoutFormValues, setWorkoutFormValues] = useState(() => createWorkoutFormValues())
   const [openRowActionMenuId, setOpenRowActionMenuId] = useState(null)
   const [pendingRowAction, setPendingRowAction] = useState(null)
@@ -184,36 +378,46 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
   const [columnVisibility, setColumnVisibility] = useState({})
   const [pagination, setPagination] = useState({
     pageIndex: 0,
-    pageSize: 10,
+    pageSize: 5,
   })
 
   function openCreateWorkoutDialog() {
     setWorkoutDialogMode('create')
     setSelectedWorkoutId(null)
+    setWorkoutTrainingSections([])
     setWorkoutFormValues(createWorkoutFormValues())
     setIsCreateWorkoutDialogOpen(true)
   }
 
   function openEditWorkoutDialog(workoutId) {
-    const selectedWorkout = workouts.find((workout) => workout.id === workoutId)
+    const selectedWorkout = workoutsData.find((workout) => workout.id === workoutId)
 
     if (!selectedWorkout) return
 
     setWorkoutDialogMode('edit')
     setSelectedWorkoutId(workoutId)
+    setWorkoutTrainingSections(createInitialTrainingSections())
     setWorkoutFormValues(createWorkoutFormValues(selectedWorkout))
     setIsCreateWorkoutDialogOpen(true)
   }
 
   function openDuplicateWorkoutDialog(workoutId) {
-    const selectedWorkout = workouts.find((workout) => workout.id === workoutId)
+    const selectedWorkout = workoutsData.find((workout) => workout.id === workoutId)
 
     if (!selectedWorkout) return
 
     setWorkoutDialogMode('duplicate')
     setSelectedWorkoutId(workoutId)
+    setWorkoutTrainingSections(createInitialTrainingSections())
     setWorkoutFormValues(createWorkoutFormValues(selectedWorkout))
     setIsCreateWorkoutDialogOpen(true)
+  }
+
+  function handleCreateWorkout() {
+    const nextWorkoutId = `workout-${Date.now()}`
+
+    setSelectedWorkoutId(nextWorkoutId)
+    setWorkoutDialogMode('edit')
   }
 
   const columns = useMemo(
@@ -247,6 +451,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
         accessorKey: 'name',
         header: 'Workout',
         meta: { label: 'Workout' },
+        cell: ({ row }) => <WorkoutNameCell workout={row.original} />,
       },
       {
         accessorKey: 'sections',
@@ -294,8 +499,13 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
     [openRowActionMenuId],
   )
 
+  const filteredWorkouts = useMemo(() => {
+    const normalizedFilters = Array.isArray(workoutFilters) ? workoutFilters : []
+    return workoutsData.filter((workout) => workoutMatchesFilters(workout, normalizedFilters))
+  }, [workoutFilters, workoutsData])
+
   const table = useReactTable({
-    data: workouts,
+    data: filteredWorkouts,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -313,8 +523,56 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
   })
 
   useEffect(() => {
+    let isMounted = true
+
+    async function loadWorkouts() {
+      setLoading(true)
+      setError('')
+
+      try {
+        const response = await fetch('/api/admin/workout-templates')
+        const payload = await response.json().catch(() => ({}))
+
+        if (!response.ok) {
+          throw new Error(payload?.error || 'Failed to load workouts.')
+        }
+
+        const nextWorkouts = Array.isArray(payload.workoutTemplates)
+          ? payload.workoutTemplates.map(mapWorkoutTemplateToWorkoutRow)
+          : []
+
+        if (isMounted) {
+          setWorkoutsData(nextWorkouts)
+        }
+      } catch (loadError) {
+        if (isMounted) {
+          setWorkoutsData([])
+          setError(loadError?.message || 'Failed to load workouts.')
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadWorkouts()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  useEffect(() => {
     table.getColumn('name')?.setFilterValue(searchQuery)
   }, [searchQuery, table])
+
+  useEffect(() => {
+    setPagination((current) => ({
+      ...current,
+      pageIndex: 0,
+    }))
+  }, [workoutFilters, searchQuery])
 
   useEffect(() => {
     if (openRowActionMenuId || !pendingRowAction) return
@@ -328,257 +586,98 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
     setPendingRowAction(null)
   }, [openRowActionMenuId, pendingRowAction])
 
+  const emptyStateMessage = error || (workoutFilters.length > 0 ? 'No workouts match the current filters.' : 'No workouts found.')
+  const pageSizeOptions = [5, 10, 20, 30]
+  const totalRows = table.getFilteredRowModel().rows.length
+  const pageStart = totalRows === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1
+  const pageEnd = Math.min((pagination.pageIndex + 1) * pagination.pageSize, totalRows)
+  const pageNumbers = Array.from({ length: table.getPageCount() }, (_, index) => index)
+  const skeletonRows = Array.from({ length: pagination.pageSize }, (_, rowIndex) => rowIndex)
+
   return (
     <div className="admin-shell-athletes-table-example">
-      <div className="admin-shell-athletes-example-controls flex items-center justify-between gap-3">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button type="button" className="admin-shell-athletes-example-columns-button">
-              Columns
-              <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {table
-              .getAllColumns()
-              .filter((column) => column.getCanHide())
-              .map((column) => (
-                <DropdownMenuCheckboxItem
-                  key={column.id}
-                  className="capitalize"
-                  checked={column.getIsVisible()}
-                  onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                >
-                  {column.columnDef.meta?.label ?? column.id}
-                </DropdownMenuCheckboxItem>
-              ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <Button
-          type="button"
-          onClick={openCreateWorkoutDialog}
-          className="admin-shell-athletes-invite-button bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d] rounded-[12px] min-h-[40px]"
-        >
-          Create a workout
-        </Button>
+      <div className="grid gap-3">
+        <div className="flex w-full items-center justify-between gap-3">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button type="button" className="admin-shell-athletes-example-columns-button">
+                Columns
+                <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {table
+                .getAllColumns()
+                .filter((column) => column.getCanHide())
+                .map((column) => (
+                  <DropdownMenuCheckboxItem
+                    key={column.id}
+                    className="capitalize"
+                    checked={column.getIsVisible()}
+                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                  >
+                    {column.columnDef.meta?.label ?? column.id}
+                  </DropdownMenuCheckboxItem>
+                ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button
+            type="button"
+            onClick={openCreateWorkoutDialog}
+            className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d] md:self-auto"
+          >
+            Create a workout
+          </Button>
+        </div>
+        <div className="flex w-full flex-wrap items-center justify-start gap-2">
+          <Filters
+            filters={workoutFilters}
+            fields={workoutFilterFields}
+            onChange={setWorkoutFilters}
+            trigger={
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-[12px] min-h-[40px] !border !border-[#24334A] bg-transparent text-[#DCE6F8] shadow-none hover:bg-[#15233A] hover:text-[#EEF4FF]"
+              >
+                <Plus className="size-4" />
+                Add filter
+              </Button>
+            }
+          />
+        </div>
       </div>
 
-      <Dialog
+      <WorkoutEditorDialog
         open={isCreateWorkoutDialogOpen}
         onOpenChange={(isOpen) => {
           setIsCreateWorkoutDialogOpen(isOpen)
+
+          if (!isOpen) {
+            setPendingRowAction(null)
+            setWorkoutDialogMode('create')
+            setSelectedWorkoutId(null)
+            setWorkoutTrainingSections([])
+            setWorkoutFormValues(createWorkoutFormValues())
+          }
         }}
-        modal={false}
-      >
-        <DialogContent
-          pageScrollable
-          className="admin-shell-athletes-invite-dialog border border-[#24334A] bg-[#0F1728] p-0 text-[#DCE6F8] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[760px]"
-        >
-          <div className="shrink-0 border-b border-[#24334A] px-6 py-5">
-            <DialogHeader>
-              <DialogTitle>{workoutDialogMode === 'edit' ? 'Edit workout' : workoutDialogMode === 'duplicate' ? 'Duplicate workout' : 'Workout'}</DialogTitle>
-              <DialogDescription>
-                {workoutDialogMode === 'edit'
-                  ? `Update ${workoutFormValues.name || selectedWorkoutId || 'this workout'} below.`
-                  : workoutDialogMode === 'duplicate'
-                    ? `Duplicate ${workoutFormValues.name || selectedWorkoutId || 'this workout'} into a new workout.`
-                    : 'Fill out the information below.'}
-              </DialogDescription>
-            </DialogHeader>
-          </div>
-
-          <div className="grid gap-5 px-6 py-6">
-            <Tabs defaultValue="details" className="grid gap-5">
-              <TabsList>
-                <TabsTrigger value="details">Details</TabsTrigger>
-                <TabsTrigger value="training">Training</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="details" className="grid gap-5">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="grid gap-2">
-                    <FieldLabel htmlFor="create-workout-name">Name</FieldLabel>
-                    <input
-                      id="create-workout-name"
-                      type="text"
-                      value={workoutFormValues.name}
-                      onChange={(event) => setWorkoutFormValues((current) => ({ ...current, name: event.target.value }))}
-                      className="h-11 rounded-[12px] border border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] outline-none placeholder:text-[#70809E] focus:border-[#3BE0AF]"
-                      placeholder="Enter workout name"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <FieldLabel htmlFor="create-workout-duration">Duration</FieldLabel>
-                    <input
-                      id="create-workout-duration"
-                      type="text"
-                      value={workoutFormValues.duration}
-                      onChange={(event) => setWorkoutFormValues((current) => ({ ...current, duration: event.target.value }))}
-                      className="h-11 rounded-[12px] border border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] outline-none placeholder:text-[#70809E] focus:border-[#3BE0AF]"
-                      placeholder="60 min"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-2">
-                  <FieldLabel htmlFor="create-workout-thumbnail">Thumbnail</FieldLabel>
-                  <CompactFileUpload
-                    id="create-workout-thumbnail"
-                    buttonLabel="Choose File"
-                    helperText="Drop files here or click to browse (max 3 files)"
-                    fileName={workoutFormValues.thumbnailName}
-                    onFileChange={(file) => setWorkoutFormValues((current) => ({ ...current, thumbnailName: file?.name ?? '' }))}
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <FieldLabel htmlFor="create-workout-program">Program</FieldLabel>
-                  <Select value={workoutFormValues.program} onValueChange={(value) => setWorkoutFormValues((current) => ({ ...current, program: value }))}>
-                    <SelectTrigger id="create-workout-program" className="h-11 rounded-[12px]">
-                      <SelectValue placeholder="Choose some options..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {programOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="grid gap-2">
-                    <FieldLabel htmlFor="create-workout-trainer">Trainer</FieldLabel>
-                    <Select value={workoutFormValues.trainer} onValueChange={(value) => setWorkoutFormValues((current) => ({ ...current, trainer: value }))}>
-                      <SelectTrigger id="create-workout-trainer" className="h-11 rounded-[12px]">
-                        <SelectValue placeholder="Select trainer" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {trainerOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <FieldLabel htmlFor="create-workout-equipment">Equipment needed</FieldLabel>
-                    <MultiCombobox
-                      id="create-workout-equipment"
-                      placeholder="Choose some options..."
-                      searchPlaceholder="Search equipment..."
-                      maxVisibleBadges={3}
-                      options={equipmentOptions}
-                      selectedValues={workoutFormValues.equipmentNeeded}
-                      onSelectedValuesChange={(equipmentNeeded) => setWorkoutFormValues((current) => ({ ...current, equipmentNeeded }))}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="grid gap-2">
-                    <FieldLabel htmlFor="create-workout-category">Category</FieldLabel>
-                    <Select value={workoutFormValues.category} onValueChange={(value) => setWorkoutFormValues((current) => ({ ...current, category: value }))}>
-                      <SelectTrigger id="create-workout-category" className="h-11 rounded-[12px]">
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categoryOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <FieldLabel htmlFor="create-workout-difficulty">Difficulty</FieldLabel>
-                    <Select value={workoutFormValues.difficulty} onValueChange={(value) => setWorkoutFormValues((current) => ({ ...current, difficulty: value }))}>
-                      <SelectTrigger id="create-workout-difficulty" className="h-11 rounded-[12px]">
-                        <SelectValue placeholder="Select difficulty" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {difficultyOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="grid gap-2">
-                    <FieldLabel htmlFor="create-workout-status">Status</FieldLabel>
-                    <Select value={workoutFormValues.status} onValueChange={(value) => setWorkoutFormValues((current) => ({ ...current, status: value }))}>
-                      <SelectTrigger id="create-workout-status" className="h-11 rounded-[12px]">
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {statusOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <FieldLabel htmlFor="create-workout-focus-area">Focus area</FieldLabel>
-                    <Select value={workoutFormValues.focusArea} onValueChange={(value) => setWorkoutFormValues((current) => ({ ...current, focusArea: value }))}>
-                      <SelectTrigger id="create-workout-focus-area" className="h-11 rounded-[12px]">
-                        <SelectValue placeholder="Select focus area" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {focusAreaOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid gap-2">
-                  <FieldLabel htmlFor="create-workout-description">Description</FieldLabel>
-                  <Textarea
-                    id="create-workout-description"
-                    value={workoutFormValues.description}
-                    onChange={(event) => setWorkoutFormValues((current) => ({ ...current, description: event.target.value }))}
-                    className="min-h-[140px] rounded-[12px] border border-[#24334A] bg-[#111D30] px-4 py-3 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
-                    placeholder="Add a short description for this workout"
-                  />
-                </div>
-              </TabsContent>
-
-              <TabsContent value="training" className="grid gap-5">
-                <WorkoutTrainingBuilder />
-              </TabsContent>
-            </Tabs>
-          </div>
-
-          <DialogFooter className="shrink-0 border-t border-[#24334A] px-6 py-5 sm:justify-end gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-[12px] min-h-[40px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
-              onClick={() => setIsCreateWorkoutDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              className="rounded-[12px] min-h-[40px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]"
-            >
-              Create
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        mode={workoutDialogMode}
+        title={workoutDialogMode === 'edit' ? 'Edit workout' : workoutDialogMode === 'duplicate' ? 'Duplicate workout' : 'Workout'}
+        description={
+          workoutDialogMode === 'edit'
+            ? `Update ${workoutFormValues.name || selectedWorkoutId || 'this workout'} below.`
+            : workoutDialogMode === 'duplicate'
+              ? `Duplicate ${workoutFormValues.name || selectedWorkoutId || 'this workout'} into a new workout.`
+              : 'Fill out the information below.'
+        }
+        detailsValues={workoutFormValues}
+        onDetailsChange={setWorkoutFormValues}
+        trainingSections={workoutTrainingSections}
+        onTrainingSectionsChange={setWorkoutTrainingSections}
+        showTrainingTab={workoutDialogMode !== 'create'}
+        primaryActionLabel={workoutDialogMode === 'edit' ? 'Save changes' : workoutDialogMode === 'duplicate' ? 'Create copy' : 'Create'}
+        onPrimaryAction={workoutDialogMode === 'create' ? handleCreateWorkout : undefined}
+      />
 
       <div className="admin-shell-athletes-table-shell">
         <Table className="admin-shell-athletes-table">
@@ -594,7 +693,39 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {loading ? (
+              skeletonRows.map((rowIndex) => (
+                <TableRow
+                  key={`skeleton-${rowIndex}`}
+                  className={rowIndex % 2 === 0 ? 'admin-shell-athletes-row-even' : 'admin-shell-athletes-row-odd'}
+                >
+                  <TableCell>
+                    <Skeleton className="h-4 w-4 rounded-[4px]" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[180px]" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[64px]" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[64px]" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[96px]" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[72px]" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-8 w-[96px] rounded-full" />
+                  </TableCell>
+                  <TableCell className="admin-shell-athletes-actions-cell">
+                    <Skeleton className="ml-auto h-8 w-8 rounded-full" />
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row, index) => (
                 <TableRow
                   key={row.id}
@@ -611,7 +742,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center text-[#8EA0BC]">
-                  No workouts found.
+                  {emptyStateMessage}
                 </TableCell>
               </TableRow>
             )}
@@ -619,16 +750,47 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
         </Table>
       </div>
 
-      <div className="flex items-center justify-between py-4 text-sm text-[#8EA0BC]">
-        <div>{table.getFilteredRowModel().rows.length} workout(s)</div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
-            Previous
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
-            Next
-          </Button>
-        </div>
+      <div className="flex items-center justify-end gap-3 py-4 text-sm text-[#8EA0BC]">
+        <span>Rows per page</span>
+        <Select value={String(pagination.pageSize)} onValueChange={(value) => table.setPageSize(Number(value))}>
+          <SelectTrigger className="h-9 w-[76px] rounded-[10px] !border-[#24334A] bg-[#111D30] px-3 text-sm text-[#DCE6F8]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {pageSizeOptions.map((option) => (
+              <SelectItem key={option} value={String(option)}>{option}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span>{pageStart} - {pageEnd} of {totalRows}</span>
+        <button
+          type="button"
+          aria-label="Go to previous page"
+          className="admin-shell-athletes-example-pagination-button"
+          onClick={() => table.previousPage()}
+          disabled={!table.getCanPreviousPage()}
+        >
+          ‹
+        </button>
+        {pageNumbers.map((pageNumber) => (
+          <button
+            key={`page-${pageNumber}`}
+            type="button"
+            className={`admin-shell-athletes-example-pagination-button ${pagination.pageIndex === pageNumber ? 'bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]' : ''}`}
+            onClick={() => table.setPageIndex(pageNumber)}
+          >
+            {pageNumber + 1}
+          </button>
+        ))}
+        <button
+          type="button"
+          aria-label="Go to next page"
+          className="admin-shell-athletes-example-pagination-button"
+          onClick={() => table.nextPage()}
+          disabled={!table.getCanNextPage()}
+        >
+          ›
+        </button>
       </div>
     </div>
   )
