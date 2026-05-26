@@ -28,6 +28,8 @@ function expectColumn(sql, tableName, columnName) {
 }
 
 const requiredTables = [
+  'workout_template_blocks',
+  'program_workout_blocks',
   'program_workout_exercises',
   'program_workout_sets',
   'rest_timer_states',
@@ -117,8 +119,26 @@ for (const sqlName of ['schema-v1.sql', '0001_initial_schema.sql']) {
     expectColumn(sql, 'exercise_performance_snapshots', 'body_region')
   })
 
+  test(`${sqlName} stores workout block structure for both templates and scheduled program workouts`, () => {
+    expectColumn(sql, 'workout_template_blocks', 'block_code')
+    expectColumn(sql, 'workout_template_blocks', 'title')
+    expectColumn(sql, 'workout_template_blocks', 'instructions')
+    expectColumn(sql, 'workout_template_exercises', 'workout_template_block_id')
+    expectColumn(sql, 'program_workout_blocks', 'block_code')
+    expectColumn(sql, 'program_workout_blocks', 'title')
+    expectColumn(sql, 'program_workout_blocks', 'instructions')
+    expectColumn(sql, 'program_workout_exercises', 'program_workout_block_id')
+  })
+
   test(`${sqlName} preserves planned workout notes needed by workout edit save`, () => {
     expectColumn(sql, 'program_workouts', 'notes')
+  })
+
+  test(`${sqlName} stores workout card colors on both templates and scheduled program workouts`, () => {
+    expectColumn(sql, 'workout_templates', 'bg_color')
+    expectColumn(sql, 'workout_templates', 'text_color')
+    expectColumn(sql, 'program_workouts', 'bg_color')
+    expectColumn(sql, 'program_workouts', 'text_color')
   })
 
   test(`${sqlName} allows coach-authored programs to start unassigned`, () => {

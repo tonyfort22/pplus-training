@@ -354,6 +354,8 @@ It may be coach-authored, imported, or normalized from source content.
 - difficulty nullable
 - focus_area nullable
 - training_type nullable
+- bg_color nullable
+- text_color nullable
 - estimated_duration_minutes nullable
 - thumbnail_url nullable
 - source_type (`imported`, `manual`, `hybrid`)
@@ -509,6 +511,8 @@ These rows should usually come from a `workout_template`, with optional `content
 - category_snapshot nullable
 - focus_area_snapshot nullable
 - training_type_snapshot nullable
+- bg_color nullable
+- text_color nullable
 - estimated_duration_minutes_snapshot nullable
 - source_file_label_snapshot nullable
 - sort_order
