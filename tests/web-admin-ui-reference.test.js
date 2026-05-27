@@ -1748,7 +1748,7 @@ test('admin navigation uses real nested routes driven by shared config', () => {
   assert.match(cssSource, /\.admin-shell-invites-table-card\s*\{[\s\S]*padding:\s*20px 28px 22px;/)
   assert.match(cssSource, /\.admin-shell-invites-table\s*\{[\s\S]*border-collapse:\s*separate;/)
   assert.match(cssSource, /\.admin-shell-invites-table-shell\s*\{[\s\S]*overflow:\s*hidden;/)
-  assert.doesNotMatch(cssSource, /\.admin-shell-invites-table-shell\s*\{[\s\S]*padding-top:/)
+  assert.doesNotMatch(cssSource, /\.admin-shell-invites-table-shell\s*\{[^}]*padding-top:/)
   assert.match(cssSource, /\.admin-shell-invites-checkbox-cell input\s*\{[\s\S]*appearance:\s*none;/)
   assert.match(cssSource, /\.admin-shell-invites-checkbox-cell input\s*\{[\s\S]*width:\s*20px;/)
   assert.match(cssSource, /\.admin-shell-invites-checkbox-cell input:checked\s*\{[\s\S]*background:\s*#3be0af;/)
