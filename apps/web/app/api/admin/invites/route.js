@@ -1,3 +1,4 @@
+import { createAdminAthleteRepository } from '@/lib/admin-athlete-repository'
 import { createAdminInviteRepository } from '@/lib/admin-invite-repository'
 
 function json(payload, init = {}) {
@@ -16,6 +17,17 @@ export async function GET() {
     const repository = createAdminInviteRepository()
     const invites = await repository.listInvites()
     return json({ invites })
+  } catch (error) {
+    return handleRouteError(error)
+  }
+}
+
+export async function POST(request) {
+  try {
+    const repository = createAdminAthleteRepository()
+    const body = await request.json()
+    const athlete = await repository.sendAthleteInvite(body ?? {})
+    return json({ athlete }, { status: 201 })
   } catch (error) {
     return handleRouteError(error)
   }

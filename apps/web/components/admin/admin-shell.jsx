@@ -56,6 +56,7 @@ import GroupsListView from './groups-list-view'
 import InvitesListView from './invites-list-view'
 import ProgramsLibraryView from './programs-library-view'
 import RankingsListView from './rankings-list-view'
+import SettingsView from './settings-view'
 import WorkoutsCalendarView from './workouts-calendar-view'
 import WorkoutsLibraryView from './workouts-library-view'
 
@@ -75,10 +76,8 @@ const accountSwitcher = {
 }
 
 const accountMenuItems = [
-  { id: 'profile', label: 'Profile' },
-  { id: 'billing', label: 'Billing' },
-  { id: 'settings', label: 'Settings' },
-  { id: 'keyboard-shortcuts', label: 'Keyboard shortcuts' },
+  { id: 'profile', label: 'Profile', href: '/admin/settings' },
+  { id: 'account', label: 'Account', href: '/admin/settings/account' },
 ]
 
 const SELECTED_ADMIN_ATHLETE_STORAGE_KEY = 'pplus-admin-selected-athlete-id'
@@ -226,7 +225,7 @@ function AdminSidebarNavItem({ currentPath = '', group }) {
                   <SidebarMenuSubButton
                     asChild
                     isActive={itemCurrent}
-                    className="h-8 rounded-xl px-3 text-[12px] text-[#8ea0bc] data-[active=true]:bg-[#2d4c4c] data-[active=true]:font-medium data-[active=true]:text-[#3BE0AF] hover:bg-[#111d30] hover:text-[#eef4ff]"
+                    className="h-8 rounded-xl px-3 text-[12px] text-[#8ea0bc] bg-transparent data-[active=true]:bg-transparent data-[active=true]:font-medium data-[active=true]:text-[#3BE0AF] hover:bg-transparent hover:text-[#3BE0AF] active:bg-transparent"
                   >
                     <Link href={item.href}>{item.label}</Link>
                   </SidebarMenuSubButton>
@@ -304,8 +303,8 @@ function DashboardShellHeader({ searchQuery = '', onSearchQueryChange = () => {}
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {accountMenuItems.map((item) => (
-              <DropdownMenuItem key={item.id}>
-                <span>{item.label}</span>
+              <DropdownMenuItem key={item.id} asChild>
+                <Link href={item.href}>{item.label}</Link>
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
@@ -456,8 +455,8 @@ function SidebarAccountSwitcher() {
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {accountMenuItems.map((item) => (
-              <DropdownMenuItem key={item.id}>
-                <span>{item.label}</span>
+              <DropdownMenuItem key={item.id} asChild>
+                <Link href={item.href}>{item.label}</Link>
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
@@ -479,7 +478,7 @@ function AdminDashboardSidebar({
   const topSections = [...adminNavigation, ...adminBottomNavigation]
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+    <Sidebar collapsible="icon" className="!border-r-0 !border-l-0 border-r-0 border-l-0">
       <SidebarHeader className="gap-4 px-3 py-4 group-data-[collapsible=icon]:px-2">
         <SidebarBrandLogo />
       </SidebarHeader>
@@ -643,6 +642,8 @@ export default function AdminShell({ currentPath = '', contentOverride = null })
   const isWorkoutsLibraryView = currentPath === '/admin/workouts'
   const isWorkoutsCalendarView = currentPath === '/admin/workouts/calendar'
   const isExercisesLibraryView = currentPath === '/admin/exercises'
+  const isSettingsView = currentPath === '/admin/settings'
+    || currentPath === '/admin/settings/account'
 
   return (
     <SidebarProvider defaultOpen>
@@ -660,7 +661,7 @@ export default function AdminShell({ currentPath = '', contentOverride = null })
 
         <div className="flex-1">
           <main className={['admin-shell-workspace', isDashboardOverview ? 'admin-shell-workspace-dashboard' : ''].filter(Boolean).join(' ')}>
-            {!isDashboardOverview && !isAllAthletesView && !isAthleteInvitesView && !isAthleteGroupsView && !isAthleteRankingsView && !isProgramsLibraryView && !isWorkoutsLibraryView && !isWorkoutsCalendarView && !isExercisesLibraryView && (
+            {!isDashboardOverview && !isAllAthletesView && !isAthleteInvitesView && !isAthleteGroupsView && !isAthleteRankingsView && !isProgramsLibraryView && !isWorkoutsLibraryView && !isWorkoutsCalendarView && !isExercisesLibraryView && !isSettingsView && (
               <div className="admin-shell-workspace-header">
                 <span className="admin-shell-workspace-kicker">{sectionLabel}</span>
                 <h1 className="admin-shell-workspace-title">{pageTitle}</h1>
@@ -690,6 +691,8 @@ export default function AdminShell({ currentPath = '', contentOverride = null })
               <WorkoutsCalendarView selectedAthleteId={selectedAthleteId} />
             ) : isExercisesLibraryView ? (
               <ExercisesLibraryView searchQuery={topbarSearchQuery} />
+            ) : isSettingsView ? (
+              <SettingsView currentPath={currentPath} />
             ) : (
               <section className="admin-shell-workspace-panel">
                 <h2 className="admin-shell-workspace-panel-title">{pageTitle} workspace</h2>

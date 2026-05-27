@@ -179,6 +179,8 @@ create table if not exists workout_templates (
   category text,
   focus_area text,
   training_type text,
+  bg_color text,
+  text_color text,
   estimated_duration_minutes integer,
   thumbnail_url text,
   status text not null check (status in ('draft', 'active', 'archived')),
@@ -186,9 +188,22 @@ create table if not exists workout_templates (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists workout_template_blocks (
+  id uuid primary key default gen_random_uuid(),
+  workout_template_id uuid not null references workout_templates(id) on delete cascade,
+  block_code text,
+  title text,
+  instructions text,
+  sort_order integer not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (workout_template_id, sort_order)
+);
+
 create table if not exists workout_template_exercises (
   id uuid primary key default gen_random_uuid(),
   workout_template_id uuid not null references workout_templates(id) on delete cascade,
+  workout_template_block_id uuid references workout_template_blocks(id) on delete set null,
   exercise_id uuid references exercises(id) on delete set null,
   name_snapshot text not null,
   sort_order integer not null,
@@ -223,7 +238,7 @@ create table if not exists workout_template_sets (
 
 create table if not exists programs (
   id uuid primary key default gen_random_uuid(),
-  athlete_id uuid not null references athlete_profiles(id) on delete cascade,
+  athlete_id uuid references athlete_profiles(id) on delete set null,
   coach_id uuid references coach_profiles(id) on delete set null,
   name text not null,
   description text,
@@ -268,6 +283,8 @@ create table if not exists program_workouts (
   workout_template_id uuid references workout_templates(id) on delete set null,
   name_snapshot text not null,
   notes text,
+  bg_color text,
+  text_color text,
   status text not null check (status in ('scheduled', 'available', 'in_progress', 'completed', 'missed', 'skipped')),
   sort_order integer,
   scheduled_date date,
@@ -277,9 +294,22 @@ create table if not exists program_workouts (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists program_workout_blocks (
+  id uuid primary key default gen_random_uuid(),
+  program_workout_id uuid not null references program_workouts(id) on delete cascade,
+  block_code text,
+  title text,
+  instructions text,
+  sort_order integer not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (program_workout_id, sort_order)
+);
+
 create table if not exists program_workout_exercises (
   id uuid primary key default gen_random_uuid(),
   program_workout_id uuid not null references program_workouts(id) on delete cascade,
+  program_workout_block_id uuid references program_workout_blocks(id) on delete set null,
   exercise_id uuid references exercises(id) on delete set null,
   name_snapshot text not null,
   sort_order integer not null,
@@ -535,13 +565,17 @@ create index if not exists idx_exercise_aliases_exercise on exercise_aliases(exe
 create index if not exists idx_sub_muscles_muscle on sub_muscles(muscle_id);
 create index if not exists idx_exercise_muscle_maps_exercise on exercise_muscle_maps(exercise_id);
 create index if not exists idx_exercise_sub_muscle_maps_exercise on exercise_sub_muscle_maps(exercise_id);
+create index if not exists idx_workout_template_blocks_template on workout_template_blocks(workout_template_id);
 create index if not exists idx_workout_template_exercises_template on workout_template_exercises(workout_template_id);
+create index if not exists idx_workout_template_exercises_block on workout_template_exercises(workout_template_block_id);
 create index if not exists idx_workout_template_sets_exercise on workout_template_sets(workout_template_exercise_id);
 create index if not exists idx_program_weeks_program on program_weeks(program_id);
 create index if not exists idx_program_days_week on program_days(program_week_id);
+create index if not exists idx_program_workout_blocks_workout on program_workout_blocks(program_workout_id);
 create index if not exists idx_program_workouts_program on program_workouts(program_id);
 create index if not exists idx_program_workouts_day on program_workouts(program_day_id);
 create index if not exists idx_program_workout_exercises_workout on program_workout_exercises(program_workout_id);
+create index if not exists idx_program_workout_exercises_block on program_workout_exercises(program_workout_block_id);
 create index if not exists idx_program_workout_sets_exercise on program_workout_sets(program_workout_exercise_id);
 create index if not exists idx_workout_sessions_athlete on workout_sessions(athlete_id);
 create index if not exists idx_workout_sessions_program_workout on workout_sessions(program_workout_id);
@@ -590,6 +624,18 @@ create index if not exists idx_athlete_invitations_email_created on athlete_invi
 create index if not exists idx_athlete_groups_coach_status on athlete_groups(coach_id, status, updated_at desc);
 create index if not exists idx_athlete_group_memberships_group on athlete_group_memberships(athlete_group_id);
 create index if not exists idx_athlete_group_memberships_athlete on athlete_group_memberships(athlete_id);
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('exercise-media', 'exercise-media', true, 5242880, array['image/jpeg', 'image/png', 'image/webp'])
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists exercise_media_select_public on storage.objects;
+create policy exercise_media_select_public on storage.objects
+for select to public
+using (bucket_id = 'exercise-media');
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('athlete-avatars', 'athlete-avatars', true, 5242880, array['image/jpeg', 'image/png', 'image/webp'])

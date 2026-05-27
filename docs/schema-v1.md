@@ -354,6 +354,8 @@ It may be coach-authored, imported, or normalized from source content.
 - difficulty nullable
 - focus_area nullable
 - training_type nullable
+- bg_color nullable
+- text_color nullable
 - estimated_duration_minutes nullable
 - thumbnail_url nullable
 - source_type (`imported`, `manual`, `hybrid`)
@@ -439,9 +441,9 @@ Layer 5 does **not** store the authoritative performed set history.
 Once a workout is started, Layer 6 becomes the execution source of truth.
 
 ## programs
-Assigned athlete programs.
+Coach-authored program plans. A program may start unassigned and later be attached to an athlete, while assigned athlete views still consume athlete-linked programs.
 - id
-- athlete_id
+- athlete_id nullable
 - coach_id
 - content_collection_id nullable
 - name
@@ -509,6 +511,8 @@ These rows should usually come from a `workout_template`, with optional `content
 - category_snapshot nullable
 - focus_area_snapshot nullable
 - training_type_snapshot nullable
+- bg_color nullable
+- text_color nullable
 - estimated_duration_minutes_snapshot nullable
 - source_file_label_snapshot nullable
 - sort_order

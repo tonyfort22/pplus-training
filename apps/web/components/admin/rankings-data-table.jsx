@@ -24,15 +24,15 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-
-const rankings = [
-  { id: 'ranking-01', rank: 1, badgeSrc: '/admin/gold_badge.svg', name: 'Thomas Thibault', ageLabel: '1/01/2011 (15 year old)', program: 'Training Program', workoutsCompleted: 34, workoutsTarget: 40, workoutsPercentage: 85, lastActive: 'May 17, 2026', status: 'Active' },
-  { id: 'ranking-02', rank: 2, badgeSrc: '/admin/silver_badge.svg', name: 'Mason Lee', ageLabel: '1/01/2011 (15 year old)', program: 'Speed Development', workoutsCompleted: 29, workoutsTarget: 40, workoutsPercentage: 72.5, lastActive: 'May 16, 2026', status: 'Active' },
-  { id: 'ranking-03', rank: 3, badgeSrc: '/admin/bronze_badget.svg', name: 'Noah Smith', ageLabel: '1/01/2011 (15 year old)', program: 'Off-Season Strength', workoutsCompleted: 28, workoutsTarget: 40, workoutsPercentage: 70, lastActive: 'May 15, 2026', status: 'Watch' },
-  { id: 'ranking-04', rank: 4, name: 'Lucas Bennett', ageLabel: '1/01/2011 (15 year old)', program: 'Return to Play', workoutsCompleted: 21, workoutsTarget: 40, workoutsPercentage: 52.5, lastActive: 'May 14, 2026', status: 'Watch' },
-  { id: 'ranking-05', rank: 5, name: 'Oliver James', ageLabel: '1/01/2011 (15 year old)', program: 'In-Season Maintenance', workoutsCompleted: 16, workoutsTarget: 40, workoutsPercentage: 40, lastActive: 'May 13, 2026', status: 'Inactive' },
-]
 
 function getInitials(name) {
   return name
@@ -53,10 +53,10 @@ function RankCell({ badgeSrc = '', rank }) {
   )
 }
 
-function NameCell({ name, ageLabel }) {
+function NameCell({ name, ageLabel, avatarUrl = '' }) {
   return (
     <div className="admin-shell-athletes-name-cell">
-      <Avatar alt={name} className="admin-shell-athletes-avatar" initials={getInitials(name)} />
+      <Avatar alt={name} className="admin-shell-athletes-avatar" initials={getInitials(name)} src={avatarUrl || undefined} />
       <div className="admin-shell-athletes-name-copy">
         <span className="admin-shell-athletes-name-text">{name}</span>
         <span className="admin-shell-athletes-name-meta">{ageLabel}</span>
@@ -114,13 +114,55 @@ function RowActionsCell() {
 }
 
 export default function RankingsDataTable({ searchQuery = '' }) {
+  const [rankings, setRankings] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [rowSelection, setRowSelection] = useState({})
   const [columnFilters, setColumnFilters] = useState([])
   const [columnVisibility, setColumnVisibility] = useState({})
   const [pagination, setPagination] = useState({
     pageIndex: 0,
-    pageSize: 5,
+    pageSize: 10,
   })
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadRankings() {
+      setLoading(true)
+      setError('')
+
+      try {
+        const response = await fetch('/api/admin/rankings', {
+          cache: 'no-store',
+        })
+        const payload = await response.json()
+
+        if (!response.ok) {
+          throw new Error(payload?.error || 'Failed to load rankings.')
+        }
+
+        if (!cancelled) {
+          setRankings(Array.isArray(payload?.rankings) ? payload.rankings : [])
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setRankings([])
+          setError(loadError?.message || 'Failed to load rankings.')
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadRankings()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const columns = useMemo(
     () => [
@@ -159,7 +201,7 @@ export default function RankingsDataTable({ searchQuery = '' }) {
         accessorKey: 'name',
         header: 'Name',
         meta: { label: 'Name' },
-        cell: ({ row }) => <NameCell name={row.original.name} ageLabel={row.original.ageLabel} />,
+        cell: ({ row }) => <NameCell name={row.original.name} ageLabel={row.original.ageLabel} avatarUrl={row.original.avatarUrl} />,
       },
       {
         accessorKey: 'program',
@@ -224,6 +266,14 @@ export default function RankingsDataTable({ searchQuery = '' }) {
     table.getColumn('name')?.setFilterValue(searchQuery)
   }, [searchQuery, table])
 
+  const emptyStateMessage = error || 'No ranked athletes found.'
+  const pageSizeOptions = [5, 10, 20, 30]
+  const totalRows = table.getFilteredRowModel().rows.length
+  const pageStart = totalRows === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1
+  const pageEnd = Math.min((pagination.pageIndex + 1) * pagination.pageSize, totalRows)
+  const pageNumbers = Array.from({ length: table.getPageCount() }, (_, index) => index)
+  const skeletonRows = Array.from({ length: pagination.pageSize }, (_, rowIndex) => rowIndex)
+
   return (
     <div className="admin-shell-athletes-table-example">
       <div className="admin-shell-athletes-example-controls flex items-center justify-between gap-3">
@@ -272,7 +322,45 @@ export default function RankingsDataTable({ searchQuery = '' }) {
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {loading ? (
+              skeletonRows.map((rowIndex) => (
+                <TableRow key={`skeleton-${rowIndex}`} className={rowIndex % 2 === 0 ? 'admin-shell-athletes-row-even' : 'admin-shell-athletes-row-odd'}>
+                  <TableCell>
+                    <Skeleton className="h-4 w-4 rounded-[4px]" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-8 w-8 rounded-full" />
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-10 w-10 rounded-full" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-[140px]" />
+                        <Skeleton className="h-3 w-[96px]" />
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[120px]" />
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-[84px]" />
+                      <Skeleton className="h-2 w-[132px] rounded-full" />
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[88px]" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-8 w-[96px] rounded-full" />
+                  </TableCell>
+                  <TableCell className="admin-shell-athletes-actions-cell">
+                    <Skeleton className="ml-auto h-8 w-8 rounded-full" />
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row, index) => (
                 <TableRow
                   key={row.id}
@@ -292,7 +380,7 @@ export default function RankingsDataTable({ searchQuery = '' }) {
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center text-[#8EA0BC]">
-                  No ranked athletes found.
+                  {emptyStateMessage}
                 </TableCell>
               </TableRow>
             )}
@@ -300,16 +388,47 @@ export default function RankingsDataTable({ searchQuery = '' }) {
         </Table>
       </div>
 
-      <div className="flex items-center justify-between py-4 text-sm text-[#8EA0BC]">
-        <div>{table.getFilteredRowModel().rows.length} ranked athlete(s)</div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
-            Previous
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
-            Next
-          </Button>
-        </div>
+      <div className="flex items-center justify-end gap-3 py-4 text-sm text-[#8EA0BC]">
+        <span>Rows per page</span>
+        <Select value={String(pagination.pageSize)} onValueChange={(value) => table.setPageSize(Number(value))}>
+          <SelectTrigger className="h-9 w-[76px] rounded-[10px] !border-[#24334A] bg-[#111D30] px-3 text-sm text-[#DCE6F8]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {pageSizeOptions.map((option) => (
+              <SelectItem key={option} value={String(option)}>{option}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span>{pageStart} - {pageEnd} of {totalRows}</span>
+        <button
+          type="button"
+          aria-label="Go to previous page"
+          className="admin-shell-athletes-example-pagination-button"
+          onClick={() => table.previousPage()}
+          disabled={!table.getCanPreviousPage()}
+        >
+          ‹
+        </button>
+        {pageNumbers.map((pageNumber) => (
+          <button
+            key={`page-${pageNumber}`}
+            type="button"
+            className={`admin-shell-athletes-example-pagination-button ${pagination.pageIndex === pageNumber ? 'bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]' : ''}`}
+            onClick={() => table.setPageIndex(pageNumber)}
+          >
+            {pageNumber + 1}
+          </button>
+        ))}
+        <button
+          type="button"
+          aria-label="Go to next page"
+          className="admin-shell-athletes-example-pagination-button"
+          onClick={() => table.nextPage()}
+          disabled={!table.getCanNextPage()}
+        >
+          ›
+        </button>
       </div>
     </div>
   )
