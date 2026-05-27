@@ -160,6 +160,12 @@ for (const sqlName of ['schema-v1.sql', '0001_initial_schema.sql']) {
     assert.match(normalized, /create policy coach_avatars_delete_own on storage\.objects for delete to authenticated using \([\s\S]*coach_profiles\.user_id = auth\.uid\(\)[\s\S]*coach_profiles\.id::text = split_part\(name, '\/', 1\)[\s\S]*\)/)
   })
 
+  test(`${sqlName} provisions public exercise media storage for thumbnail delivery`, () => {
+    const normalized = normalize(sql)
+    assert.match(normalized, /insert into storage\.buckets \(id, name, public, file_size_limit, allowed_mime_types\) values \('exercise-media', 'exercise-media', true, 5242880, array\['image\/jpeg', 'image\/png', 'image\/webp'\]\)/)
+    assert.match(normalized, /create policy exercise_media_select_public on storage\.objects for select to public using \(bucket_id = 'exercise-media'\)/)
+  })
+
   test(`${sqlName} preserves plan lineage in execution tables`, () => {
     expectColumn(sql, 'workout_session_exercises', 'program_workout_exercise_id')
     expectColumn(sql, 'workout_session_sets', 'program_workout_set_id')

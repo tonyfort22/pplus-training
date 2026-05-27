@@ -116,6 +116,7 @@ function FilterOperatorDropdown({ field, operator, onChange }) {
 function FilterSelectValue({ field, values, onChange }) {
   const selectedValues = Array.isArray(values) ? values : []
   const selectedLabels = (field.options || []).filter((option) => selectedValues.includes(option.value)).map((option) => option.label)
+  const allowsMultipleValues = field.allowMultipleValues === true
 
   return (
     <DropdownMenu>
@@ -139,7 +140,16 @@ function FilterSelectValue({ field, values, onChange }) {
                 checked={checked}
                 className="rounded-xl focus:bg-[#15233A] focus:text-[#EEF4FF]"
                 onCheckedChange={(nextChecked) => {
-                  onChange(nextChecked ? [option.value] : [])
+                  if (!allowsMultipleValues) {
+                    onChange(nextChecked ? [option.value] : [])
+                    return
+                  }
+
+                  const nextValues = nextChecked
+                    ? [...selectedValues, option.value]
+                    : selectedValues.filter((selectedValue) => selectedValue !== option.value)
+
+                  onChange([...new Set(nextValues)])
                 }}
               >
                 {option.label}

@@ -14,8 +14,22 @@ function handleRouteError(error) {
 export async function GET() {
   try {
     const repository = createAdminExerciseRepository()
-    const exercises = await repository.listExercises()
-    return json({ exercises })
+    const [exercises, muscleOptions] = await Promise.all([
+      repository.listExercises(),
+      repository.listMuscles(),
+    ])
+    return json({ exercises, muscleOptions })
+  } catch (error) {
+    return handleRouteError(error)
+  }
+}
+
+export async function POST(request) {
+  try {
+    const repository = createAdminExerciseRepository()
+    const payload = await request.json()
+    const exercise = await repository.createExercise(payload)
+    return json({ exercise }, { status: 201 })
   } catch (error) {
     return handleRouteError(error)
   }
