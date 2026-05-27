@@ -5,7 +5,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const pagePath = resolve(repoRoot, 'apps/web/app/page.jsx')
+const pagePath = resolve(repoRoot, 'apps/web/app/admin/login/page.jsx')
 const cssPath = resolve(repoRoot, 'apps/web/app/globals.css')
 const layoutPath = resolve(repoRoot, 'apps/web/app/layout.jsx')
 const buttonPath = resolve(repoRoot, 'apps/web/components/admin/ui/admin-button.jsx')
@@ -33,11 +33,11 @@ test('admin login screen source matches the figma auth_dark frame seams', () => 
   assert.match(layoutSource, /title:\s*'PPLUS Training'/)
   assert.match(layoutSource, /description:\s*'Coach dashboard and athlete management for PPLUS Training\.'/)
 
-  assert.match(pageSource, /from '\.\.\/components\/admin\/ui\/admin-button'/)
-  assert.match(pageSource, /from '\.\.\/components\/admin\/ui\/admin-card'/)
-  assert.match(pageSource, /from '\.\.\/components\/admin\/ui\/admin-input'/)
-  assert.match(pageSource, /from '\.\.\/components\/admin\/ui\/admin-label'/)
-  assert.match(pageSource, /from '\.\.\/components\/admin\/ui\/admin-page-shell'/)
+  assert.match(pageSource, /from '\.\.\/\.\.\/\.\.\/components\/admin\/ui\/admin-button'/)
+  assert.match(pageSource, /from '\.\.\/\.\.\/\.\.\/components\/admin\/ui\/admin-card'/)
+  assert.match(pageSource, /from '\.\.\/\.\.\/\.\.\/components\/admin\/ui\/admin-input'/)
+  assert.match(pageSource, /from '\.\.\/\.\.\/\.\.\/components\/admin\/ui\/admin-label'/)
+  assert.match(pageSource, /from '\.\.\/\.\.\/\.\.\/components\/admin\/ui\/admin-page-shell'/)
   assert.match(pageSource, /id="auth-theme-dark"/)
   assert.match(pageSource, /id="auth-theme-light"/)
   assert.match(pageSource, /name="auth-theme"/)
