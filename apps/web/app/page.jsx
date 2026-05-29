@@ -1,9 +1,8 @@
 import Image from 'next/image'
-import { CircleCheckBig, Dumbbell, Flame, Mail, MapPin, Medal, Phone, Trophy, Users, Zap } from 'lucide-react'
+import { CircleCheckBig, Dumbbell, Flame, Medal, Trophy, Users, Zap } from 'lucide-react'
 import LandingFeatureShowcase from './landing-feature-showcase'
-import { features, featuresSection, footer, hero, programs, programsSection } from './landing-content'
-
-const APP_STORE_DOWNLOAD_URL = 'https://apps.apple.com/'
+import { features, featuresSection, hero, programs, programsSection } from './landing-content'
+import { APP_STORE_DOWNLOAD_URL, LandingFooter, LandingHeader } from './landing-sections'
 
 const heroIcons = [
   { id: 'top-left', icon: Dumbbell, className: 'landing-hero-icon-top-left' },
@@ -14,64 +13,12 @@ const heroIcons = [
   { id: 'bottom-right', icon: Medal, className: 'landing-hero-icon-bottom-right' },
 ]
 
-const footerContactIcons = {
-  'map-pin': MapPin,
-  phone: Phone,
-  mail: Mail,
-}
-
-function FooterLinkColumn({ title, links }) {
-  return (
-    <div className="landing-footer-column">
-      <h3>{title}</h3>
-      <ul>
-        {links.map((link) => (
-          <li key={`${title}-${link.label}`}>
-            <a href={link.href}>{link.label}</a>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
-
 export default function HomePage() {
   const [heroLineOne, heroLineTwo] = hero.heading.split(' / ')
 
   return (
     <main className="landing-page">
-      <header className="landing-header">
-        <div className="landing-shell landing-header-inner">
-          <a href="/" className="landing-header-brand" aria-label="PPLUS Training home">
-            <Image
-              src="/landing/brand/logo-ppht-landing.png"
-              alt="PPLUS Training logo"
-              width={290}
-              height={48}
-              priority
-              className="landing-logo landing-logo-header"
-            />
-          </a>
-
-          <nav className="landing-header-nav" aria-label="Primary">
-            <a href="#features">Features</a>
-            <a href="#programs">Program</a>
-            <a href="#footer">Support</a>
-          </nav>
-
-          <div className="landing-header-actions">
-            <a href="/admin/login" className="landing-signin-link">Sign In</a>
-            <a className="landing-store-link landing-store-link-header" href={APP_STORE_DOWNLOAD_URL} aria-label="Download PPLUS Training on the App Store">
-              <Image
-                src="/landing/brand/app-store-badge.svg"
-                alt="Download on the App Store"
-                width={154}
-                height={46}
-              />
-            </a>
-          </div>
-        </div>
-      </header>
+      <LandingHeader />
 
       <section id="hero" className="landing-section landing-hero">
         <div className="landing-shell landing-hero-inner">
@@ -150,40 +97,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <footer id="footer" className="landing-footer">
-        <div className="landing-shell landing-footer-grid">
-          <div className="landing-footer-brand-block">
-            <Image
-              src="/landing/brand/logo-ppht-landing.png"
-              alt="PPLUS Training logo"
-              width={290}
-              height={48}
-              className="landing-logo"
-            />
-            <p>{footer.brandCopy}</p>
-            <address>
-              {footer.contact.map((item) => {
-                const Icon = footerContactIcons[item.icon]
-
-                return (
-                  <span key={item.text} className="landing-footer-contact-item">
-                    <Icon className="landing-footer-contact-icon" aria-hidden="true" />
-                    <span>{item.text}</span>
-                  </span>
-                )
-              })}
-            </address>
-          </div>
-
-          <FooterLinkColumn title="Features" links={footer.featureLinks} />
-          <FooterLinkColumn title="Programs" links={footer.programLinks} />
-          <FooterLinkColumn title="Resources" links={footer.resourceLinks} />
-        </div>
-
-        <div className="landing-shell landing-footer-meta">
-          <p>{footer.copyright}</p>
-        </div>
-      </footer>
+      <LandingFooter />
     </main>
   )
 }

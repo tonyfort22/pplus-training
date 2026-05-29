@@ -82,15 +82,15 @@ export const footer = {
   ],
   featureLinks: features.map((feature) => ({
     label: feature.title,
-    href: '#features',
+    href: '/#features',
   })),
   programLinks: programs.map((program) => ({
     label: program.title,
-    href: '#programs',
+    href: '/#programs',
   })),
   resourceLinks: [
-    { label: 'Support', href: '#footer' },
-    { label: 'FAQ', href: '#footer' },
+    { label: 'Support', href: '/support' },
+    { label: 'FAQ', href: '/#footer' },
   ],
   copyright: '2026 PPLUS Training. All rights reserved',
 }
