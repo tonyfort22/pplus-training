@@ -23,27 +23,39 @@ test('support page uses the FormCN customer support template, not a custom marke
   const schemaSource = readFileSync(schemaPath, 'utf8')
   const cssSource = readFileSync(cssPath, 'utf8')
 
-  assert.match(pageSource, /<LandingHeader \/>/, 'support page should reuse the shared project header')
-  assert.match(pageSource, /<LandingFooter \/>/, 'support page should reuse the shared project footer')
+  assert.match(pageSource, /const currentPath = conversationId \? `\/support\?conversationId=\$\{encodeURIComponent\(conversationId\)\}` : '\/support'/)
+  assert.match(pageSource, /<LandingHeader language=\{language\} currentPath=\{currentPath\} copy=\{copy\} \/>/, 'support page should reuse the shared project header with language context')
+  assert.match(pageSource, /<LandingFooter language=\{language\} copy=\{copy\} \/>/, 'support page should reuse the shared project footer with language context')
   assert.match(pageSource, /landing-section landing-features-section support-template-section/, 'support section should reuse the home Features section surface')
   assert.match(pageSource, /landing-shell landing-features-stack support-template-stack/, 'support section should reuse the home Features stack')
   assert.match(pageSource, /landing-section-heading landing-section-heading-centered landing-features-heading support-template-heading-on-image/, 'support heading should reuse the home Features heading treatment')
-  assert.match(pageSource, /<p className="landing-pill support-template-pill">Support<\/p>/, 'support page should use the same top pill treatment as FAQ')
-  assert.match(pageSource, /<h2>Get in <span>Touch<\/span><\/h2>/, 'support heading should highlight Touch in green')
+  assert.match(pageSource, /<p className="landing-pill support-template-pill">\{supportCopy\.pill\}<\/p>/, 'support page should use the same top pill treatment as FAQ')
+  assert.match(pageSource, /const copy = getPublicPageCopy\(language\)/, 'support page should load localized support copy')
+  assert.match(pageSource, /const supportCopy = copy\.support/, 'support page should scope support copy')
+  assert.match(pageSource, /<p className="landing-pill support-template-pill">\{supportCopy\.pill\}<\/p>/, 'support page should render localized pill text')
+  assert.match(pageSource, /<h2>\{supportCopy\.headingPrefix\} <span>\{supportCopy\.headingAccent\}<\/span><\/h2>/, 'support heading should render localized green accent')
   assert.doesNotMatch(pageSource, /We're here to help! Please describe your issue below\./, 'support subtitle under the heading should be removed')
   assert.doesNotMatch(pageSource, /<h1>Customer Support Request<\/h1>|support-highlight-grid|How can we help\?|Email support|Clear context/, 'support page must not use the rejected custom marketing hero or wrong heading level')
 
   assert.doesNotMatch(formSource, /<h1>Customer Support Request<\/h1>|support-template-heading/, 'form component should not own the page heading')
-  assert.match(formSource, /First Name \*/, 'form should keep the exact FormCN support fields')
+  assert.match(formSource, /name="firstName"/, 'form should keep the first name field')
+  assert.match(formSource, /name="lastName"/, 'form should keep the last name field')
+  assert.match(formSource, /name="email"/, 'form should keep the email field')
+  assert.match(formSource, /name="category"/, 'form should keep the issue category field')
+  assert.match(formSource, /name="description"/, 'form should keep the issue description field')
   for (const label of [
-    'First Name *',
-    'Last Name *',
-    'Email Address *',
-    'Issue Category *',
-    'Issue Description *',
+    'copy.labels.firstName',
+    'copy.labels.lastName',
+    'copy.labels.email',
+    'copy.labels.category',
+    'copy.labels.description',
   ]) {
-    assert.match(formSource, new RegExp(label.replace(/[()*]/g, '\\$&')), `missing support template label: ${label}`)
+    assert.match(formSource, new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `missing support template copy reference: ${label}`)
   }
+  assert.match(formSource, /export function PphtSupportFac5db68F122\(\{ copy \}\)/, 'support form should accept localized copy')
+  assert.match(formSource, /categoryOptions = copy\.categories/, 'support form should use localized categories')
+  assert.match(formSource, /placeholder=\{copy\.placeholders\.firstName\}/)
+  assert.match(formSource, /\{isSubmitting \? copy\.submitSubmitting : copy\.submitIdle\}/)
 
   for (const field of ['firstName', 'lastName', 'email', 'category', 'description']) {
     assert.match(schemaSource, new RegExp(field), `schema should include ${field}`)
@@ -81,18 +93,21 @@ test('support page switches to requester conversation reply mode from conversati
   assert.match(pageSource, /export default async function SupportPage\(\{ searchParams \}\)/)
   assert.match(pageSource, /const resolvedSearchParams = await searchParams/)
   assert.match(pageSource, /const conversationId = resolvedSearchParams\?\.conversationId/)
-  assert.match(pageSource, /conversationId \? <SupportConversationReply conversationId=\{conversationId\} \/> : <PphtSupportFac5db68F122 \/>/)
+  assert.match(pageSource, /const language = normalizePublicLanguage\(resolvedSearchParams\?\.lang\)/)
+  assert.match(pageSource, /conversationId \? <SupportConversationReply conversationId=\{conversationId\} copy=\{supportCopy\.reply\} \/> : <PphtSupportFac5db68F122 copy=\{supportCopy\.form\} \/>/)
   assert.match(threadSource, /fetch\(`\/api\/support\/conversations\/\$\{conversationId\}\/messages`/)
   assert.match(threadSource, /method: 'POST'/)
   assert.match(threadSource, /body: JSON\.stringify\(\{ body: trimmedReply \}\)/)
-  assert.match(threadSource, /Continue your support conversation/)
-  assert.match(threadSource, /Your reply was sent/)
+  assert.match(threadSource, /export function SupportConversationReply\(\{ conversationId, copy \}\)/)
+  assert.match(threadSource, /\{copy\.label\}/)
+  assert.match(threadSource, /\{isSubmitting \? copy\.submitSubmitting : copy\.submitIdle\}/)
+  assert.doesNotMatch(threadSource, /Continue your support conversation|Your reply was sent|Send reply/, 'reply strings should come from localized copy')
 })
 
 test('landing navigation points Support to the real support page', () => {
   const landingSectionsSource = readFileSync(landingSectionsPath, 'utf8')
   const landingContentSource = readFileSync(landingContentPath, 'utf8')
 
-  assert.match(landingSectionsSource, /<a href="\/support">Support<\/a>/, 'header Support nav should link to /support')
+  assert.match(landingSectionsSource, /<a href=\{getLocalizedHref\('\/support', language\)\}>\{navCopy\.support\}<\/a>/, 'header Support nav should link to localized /support')
   assert.match(landingContentSource, /\{ label: 'Support', href: '\/support' \}/, 'footer Support resource link should link to /support')
 })
