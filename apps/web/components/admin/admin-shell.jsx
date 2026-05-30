@@ -12,6 +12,7 @@ import {
   Dumbbell,
   Footprints,
   House,
+  MessageCircle,
   Search,
   Settings,
   Users,
@@ -47,6 +48,7 @@ import {
   SidebarRail,
   SidebarSeparator,
   SidebarTrigger,
+  useSidebar,
 } from '@/components/ui/sidebar'
 import { adminBottomNavigation, adminNavigation, findAdminRoute } from './admin-navigation'
 import AthletesListView from './athletes-list-view'
@@ -56,6 +58,7 @@ import GroupsListView from './groups-list-view'
 import InvitesListView from './invites-list-view'
 import ProgramsLibraryView from './programs-library-view'
 import RankingsListView from './rankings-list-view'
+import SettingsView from './settings-view'
 import WorkoutsCalendarView from './workouts-calendar-view'
 import WorkoutsLibraryView from './workouts-library-view'
 
@@ -65,6 +68,7 @@ const iconMap = {
   dumbbell: Dumbbell,
   footprints: Footprints,
   house: House,
+  'message-circle': MessageCircle,
   settings: Settings,
   users: Users,
 }
@@ -75,10 +79,8 @@ const accountSwitcher = {
 }
 
 const accountMenuItems = [
-  { id: 'profile', label: 'Profile' },
-  { id: 'billing', label: 'Billing' },
-  { id: 'settings', label: 'Settings' },
-  { id: 'keyboard-shortcuts', label: 'Keyboard shortcuts' },
+  { id: 'profile', label: 'Profile', href: '/admin/settings' },
+  { id: 'account', label: 'Account', href: '/admin/settings/account' },
 ]
 
 const SELECTED_ADMIN_ATHLETE_STORAGE_KEY = 'pplus-admin-selected-athlete-id'
@@ -197,6 +199,8 @@ function getGroupState(group, currentPath) {
 }
 
 function AdminSidebarNavItem({ currentPath = '', group }) {
+  const { state } = useSidebar()
+  const isCollapsed = state === 'collapsed'
   const Icon = iconMap[group.icon]
   const { groupHref, isActive } = getGroupState(group, currentPath)
   const showSubtabs = isActive || (currentPath === '/admin/dashboard' && group.id === 'athletes')
@@ -214,7 +218,7 @@ function AdminSidebarNavItem({ currentPath = '', group }) {
             <summary className="list-none [&::-webkit-details-marker]:hidden">
               {Icon ? <Icon className="h-4 w-4 shrink-0" /> : null}
               <span className="group-data-[collapsible=icon]:hidden">{group.label}</span>
-              <ChevronRight className="ml-auto h-4 w-4 shrink-0 transition-transform group-open/admin-sidebar-item:rotate-90 group-data-[collapsible=icon]:hidden" />
+              {!isCollapsed ? <ChevronRight className="ml-auto h-4 w-4 shrink-0 transition-transform group-open/admin-sidebar-item:rotate-90" /> : null}
             </summary>
           </SidebarMenuButton>
 
@@ -226,7 +230,7 @@ function AdminSidebarNavItem({ currentPath = '', group }) {
                   <SidebarMenuSubButton
                     asChild
                     isActive={itemCurrent}
-                    className="h-8 rounded-xl px-3 text-[12px] text-[#8ea0bc] data-[active=true]:bg-[#2d4c4c] data-[active=true]:font-medium data-[active=true]:text-[#3BE0AF] hover:bg-[#111d30] hover:text-[#eef4ff]"
+                    className="h-8 rounded-xl px-3 text-[12px] text-[#8ea0bc] bg-transparent data-[active=true]:bg-transparent data-[active=true]:font-medium data-[active=true]:text-[#3BE0AF] hover:bg-transparent hover:text-[#3BE0AF] active:bg-transparent"
                   >
                     <Link href={item.href}>{item.label}</Link>
                   </SidebarMenuSubButton>
@@ -247,7 +251,7 @@ function AdminSidebarNavItem({ currentPath = '', group }) {
         className="min-h-10 rounded-2xl px-3 text-[13px] font-medium text-[#dbe4ef] data-[active=true]:bg-[#2d4c4c] data-[active=true]:text-[#3BE0AF] hover:bg-[#111d30] hover:text-[#eef4ff] group-data-[collapsible=icon]:!size-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:px-0"
         tooltip={group.label}
       >
-        <Link href={groupHref}>
+        <Link href={groupHref} target={group.external ? '_blank' : undefined} rel={group.external ? 'noreferrer' : undefined}>
           {Icon ? <Icon className="h-4 w-4 shrink-0" /> : null}
           <span className="group-data-[collapsible=icon]:hidden">{group.label}</span>
         </Link>
@@ -304,8 +308,8 @@ function DashboardShellHeader({ searchQuery = '', onSearchQueryChange = () => {}
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {accountMenuItems.map((item) => (
-              <DropdownMenuItem key={item.id}>
-                <span>{item.label}</span>
+              <DropdownMenuItem key={item.id} asChild>
+                <Link href={item.href}>{item.label}</Link>
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
@@ -316,10 +320,16 @@ function DashboardShellHeader({ searchQuery = '', onSearchQueryChange = () => {}
 }
 
 function SidebarBrandLogo() {
+  const { state } = useSidebar()
+  const isCollapsed = state === 'collapsed'
+
   return (
     <div className="flex items-center justify-start px-3 py-[14px] group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
-      <img className="h-5 w-auto group-data-[collapsible=icon]:hidden" src="/admin/logo_pplus_training.svg" alt="PPLUS Training" />
-      <img className="hidden h-6 w-auto group-data-[collapsible=icon]:block" src="/admin/logo_pplus_mark_green.svg" alt="P+" />
+      {isCollapsed ? (
+        <img className="h-6 w-auto" src="/admin/logo_pplus_mark_green.svg" alt="P+" />
+      ) : (
+        <img className="h-5 w-auto" src="/admin/logo_pplus_training.svg" alt="PPLUS Training" />
+      )}
     </div>
   )
 }
@@ -332,6 +342,8 @@ function SidebarWorkspaceSwitcher({
   onSelectAthlete = () => {},
   loadingState = 'idle',
 }) {
+  const { state } = useSidebar()
+  const isCollapsed = state === 'collapsed'
   const filteredAthletes = athletes.filter((athlete) => {
     const normalizedQuery = athleteSearchQuery.trim().toLowerCase()
 
@@ -348,11 +360,15 @@ function SidebarWorkspaceSwitcher({
     birthSummary: formatAthleteBirthSummary(selectedAthlete),
   }
 
+  if (isCollapsed) {
+    return null
+  }
+
   return (
     <SidebarMenuItem>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <SidebarMenuButton size="lg" className="h-14 w-full rounded-2xl border border-[#24334A] bg-[#111D30] px-3 hover:bg-[#15233a] hover:text-[#eef4ff] group-data-[collapsible=icon]:hidden">
+          <SidebarMenuButton size="lg" className="h-14 w-full rounded-2xl border border-[#24334A] bg-[#111D30] px-3 hover:bg-[#15233a] hover:text-[#eef4ff]">
             {selectedAthlete?.avatarUrl ? (
               <img
                 src={selectedAthlete.avatarUrl}
@@ -456,8 +472,8 @@ function SidebarAccountSwitcher() {
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {accountMenuItems.map((item) => (
-              <DropdownMenuItem key={item.id}>
-                <span>{item.label}</span>
+              <DropdownMenuItem key={item.id} asChild>
+                <Link href={item.href}>{item.label}</Link>
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
@@ -479,7 +495,7 @@ function AdminDashboardSidebar({
   const topSections = [...adminNavigation, ...adminBottomNavigation]
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+    <Sidebar collapsible="icon" className="!border-r-0 !border-l-0 border-r-0 border-l-0">
       <SidebarHeader className="gap-4 px-3 py-4 group-data-[collapsible=icon]:px-2">
         <SidebarBrandLogo />
       </SidebarHeader>
@@ -643,6 +659,8 @@ export default function AdminShell({ currentPath = '', contentOverride = null })
   const isWorkoutsLibraryView = currentPath === '/admin/workouts'
   const isWorkoutsCalendarView = currentPath === '/admin/workouts/calendar'
   const isExercisesLibraryView = currentPath === '/admin/exercises'
+  const isSettingsView = currentPath === '/admin/settings'
+    || currentPath === '/admin/settings/account'
 
   return (
     <SidebarProvider defaultOpen>
@@ -660,7 +678,7 @@ export default function AdminShell({ currentPath = '', contentOverride = null })
 
         <div className="flex-1">
           <main className={['admin-shell-workspace', isDashboardOverview ? 'admin-shell-workspace-dashboard' : ''].filter(Boolean).join(' ')}>
-            {!isDashboardOverview && !isAllAthletesView && !isAthleteInvitesView && !isAthleteGroupsView && !isAthleteRankingsView && !isProgramsLibraryView && !isWorkoutsLibraryView && !isWorkoutsCalendarView && !isExercisesLibraryView && (
+            {!isDashboardOverview && !isAllAthletesView && !isAthleteInvitesView && !isAthleteGroupsView && !isAthleteRankingsView && !isProgramsLibraryView && !isWorkoutsLibraryView && !isWorkoutsCalendarView && !isExercisesLibraryView && !isSettingsView && (
               <div className="admin-shell-workspace-header">
                 <span className="admin-shell-workspace-kicker">{sectionLabel}</span>
                 <h1 className="admin-shell-workspace-title">{pageTitle}</h1>
@@ -690,6 +708,8 @@ export default function AdminShell({ currentPath = '', contentOverride = null })
               <WorkoutsCalendarView selectedAthleteId={selectedAthleteId} />
             ) : isExercisesLibraryView ? (
               <ExercisesLibraryView searchQuery={topbarSearchQuery} />
+            ) : isSettingsView ? (
+              <SettingsView currentPath={currentPath} />
             ) : (
               <section className="admin-shell-workspace-panel">
                 <h2 className="admin-shell-workspace-panel-title">{pageTitle} workspace</h2>

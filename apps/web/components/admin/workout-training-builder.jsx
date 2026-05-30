@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
@@ -71,40 +70,40 @@ function createSet(overrides = {}) {
   }
 }
 
-function createExercise(id, title, defaultSets = []) {
+function createExercise(id, title, defaultSets = [], overrides = {}) {
   exerciseNumberSeed += 1
   return {
     id: `${id}-${exerciseNumberSeed}`,
     title,
-    isExpanded: true,
-    showInstruction: false,
-    instruction: '',
+    isExpanded: overrides.isExpanded ?? true,
+    showInstruction: overrides.showInstruction ?? false,
+    instruction: overrides.instruction ?? '',
     sets: defaultSets.map((setValues) => createSet(setValues)),
   }
 }
 
-function createSection(label, exercises = []) {
+function createSection(label, exercises = [], overrides = {}) {
   return {
     id: `section-${label.toLowerCase()}`,
     label,
-    isExpanded: true,
-    showInstruction: false,
-    instruction: '',
-    draftExerciseQuery: '',
+    isExpanded: overrides.isExpanded ?? true,
+    showInstruction: overrides.showInstruction ?? false,
+    instruction: overrides.instruction ?? '',
+    draftExerciseQuery: overrides.draftExerciseQuery ?? '',
     exercises,
   }
 }
 
-function createInitialTrainingSections() {
+export function createInitialTrainingSections() {
   return [
     createSection('A1', [
-      createExercise('exercise-skater-hops', 'Skater hops', EXERCISE_LIBRARY[0].defaultSets),
-      createExercise('exercise-sled-sprint', 'Sled sprint', EXERCISE_LIBRARY[1].defaultSets),
-    ]),
+      createExercise('exercise-skater-hops', 'Skater hops', EXERCISE_LIBRARY[0].defaultSets, { isExpanded: true }),
+      createExercise('exercise-sled-sprint', 'Sled sprint', EXERCISE_LIBRARY[1].defaultSets, { isExpanded: false }),
+    ], { isExpanded: true }),
     createSection('A2', [
-      createExercise('exercise-copenhagen-plank', 'Copenhagen plank', EXERCISE_LIBRARY[2].defaultSets),
-      createExercise('exercise-spirit-bike', 'Spirit Bike sprint', EXERCISE_LIBRARY[3].defaultSets),
-    ]),
+      createExercise('exercise-copenhagen-plank', 'Copenhagen plank', EXERCISE_LIBRARY[2].defaultSets, { isExpanded: true }),
+      createExercise('exercise-spirit-bike', 'Spirit Bike sprint', EXERCISE_LIBRARY[3].defaultSets, { isExpanded: false }),
+    ], { isExpanded: false }),
   ]
 }
 
@@ -186,8 +185,11 @@ function SortableSetRow({ sectionId, exerciseId, setIndex, setValues, updateSetF
   )
 }
 
-export default function WorkoutTrainingBuilder() {
-  const [sections, setSections] = useState(() => createInitialTrainingSections())
+export default function WorkoutTrainingBuilder({
+  sections = createInitialTrainingSections(),
+  onSectionsChange = () => {},
+  readOnly = false,
+}) {
   const setRowSensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -196,8 +198,13 @@ export default function WorkoutTrainingBuilder() {
     }),
   )
 
+  function updateSections(updater) {
+    const nextSections = typeof updater === 'function' ? updater(sections) : updater
+    onSectionsChange(nextSections)
+  }
+
   function addSection() {
-    setSections((currentSections) => [
+    updateSections((currentSections) => [
       ...currentSections,
       createSection(getNextSectionLabel(currentSections), []),
     ])
@@ -205,13 +212,13 @@ export default function WorkoutTrainingBuilder() {
 
   function handleSectionDragEnd({ active, over }) {
     if (!over || active.id === over.id) return
-    setSections((currentSections) => reorderItems(currentSections, active.id, over.id))
+    updateSections((currentSections) => reorderItems(currentSections, active.id, over.id))
   }
 
   function handleExerciseDragEnd(sectionId, { active, over }) {
     if (!over || active.id === over.id) return
 
-    setSections((currentSections) =>
+    updateSections((currentSections) =>
       currentSections.map((section) => {
         if (section.id !== sectionId) return section
         return {
@@ -232,7 +239,7 @@ export default function WorkoutTrainingBuilder() {
   }
 
   function updateSection(sectionId, updater) {
-    setSections((currentSections) =>
+    updateSections((currentSections) =>
       currentSections.map((section) => (section.id === sectionId ? updater(section) : section)),
     )
   }
@@ -275,17 +282,31 @@ export default function WorkoutTrainingBuilder() {
 
   return (
     <div className="grid gap-4">
-      <div className="flex justify-end">
-        <Button type="button" onClick={addSection} className="rounded-[12px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]">
-          Add section
-        </Button>
-      </div>
+      {sections.length === 0 ? (
+        <div className="grid gap-4 rounded-[18px] border border-dashed border-[#24334A] bg-[#0F1728] px-6 py-8 text-center">
+          <div className="grid gap-2">
+            <p className="text-base font-semibold text-[#EEF4FF]">No sections yet</p>
+            <p className="text-sm text-[#8EA0BC]">Add a section to this workout.</p>
+          </div>
+          <div className="flex justify-center">
+            <Button type="button" onClick={addSection} disabled={readOnly} className="min-h-[40px] rounded-[12px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]">
+              Add a section to this workout
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="flex justify-end">
+            <Button type="button" onClick={addSection} disabled={readOnly} className="min-h-[40px] rounded-[12px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]">
+              Add section
+            </Button>
+          </div>
 
-      <KanbanBoard className="gap-4" onDragEnd={handleSectionDragEnd}>
-        <KanbanColumn itemIds={sections.map((section) => section.id)}>
-          {sections.map((section) => (
-            <KanbanItem key={section.id} id={section.id} columnId="training-sections" className="rounded-[18px] border border-[#24334A] bg-[#111827] shadow-[0_18px_40px_rgba(0,0,0,0.26)]">
-              <div className="grid gap-0">
+          <KanbanBoard className="gap-4" onDragEnd={handleSectionDragEnd}>
+            <KanbanColumn itemIds={sections.map((section) => section.id)}>
+              {sections.map((section) => (
+                <KanbanItem key={section.id} id={section.id} columnId="training-sections" className="rounded-[18px] border border-[#24334A] bg-[#111827] shadow-[0_18px_40px_rgba(0,0,0,0.26)]">
+                  <div className="grid gap-0">
                 <div className="flex items-center justify-between gap-3 border-b border-[#24334A] px-4 py-4">
                   <div className="flex items-center gap-3">
                     <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#2F4563] bg-[#0F1728] text-xs font-semibold tracking-[0.18em] text-[#7DF5CD]">
@@ -478,6 +499,8 @@ export default function WorkoutTrainingBuilder() {
           ))}
         </KanbanColumn>
       </KanbanBoard>
+        </>
+      )}
     </div>
   )
 }

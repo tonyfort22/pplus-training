@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
+import { parseAsJson, useQueryState } from 'nuqs'
 import {
   flexRender,
   getCoreRowModel,
@@ -9,8 +10,10 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { ChevronDown, MoreHorizontal, PlusIcon } from 'lucide-react'
+import { ChevronDown, CircleAlert, CircleCheckBig, LoaderCircle, MoreHorizontal, Plus, Trash2, X } from 'lucide-react'
 
+import { Filters } from '@/components/reui/filters'
+import { useToast } from '@/hooks/use-toast'
 import Badge from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import Checkbox from '@/components/ui/checkbox'
@@ -40,27 +43,18 @@ import {
   ItemSeparator,
   ItemTitle,
 } from '@/components/ui/item'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import Textarea from '@/components/ui/textarea'
-
-const programAthleteCandidates = [
-  {
-    id: 'program-athlete-01',
-    name: 'Mason Lee',
-    detail: 'Speed Development · Active',
-  },
-  {
-    id: 'program-athlete-02',
-    name: 'Noah Smith',
-    detail: 'Off-Season Strength · Active',
-  },
-  {
-    id: 'program-athlete-03',
-    name: 'Ethan Carter',
-    detail: 'Preseason Ramp-Up · Needs review',
-  },
-]
 
 function getInitials(name) {
   return name
@@ -73,12 +67,238 @@ function getInitials(name) {
 
 function createProgramFormValues(program = {}) {
   return {
+    athleteIds: Array.isArray(program.athleteIds)
+      ? program.athleteIds.filter(Boolean)
+      : program.athleteId
+        ? [program.athleteId]
+        : [],
     name: program.name ?? '',
     weeks: program.duration?.split(' ')?.[0] ?? '',
     startDate: program.startDate ?? '',
     endDate: program.endDate ?? '',
     description: program.description ?? '',
   }
+}
+
+
+function normalizeProgramFilterValue(value) {
+  return String(value ?? '').trim().toLowerCase()
+}
+
+function parseProgramDateValue(value) {
+  if (!value) return null
+  const parsedDate = new Date(`${value}T12:00:00Z`)
+  return Number.isNaN(parsedDate.getTime()) ? null : parsedDate.getTime()
+}
+
+function parseProgramMetricValue(value) {
+  if (value === null || value === undefined || value === '') return null
+  const normalized = Number(String(value).replace(/[^0-9.\-]/g, ''))
+  return Number.isFinite(normalized) ? normalized : null
+}
+
+function ProgramRangeFilterValue({
+  values = [],
+  onChange = () => {},
+  operator = 'between',
+  type = 'number',
+  startPlaceholder = 'Min',
+  endPlaceholder = 'Max',
+}) {
+  const [firstValue = '', secondValue = ''] = values
+  const singleValuePlaceholder = operator === 'before' ? 'Before' : operator === 'after' ? 'After' : operator === 'greater_than' ? 'Min' : operator === 'less_than' ? 'Max' : 'Value'
+
+  if (operator === 'between') {
+    return (
+      <div className="flex items-center gap-2">
+        <Input
+          type={type}
+          value={firstValue}
+          onChange={(event) => onChange([event.target.value, secondValue])}
+          placeholder={startPlaceholder}
+          className="h-8 w-28 !border-0 bg-[#0F1728] text-[#DCE6F8] shadow-none placeholder:text-[#70809E] focus-visible:!border-0 focus-visible:ring-0"
+        />
+        <span className="text-xs text-[#8EA0BC]">to</span>
+        <Input
+          type={type}
+          value={secondValue}
+          onChange={(event) => onChange([firstValue, event.target.value])}
+          placeholder={endPlaceholder}
+          className="h-8 w-28 !border-0 bg-[#0F1728] text-[#DCE6F8] shadow-none placeholder:text-[#70809E] focus-visible:!border-0 focus-visible:ring-0"
+        />
+      </div>
+    )
+  }
+
+  return (
+    <Input
+      type={type}
+      value={firstValue}
+      onChange={(event) => onChange([event.target.value])}
+      placeholder={singleValuePlaceholder}
+      className="h-8 w-28 !border-0 bg-[#0F1728] text-[#DCE6F8] shadow-none placeholder:text-[#70809E] focus-visible:!border-0 focus-visible:ring-0"
+    />
+  )
+}
+
+const programFilterFields = [
+  {
+    key: 'status',
+    label: 'Status',
+    field: 'status',
+    type: 'select',
+    defaultOperator: 'is',
+    options: [
+      { value: 'active', label: 'Active' },
+      { value: 'archived', label: 'Archived' },
+      { value: 'draft', label: 'Draft' },
+      { value: 'unknown', label: 'Unknown' },
+    ],
+  },
+  {
+    key: 'programType',
+    label: 'Program type',
+    field: 'programType',
+    type: 'select',
+    defaultOperator: 'is',
+    options: [
+      { value: 'assigned', label: 'Assigned' },
+      { value: 'template', label: 'Template' },
+    ],
+  },
+  {
+    key: 'createdDate',
+    label: 'Created date',
+    field: 'createdDate',
+    type: 'custom',
+    defaultOperator: 'between',
+    operators: [
+      { value: 'between', label: 'between' },
+      { value: 'before', label: 'before' },
+      { value: 'after', label: 'after' },
+      { value: 'empty', label: 'is empty' },
+      { value: 'not_empty', label: 'is not empty' },
+    ],
+    customRenderer: ({ values, onChange, operator }) => (
+      <ProgramRangeFilterValue values={values} onChange={onChange} operator={operator} type="date" startPlaceholder="Start date" endPlaceholder="End date" />
+    ),
+  },
+  {
+    key: 'startDate',
+    label: 'Start date',
+    field: 'startDate',
+    type: 'custom',
+    defaultOperator: 'between',
+    operators: [
+      { value: 'between', label: 'between' },
+      { value: 'before', label: 'before' },
+      { value: 'after', label: 'after' },
+      { value: 'empty', label: 'is empty' },
+      { value: 'not_empty', label: 'is not empty' },
+    ],
+    customRenderer: ({ values, onChange, operator }) => (
+      <ProgramRangeFilterValue values={values} onChange={onChange} operator={operator} type="date" startPlaceholder="Start date" endPlaceholder="End date" />
+    ),
+  },
+  {
+    key: 'endDate',
+    label: 'End date',
+    field: 'endDate',
+    type: 'custom',
+    defaultOperator: 'between',
+    operators: [
+      { value: 'between', label: 'between' },
+      { value: 'before', label: 'before' },
+      { value: 'after', label: 'after' },
+      { value: 'empty', label: 'is empty' },
+      { value: 'not_empty', label: 'is not empty' },
+    ],
+    customRenderer: ({ values, onChange, operator }) => (
+      <ProgramRangeFilterValue values={values} onChange={onChange} operator={operator} type="date" startPlaceholder="Start date" endPlaceholder="End date" />
+    ),
+  },
+  {
+    key: 'duration',
+    label: 'Duration',
+    field: 'duration',
+    type: 'custom',
+    defaultOperator: 'between',
+    operators: [
+      { value: 'between', label: 'between' },
+      { value: 'greater_than', label: 'greater than' },
+      { value: 'less_than', label: 'less than' },
+      { value: 'empty', label: 'is empty' },
+      { value: 'not_empty', label: 'is not empty' },
+    ],
+    customRenderer: ({ values, onChange, operator }) => (
+      <ProgramRangeFilterValue values={values} onChange={onChange} operator={operator} startPlaceholder="Min weeks" endPlaceholder="Max weeks" />
+    ),
+  },
+]
+
+function programMatchesFilter(program, filter) {
+  if (!filter?.field) return true
+
+  const values = Array.isArray(filter.values) ? filter.values : []
+  const primaryValue = values[0]
+  const secondaryValue = values[1]
+
+  switch (filter.field) {
+    case 'status': {
+      const programStatus = normalizeProgramFilterValue(program.status)
+      if (filter.operator === 'empty') return !program.status
+      if (filter.operator === 'not_empty') return Boolean(program.status)
+      const selectedStatus = normalizeProgramFilterValue(primaryValue)
+      if (!selectedStatus) return true
+      if (filter.operator === 'is_not') return programStatus != selectedStatus
+      return programStatus == selectedStatus
+    }
+    case 'programType': {
+      const programType = normalizeProgramFilterValue(program.programType)
+      if (filter.operator === 'empty') return !program.programType
+      if (filter.operator === 'not_empty') return Boolean(program.programType)
+      const selectedType = normalizeProgramFilterValue(primaryValue)
+      if (!selectedType) return true
+      if (filter.operator === 'is_not') return programType != selectedType
+      return programType == selectedType
+    }
+    case 'createdDate':
+    case 'startDate':
+    case 'endDate': {
+      const programDate = parseProgramDateValue(program[filter.field])
+      const startDate = parseProgramDateValue(primaryValue)
+      const endDate = parseProgramDateValue(secondaryValue)
+      if (filter.operator === 'empty') return !program[filter.field]
+      if (filter.operator === 'not_empty') return Boolean(program[filter.field])
+      if (!programDate) return false
+      if (filter.operator === 'before') return startDate ? programDate < startDate : true
+      if (filter.operator === 'after') return startDate ? programDate > startDate : true
+      if (startDate && endDate) return programDate >= startDate && programDate <= endDate
+      if (startDate) return programDate >= startDate
+      if (endDate) return programDate <= endDate
+      return true
+    }
+    case 'duration': {
+      const durationValue = parseProgramMetricValue(program.duration)
+      const minDuration = parseProgramMetricValue(primaryValue)
+      const maxDuration = parseProgramMetricValue(secondaryValue)
+      if (filter.operator === 'empty') return !program.duration || program.duration === '-'
+      if (filter.operator === 'not_empty') return Boolean(program.duration && program.duration !== '-')
+      if (durationValue === null) return false
+      if (filter.operator === 'greater_than') return minDuration === null ? true : durationValue > minDuration
+      if (filter.operator === 'less_than') return minDuration === null ? true : durationValue < minDuration
+      if (minDuration !== null && maxDuration !== null) return durationValue >= minDuration && durationValue <= maxDuration
+      if (minDuration !== null) return durationValue >= minDuration
+      if (maxDuration !== null) return durationValue <= maxDuration
+      return true
+    }
+    default:
+      return true
+  }
+}
+
+function programMatchesFilters(program, filters) {
+  return filters.every((filter) => programMatchesFilter(program, filter))
 }
 
 function ProgramCell({ programId, name, athletesLabel }) {
@@ -131,13 +351,23 @@ function RowActionsCell({
 }
 
 export default function ProgramsDataTable({ searchQuery = '' }) {
+  const { toastManager } = useToast()
   const [programs, setPrograms] = useState([])
+  const [athleteOptions, setAthleteOptions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [programFilters, setProgramFilters] = useQueryState(
+    'filters',
+    parseAsJson((value) => (Array.isArray(value) ? value : [])).withDefault([]),
+  )
   const [isCreateProgramDialogOpen, setIsCreateProgramDialogOpen] = useState(false)
+  const [programToast, setProgramToast] = useState(null)
   const [programDialogMode, setProgramDialogMode] = useState('create')
+  const [activeProgramDialogTab, setActiveProgramDialogTab] = useState('details')
   const [selectedProgramId, setSelectedProgramId] = useState(null)
   const [programFormValues, setProgramFormValues] = useState(() => createProgramFormValues())
+  const [isSavingProgram, setIsSavingProgram] = useState(false)
   const [openRowActionMenuId, setOpenRowActionMenuId] = useState(null)
   const [pendingRowAction, setPendingRowAction] = useState(null)
   const [rowSelection, setRowSelection] = useState({})
@@ -150,9 +380,49 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
 
   function openCreateProgramDialog() {
     setProgramDialogMode('create')
+    setActiveProgramDialogTab('details')
     setSelectedProgramId(null)
     setProgramFormValues(createProgramFormValues())
     setIsCreateProgramDialogOpen(true)
+  }
+
+  function dismissProgramToast() {
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.removeItem('pplus-program-toast')
+    }
+    setProgramToast(null)
+  }
+
+  function queueProgramToast(toastInput) {
+    if (typeof window === 'undefined') return
+    window.sessionStorage.setItem('pplus-program-toast', JSON.stringify(toastInput))
+  }
+
+  function flushQueuedProgramToast() {
+    if (typeof window === 'undefined') return
+    const queuedToast = window.sessionStorage.getItem('pplus-program-toast')
+    if (!queuedToast) return
+
+    window.sessionStorage.removeItem('pplus-program-toast')
+
+    try {
+      const parsedToast = JSON.parse(queuedToast)
+      if (parsedToast?.title) {
+        showProgramToast(parsedToast)
+      }
+    } catch {
+      window.sessionStorage.removeItem('pplus-program-toast')
+    }
+  }
+
+  function showProgramToast({ title = 'Notice', description = '', variant = 'info', duration }) {
+    setProgramToast({
+      id: `program-toast-${Date.now()}`,
+      title,
+      description,
+      variant,
+      duration: typeof duration === 'number' ? duration : variant === 'loading' ? 0 : 4500,
+    })
   }
 
   function openEditProgramDialog(programId) {
@@ -163,9 +433,134 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
     }
 
     setProgramDialogMode('edit')
+    setActiveProgramDialogTab('details')
     setSelectedProgramId(programId)
     setProgramFormValues(createProgramFormValues(selectedProgram))
     setIsCreateProgramDialogOpen(true)
+  }
+
+  function upsertProgram(nextProgram) {
+    if (!nextProgram?.id) return
+
+    setPrograms((current) => {
+      const existingIndex = current.findIndex((program) => program.id === nextProgram.id)
+      if (existingIndex === -1) {
+        return [...current, nextProgram]
+      }
+
+      const nextPrograms = current.slice()
+      nextPrograms[existingIndex] = nextProgram
+      return nextPrograms
+    })
+  }
+
+  async function handleSaveProgram() {
+    const payload = {
+      athleteIds: programFormValues.athleteIds,
+      name: programFormValues.name,
+      weeks: programFormValues.weeks,
+      startDate: programFormValues.startDate,
+      endDate: programFormValues.endDate,
+      description: programFormValues.description,
+    }
+    const isEditingProgram = programDialogMode === 'edit'
+
+    setIsSavingProgram(true)
+    setError('')
+
+    const loadingToastId = toastManager.show({
+      title: isEditingProgram ? 'Saving program...' : 'Creating program...',
+      variant: 'loading',
+      duration: 0,
+      data: { close: true },
+    })
+    showProgramToast({
+      title: isEditingProgram ? 'Saving program...' : 'Creating program...',
+      variant: 'loading',
+      duration: 0,
+    })
+
+    try {
+      const response = await fetch('/api/admin/programs', {
+        method: isEditingProgram ? 'PATCH' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(isEditingProgram ? { id: selectedProgramId, ...payload } : payload),
+      })
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result?.error || `Failed to ${isEditingProgram ? 'update' : 'create'} program.`)
+      }
+
+      const nextProgram = result?.program ?? null
+      if (!nextProgram?.id) {
+        throw new Error('Program save did not return a valid program.')
+      }
+
+      const successToast = {
+        title: isEditingProgram ? 'Program updated' : 'Program created',
+        description: isEditingProgram
+          ? `Saved changes to ${nextProgram?.name || 'this program'}.`
+          : `Created ${nextProgram?.name || 'this program'} and opened it for further editing.`,
+        variant: 'success',
+        data: { close: true },
+      }
+
+      toastManager.dismiss(loadingToastId)
+      dismissProgramToast()
+
+      upsertProgram(nextProgram)
+      setSelectedProgramId(nextProgram.id)
+      setProgramFormValues(createProgramFormValues(nextProgram))
+      setRefreshKey((current) => current + 1)
+
+      if (isEditingProgram) {
+        setIsCreateProgramDialogOpen(false)
+      } else {
+        setProgramDialogMode('edit')
+        setActiveProgramDialogTab('details')
+      }
+
+      queueProgramToast(successToast)
+      showProgramToast(successToast)
+      window.setTimeout(() => {
+        toastManager.show(successToast)
+      }, 0)
+    } catch (saveError) {
+      const errorToast = {
+        title: isEditingProgram ? 'Failed to save program' : 'Failed to create program',
+        description: saveError?.message || (isEditingProgram ? 'We could not save this program right now.' : 'We could not create this program right now.'),
+        variant: 'error',
+        duration: 6000,
+        data: { close: true },
+      }
+
+      toastManager.dismiss(loadingToastId)
+      dismissProgramToast()
+      queueProgramToast(errorToast)
+      showProgramToast(errorToast)
+      window.setTimeout(() => {
+        toastManager.show(errorToast)
+      }, 0)
+      setError(saveError?.message || 'Failed to save program.')
+    } finally {
+      setIsSavingProgram(false)
+    }
+  }
+
+  function handleToggleProgramAthlete(athleteId) {
+    const nextAthleteId = String(athleteId ?? '').trim()
+    if (!nextAthleteId) return
+
+    setError('')
+    setProgramFormValues((current) => ({
+      ...current,
+      athleteIds: current.athleteIds.includes(nextAthleteId)
+        ? current.athleteIds.filter((value) => value !== nextAthleteId)
+        : [...current.athleteIds, nextAthleteId],
+    }))
   }
 
   useEffect(() => {
@@ -187,10 +582,12 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
 
         if (!cancelled) {
           setPrograms(Array.isArray(payload?.programs) ? payload.programs : [])
+          setAthleteOptions(Array.isArray(payload?.athleteOptions) ? payload.athleteOptions : [])
         }
       } catch (loadError) {
         if (!cancelled) {
           setPrograms([])
+          setAthleteOptions([])
           setError(loadError?.message || 'Failed to load programs.')
         }
       } finally {
@@ -205,7 +602,7 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [refreshKey])
 
   const columns = useMemo(
     () => [
@@ -285,8 +682,16 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
     [openRowActionMenuId],
   )
 
+  const selectedProgram = useMemo(() => programs.find((program) => program.id === selectedProgramId) ?? null, [programs, selectedProgramId])
+  const isProgramPersisted = programDialogMode === 'edit' && Boolean(selectedProgramId)
+
+  const filteredPrograms = useMemo(() => {
+    const normalizedFilters = Array.isArray(programFilters) ? programFilters : []
+    return programs.filter((program) => programMatchesFilters(program, normalizedFilters))
+  }, [programFilters, programs])
+
   const table = useReactTable({
-    data: programs,
+    data: filteredPrograms,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -308,6 +713,27 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
   }, [searchQuery, table])
 
   useEffect(() => {
+    setPagination((current) => ({
+      ...current,
+      pageIndex: 0,
+    }))
+  }, [programFilters, searchQuery])
+
+  useEffect(() => {
+    flushQueuedProgramToast()
+  }, [])
+
+  useEffect(() => {
+    if (!programToast?.id || !programToast.duration || programToast.duration <= 0) return undefined
+
+    const timeoutId = window.setTimeout(() => {
+      dismissProgramToast()
+    }, programToast.duration)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [programToast])
+
+  useEffect(() => {
     if (openRowActionMenuId || !pendingRowAction) return
 
     if (pendingRowAction.type === 'edit') {
@@ -317,44 +743,106 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
     setPendingRowAction(null)
   }, [openRowActionMenuId, pendingRowAction])
 
-  const emptyStateMessage = loading
-    ? 'Loading programs...'
-    : error || 'No programs found.'
+  const emptyStateMessage = error || (programFilters.length > 0 ? 'No programs match the current filters.' : 'No programs found.')
+  const pageSizeOptions = [5, 10, 20, 30]
+  const totalRows = table.getFilteredRowModel().rows.length
+  const pageStart = totalRows === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1
+  const pageEnd = Math.min((pagination.pageIndex + 1) * pagination.pageSize, totalRows)
+  const pageNumbers = Array.from({ length: table.getPageCount() }, (_, index) => index)
+  const skeletonRows = Array.from({ length: pagination.pageSize }, (_, rowIndex) => rowIndex)
 
   return (
     <div className="admin-shell-athletes-table-example">
-      <div className="admin-shell-athletes-example-controls flex items-center justify-between gap-3">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button type="button" className="admin-shell-athletes-example-columns-button">
-              Columns
-              <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {table
-              .getAllColumns()
-              .filter((column) => column.getCanHide())
-              .map((column) => (
-                <DropdownMenuCheckboxItem
-                  key={column.id}
-                  className="capitalize"
-                  checked={column.getIsVisible()}
-                  onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                >
-                  {column.columnDef.meta?.label ?? column.id}
-                </DropdownMenuCheckboxItem>
-              ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <Button
-          type="button"
-          onClick={openCreateProgramDialog}
-          className="admin-shell-athletes-invite-button bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d] rounded-[12px] min-h-[40px]"
-        >
-          Create a program
-        </Button>
+      <div className="grid gap-3">
+        <div className="flex w-full items-center justify-between gap-3">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button type="button" className="admin-shell-athletes-example-columns-button">
+                Columns
+                <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {table
+                .getAllColumns()
+                .filter((column) => column.getCanHide())
+                .map((column) => (
+                  <DropdownMenuCheckboxItem
+                    key={column.id}
+                    className="capitalize"
+                    checked={column.getIsVisible()}
+                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                  >
+                    {column.columnDef.meta?.label ?? column.id}
+                  </DropdownMenuCheckboxItem>
+                ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button
+            type="button"
+            onClick={openCreateProgramDialog}
+            className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d] md:self-auto"
+          >
+            Create a program
+          </Button>
+        </div>
+        <div className="flex w-full flex-wrap items-center justify-start gap-2">
+          <Filters
+            filters={programFilters}
+            fields={programFilterFields}
+            onChange={setProgramFilters}
+            trigger={
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-[12px] min-h-[40px] !border !border-[#24334A] bg-transparent text-[#DCE6F8] shadow-none hover:bg-[#15233A] hover:text-[#EEF4FF]"
+              >
+                <Plus className="size-4" />
+                Add filter
+              </Button>
+            }
+          />
+        </div>
       </div>
+
+      {programToast ? (
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[120] flex justify-end px-4 pb-4 sm:px-6 sm:pb-6">
+          <div className="flex w-full max-w-[420px] flex-col gap-3">
+            <div
+              className={[
+                'pointer-events-auto flex w-full items-start gap-3 rounded-[16px] border px-4 py-3 text-[#DCE6F8] shadow-[0_20px_50px_rgba(0,0,0,0.35)] transition-all duration-200',
+                programToast.variant === 'loading'
+                  ? 'border-[#24334A] bg-[#111D30]'
+                  : programToast.variant === 'success'
+                    ? 'border-[#1E5B4A] bg-[#0F1728]'
+                    : 'border-[#5A2830] bg-[#0F1728]',
+              ].join(' ')}
+            >
+              <div className="mt-0.5 shrink-0">
+                {programToast.variant === 'loading' ? (
+                  <LoaderCircle className="size-4 animate-spin text-[#8EA0BC]" />
+                ) : programToast.variant === 'success' ? (
+                  <CircleCheckBig className="size-4 text-[#3BE0AF]" />
+                ) : (
+                  <CircleAlert className="size-4 text-[#F87171]" />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-[#EEF4FF]">{programToast.title}</p>
+                {programToast.description ? <p className="mt-1 text-sm leading-5 text-[#8EA0BC]">{programToast.description}</p> : null}
+              </div>
+              <button
+                type="button"
+                className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-[#8EA0BC] transition-colors hover:bg-[#15233A] hover:text-[#EEF4FF]"
+                onClick={dismissProgramToast}
+                aria-label="Dismiss toast"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <Dialog
         open={isCreateProgramDialogOpen}
@@ -363,11 +851,18 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
 
           if (!isOpen) {
             setPendingRowAction(null)
+            setProgramDialogMode('create')
+            setSelectedProgramId(null)
+            setActiveProgramDialogTab('details')
+            setProgramFormValues(createProgramFormValues())
           }
         }}
       >
-        <DialogContent className="admin-shell-athletes-invite-dialog border border-[#24334A] bg-[#0F1728] p-0 text-[#DCE6F8] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[720px]">
-          <div className="border-b border-[#24334A] px-6 py-5">
+        <DialogContent
+          pageScrollable
+          className="admin-shell-athletes-invite-dialog border border-[#24334A] bg-[#0F1728] p-0 text-[#DCE6F8] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[720px]"
+        >
+          <div className="shrink-0 border-b border-[#24334A] px-6 py-5">
             <DialogHeader>
               <DialogTitle>{programDialogMode === 'edit' ? 'Edit program' : 'Create a program'}</DialogTitle>
               <DialogDescription>
@@ -379,11 +874,20 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
           </div>
 
           <div className="grid gap-5 px-6 py-6">
-            <Tabs defaultValue="details" className="grid gap-5">
-              <TabsList>
-                <TabsTrigger value="details">Details</TabsTrigger>
-                <TabsTrigger value="athletes">Athletes</TabsTrigger>
-              </TabsList>
+            <Tabs
+              value={activeProgramDialogTab}
+              onValueChange={(nextTab) => {
+                if (!isProgramPersisted && nextTab === 'athletes') return
+                setActiveProgramDialogTab(nextTab)
+              }}
+              className="grid gap-5"
+            >
+              {isProgramPersisted ? (
+                <TabsList>
+                  <TabsTrigger value="details">Details</TabsTrigger>
+                  <TabsTrigger value="athletes">Athletes</TabsTrigger>
+                </TabsList>
+              ) : null}
 
               <TabsContent value="details" className="grid gap-5">
                 <div className="grid gap-4 md:grid-cols-2">
@@ -410,7 +914,8 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
                       min="1"
                       value={programFormValues.weeks}
                       onChange={(event) => setProgramFormValues((current) => ({ ...current, weeks: event.target.value }))}
-                      className="h-11 rounded-[12px] border border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] outline-none placeholder:text-[#70809E] focus:border-[#3BE0AF]"
+                      disabled={isProgramPersisted}
+                      className="h-11 rounded-[12px] border border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] outline-none placeholder:text-[#70809E] focus:border-[#3BE0AF] disabled:cursor-not-allowed disabled:opacity-60"
                       placeholder="Enter total weeks"
                     />
                   </div>
@@ -460,37 +965,43 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
               <TabsContent value="athletes" className="grid gap-3">
                 <div className="space-y-1">
                   <p className="text-sm font-medium text-[#DCE6F8]">Athletes</p>
-                  <p className="text-sm text-[#8EA0BC]">Add athletes to this program using the shared item-group pattern.</p>
+                  <p className="text-sm text-[#8EA0BC]">Choose the athletes assigned to this program from the real athlete list.</p>
+                  <p className="text-xs text-[#70809E]">{programFormValues.athleteIds.length} athlete{programFormValues.athleteIds.length === 1 ? '' : 's'} selected</p>
                 </div>
 
                 <ItemGroup className="gap-0">
-                  {programAthleteCandidates.map((athlete, index) => (
-                    <div key={athlete.id}>
-                      <Item className="rounded-none px-0 py-3 text-[#DCE6F8] shadow-none transition-colors hover:bg-transparent">
-                        <ItemMedia>
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[#2B3D57] bg-[#162235] text-sm font-semibold text-[#EEF4FF]">
-                            {getInitials(athlete.name)}
-                          </div>
-                        </ItemMedia>
-                        <ItemContent className="gap-1">
-                          <ItemTitle className="text-[#EEF4FF]">{athlete.name}</ItemTitle>
-                          <ItemDescription className="text-[#8EA0BC]">{athlete.detail}</ItemDescription>
-                        </ItemContent>
-                        <ItemActions>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-9 w-9 rounded-full border border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
-                          >
-                            <PlusIcon className="h-4 w-4" />
-                            <span className="sr-only">Add athlete to program</span>
-                          </Button>
-                        </ItemActions>
-                      </Item>
-                      {index !== programAthleteCandidates.length - 1 ? <ItemSeparator className="bg-[#24334A]" /> : null}
-                    </div>
-                  ))}
+                  {athleteOptions.map((athlete, index) => {
+                    const isSelectedAthlete = programFormValues.athleteIds.includes(athlete.id)
+
+                    return (
+                      <div key={athlete.id}>
+                        <Item className="rounded-none px-0 py-3 text-[#DCE6F8] shadow-none transition-colors hover:bg-transparent">
+                          <ItemMedia>
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[#2B3D57] bg-[#162235] text-sm font-semibold text-[#EEF4FF]">
+                              {getInitials(athlete.name)}
+                            </div>
+                          </ItemMedia>
+                          <ItemContent className="gap-1">
+                            <ItemTitle className="text-[#EEF4FF]">{athlete.name}</ItemTitle>
+                            <ItemDescription className="text-[#8EA0BC]">{isSelectedAthlete ? 'Added to program' : 'Available to add'}</ItemDescription>
+                          </ItemContent>
+                          <ItemActions>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleToggleProgramAthlete(athlete.id)}
+                              className="h-9 w-9 rounded-full border border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
+                            >
+                              {isSelectedAthlete ? <Trash2 className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                              <span className="sr-only">{isSelectedAthlete ? 'Remove athlete from program' : 'Add athlete to program'}</span>
+                            </Button>
+                          </ItemActions>
+                        </Item>
+                        {index != athleteOptions.length - 1 ? <ItemSeparator className="bg-[#24334A]" /> : null}
+                      </div>
+                    )
+                  })}
                 </ItemGroup>
               </TabsContent>
             </Tabs>
@@ -507,9 +1018,13 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
             </Button>
             <Button
               type="button"
-              className="rounded-[12px] min-h-[40px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]"
+              disabled={isSavingProgram}
+              onClick={() => {
+                void handleSaveProgram()
+              }}
+              className="rounded-[12px] min-h-[40px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {programDialogMode === 'edit' ? 'Save changes' : 'Create'}
+              {isSavingProgram ? (programDialogMode === 'edit' ? 'Saving...' : 'Creating...') : programDialogMode === 'edit' ? 'Save changes' : 'Create'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -529,7 +1044,39 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows?.length ? (
+            {loading ? (
+              skeletonRows.map((rowIndex) => (
+                <TableRow key={`skeleton-${rowIndex}`} className={rowIndex % 2 === 0 ? 'admin-shell-athletes-row-even' : 'admin-shell-athletes-row-odd'}>
+                  <TableCell>
+                    <Skeleton className="h-4 w-4 rounded-[4px]" />
+                  </TableCell>
+                  <TableCell>
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-[160px]" />
+                      <Skeleton className="h-3 w-[112px]" />
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[72px]" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[72px]" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[72px]" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[88px]" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-8 w-[96px] rounded-full" />
+                  </TableCell>
+                  <TableCell className="admin-shell-athletes-actions-cell">
+                    <Skeleton className="ml-auto h-8 w-8 rounded-full" />
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row, index) => (
                 <TableRow
                   key={row.id}
@@ -554,16 +1101,47 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
         </Table>
       </div>
 
-      <div className="flex items-center justify-between py-4 text-sm text-[#8EA0BC]">
-        <div>{table.getFilteredRowModel().rows.length} program(s)</div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
-            Previous
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
-            Next
-          </Button>
-        </div>
+      <div className="flex items-center justify-end gap-3 py-4 text-sm text-[#8EA0BC]">
+        <span>Rows per page</span>
+        <Select value={String(pagination.pageSize)} onValueChange={(value) => table.setPageSize(Number(value))}>
+          <SelectTrigger className="h-9 w-[76px] rounded-[10px] !border-[#24334A] bg-[#111D30] px-3 text-sm text-[#DCE6F8]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {pageSizeOptions.map((option) => (
+              <SelectItem key={option} value={String(option)}>{option}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span>{pageStart} - {pageEnd} of {totalRows}</span>
+        <button
+          type="button"
+          aria-label="Go to previous page"
+          className="admin-shell-athletes-example-pagination-button"
+          onClick={() => table.previousPage()}
+          disabled={!table.getCanPreviousPage()}
+        >
+          ‹
+        </button>
+        {pageNumbers.map((pageNumber) => (
+          <button
+            key={`page-${pageNumber}`}
+            type="button"
+            className={`admin-shell-athletes-example-pagination-button ${pagination.pageIndex === pageNumber ? 'bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]' : ''}`}
+            onClick={() => table.setPageIndex(pageNumber)}
+          >
+            {pageNumber + 1}
+          </button>
+        ))}
+        <button
+          type="button"
+          aria-label="Go to next page"
+          className="admin-shell-athletes-example-pagination-button"
+          onClick={() => table.nextPage()}
+          disabled={!table.getCanNextPage()}
+        >
+          ›
+        </button>
       </div>
     </div>
   )

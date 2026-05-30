@@ -12,12 +12,14 @@ export default function CompactFileUpload({
   id,
   onFileChange = () => {},
   className,
+  disabled = false,
 }) {
   return (
     <label
-      htmlFor={id}
+      htmlFor={disabled ? undefined : id}
       className={cn(
-        "flex cursor-pointer items-center justify-between gap-4 rounded-[14px] border border-dashed border-[#24334A] bg-[#111D30] px-4 py-3 text-sm text-[#DCE6F8] transition hover:border-[#3BE0AF]/50 hover:bg-[#15233A]",
+        "flex items-center justify-between gap-4 rounded-[14px] border border-dashed border-[#24334A] bg-[#111D30] px-4 py-3 text-sm text-[#DCE6F8] transition",
+        disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:border-[#3BE0AF]/50 hover:bg-[#15233A]",
         className,
       )}
     >
@@ -37,6 +39,7 @@ export default function CompactFileUpload({
         accept={accept}
         className="sr-only"
         onChange={(event) => onFileChange(event.target.files?.[0] ?? null)}
+        disabled={disabled}
       />
     </label>
   )

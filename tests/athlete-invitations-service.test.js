@@ -30,6 +30,7 @@ test('createAthleteInvitationService creates the invite record first, then sends
       },
     },
     createCode: () => '7K9M2Q',
+    loopsTransactionalId: 'cmp2cx45l1r470iylhx75mg84',
   })
 
   const result = await service.sendAthleteInvitation({
@@ -60,7 +61,7 @@ test('createAthleteInvitationService creates the invite record first, then sends
     {
       type: 'loops',
       payload: {
-        transactionalId: 'pplus-athlete-invite',
+        transactionalId: 'cmp2cx45l1r470iylhx75mg84',
         email: 'athlete@example.com',
         dataVariables: {
           inviteCode: '7K9M2Q',
