@@ -90,7 +90,7 @@ export const footer = {
   })),
   resourceLinks: [
     { label: 'Support', href: '/support' },
-    { label: 'FAQ', href: '/#footer' },
+    { label: 'FAQ', href: '/faq' },
   ],
   copyright: '2026 PPLUS Training. All rights reserved',
 }
