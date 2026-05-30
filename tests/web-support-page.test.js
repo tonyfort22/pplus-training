@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const supportPagePath = resolve(repoRoot, 'apps/web/app/support/page.jsx')
 const supportFormPath = resolve(repoRoot, 'apps/web/components/ppht-support-fac5db68-f122.jsx')
+const supportThreadPath = resolve(repoRoot, 'apps/web/components/support-conversation-reply.jsx')
 const schemaPath = resolve(repoRoot, 'apps/web/lib/form-schema.js')
 const landingSectionsPath = resolve(repoRoot, 'apps/web/app/landing-sections.jsx')
 const landingContentPath = resolve(repoRoot, 'apps/web/app/landing-content.js')
@@ -65,6 +66,22 @@ test('support page uses the FormCN customer support template, not a custom marke
   assert.match(formSource, /hover:bg-\[#35c89d\]/, 'support submit button should use the admin dashboard primary hover green')
   assert.doesNotMatch(formSource, /admin-button admin-button-prominent/, 'support submit button should not use the outlined admin button style')
   assert.doesNotMatch(cssSource, /\.support-template-actions button \{[^}]*background:\s*rgba\(238, 244, 255/, 'support submit button should not keep the rejected white FormCN button override')
+})
+
+test('support page switches to requester conversation reply mode from conversationId links', () => {
+  assert.ok(existsSync(supportThreadPath), 'requester support conversation reply component should exist')
+  const pageSource = readFileSync(supportPagePath, 'utf8')
+  const threadSource = readFileSync(supportThreadPath, 'utf8')
+
+  assert.match(pageSource, /export default async function SupportPage\(\{ searchParams \}\)/)
+  assert.match(pageSource, /const resolvedSearchParams = await searchParams/)
+  assert.match(pageSource, /const conversationId = resolvedSearchParams\?\.conversationId/)
+  assert.match(pageSource, /conversationId \? <SupportConversationReply conversationId=\{conversationId\} \/> : <PphtSupportFac5db68F122 \/>/)
+  assert.match(threadSource, /fetch\(`\/api\/support\/conversations\/\$\{conversationId\}\/messages`/)
+  assert.match(threadSource, /method: 'POST'/)
+  assert.match(threadSource, /body: JSON\.stringify\(\{ body: trimmedReply \}\)/)
+  assert.match(threadSource, /Continue your support conversation/)
+  assert.match(threadSource, /Your reply was sent/)
 })
 
 test('landing navigation points Support to the real support page', () => {

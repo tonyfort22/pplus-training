@@ -11,6 +11,7 @@ function getRepositoryConfig(config = {}) {
   const supabaseUrl = config.supabaseUrl || process.env.SUPABASE_URL
   const serviceRoleKey = config.serviceRoleKey || process.env.SUPABASE_SERVICE_ROLE_KEY
   const fetchImpl = config.fetchImpl || fetch
+  const now = config.now || (() => new Date().toISOString())
 
   if (!supabaseUrl || !serviceRoleKey) {
     throw createRepositoryError('Persistence unavailable until web Supabase env is configured.', 503)
@@ -20,6 +21,7 @@ function getRepositoryConfig(config = {}) {
     baseRestUrl: `${supabaseUrl.replace(/\/$/, '')}/rest/v1`,
     serviceRoleKey,
     fetchImpl,
+    now,
   }
 }
 
@@ -58,9 +60,9 @@ function mapSupportRequestRow(row = {}) {
 }
 
 export function createSupportRequestsRepository(config = {}) {
-  async function requestSupportRequests(path = '', init = {}) {
+  async function requestTable(tableName, path = '', init = {}) {
     const { baseRestUrl, serviceRoleKey, fetchImpl } = getRepositoryConfig(config)
-    const response = await fetchImpl(`${baseRestUrl}/support_requests${path}`, {
+    const response = await fetchImpl(`${baseRestUrl}/${tableName}${path}`, {
       ...init,
       headers: {
         apikey: serviceRoleKey,
@@ -75,10 +77,63 @@ export function createSupportRequestsRepository(config = {}) {
 
     if (!response.ok) {
       const message = parsed?.message || parsed?.error || text || response.statusText
-      throw createRepositoryError(`support_requests request failed (${response.status}): ${message}`, response.status)
+      throw createRepositoryError(`${tableName} request failed (${response.status}): ${message}`, response.status)
     }
 
     return parsed
+  }
+
+  async function requestSupportRequests(path = '', init = {}) {
+    return requestTable('support_requests', path, init)
+  }
+
+  async function createInboxConversationForSupportRequest(supportRequest) {
+    const { now } = getRepositoryConfig(config)
+    const timestamp = now()
+    const requesterName = `${supportRequest.firstName || ''} ${supportRequest.lastName || ''}`.trim() || supportRequest.email
+    const preview = String(supportRequest.description || '').slice(0, 240)
+
+    const conversationRows = await requestTable('support_conversations', '?select=*', {
+      method: 'POST',
+      headers: {
+        Prefer: 'return=representation',
+      },
+      body: JSON.stringify({
+        support_request_id: supportRequest.id,
+        subject: supportRequest.category,
+        status: 'open',
+        priority: 'normal',
+        requester_name: requesterName,
+        requester_email: supportRequest.email,
+        requester_role: null,
+        requester_avatar_url: null,
+        last_message_preview: preview,
+        last_message_at: timestamp,
+      }),
+    })
+
+    const conversation = Array.isArray(conversationRows) ? conversationRows[0] : conversationRows
+    if (!conversation?.id) {
+      throw createRepositoryError('Failed to create support inbox conversation.', 500)
+    }
+
+    await requestTable('support_messages', '?select=*', {
+      method: 'POST',
+      headers: {
+        Prefer: 'return=representation',
+      },
+      body: JSON.stringify({
+        conversation_id: conversation.id,
+        sender_type: 'requester',
+        sender_name: requesterName,
+        sender_avatar_url: null,
+        body: supportRequest.description,
+        attachments: [],
+        created_at: timestamp,
+      }),
+    })
+
+    return conversation
   }
 
   return {
@@ -105,7 +160,13 @@ export function createSupportRequestsRepository(config = {}) {
         throw createRepositoryError('Failed to create support request.', 500)
       }
 
-      return mapSupportRequestRow(created)
+      const supportRequest = mapSupportRequestRow(created)
+      const conversation = await createInboxConversationForSupportRequest(supportRequest)
+
+      return {
+        ...supportRequest,
+        supportConversationId: conversation.id,
+      }
     },
 
     async markNotificationSent(supportRequestId, sentAt = new Date().toISOString()) {

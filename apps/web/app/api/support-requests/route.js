@@ -15,7 +15,8 @@ function handleRouteError(error) {
 export async function POST(request) {
   try {
     const repository = createSupportRequestsRepository()
-    const notificationSender = createSupportRequestNotificationSender()
+    const requestOrigin = new URL(request.url).origin
+    const notificationSender = createSupportRequestNotificationSender({ appBaseUrl: requestOrigin })
     const body = await request.json()
     const supportRequest = await repository.createSupportRequest(body ?? {})
 

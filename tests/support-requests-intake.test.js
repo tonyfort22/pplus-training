@@ -108,7 +108,7 @@ test('support request repository validates, normalizes, and inserts via Supabase
   })
 
   assert.equal(supportRequest.id, 'support-request-1')
-  assert.equal(calls.length, 1)
+  assert.equal(calls.length, 3)
   assert.equal(calls[0].url, 'https://example.supabase.co/rest/v1/support_requests?select=*')
   assert.equal(calls[0].init.method, 'POST')
   assert.equal(calls[0].init.headers.apikey, 'service-role-key')
@@ -132,16 +132,105 @@ test('support request repository validates, normalizes, and inserts via Supabase
   await repository.markNotificationSent('support-request-1', '2026-05-27T15:05:00.000Z')
   await repository.markNotificationFailed('support-request-1', 'Resend rejected the message')
 
-  assert.equal(calls[1].url, 'https://example.supabase.co/rest/v1/support_requests?id=eq.support-request-1&select=*')
-  assert.equal(calls[1].init.method, 'PATCH')
-  assert.deepEqual(JSON.parse(calls[1].init.body), {
+  assert.equal(calls[3].url, 'https://example.supabase.co/rest/v1/support_requests?id=eq.support-request-1&select=*')
+  assert.equal(calls[3].init.method, 'PATCH')
+  assert.deepEqual(JSON.parse(calls[3].init.body), {
     notification_sent_at: '2026-05-27T15:05:00.000Z',
     notification_error: null,
   })
-  assert.equal(calls[2].url, 'https://example.supabase.co/rest/v1/support_requests?id=eq.support-request-1&select=*')
-  assert.equal(calls[2].init.method, 'PATCH')
-  assert.deepEqual(JSON.parse(calls[2].init.body), {
+  assert.equal(calls[4].url, 'https://example.supabase.co/rest/v1/support_requests?id=eq.support-request-1&select=*')
+  assert.equal(calls[4].init.method, 'PATCH')
+  assert.deepEqual(JSON.parse(calls[4].init.body), {
     notification_error: 'Resend rejected the message',
+  })
+})
+
+test('support request repository creates an inbox conversation and first requester message', async () => {
+  assert.ok(existsSync(supportRepositoryPath), 'support request repository should exist')
+  const { createSupportRequestsRepository } = await import(`${supportRepositoryPath}?cacheBust=${Date.now()}`)
+
+  const calls = []
+  const repository = createSupportRequestsRepository({
+    supabaseUrl: 'https://example.supabase.co',
+    serviceRoleKey: 'service-role-key',
+    now: () => '2026-05-29T18:30:00.000Z',
+    fetchImpl: async (url, init) => {
+      calls.push({ url: String(url), init })
+      if (String(url).includes('/support_requests')) {
+        return Response.json([{
+          id: 'support-request-1',
+          first_name: 'Jane',
+          last_name: 'Hockey',
+          email: 'jane@example.com',
+          category: 'technical',
+          description: 'Video will not load',
+          status: 'new',
+          source: 'support_page',
+          notification_sent_at: null,
+          notification_error: null,
+          created_at: '2026-05-29T18:30:00.000Z',
+          updated_at: '2026-05-29T18:30:00.000Z',
+        }], { status: 201 })
+      }
+      if (String(url).includes('/support_conversations')) {
+        return Response.json([{
+          id: 'conversation-1',
+          support_request_id: 'support-request-1',
+          subject: 'technical',
+          status: 'open',
+          priority: 'normal',
+          requester_name: 'Jane Hockey',
+          requester_email: 'jane@example.com',
+          requester_role: null,
+          requester_avatar_url: null,
+          last_message_preview: 'Video will not load',
+          last_message_at: '2026-05-29T18:30:00.000Z',
+          created_at: '2026-05-29T18:30:00.000Z',
+          updated_at: '2026-05-29T18:30:00.000Z',
+        }], { status: 201 })
+      }
+      if (String(url).includes('/support_messages')) {
+        return Response.json([{ id: 'message-1' }], { status: 201 })
+      }
+      throw new Error(`unexpected URL ${url}`)
+    },
+  })
+
+  const supportRequest = await repository.createSupportRequest({
+    firstName: 'Jane',
+    lastName: 'Hockey',
+    email: 'jane@example.com',
+    category: 'technical',
+    description: 'Video will not load',
+  })
+
+  assert.equal(supportRequest.id, 'support-request-1')
+  assert.equal(supportRequest.supportConversationId, 'conversation-1')
+  assert.equal(calls.length, 3)
+  assert.equal(calls[1].url, 'https://example.supabase.co/rest/v1/support_conversations?select=*')
+  assert.equal(calls[1].init.method, 'POST')
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    support_request_id: 'support-request-1',
+    subject: 'technical',
+    status: 'open',
+    priority: 'normal',
+    requester_name: 'Jane Hockey',
+    requester_email: 'jane@example.com',
+    requester_role: null,
+    requester_avatar_url: null,
+    last_message_preview: 'Video will not load',
+    last_message_at: '2026-05-29T18:30:00.000Z',
+  })
+  assert.equal(calls[2].url, 'https://example.supabase.co/rest/v1/support_messages?select=*')
+  assert.equal(calls[2].init.method, 'POST')
+  assert.deepEqual(JSON.parse(calls[2].init.body), {
+    conversation_id: 'conversation-1',
+    sender_type: 'requester',
+    sender_name: 'Jane Hockey',
+    sender_avatar_url: null,
+    body: 'Video will not load',
+    attachments: [],
+    created_at: '2026-05-29T18:30:00.000Z',
   })
 })
 
@@ -152,6 +241,8 @@ test('support API route creates support requests through the repository seam and
   assert.match(routeSource, /import \{ createSupportRequestNotificationSender \} from '@\/lib\/support-request-notifications'/)
   assert.match(routeSource, /export async function POST\(request\)/)
   assert.match(routeSource, /const body = await request\.json\(\)/)
+  assert.match(routeSource, /const requestOrigin = new URL\(request\.url\)\.origin/)
+  assert.match(routeSource, /createSupportRequestNotificationSender\(\{ appBaseUrl: requestOrigin \}\)/)
   assert.match(routeSource, /repository\.createSupportRequest\(body \?\? \{\}\)/)
   assert.match(routeSource, /notificationSender\.sendSupportRequestNotification\(supportRequest\)/)
   assert.match(routeSource, /repository\.markNotificationSent\(supportRequest\.id/)
@@ -206,8 +297,22 @@ test('support notification sender posts internal email through Loops transaction
     description: 'Video will not load',
     submittedAt: 'May 27, 2026, 11:00 a.m.',
     source: 'support_page',
-    adminUrl: 'https://pplus.example.com/admin/support/support-request-1',
+    adminUrl: 'https://pplus.example.com/admin/support',
   })
+
+  await sender.sendSupportRequestNotification({
+    id: 'support-request-2',
+    supportConversationId: 'conversation-2',
+    firstName: 'Alex',
+    lastName: 'Goalie',
+    email: 'alex@example.com',
+    category: 'billing',
+    description: 'Invoice question',
+    createdAt: '2026-05-27T15:00:00.000Z',
+    source: 'support_page',
+  })
+  const deepLinkBody = JSON.parse(calls[1].init.body)
+  assert.equal(deepLinkBody.dataVariables.adminUrl, 'https://pplus.example.com/admin/support?conversationId=conversation-2')
 
   const disabledSender = createSupportRequestNotificationSender({
     loopsApiKey: '',
@@ -215,7 +320,7 @@ test('support notification sender posts internal email through Loops transaction
     toEmail: '',
     fetchImpl: async () => { throw new Error('should not send') },
   })
-  const disabledResult = await disabledSender.sendSupportRequestNotification({ id: 'support-request-2' })
+  const disabledResult = await disabledSender.sendSupportRequestNotification({ id: 'support-request-3' })
   assert.equal(disabledResult.skipped, true)
   assert.equal(disabledResult.reason, 'missing_email_config')
 })
