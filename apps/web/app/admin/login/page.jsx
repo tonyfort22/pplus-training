@@ -3,6 +3,8 @@ import AdminCard from '../../../components/admin/ui/admin-card'
 import AdminInput from '../../../components/admin/ui/admin-input'
 import AdminLabel from '../../../components/admin/ui/admin-label'
 import AdminPageShell from '../../../components/admin/ui/admin-page-shell'
+import { getLocalizedHref, normalizePublicLanguage } from '../../../lib/i18n/language'
+import { getPublicPageCopy } from '../../../lib/i18n/public-page-copy'
 
 function EyeIcon() {
   return (
@@ -20,7 +22,12 @@ function EyeIcon() {
   );
 }
 
-export default function HomePage() {
+export default async function HomePage({ searchParams }) {
+  const resolvedSearchParams = await searchParams
+  const language = normalizePublicLanguage(resolvedSearchParams?.lang)
+  const copy = getPublicPageCopy(language)
+  const loginCopy = copy.login
+
   return (
     <AdminPageShell>
       <div className="admin-login-pattern" aria-hidden="true" />
@@ -44,17 +51,17 @@ export default function HomePage() {
           <div className="admin-auth-marketing-inner">
             <div className="admin-auth-marketing-badge">
               <img src="/admin/auth_trophy.svg" alt="" aria-hidden="true" />
-              <span>The Best Hockey Training App</span>
+              <span>{loginCopy.badge}</span>
             </div>
 
             <div className="admin-auth-marketing-copy">
-              <p className="admin-auth-marketing-kicker">ELITE HOCKEY TRAINING</p>
+              <p className="admin-auth-marketing-kicker">{loginCopy.kicker}</p>
               <div className="admin-auth-marketing-headline">
-                <h2>Off-Ice Work</h2>
-                <h2 className="admin-auth-marketing-headline-accent">On-Ice Results</h2>
+                <h2>{loginCopy.headline.lineOne}</h2>
+                <h2 className="admin-auth-marketing-headline-accent">{loginCopy.headline.lineTwo}</h2>
               </div>
               <p className="admin-auth-marketing-description">
-                PPLUS Training helps hockey athletes stay locked in off the ice with guided trainings, simple tracking, and a clear plan built for long-term development.
+                {loginCopy.description}
               </p>
             </div>
 
@@ -102,50 +109,52 @@ export default function HomePage() {
 
           <div className="admin-auth-signin-body">
             <div className="admin-auth-signin-logo-row">
-              <img
-                className="admin-auth-signin-logo admin-auth-signin-logo-dark"
-                src="/admin/logo_pplus_training.svg"
-                alt="PPLUS Training"
-              />
-              <img
-                className="admin-auth-signin-logo admin-auth-signin-logo-light"
-                src="/admin/logo_ppht_light_mode.svg"
-                alt="PPLUS Training"
-              />
+              <a href={getLocalizedHref('/', language)} className="admin-auth-signin-logo-link" aria-label="PPLUS Training home">
+                <img
+                  className="admin-auth-signin-logo admin-auth-signin-logo-dark"
+                  src="/admin/logo_pplus_training.svg"
+                  alt="PPLUS Training"
+                />
+                <img
+                  className="admin-auth-signin-logo admin-auth-signin-logo-light"
+                  src="/admin/logo_ppht_light_mode.svg"
+                  alt="PPLUS Training"
+                />
+              </a>
             </div>
 
             <div className="admin-auth-flow">
               <div className="admin-auth-title-row">
-                <h1 className="admin-auth-title">Welcome back 👋🏻</h1>
+                <h1 className="admin-auth-title">{loginCopy.form.title}</h1>
               </div>
 
               <form className="admin-login-form">
                 <div className="admin-login-field-group">
                   <AdminLabel className="admin-auth-sr-only" htmlFor="email">
-                    Email
+                    {loginCopy.form.email}
                   </AdminLabel>
                   <AdminInput
                     id="email"
                     type="email"
-                    placeholder="Email"
+                    placeholder={loginCopy.form.email}
                   />
                 </div>
 
                 <div className="admin-login-field-group">
                   <AdminLabel className="admin-auth-sr-only" htmlFor="password">
-                    Password
+                    {loginCopy.form.password}
                   </AdminLabel>
                   <div className="admin-login-password-shell">
                     <AdminInput
                       id="password"
                       className="admin-login-input-password"
                       type="password"
-                      placeholder="Password"
+                      placeholder={loginCopy.form.password}
                     />
                     <button
                       type="button"
                       className="admin-login-password-toggle"
-                      aria-label="Toggle password visibility"
+                      aria-label={loginCopy.form.togglePassword}
                     >
                       <EyeIcon />
                     </button>
@@ -153,14 +162,14 @@ export default function HomePage() {
                 </div>
 
                 <AdminButton type="submit" size="default" className="admin-auth-submit-button w-full">
-                  <span>Sign in</span>
+                  <span>{loginCopy.form.submit}</span>
                 </AdminButton>
               </form>
             </div>
 
             <div className="admin-login-forgot-row">
               <a href="#" className="admin-login-forgot">
-                Forgot Password
+                {loginCopy.form.forgotPassword}
               </a>
             </div>
           </div>

@@ -12,19 +12,12 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import Textarea from '@/components/ui/textarea'
 
-const categoryOptions = [
-  { label: 'Technical Issue', value: 'technical' },
-  { label: 'Billing Question', value: 'billing' },
-  { label: 'Product Inquiry', value: 'product' },
-  { label: 'Account Access', value: 'account' },
-  { label: 'Other', value: 'other' },
-]
-
 const dashboardInputClassName = 'support-dashboard-input h-11 rounded-[12px] border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20'
 const dashboardTextareaClassName = 'support-dashboard-textarea min-h-[140px] rounded-[12px] border border-[#24334A] bg-[#111D30] px-4 py-3 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20'
 
-export function PphtSupportFac5db68F122() {
+export function PphtSupportFac5db68F122({ copy }) {
   const [submitError, setSubmitError] = useState(null)
+  const categoryOptions = copy.categories
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -54,7 +47,7 @@ export function PphtSupportFac5db68F122() {
     const payload = await response.json().catch(() => null)
 
     if (!response.ok || !payload?.ok) {
-      setSubmitError(payload?.error || 'We could not submit your support request. Please try again.')
+      setSubmitError(payload?.error || copy.submitError)
       return
     }
 
@@ -78,8 +71,8 @@ export function PphtSupportFac5db68F122() {
           >
             <Check aria-hidden="true" />
           </motion.div>
-          <h2>Thank you</h2>
-          <p>Form submitted successfully, we will get back to you soon.</p>
+          <h2>{copy.successTitle}</h2>
+          <p>{copy.successBody}</p>
         </motion.div>
       </div>
     )
@@ -93,8 +86,8 @@ export function PphtSupportFac5db68F122() {
           control={form.control}
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid} className="support-template-field support-template-half">
-              <FieldLabel htmlFor="firstName">First Name *</FieldLabel>
-              <Input {...field} id="firstName" type="text" aria-invalid={fieldState.invalid} placeholder="Enter your first name" className={dashboardInputClassName} />
+              <FieldLabel htmlFor="firstName">{copy.labels.firstName}</FieldLabel>
+              <Input {...field} id="firstName" type="text" aria-invalid={fieldState.invalid} placeholder={copy.placeholders.firstName} className={dashboardInputClassName} />
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )}
@@ -105,8 +98,8 @@ export function PphtSupportFac5db68F122() {
           control={form.control}
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid} className="support-template-field support-template-half">
-              <FieldLabel htmlFor="lastName">Last Name *</FieldLabel>
-              <Input {...field} id="lastName" type="text" aria-invalid={fieldState.invalid} placeholder="Enter your last name" className={dashboardInputClassName} />
+              <FieldLabel htmlFor="lastName">{copy.labels.lastName}</FieldLabel>
+              <Input {...field} id="lastName" type="text" aria-invalid={fieldState.invalid} placeholder={copy.placeholders.lastName} className={dashboardInputClassName} />
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )}
@@ -117,8 +110,8 @@ export function PphtSupportFac5db68F122() {
           control={form.control}
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid} className="support-template-field support-template-full">
-              <FieldLabel htmlFor="email">Email Address *</FieldLabel>
-              <Input {...field} id="email" type="email" aria-invalid={fieldState.invalid} placeholder="Enter your email address" className={dashboardInputClassName} />
+              <FieldLabel htmlFor="email">{copy.labels.email}</FieldLabel>
+              <Input {...field} id="email" type="email" aria-invalid={fieldState.invalid} placeholder={copy.placeholders.email} className={dashboardInputClassName} />
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )}
@@ -129,10 +122,10 @@ export function PphtSupportFac5db68F122() {
           control={form.control}
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid} className="support-template-field support-template-full">
-              <FieldLabel htmlFor="category">Issue Category *</FieldLabel>
+              <FieldLabel htmlFor="category">{copy.labels.category}</FieldLabel>
               <Select value={field.value} onValueChange={field.onChange}>
                 <SelectTrigger id="category" className={dashboardInputClassName}>
-                  <SelectValue placeholder="Select Category" />
+                  <SelectValue placeholder={copy.placeholders.category} />
                 </SelectTrigger>
                 <SelectContent>
                   {categoryOptions.map((option) => (
@@ -152,8 +145,8 @@ export function PphtSupportFac5db68F122() {
           control={form.control}
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid} className="support-template-field support-template-full">
-              <FieldLabel htmlFor="description">Issue Description *</FieldLabel>
-              <Textarea {...field} id="description" aria-invalid={fieldState.invalid} placeholder="Please describe your issue in detail..." className={dashboardTextareaClassName} />
+              <FieldLabel htmlFor="description">{copy.labels.description}</FieldLabel>
+              <Textarea {...field} id="description" aria-invalid={fieldState.invalid} placeholder={copy.placeholders.description} className={dashboardTextareaClassName} />
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
           )}
@@ -166,7 +159,7 @@ export function PphtSupportFac5db68F122() {
             {submitError}
           </p>
         )}
-        <Button className="min-h-[40px] rounded-[12px] bg-[#3BE0AF] px-[18px] text-[#0B1120] hover:bg-[#35c89d] support-template-submit-button" disabled={isSubmitting}>{isSubmitting ? 'Submitting...' : 'Submit'}</Button>
+        <Button className="min-h-[40px] rounded-[12px] bg-[#3BE0AF] px-[18px] text-[#0B1120] hover:bg-[#35c89d] support-template-submit-button" disabled={isSubmitting}>{isSubmitting ? copy.submitSubmitting : copy.submitIdle}</Button>
       </div>
     </form>
   )

@@ -1,6 +1,8 @@
 import Image from 'next/image'
 import { Mail, MapPin, Phone } from 'lucide-react'
-import { footer } from './landing-content'
+import PublicLanguageSwitcher from '../components/public-language-switcher'
+import { DEFAULT_LANGUAGE, getLocalizedHref } from '../lib/i18n/language'
+import * as landingContentFallback from './landing-content'
 
 export const APP_STORE_DOWNLOAD_URL = 'https://apps.apple.com/'
 
@@ -10,14 +12,14 @@ const footerContactIcons = {
   mail: Mail,
 }
 
-function FooterLinkColumn({ title, links }) {
+function FooterLinkColumn({ title, links, language }) {
   return (
     <div className="landing-footer-column">
       <h3>{title}</h3>
       <ul>
         {links.map((link) => (
           <li key={`${title}-${link.label}`}>
-            <a href={link.href}>{link.label}</a>
+            <a href={getLocalizedHref(link.href, language)}>{link.label}</a>
           </li>
         ))}
       </ul>
@@ -25,11 +27,18 @@ function FooterLinkColumn({ title, links }) {
   )
 }
 
-export function LandingHeader() {
+export function LandingHeader({ language = DEFAULT_LANGUAGE, currentPath = '/', copy } = {}) {
+  const navCopy = copy?.home?.nav || {
+    features: 'Features',
+    program: 'Program',
+    faq: 'FAQ',
+    support: 'Support',
+  }
+
   return (
     <header className="landing-header">
       <div className="landing-shell landing-header-inner">
-        <a href="/" className="landing-header-brand" aria-label="PPLUS Training home">
+        <a href={getLocalizedHref('/', language)} className="landing-header-brand" aria-label="PPLUS Training home">
           <Image
             src="/landing/brand/logo-ppht-landing.png"
             alt="PPLUS Training logo"
@@ -41,14 +50,14 @@ export function LandingHeader() {
         </a>
 
         <nav className="landing-header-nav" aria-label="Primary">
-          <a href="/#features">Features</a>
-          <a href="/#programs">Program</a>
-          <a href="/faq">FAQ</a>
-          <a href="/support">Support</a>
+          <a href={getLocalizedHref('/#features', language)}>{navCopy.features}</a>
+          <a href={getLocalizedHref('/#programs', language)}>{navCopy.program}</a>
+          <a href={getLocalizedHref('/faq', language)}>{navCopy.faq}</a>
+          <a href={getLocalizedHref('/support', language)}>{navCopy.support}</a>
         </nav>
 
         <div className="landing-header-actions">
-          <a href="/admin/login" className="landing-signin-link">Sign In</a>
+          <PublicLanguageSwitcher language={language} currentPath={currentPath} />
           <a className="landing-store-link landing-store-link-header" href={APP_STORE_DOWNLOAD_URL} aria-label="Download PPLUS Training on the App Store">
             <Image
               src="/landing/brand/app-store-badge.svg"
@@ -63,7 +72,9 @@ export function LandingHeader() {
   )
 }
 
-export function LandingFooter() {
+export function LandingFooter({ language = DEFAULT_LANGUAGE, copy } = {}) {
+  const footerCopy = copy?.home?.footer || landingContentFallback.footer
+
   return (
     <footer id="footer" className="landing-footer">
       <div className="landing-shell landing-footer-grid">
@@ -75,9 +86,9 @@ export function LandingFooter() {
             height={48}
             className="landing-logo"
           />
-          <p>{footer.brandCopy}</p>
+          <p>{footerCopy.brandCopy}</p>
           <address>
-            {footer.contact.map((item) => {
+            {footerCopy.contact.map((item) => {
               const Icon = footerContactIcons[item.icon]
 
               return (
@@ -90,13 +101,13 @@ export function LandingFooter() {
           </address>
         </div>
 
-        <FooterLinkColumn title="Features" links={footer.featureLinks} />
-        <FooterLinkColumn title="Programs" links={footer.programLinks} />
-        <FooterLinkColumn title="Resources" links={footer.resourceLinks} />
+        <FooterLinkColumn title={footerCopy.columnTitles?.features || 'Features'} links={footerCopy.featureLinks} language={language} />
+        <FooterLinkColumn title={footerCopy.columnTitles?.programs || 'Programs'} links={footerCopy.programLinks} language={language} />
+        <FooterLinkColumn title={footerCopy.columnTitles?.resources || 'Resources'} links={footerCopy.resourceLinks} language={language} />
       </div>
 
       <div className="landing-shell landing-footer-meta">
-        <p>{footer.copyright}</p>
+        <p>{footerCopy.copyright}</p>
       </div>
     </footer>
   )

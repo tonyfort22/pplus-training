@@ -1724,6 +1724,7 @@ button {
   font-size: clamp(44px, 5vw, 62px);
   font-weight: 900;
   line-height: 1.12;
+  white-space: nowrap;
 }
 
 .admin-auth-marketing-headline-accent {
@@ -1852,6 +1853,18 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+.admin-auth-signin-logo-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+.admin-auth-signin-logo-link:focus-visible {
+  outline: 2px solid rgba(59, 224, 175, 0.42);
+  outline-offset: 6px;
 }
 
 .admin-auth-signin-logo {
@@ -4370,6 +4383,43 @@ button {
   white-space: nowrap;
 }
 
+.public-language-switcher {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(40px, 1fr));
+  align-items: center;
+  min-width: 92px;
+  height: 38px;
+  padding: 3px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 999px;
+  background: rgba(8, 17, 31, 0.76);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 12px 28px rgba(0, 0, 0, 0.2);
+}
+
+.public-language-switcher-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  border-radius: 999px;
+  color: rgba(226, 235, 248, 0.72);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.public-language-switcher-option:hover {
+  color: #ffffff;
+}
+
+.public-language-switcher-option-active {
+  background: var(--landing-accent);
+  color: #07111f;
+  box-shadow: 0 8px 18px rgba(59, 224, 175, 0.22);
+}
+
 .landing-store-link {
   display: inline-flex;
   align-items: center;
@@ -5051,6 +5101,16 @@ button {
 
 .faq-pill {
   margin-bottom: 20px;
+}
+
+.landing-features-heading .landing-features-pill,
+.landing-programs-heading .landing-programs-pill {
+  margin-bottom: 20px;
+  border: 1px solid rgba(57, 229, 180, 0.22);
+  background: rgba(10, 17, 31, 0.72);
+  color: var(--landing-accent);
+  padding: 11px 18px;
+  box-shadow: inset 0 0 0 1px rgba(57, 229, 180, 0.04);
 }
 
 .faq-hero-title {
