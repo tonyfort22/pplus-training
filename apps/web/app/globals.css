@@ -5029,6 +5029,105 @@ button {
   }
 }
 
+.faq-page {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #08111f 0%, #091220 100%);
+}
+
+.faq-hero-section {
+  padding-top: 86px;
+  padding-bottom: 84px;
+}
+
+.faq-shell {
+  justify-items: center;
+  row-gap: 50px;
+}
+
+.faq-hero-copy {
+  max-width: 900px;
+  text-align: center;
+}
+
+.faq-pill {
+  margin-bottom: 20px;
+}
+
+.faq-hero-title {
+  margin: 0;
+  color: var(--landing-ink);
+  font-size: clamp(2rem, 4.2vw, 3.4rem);
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  line-height: 0.98;
+}
+
+.faq-hero-title span {
+  color: var(--landing-accent);
+}
+
+.faq-accordion-list {
+  width: min(100%, 900px);
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.faq-item {
+  border-bottom: 1px solid rgba(143, 161, 190, 0.22);
+}
+
+.faq-item:first-child {
+  border-top: 1px solid rgba(143, 161, 190, 0.22);
+}
+
+.faq-item summary {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 72px;
+  padding: 22px 52px 22px 0;
+  color: var(--landing-ink);
+  cursor: pointer;
+  list-style: none;
+  font-size: clamp(1.05rem, 1.6vw, 1.3rem);
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-item summary::after {
+  content: '+';
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--landing-accent);
+  font-size: 1.45rem;
+  font-weight: 400;
+  transform: translateY(-50%);
+  transition: transform 160ms ease, color 160ms ease;
+}
+
+.faq-item[open] summary::after {
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.faq-item p {
+  max-width: 760px;
+  margin: -2px 0 24px;
+  color: var(--landing-copy);
+  font-size: 1rem;
+  font-weight: 300;
+  line-height: 1.75;
+}
+
 .support-template-page {
   min-height: 100vh;
 }
@@ -5055,14 +5154,27 @@ button {
   text-shadow: 0 18px 48px rgba(0, 0, 0, 0.36);
 }
 
-.support-template-heading-on-image span {
+.support-template-heading-on-image h2 span {
+  color: var(--landing-accent);
+}
+
+.support-template-heading-on-image .support-template-pill {
+  margin-bottom: 20px;
+  border: 1px solid rgba(57, 229, 180, 0.22);
+  background: rgba(10, 17, 31, 0.72);
+  color: var(--landing-accent);
+  padding: 11px 18px;
+  box-shadow: inset 0 0 0 1px rgba(57, 229, 180, 0.04);
+}
+
+.support-template-heading-on-image > span {
   display: block;
   max-width: 620px;
   margin: 16px auto 0;
-  color: var(--landing-copy);
-  font-size: clamp(16px, 1.6vw, 20px);
+  color: rgba(235, 242, 252, 0.72);
+  font-size: 1rem;
   font-weight: 300;
-  line-height: 1.5;
+  line-height: 1.7;
 }
 
 .support-template-card {

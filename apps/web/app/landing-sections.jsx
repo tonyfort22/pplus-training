@@ -43,6 +43,7 @@ export function LandingHeader() {
         <nav className="landing-header-nav" aria-label="Primary">
           <a href="/#features">Features</a>
           <a href="/#programs">Program</a>
+          <a href="/faq">FAQ</a>
           <a href="/support">Support</a>
         </nav>
 

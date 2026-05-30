@@ -28,8 +28,9 @@ test('support page uses the FormCN customer support template, not a custom marke
   assert.match(pageSource, /landing-section landing-features-section support-template-section/, 'support section should reuse the home Features section surface')
   assert.match(pageSource, /landing-shell landing-features-stack support-template-stack/, 'support section should reuse the home Features stack')
   assert.match(pageSource, /landing-section-heading landing-section-heading-centered landing-features-heading support-template-heading-on-image/, 'support heading should reuse the home Features heading treatment')
-  assert.match(pageSource, /<h2>Get in Touch<\/h2>/, 'support heading should use the requested Get in Touch copy')
-  assert.match(pageSource, /We're here to help! Please describe your issue below\./, 'support subtitle should sit with the page heading')
+  assert.match(pageSource, /<p className="landing-pill support-template-pill">Support<\/p>/, 'support page should use the same top pill treatment as FAQ')
+  assert.match(pageSource, /<h2>Get in <span>Touch<\/span><\/h2>/, 'support heading should highlight Touch in green')
+  assert.doesNotMatch(pageSource, /We're here to help! Please describe your issue below\./, 'support subtitle under the heading should be removed')
   assert.doesNotMatch(pageSource, /<h1>Customer Support Request<\/h1>|support-highlight-grid|How can we help\?|Email support|Clear context/, 'support page must not use the rejected custom marketing hero or wrong heading level')
 
   assert.doesNotMatch(formSource, /<h1>Customer Support Request<\/h1>|support-template-heading/, 'form component should not own the page heading')
@@ -65,6 +66,10 @@ test('support page uses the FormCN customer support template, not a custom marke
   assert.match(formSource, /text-\[#0B1120\]/, 'support submit button should use the solid green admin dashboard primary dark text')
   assert.match(formSource, /hover:bg-\[#35c89d\]/, 'support submit button should use the admin dashboard primary hover green')
   assert.doesNotMatch(formSource, /admin-button admin-button-prominent/, 'support submit button should not use the outlined admin button style')
+  assert.match(cssSource, /\.support-template-heading-on-image h2 span \{[^}]*color:\s*var\(--landing-accent\);/)
+  assert.match(cssSource, /\.support-template-heading-on-image \.support-template-pill \{[^}]*border:\s*1px solid rgba\(57, 229, 180, 0\.22\);/)
+  assert.match(cssSource, /\.support-template-heading-on-image \.support-template-pill \{[^}]*background:\s*rgba\(10, 17, 31, 0\.72\);/)
+  assert.match(cssSource, /\.support-template-heading-on-image \.support-template-pill \{[^}]*padding:\s*11px 18px;/)
   assert.doesNotMatch(cssSource, /\.support-template-actions button \{[^}]*background:\s*rgba\(238, 244, 255/, 'support submit button should not keep the rejected white FormCN button override')
 })
 

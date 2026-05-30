@@ -68,7 +68,7 @@ test('web root serves the marketing landing page and admin login lives at /admin
   assert.match(landingContentSource, /export const programs =/)
   assert.match(landingContentSource, /featureLinks: features\.map\(\(feature\) => \(\{[\s\S]*label: feature\.title,[\s\S]*href: '\/#features',[\s\S]*\}\)\)/)
   assert.match(landingContentSource, /programLinks: programs\.map\(\(program\) => \(\{[\s\S]*label: program\.title,[\s\S]*href: '\/#programs',[\s\S]*\}\)\)/)
-  assert.match(landingContentSource, /\{ label: 'FAQ', href: '\/#footer' \}/)
+  assert.match(landingContentSource, /\{ label: 'FAQ', href: '\/faq' \}/)
   assert.doesNotMatch(landingContentSource, /#feature-\$\{feature\.slug\}/)
   assert.doesNotMatch(landingContentSource, /href: '#features'|href: '#programs'|href: '#footer'/)
   assert.match(featureShowcaseSource, /export default function LandingFeatureShowcase/)

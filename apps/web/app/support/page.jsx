@@ -13,9 +13,8 @@ export default async function SupportPage({ searchParams }) {
       <section className="landing-section landing-features-section support-template-section">
         <div className="landing-shell landing-features-stack support-template-stack">
           <div className="landing-section-heading landing-section-heading-centered landing-features-heading support-template-heading-on-image">
-            <p>SUPPORT</p>
-            <h2>Get in Touch</h2>
-            <span>We're here to help! Please describe your issue below.</span>
+            <p className="landing-pill support-template-pill">Support</p>
+            <h2>Get in <span>Touch</span></h2>
           </div>
 
           <div className="support-template-card">
