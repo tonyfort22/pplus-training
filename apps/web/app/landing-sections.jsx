@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import { Mail, MapPin, Phone } from 'lucide-react'
 import PublicLanguageSwitcher from '../components/public-language-switcher'
+import PublicThemeToggle from '../components/public-theme-toggle'
 import { DEFAULT_LANGUAGE, getLocalizedHref } from '../lib/i18n/language'
 import * as landingContentFallback from './landing-content'
 
@@ -27,6 +28,31 @@ function FooterLinkColumn({ title, links, language }) {
   )
 }
 
+function LandingLogo({ className = '', priority = false } = {}) {
+  const logoClassName = ['landing-logo', className].filter(Boolean).join(' ')
+
+  return (
+    <span className={logoClassName} aria-hidden="true">
+      <Image
+        src="/landing/brand/logo-ppht-landing.png"
+        alt=""
+        width={290}
+        height={48}
+        priority={priority}
+        className="landing-logo-image landing-logo-dark"
+      />
+      <Image
+        src="/admin/logo_ppht_light_mode.svg"
+        alt=""
+        width={267}
+        height={44}
+        priority={priority}
+        className="landing-logo-image landing-logo-light"
+      />
+    </span>
+  )
+}
+
 export function LandingHeader({ language = DEFAULT_LANGUAGE, currentPath = '/', copy } = {}) {
   const navCopy = copy?.home?.nav || {
     features: 'Features',
@@ -39,14 +65,7 @@ export function LandingHeader({ language = DEFAULT_LANGUAGE, currentPath = '/', 
     <header className="landing-header">
       <div className="landing-shell landing-header-inner">
         <a href={getLocalizedHref('/', language)} className="landing-header-brand" aria-label="PPLUS Training home">
-          <Image
-            src="/landing/brand/logo-ppht-landing.png"
-            alt="PPLUS Training logo"
-            width={290}
-            height={48}
-            priority
-            className="landing-logo landing-logo-header"
-          />
+          <LandingLogo className="landing-logo-header" priority />
         </a>
 
         <nav className="landing-header-nav" aria-label="Primary">
@@ -79,22 +98,37 @@ export function LandingFooter({ language = DEFAULT_LANGUAGE, copy } = {}) {
     <footer id="footer" className="landing-footer">
       <div className="landing-shell landing-footer-grid">
         <div className="landing-footer-brand-block">
-          <Image
-            src="/landing/brand/logo-ppht-landing.png"
-            alt="PPLUS Training logo"
-            width={290}
-            height={48}
-            className="landing-logo"
-          />
+          <a href={getLocalizedHref('/', language)} className="landing-footer-logo-link" aria-label="PPLUS Training home">
+            <LandingLogo />
+          </a>
           <p>{footerCopy.brandCopy}</p>
           <address>
             {footerCopy.contact.map((item) => {
               const Icon = footerContactIcons[item.icon]
+              const contactContent = (
+                <>
+                  <Icon className="landing-footer-contact-icon" aria-hidden="true" />
+                  <span>{item.text}</span>
+                </>
+              )
+
+              if (item.href) {
+                return (
+                  <a
+                    key={item.text}
+                    className="landing-footer-contact-item"
+                    href={item.href}
+                    target={item.external ? '_blank' : undefined}
+                    rel={item.external ? 'noopener noreferrer' : undefined}
+                  >
+                    {contactContent}
+                  </a>
+                )
+              }
 
               return (
                 <span key={item.text} className="landing-footer-contact-item">
-                  <Icon className="landing-footer-contact-icon" aria-hidden="true" />
-                  <span>{item.text}</span>
+                  {contactContent}
                 </span>
               )
             })}
@@ -108,6 +142,7 @@ export function LandingFooter({ language = DEFAULT_LANGUAGE, copy } = {}) {
 
       <div className="landing-shell landing-footer-meta">
         <p>{footerCopy.copyright}</p>
+        <PublicThemeToggle />
       </div>
     </footer>
   )

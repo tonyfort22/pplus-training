@@ -8,6 +8,7 @@ export const publicPageCopy = {
         program: 'Programs',
         faq: 'FAQ',
         support: 'Support',
+        signIn: 'Sign In',
       },
       hero: {
         pill: 'The Best Hockey Training App',
@@ -73,8 +74,8 @@ export const publicPageCopy = {
       footer: {
         brandCopy: 'PPLUS Training helps hockey athletes stay locked in off the ice with guided training, simple tracking, and a clear plan built for long-term development.',
         contact: [
-          { icon: 'map-pin', text: '80 boulevard Brien, Repentigny, QC' },
-          { icon: 'phone', text: '(514) 915-2722' },
+          { icon: 'map-pin', text: '80 boulevard Brien, Repentigny, QC', href: 'https://www.google.com/maps/search/?api=1&query=80%20boulevard%20Brien%2C%20Repentigny%2C%20QC', external: true },
+          { icon: 'phone', text: '(514) 915-2722', href: 'tel:+15149152722' },
           { icon: 'mail', text: 'anthony.fortugno@performeplus.com' },
         ],
         columnTitles: {
@@ -201,6 +202,7 @@ export const publicPageCopy = {
         program: 'Programmes',
         faq: 'FAQ',
         support: 'Support',
+        signIn: 'Connexion',
       },
       hero: {
         pill: 'La meilleure app d’entraînement de hockey',
@@ -266,8 +268,8 @@ export const publicPageCopy = {
       footer: {
         brandCopy: 'PPLUS Training aide les athlètes de hockey à rester constants hors glace avec des entraînements guidés, un suivi simple et un plan clair pour le développement à long terme.',
         contact: [
-          { icon: 'map-pin', text: '80 boulevard Brien, Repentigny, QC' },
-          { icon: 'phone', text: '(514) 915-2722' },
+          { icon: 'map-pin', text: '80 boulevard Brien, Repentigny, QC', href: 'https://www.google.com/maps/search/?api=1&query=80%20boulevard%20Brien%2C%20Repentigny%2C%20QC', external: true },
+          { icon: 'phone', text: '(514) 915-2722', href: 'tel:+15149152722' },
           { icon: 'mail', text: 'anthony.fortugno@performeplus.com' },
         ],
         columnTitles: {

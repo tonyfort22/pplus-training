@@ -86,3 +86,15 @@ test('web root serves the marketing landing page and admin login lives at /admin
   assert.match(cssSource, /\.landing-features-section,\s*\n\.landing-programs-section\s*\{/)
   assert.match(cssSource, /\.landing-footer\s*\{/)
 })
+
+test('public footer logo, address, and phone have the expected link behavior', () => {
+  const landingSectionsSource = readFileSync(landingSectionsPath, 'utf8')
+  const landingContentSource = readFileSync(landingContentPath, 'utf8')
+
+  assert.match(landingSectionsSource, /<a href=\{getLocalizedHref\('\/', language\)\} className="landing-footer-logo-link" aria-label="PPLUS Training home">\s*<LandingLogo \/>\s*<\/a>/)
+  assert.match(landingSectionsSource, /href=\{item\.href\}/)
+  assert.match(landingSectionsSource, /target=\{item\.external \? '_blank' : undefined\}/)
+  assert.match(landingSectionsSource, /rel=\{item\.external \? 'noopener noreferrer' : undefined\}/)
+  assert.match(landingContentSource, /icon: 'map-pin', text: '80 boulevard Brien, Repentigny, QC', href: 'https:\/\/www\.google\.com\/maps\/search\/\?api=1&query=80%20boulevard%20Brien%2C%20Repentigny%2C%20QC', external: true/)
+  assert.match(landingContentSource, /icon: 'phone', text: '\(514\) 915-2722', href: 'tel:\+15149152722'/)
+})
