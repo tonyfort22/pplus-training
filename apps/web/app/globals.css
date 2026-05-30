@@ -4332,8 +4332,33 @@ button {
 }
 
 .landing-logo {
-  width: auto;
+  position: relative;
+  display: inline-block;
+  width: 194px;
   height: 32px;
+}
+
+.landing-logo-image {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: 100%;
+}
+
+.landing-logo-dark {
+  display: block;
+}
+
+.landing-logo-light {
+  display: none;
+}
+
+html[data-public-theme='light'] .landing-logo-dark {
+  display: none;
+}
+
+html[data-public-theme='light'] .landing-logo-light {
+  display: block;
 }
 
 .landing-logo-header {
@@ -4360,13 +4385,11 @@ button {
   height: 14px;
 }
 
-.landing-header-nav a,
-.landing-signin-link {
+.landing-header-nav a {
   transition: color 150ms ease;
 }
 
 .landing-header-nav a:hover,
-.landing-signin-link:hover,
 .landing-footer-column a:hover,
 .landing-program-link:hover {
   color: var(--landing-accent);
@@ -4376,11 +4399,6 @@ button {
   display: flex;
   align-items: center;
   gap: 18px;
-}
-
-.landing-signin-link {
-  color: rgba(244, 248, 255, 0.92);
-  white-space: nowrap;
 }
 
 .public-language-switcher {
@@ -4418,6 +4436,38 @@ button {
   background: var(--landing-accent);
   color: #07111f;
   box-shadow: 0 8px 18px rgba(59, 224, 175, 0.22);
+}
+
+.public-theme-toggle {
+  position: relative;
+  display: block;
+  width: 62px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.public-theme-toggle-image {
+  position: absolute;
+  inset: 0;
+  width: 62px;
+  height: 36px;
+  display: block;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+.public-theme-toggle-image-active {
+  opacity: 1;
+}
+
+.public-theme-toggle:focus-visible {
+  outline: 2px solid rgba(88, 198, 255, 0.36);
+  outline-offset: 3px;
+  border-radius: 6px;
 }
 
 .landing-store-link {
@@ -4869,6 +4919,12 @@ button {
   margin: 20px 0 18px;
 }
 
+.landing-footer-logo-link {
+  display: inline-flex;
+  align-items: center;
+  width: max-content;
+}
+
 .landing-footer-brand-block address {
   display: grid;
   gap: 10px;
@@ -4900,6 +4956,10 @@ button {
 }
 
 .landing-footer-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
   margin-top: 30px;
   padding-top: 20px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
@@ -4909,6 +4969,142 @@ button {
   margin: 0;
   color: var(--landing-copy-soft);
   font-size: 0.94rem;
+}
+
+html[data-public-theme='light'] .landing-page {
+  --landing-ink: #07111f;
+  --landing-copy: #314155;
+  --landing-copy-soft: #667085;
+  background: #ffffff;
+  color: var(--landing-ink);
+}
+
+html[data-public-theme='light'] .faq-page {
+  background: #ffffff;
+}
+
+html[data-public-theme='light'] .support-template-page {
+  background: #ffffff;
+}
+
+html[data-public-theme='light'] .landing-header-nav {
+  color: #111827;
+}
+
+html[data-public-theme='light'] .public-language-switcher {
+  border-color: rgba(15, 23, 42, 0.12);
+  background: #ffffff;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+}
+
+html[data-public-theme='light'] .public-language-switcher-option {
+  color: #344054;
+}
+
+html[data-public-theme='light'] .public-language-switcher-option-active {
+  color: #07111f;
+}
+
+html[data-public-theme='light'] .landing-pill,
+html[data-public-theme='light'] .landing-features-heading .landing-features-pill,
+html[data-public-theme='light'] .landing-programs-heading .landing-programs-pill,
+html[data-public-theme='light'] .support-template-heading-on-image .support-template-pill {
+  border: 1px solid rgba(57, 224, 175, 0.22);
+  background: rgba(57, 224, 175, 0.1);
+  color: #087a63;
+  box-shadow: none;
+}
+
+html[data-public-theme='light'] .landing-hero-icon-box {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.08);
+  color: var(--landing-accent);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.1);
+}
+
+html[data-public-theme='light'] .landing-feature-card {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.06);
+}
+
+html[data-public-theme='light'] .landing-feature-card:hover,
+html[data-public-theme='light'] .landing-feature-card:focus-visible,
+html[data-public-theme='light'] .landing-feature-card[data-active='true'] {
+  border-color: rgba(57, 224, 175, 0.72);
+  box-shadow: 0 22px 54px rgba(15, 23, 42, 0.1);
+}
+
+html[data-public-theme='light'] .landing-feature-phone-glow {
+  background: radial-gradient(circle, rgba(57, 224, 175, 0.18), transparent 70%);
+}
+
+html[data-public-theme='light'] .landing-program-card {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.08);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+}
+
+html[data-public-theme='light'] .landing-program-icon {
+  background: rgba(57, 224, 175, 0.12);
+}
+
+html[data-public-theme='light'] .landing-footer-meta {
+  border-top-color: rgba(15, 23, 42, 0.1);
+}
+
+html[data-public-theme='light'] .faq-hero-title {
+  color: #07111f;
+}
+
+html[data-public-theme='light'] .faq-hero-title span {
+  color: var(--landing-accent);
+}
+
+html[data-public-theme='light'] .faq-item {
+  border-bottom: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+html[data-public-theme='light'] .faq-item:first-child {
+  border-top-color: rgba(15, 23, 42, 0.12);
+}
+
+html[data-public-theme='light'] .faq-item summary {
+  color: #111827;
+  font-weight: 650;
+}
+
+html[data-public-theme='light'] .support-template-heading-on-image h2 {
+  color: #07111f;
+  text-shadow: none;
+}
+
+html[data-public-theme='light'] .support-template-heading-on-image > span {
+  color: #667085;
+}
+
+html[data-public-theme='light'] .support-dashboard-input,
+html[data-public-theme='light'] button.support-dashboard-input {
+  border-color: rgba(15, 23, 42, 0.14);
+  background: #ffffff;
+  color: #111827;
+}
+
+html[data-public-theme='light'] .support-dashboard-textarea {
+  border-color: rgba(15, 23, 42, 0.14);
+  background: #ffffff;
+  color: #111827;
+}
+
+html[data-public-theme='light'] .support-dashboard-input::placeholder,
+html[data-public-theme='light'] .support-dashboard-textarea::placeholder {
+  color: #98a2b3;
+}
+
+html[data-public-theme='light'] .support-template-form label,
+html[data-public-theme='light'] .support-template-field [data-slot='field-label'],
+html[data-public-theme='light'] .support-template-radio-group .ui-choice-field {
+  color: #344054;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -5002,6 +5198,7 @@ button {
   }
 
   .landing-logo {
+    width: 206px;
     height: 34px;
   }
 
