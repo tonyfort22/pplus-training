@@ -108,6 +108,16 @@ export const adminNavigation = [
       },
     ],
   },
+  {
+    id: 'support',
+    label: 'Support',
+    icon: 'message-circle',
+    href: '/admin/support',
+    defaultHref: '/admin/support',
+    title: 'Support dashboard',
+    description: 'Open the support inbox dashboard in a separate window.',
+    external: true,
+  },
 ]
 
 export const adminBottomNavigation = [

@@ -28,6 +28,8 @@ function expectColumn(sql, tableName, columnName) {
 }
 
 const requiredTables = [
+  'support_conversations',
+  'support_messages',
   'workout_template_blocks',
   'program_workout_blocks',
   'program_workout_exercises',
@@ -149,6 +151,30 @@ for (const sqlName of ['schema-v1.sql', '0001_initial_schema.sql']) {
     const tableBody = nextCreate === -1 ? normalized.slice(tableStart) : normalized.slice(tableStart, nextCreate)
     assert.match(tableBody, / athlete_id uuid references athlete_profiles\(id\) on delete set null/)
     assert.doesNotMatch(tableBody, / athlete_id uuid not null references athlete_profiles\(id\) on delete cascade/)
+  })
+
+  test(`${sqlName} provisions support inbox conversations and messages`, () => {
+    expectColumn(sql, 'support_conversations', 'support_request_id')
+    expectColumn(sql, 'support_conversations', 'subject')
+    expectColumn(sql, 'support_conversations', 'status')
+    expectColumn(sql, 'support_conversations', 'priority')
+    expectColumn(sql, 'support_conversations', 'requester_name')
+    expectColumn(sql, 'support_conversations', 'requester_email')
+    expectColumn(sql, 'support_conversations', 'requester_role')
+    expectColumn(sql, 'support_conversations', 'requester_avatar_url')
+    expectColumn(sql, 'support_conversations', 'last_message_preview')
+    expectColumn(sql, 'support_conversations', 'last_message_at')
+    expectColumn(sql, 'support_messages', 'conversation_id')
+    expectColumn(sql, 'support_messages', 'sender_type')
+    expectColumn(sql, 'support_messages', 'sender_name')
+    expectColumn(sql, 'support_messages', 'sender_avatar_url')
+    expectColumn(sql, 'support_messages', 'body')
+    expectColumn(sql, 'support_messages', 'attachments')
+    const normalized = normalize(sql)
+    assert.match(normalized, /alter table support_conversations enable row level security/)
+    assert.match(normalized, /alter table support_messages enable row level security/)
+    assert.match(normalized, /grant all on table support_conversations to service_role/)
+    assert.match(normalized, /grant all on table support_messages to service_role/)
   })
 
   test(`${sqlName} provisions public coach avatar storage with coach-owned write policies`, () => {
