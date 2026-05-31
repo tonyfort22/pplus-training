@@ -4,10 +4,10 @@ function Card({ className, style, ...props }) {
   return (
     <div
       data-slot="card"
-      className={cn('rounded-xl border border-[#24334A] bg-[color:var(--card)] text-[#EEF4FF] shadow-xs', className)}
+      className={cn('rounded-xl border border-[var(--admin-dashboard-card-border)] bg-[color:var(--admin-dashboard-card-bg)] text-[var(--admin-dashboard-card-text)] shadow-xs', className)}
       style={{
-        backgroundColor: 'var(--card)',
-        backgroundImage: 'linear-gradient(to top, rgb(59 224 175 / 0.05), var(--card))',
+        backgroundColor: 'var(--admin-dashboard-card-bg)',
+        backgroundImage: 'var(--admin-dashboard-card-gradient)',
         ...style,
       }}
       {...props}
@@ -24,7 +24,7 @@ function CardTitle({ className, ...props }) {
 }
 
 function CardDescription({ className, ...props }) {
-  return <div data-slot="card-description" className={cn('text-[#8EA0BC]', className)} {...props} />
+  return <div data-slot="card-description" className={cn('text-[var(--admin-dashboard-card-muted)]', className)} {...props} />
 }
 
 function CardAction({ className, ...props }) {

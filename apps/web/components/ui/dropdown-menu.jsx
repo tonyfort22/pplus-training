@@ -17,7 +17,7 @@ function DropdownMenuSubTrigger({ className, inset, children, ...props }) {
   return (
     <DropdownMenuPrimitive.SubTrigger
       className={cn(
-        "flex cursor-default select-none items-center gap-2 rounded-xl px-3 py-2 text-sm outline-none transition-colors focus:bg-[#15233A] data-[state=open]:bg-[#15233A]",
+        "flex cursor-default select-none items-center gap-2 rounded-xl px-3 py-2 text-sm outline-none transition-colors hover:bg-[var(--admin-shell-nav-active-bg)] hover:text-[var(--admin-shell-nav-active-text)] focus:bg-[var(--admin-shell-nav-active-bg)] focus:text-[var(--admin-shell-nav-active-text)] data-[highlighted]:bg-[var(--admin-shell-nav-active-bg)] data-[highlighted]:text-[var(--admin-shell-nav-active-text)] data-[state=open]:bg-[var(--admin-shell-nav-active-bg)] data-[state=open]:text-[var(--admin-shell-nav-active-text)]",
         inset && "pl-8",
         className,
       )}
@@ -33,7 +33,7 @@ function DropdownMenuSubContent({ className, ...props }) {
   return (
     <DropdownMenuPrimitive.SubContent
       className={cn(
-        "z-50 min-w-[8rem] overflow-hidden rounded-2xl border border-[#24334A] bg-[#111D30] p-1 text-[#DCE6F8] shadow-[0_16px_40px_rgba(0,0,0,0.45)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+        "z-50 min-w-[8rem] overflow-hidden rounded-2xl border border-[color:var(--admin-shell-border)] bg-[var(--admin-shell-surface)] p-1 text-[var(--admin-shell-text)] shadow-[var(--admin-shell-shadow)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
         className,
       )}
       {...props}
@@ -47,7 +47,7 @@ function DropdownMenuContent({ className, sideOffset = 4, ...props }) {
       <DropdownMenuPrimitive.Content
         sideOffset={sideOffset}
         className={cn(
-          "z-50 min-w-[8rem] overflow-hidden rounded-2xl border border-[#24334A] bg-[#111D30] p-1 text-[#DCE6F8] shadow-[0_16px_40px_rgba(0,0,0,0.45)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
+          "z-50 min-w-[8rem] overflow-hidden rounded-2xl border border-[color:var(--admin-shell-border)] bg-[var(--admin-shell-surface)] p-1 text-[var(--admin-shell-text)] shadow-[var(--admin-shell-shadow)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
           className,
         )}
         {...props}
@@ -60,7 +60,7 @@ function DropdownMenuItem({ className, inset, ...props }) {
   return (
     <DropdownMenuPrimitive.Item
       className={cn(
-        "relative flex cursor-default select-none items-center gap-2 rounded-xl px-3 py-2 text-sm outline-none transition-colors focus:bg-[#15233A] focus:text-[#EEF4FF] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        "relative flex cursor-default select-none items-center gap-2 rounded-xl px-3 py-2 text-sm outline-none transition-colors hover:bg-[var(--admin-shell-nav-active-bg)] hover:text-[var(--admin-shell-nav-active-text)] focus:bg-[var(--admin-shell-nav-active-bg)] focus:text-[var(--admin-shell-nav-active-text)] data-[highlighted]:bg-[var(--admin-shell-nav-active-bg)] data-[highlighted]:text-[var(--admin-shell-nav-active-text)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         inset && "pl-8",
         className,
       )}
@@ -73,7 +73,7 @@ function DropdownMenuCheckboxItem({ className, children, checked, ...props }) {
   return (
     <DropdownMenuPrimitive.CheckboxItem
       className={cn(
-        "relative flex cursor-default select-none items-center rounded-xl py-2 pl-8 pr-3 text-sm outline-none transition-colors focus:bg-[#15233A] focus:text-[#EEF4FF] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        "relative flex cursor-default select-none items-center rounded-xl py-2 pl-8 pr-3 text-sm outline-none transition-colors hover:bg-[var(--admin-shell-nav-active-bg)] hover:text-[var(--admin-shell-nav-active-text)] focus:bg-[var(--admin-shell-nav-active-bg)] focus:text-[var(--admin-shell-nav-active-text)] data-[highlighted]:bg-[var(--admin-shell-nav-active-bg)] data-[highlighted]:text-[var(--admin-shell-nav-active-text)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         className,
       )}
       checked={checked}
@@ -93,7 +93,7 @@ function DropdownMenuRadioItem({ className, children, ...props }) {
   return (
     <DropdownMenuPrimitive.RadioItem
       className={cn(
-        "relative flex cursor-default select-none items-center rounded-xl py-2 pl-8 pr-3 text-sm outline-none transition-colors focus:bg-[#15233A] focus:text-[#EEF4FF] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        "relative flex cursor-default select-none items-center rounded-xl py-2 pl-8 pr-3 text-sm outline-none transition-colors hover:bg-[var(--admin-shell-nav-active-bg)] hover:text-[var(--admin-shell-nav-active-text)] focus:bg-[var(--admin-shell-nav-active-bg)] focus:text-[var(--admin-shell-nav-active-text)] data-[highlighted]:bg-[var(--admin-shell-nav-active-bg)] data-[highlighted]:text-[var(--admin-shell-nav-active-text)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         className,
       )}
       {...props}
@@ -111,18 +111,18 @@ function DropdownMenuRadioItem({ className, children, ...props }) {
 function DropdownMenuLabel({ className, inset, ...props }) {
   return (
     <DropdownMenuPrimitive.Label
-      className={cn("px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#8EA0BC]", inset && "pl-8", className)}
+      className={cn("px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--admin-shell-muted)]", inset && "pl-8", className)}
       {...props}
     />
   )
 }
 
 function DropdownMenuSeparator({ className, ...props }) {
-  return <DropdownMenuPrimitive.Separator className={cn("-mx-1 my-1 h-px bg-[#24334A]", className)} {...props} />
+  return <DropdownMenuPrimitive.Separator className={cn("-mx-1 my-1 h-px bg-[var(--admin-shell-border)]", className)} {...props} />
 }
 
 function DropdownMenuShortcut({ className, ...props }) {
-  return <span className={cn("ml-auto text-[11px] tracking-[0.12em] text-[#70809E]", className)} {...props} />
+  return <span className={cn("ml-auto text-[11px] tracking-[0.12em] text-[var(--admin-shell-soft)]", className)} {...props} />
 }
 
 export {

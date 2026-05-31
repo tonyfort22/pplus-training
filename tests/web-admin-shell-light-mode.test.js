@@ -1,0 +1,78 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const adminShellPath = resolve(repoRoot, 'apps/web/components/admin/admin-shell.jsx')
+const cssPath = resolve(repoRoot, 'apps/web/app/globals.css')
+
+function extractFunction(source, name) {
+  const start = source.indexOf(`function ${name}`)
+  assert.notEqual(start, -1, `expected ${name} function to exist`)
+  const nextFunction = source.indexOf('\nfunction ', start + 1)
+  return source.slice(start, nextFunction === -1 ? source.length : nextFunction)
+}
+
+test('admin light mode skins the sidebar and top nav through theme-aware shell classes', () => {
+  const adminShellSource = readFileSync(adminShellPath, 'utf8')
+  const cssSource = readFileSync(cssPath, 'utf8')
+  const topbarSource = extractFunction(adminShellSource, 'DashboardShellHeader')
+  const sidebarSource = extractFunction(adminShellSource, 'AdminDashboardSidebar')
+  const navItemSource = extractFunction(adminShellSource, 'AdminSidebarNavItem')
+  const workspaceSwitcherSource = extractFunction(adminShellSource, 'SidebarWorkspaceSwitcher')
+  const accountSwitcherSource = extractFunction(adminShellSource, 'SidebarAccountSwitcher')
+
+  assert.match(topbarSource, /admin-dashboard-topbar/)
+  assert.match(topbarSource, /admin-dashboard-sidebar-trigger/)
+  assert.match(topbarSource, /admin-dashboard-topbar-search-input/)
+  assert.match(topbarSource, /admin-dashboard-topbar-search-button/)
+  assert.match(topbarSource, /admin-dashboard-topbar-avatar/)
+  assert.doesNotMatch(topbarSource, /border-\[#24334A\]|bg-\[#111D30\]|bg-\[rgba\(10,18,33,0\.3\)\]|text-\[#DCE6F8\]|text-\[#0B1120\]/)
+
+  assert.match(sidebarSource, /admin-dashboard-sidebar/)
+  assert.match(sidebarSource, /admin-dashboard-sidebar-header/)
+  assert.match(sidebarSource, /admin-dashboard-sidebar-content/)
+  assert.match(sidebarSource, /admin-dashboard-sidebar-group-label/)
+  assert.match(sidebarSource, /admin-dashboard-sidebar-separator/)
+  assert.match(sidebarSource, /admin-dashboard-sidebar-footer/)
+  assert.match(sidebarSource, /admin-dashboard-shell-inset/)
+  assert.match(adminShellSource, /admin-dashboard-sidebar-logo-dark/)
+  assert.match(adminShellSource, /src="\/admin\/logo_pplus_training\.svg"/)
+  assert.match(adminShellSource, /admin-dashboard-sidebar-logo-light/)
+  assert.match(adminShellSource, /src="\/admin\/logo_ppht_light_mode\.svg"/)
+  assert.match(navItemSource, /admin-dashboard-sidebar-nav-button/)
+  assert.match(navItemSource, /admin-dashboard-sidebar-subnav/)
+  assert.match(navItemSource, /admin-dashboard-sidebar-subnav-button/)
+  assert.match(workspaceSwitcherSource, /admin-dashboard-sidebar-workspace-item/)
+  assert.match(workspaceSwitcherSource, /admin-dashboard-sidebar-switcher/)
+  assert.match(workspaceSwitcherSource, /admin-dashboard-sidebar-dropdown-content/)
+  assert.match(workspaceSwitcherSource, /admin-dashboard-sidebar-avatar/)
+  assert.match(workspaceSwitcherSource, /admin-dashboard-sidebar-primary-text/)
+  assert.match(workspaceSwitcherSource, /admin-dashboard-sidebar-secondary-text/)
+  assert.match(accountSwitcherSource, /admin-dashboard-sidebar-account-button/)
+  assert.match(accountSwitcherSource, /admin-dashboard-sidebar-dropdown-content/)
+  assert.match(accountSwitcherSource, /admin-dashboard-sidebar-account-avatar/)
+  assert.doesNotMatch(sidebarSource, /bg-\[#111D30\]|text-\[#DCE6F8\]|border-\[#24334A\]/)
+
+  assert.match(cssSource, /html\[data-theme='dark'\]\s*\{[^}]*--admin-shell-bg:\s*#0a1221;[^}]*--admin-shell-topbar-bg:\s*rgba\(10, 18, 33, 0\.3\);[^}]*--admin-shell-sidebar-bg:\s*#0e1828;/)
+  assert.match(cssSource, /html\[data-theme='light'\]\s*\{[^}]*--admin-shell-bg:\s*#F8FAFC;[^}]*--admin-shell-topbar-bg:\s*rgba\(255, 255, 255, 0\.86\);[^}]*--admin-shell-sidebar-bg:\s*#ffffff;/)
+  assert.match(cssSource, /html\[data-theme='light'\] body\s*\{[^}]*background:\s*var\(--admin-shell-bg\);/)
+  assert.match(cssSource, /\.admin-dashboard-topbar\s*\{[^}]*border-bottom:\s*1px solid var\(--admin-shell-border\);[^}]*background:\s*var\(--admin-shell-topbar-bg\);/)
+  assert.match(cssSource, /\.admin-dashboard-sidebar \[data-slot='sidebar-inner'\]\s*\{[^}]*background:\s*var\(--admin-shell-sidebar-bg\);/)
+  assert.match(cssSource, /\.admin-dashboard-sidebar-logo-light\s*\{[^}]*display:\s*none;/)
+  assert.match(cssSource, /html\[data-theme='light'\] \.admin-dashboard-sidebar-logo-dark\s*\{[^}]*display:\s*none;/)
+  assert.match(cssSource, /html\[data-theme='light'\] \.admin-dashboard-sidebar-logo-light\s*\{[^}]*display:\s*block;/)
+  assert.match(cssSource, /\.admin-dashboard-topbar-search-input\s*\{[^}]*border-color:\s*var\(--admin-shell-control-border\);[^}]*background:\s*var\(--admin-shell-control-bg\);[^}]*color:\s*var\(--admin-shell-text\);/)
+  assert.match(cssSource, /\.admin-dashboard-sidebar-nav-button\s*\{[^}]*color:\s*var\(--admin-shell-muted\);/)
+  assert.match(cssSource, /\.admin-dashboard-sidebar-nav-button:hover\s*\{[^}]*background:\s*var\(--admin-shell-nav-active-bg\);[^}]*color:\s*var\(--admin-shell-nav-active-text\);/)
+  assert.match(cssSource, /\.admin-dashboard-sidebar-nav-button\[data-active='true'\]\s*\{[^}]*background:\s*var\(--admin-shell-nav-active-bg\);[^}]*color:\s*var\(--admin-shell-nav-active-text\);/)
+  assert.match(cssSource, /\.admin-dashboard-sidebar-subnav-button:hover\s*\{[^}]*background:\s*var\(--admin-shell-nav-active-bg\) !important;[^}]*color:\s*var\(--admin-shell-nav-active-text\);/)
+  assert.match(cssSource, /\.admin-dashboard-sidebar-subnav-button\[data-active='true'\]\s*\{[^}]*background:\s*var\(--admin-shell-nav-active-bg\) !important;[^}]*color:\s*var\(--admin-shell-nav-active-text\);/)
+  assert.match(cssSource, /\.admin-dashboard-sidebar-workspace-item\s*\{[^}]*margin-bottom:\s*20px;/)
+  assert.match(cssSource, /\.admin-dashboard-sidebar-dropdown-content\s*\{[^}]*box-shadow:\s*none;/)
+  assert.match(cssSource, /html\[data-theme='light'\] \.admin-dashboard-sidebar-dropdown-content\s*\{[^}]*border-color:\s*var\(--admin-dashboard-chart-header-divider\);[^}]*box-shadow:\s*none !important;[^}]*filter:\s*none !important;/)
+  assert.match(cssSource, /html\[data-theme='light'\] \.admin-dashboard-sidebar-switcher,\s*html\[data-theme='light'\] \.admin-dashboard-sidebar-account-button\s*\{[^}]*box-shadow:\s*none !important;[^}]*filter:\s*none !important;/)
+  assert.match(cssSource, /html\[data-theme='light'\] \[data-radix-popper-content-wrapper\]:has\(\.admin-dashboard-sidebar-dropdown-content\)\s*\{[^}]*background:\s*var\(--admin-shell-bg\);[^}]*box-shadow:\s*none !important;[^}]*filter:\s*none !important;/)
+})

@@ -1,171 +1,108 @@
-import AdminButton from '../components/admin/ui/admin-button'
-import AdminCard from '../components/admin/ui/admin-card'
-import AdminInput from '../components/admin/ui/admin-input'
-import AdminLabel from '../components/admin/ui/admin-label'
-import AdminPageShell from '../components/admin/ui/admin-page-shell'
+import Image from 'next/image'
+import { CircleCheckBig, Dumbbell, Flame, Medal, Trophy, Users, Zap } from 'lucide-react'
+import LandingFeatureShowcase from './landing-feature-showcase'
+import { APP_STORE_DOWNLOAD_URL, LandingFooter, LandingHeader } from './landing-sections'
+import { normalizePublicLanguage } from '../lib/i18n/language'
+import { getPublicPageCopy } from '../lib/i18n/public-page-copy'
 
-function EyeIcon() {
+const heroIcons = [
+  { id: 'top-left', icon: Dumbbell, className: 'landing-hero-icon-top-left' },
+  { id: 'mid-left', icon: Flame, className: 'landing-hero-icon-mid-left' },
+  { id: 'bottom-left', icon: Zap, className: 'landing-hero-icon-bottom-left' },
+  { id: 'top-right', icon: Trophy, className: 'landing-hero-icon-top-right' },
+  { id: 'mid-right', icon: Users, className: 'landing-hero-icon-mid-right' },
+  { id: 'bottom-right', icon: Medal, className: 'landing-hero-icon-bottom-right' },
+]
+
+export default async function HomePage({ searchParams }) {
+  const resolvedSearchParams = await searchParams
+  const language = normalizePublicLanguage(resolvedSearchParams?.lang)
+  const copy = getPublicPageCopy(language)
+  const homeCopy = copy.home
+  const [heroLineOne, heroLineTwo] = homeCopy.hero.heading.split(' / ')
+
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12 18 18.75 12 18.75 2.25 12 2.25 12Z"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="12" cy="12" r="3.1" fill="none" stroke="currentColor" strokeWidth="1.7" />
-    </svg>
-  );
-}
+    <main className="landing-page">
+      <LandingHeader language={language} currentPath="/" copy={copy} />
 
-export default function HomePage() {
-  return (
-    <AdminPageShell>
-      <div className="admin-login-pattern" aria-hidden="true" />
+      <section id="hero" className="landing-section landing-hero">
+        <div className="landing-shell landing-hero-inner">
+          <div className="landing-hero-icon-cloud" aria-hidden="true">
+            {heroIcons.map((icon) => {
+              const Icon = icon.icon
 
-      <div className="admin-auth-frame">
-        <input
-          id="auth-theme-dark"
-          className="admin-auth-theme-input"
-          type="radio"
-          name="auth-theme"
-          defaultChecked
-        />
-        <input
-          id="auth-theme-light"
-          className="admin-auth-theme-input"
-          type="radio"
-          name="auth-theme"
-        />
-
-        <section className="admin-auth-marketing" aria-label="PPLUS Training marketing">
-          <div className="admin-auth-marketing-inner">
-            <div className="admin-auth-marketing-badge">
-              <img src="/admin/auth_trophy.svg" alt="" aria-hidden="true" />
-              <span>The Best Hockey Training App</span>
-            </div>
-
-            <div className="admin-auth-marketing-copy">
-              <p className="admin-auth-marketing-kicker">ELITE HOCKEY TRAINING</p>
-              <div className="admin-auth-marketing-headline">
-                <h2>Off-Ice Work</h2>
-                <h2 className="admin-auth-marketing-headline-accent">On-Ice Results</h2>
-              </div>
-              <p className="admin-auth-marketing-description">
-                PPLUS Training helps hockey athletes stay locked in off the ice with guided trainings, simple tracking, and a clear plan built for long-term development.
-              </p>
-            </div>
-
-            <img
-              className="admin-auth-app-store-badge"
-              src="/admin/auth_app_store_badge.svg"
-              alt="Download on the App Store"
-            />
-          </div>
-        </section>
-
-        <AdminCard
-          aria-label="Admin login"
-          className="admin-auth-signin-shell"
-          layout="auth"
-          padding="auth"
-        >
-          <div className="admin-auth-theme-toggle-row">
-            <img
-              className="admin-auth-theme-toggle"
-              src="/admin/auth_theme_toggle.svg"
-              alt=""
-              aria-hidden="true"
-            />
-
-            <img
-              className="admin-auth-theme-toggle admin-auth-theme-toggle-light"
-              src="/admin/auth_theme_toggle_light.svg"
-              alt=""
-              aria-hidden="true"
-            />
-
-            <label
-              className="admin-auth-theme-hit admin-auth-theme-hit-light"
-              htmlFor="auth-theme-light"
-              aria-label="Switch to light mode"
-            />
-
-            <label
-              className="admin-auth-theme-hit admin-auth-theme-hit-dark"
-              htmlFor="auth-theme-dark"
-              aria-label="Switch to dark mode"
-            />
+              return (
+                <div key={icon.id} className={`landing-hero-icon-box ${icon.className}`}>
+                  <Icon />
+                </div>
+              )
+            })}
           </div>
 
-          <div className="admin-auth-signin-body">
-            <div className="admin-auth-signin-logo-row">
-              <img
-                className="admin-auth-signin-logo admin-auth-signin-logo-dark"
-                src="/admin/logo_pplus_training.svg"
-                alt="PPLUS Training"
-              />
-              <img
-                className="admin-auth-signin-logo admin-auth-signin-logo-light"
-                src="/admin/logo_ppht_light_mode.svg"
-                alt="PPLUS Training"
-              />
-            </div>
-
-            <div className="admin-auth-flow">
-              <div className="admin-auth-title-row">
-                <h1 className="admin-auth-title">Welcome back 👋🏻</h1>
-              </div>
-
-              <form className="admin-login-form">
-                <div className="admin-login-field-group">
-                  <AdminLabel className="admin-auth-sr-only" htmlFor="email">
-                    Email
-                  </AdminLabel>
-                  <AdminInput
-                    id="email"
-                    type="email"
-                    placeholder="Email"
-                  />
-                </div>
-
-                <div className="admin-login-field-group">
-                  <AdminLabel className="admin-auth-sr-only" htmlFor="password">
-                    Password
-                  </AdminLabel>
-                  <div className="admin-login-password-shell">
-                    <AdminInput
-                      id="password"
-                      className="admin-login-input-password"
-                      type="password"
-                      placeholder="Password"
-                    />
-                    <button
-                      type="button"
-                      className="admin-login-password-toggle"
-                      aria-label="Toggle password visibility"
-                    >
-                      <EyeIcon />
-                    </button>
-                  </div>
-                </div>
-
-                <AdminButton type="submit" size="default" className="admin-auth-submit-button w-full">
-                  <span>Sign in</span>
-                </AdminButton>
-              </form>
-            </div>
-
-            <div className="admin-login-forgot-row">
-              <a href="#" className="admin-login-forgot">
-                Forgot Password
+          <div className="landing-hero-copy">
+            <p className="landing-pill">
+              <Trophy className="landing-pill-icon" aria-hidden="true" />
+              {homeCopy.hero.pill}
+            </p>
+            <h1 className="landing-hero-title">
+              <span>{heroLineOne}</span>
+              <span className="landing-hero-title-accent">{heroLineTwo}</span>
+            </h1>
+            <p className="landing-hero-description">{homeCopy.hero.copy}</p>
+            <div className="landing-hero-actions">
+              <a className="landing-store-link" href={APP_STORE_DOWNLOAD_URL} aria-label="Download PPLUS Training on the App Store">
+                <Image
+                  src="/landing/brand/app-store-badge.svg"
+                  alt="Download on the App Store"
+                  width={184}
+                  height={56}
+                />
               </a>
             </div>
           </div>
-        </AdminCard>
-      </div>
-    </AdminPageShell>
-  );
+        </div>
+      </section>
+
+      <section id="features" className="landing-section landing-features-section">
+        <div className="landing-shell landing-features-stack">
+          <div className="landing-section-heading landing-section-heading-centered landing-features-heading">
+            <p className="landing-pill landing-features-pill">{homeCopy.featuresSection.label}</p>
+            <h2>{homeCopy.featuresSection.heading}</h2>
+          </div>
+          <LandingFeatureShowcase features={homeCopy.features} />
+        </div>
+      </section>
+
+      <section id="programs" className="landing-section landing-programs-section">
+        <div className="landing-shell">
+          <div className="landing-section-heading landing-section-heading-centered landing-programs-heading">
+            <p className="landing-pill landing-programs-pill">{homeCopy.programsSection.label}</p>
+            <h2>{homeCopy.programsSection.heading}</h2>
+          </div>
+
+          <div className="landing-program-grid">
+            {homeCopy.programs.map((program) => (
+              <article key={program.title} className="landing-program-card">
+                <span className="landing-program-icon" aria-hidden="true">
+                  <Dumbbell />
+                </span>
+                <h3>{program.title}</h3>
+                <p>{program.description}</p>
+                <ul className="landing-program-list">
+                  {program.bullets.map((bullet) => (
+                    <li key={`${program.title}-${bullet}`} className="landing-program-list-item">
+                      <CircleCheckBig className="landing-program-list-icon" aria-hidden="true" />
+                      <span>{bullet}</span>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <LandingFooter language={language} copy={copy} />
+    </main>
+  )
 }
