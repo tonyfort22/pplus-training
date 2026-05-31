@@ -593,7 +593,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
           <Button
             type="button"
             onClick={openCreateWorkoutDialog}
-            className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d] md:self-auto"
+            className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] md:self-auto"
           >
             Create workout
           </Button>

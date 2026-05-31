@@ -50,7 +50,7 @@ function DayLane({ day, onAddWorkout, onOpenWorkoutDetails, onReorderWorkouts, s
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#24334A] bg-[#0F1728] text-[#8EA0BC] hover:border-[#3BE0AF] hover:text-[#EEF4FF]"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#24334A] bg-[#0F1728] text-[#8EA0BC] hover:border-[var(--admin-shell-accent)] hover:text-[#EEF4FF]"
                     {...sortable.attributes}
                     {...sortable.listeners}
                   >
@@ -185,7 +185,7 @@ function ProgramWeekRow({ week, onAddWorkoutToDay, onDeleteWeek, onOpenWorkoutDe
               <button
                 type="button"
                 data-scroll-direction="left"
-                className="program-planner-scroll-button inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#24334A] bg-[#0F1728] text-[#8EA0BC] hover:border-[#3BE0AF] hover:text-[#EEF4FF]"
+                className="program-planner-scroll-button inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#24334A] bg-[#0F1728] text-[#8EA0BC] hover:border-[var(--admin-shell-accent)] hover:text-[#EEF4FF]"
                 onClick={() => scrollWeekSlider(-1)}
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -212,7 +212,7 @@ function ProgramWeekRow({ week, onAddWorkoutToDay, onDeleteWeek, onOpenWorkoutDe
               <button
                 type="button"
                 data-scroll-direction="right"
-                className="program-planner-scroll-button inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#24334A] bg-[#0F1728] text-[#8EA0BC] hover:border-[#3BE0AF] hover:text-[#EEF4FF]"
+                className="program-planner-scroll-button inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#24334A] bg-[#0F1728] text-[#8EA0BC] hover:border-[var(--admin-shell-accent)] hover:text-[#EEF4FF]"
                 onClick={() => scrollWeekSlider(1)}
               >
                 <ArrowRight className="h-4 w-4" />
@@ -438,7 +438,7 @@ export default function ProgramPlannerView({ program }) {
               <Button type="button" variant="outline" className="rounded-[12px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]">
                 Assign program
               </Button>
-              <Button type="button" className="rounded-[12px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]" onClick={handleAddWeek}>
+              <Button type="button" className="rounded-[12px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]" onClick={handleAddWeek}>
                 <Plus className="h-4 w-4" />
                 Add week
               </Button>

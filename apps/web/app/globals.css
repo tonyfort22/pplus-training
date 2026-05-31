@@ -103,6 +103,7 @@ html[data-theme='light'] {
   --admin-shell-nav-active-bg: #e6fff5;
   --admin-shell-nav-active-text: #078968;
   --admin-shell-accent: #06b486;
+  --admin-shell-primary-button-bg: #3be0af;
   --admin-shell-avatar-bg: #dcfff1;
   --admin-shell-avatar-text: #078968;
   --admin-shell-shadow: 0 14px 34px rgba(15, 23, 42, 0.12);
@@ -175,6 +176,7 @@ html[data-theme='dark'] {
   --admin-shell-nav-active-bg: #2d4c4c;
   --admin-shell-nav-active-text: #3be0af;
   --admin-shell-accent: #3be0af;
+  --admin-shell-primary-button-bg: #3be0af;
   --admin-shell-avatar-bg: #e0fcf0;
   --admin-shell-avatar-text: #06d6a0;
   --admin-shell-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
@@ -1179,13 +1181,13 @@ html[data-theme='light'] .admin-dashboard-sidebar-logo-light {
 }
 
 .admin-dashboard-topbar-search-button {
-  border: 1px solid var(--admin-shell-accent);
-  background: var(--admin-shell-accent);
+  border: 1px solid var(--admin-shell-primary-button-bg);
+  background: var(--admin-shell-primary-button-bg);
   color: #071712;
 }
 
 .admin-dashboard-topbar-search-button:hover {
-  background: var(--admin-shell-accent);
+  background: var(--admin-shell-primary-button-bg);
   opacity: 0.9;
 }
 
@@ -1254,6 +1256,12 @@ html[data-theme='light'] [data-radix-popper-content-wrapper]:has(.admin-dashboar
   color: var(--admin-shell-text-strong);
 }
 
+.admin-settings-profile-avatar {
+  width: 192px !important;
+  height: 192px !important;
+  object-fit: cover;
+}
+
 .admin-dashboard-sidebar-secondary-text {
   color: var(--admin-shell-muted);
 }
@@ -1264,12 +1272,12 @@ html[data-theme='light'] [data-radix-popper-content-wrapper]:has(.admin-dashboar
 
 .admin-dashboard-sidebar-nav-button:hover {
   background: var(--admin-shell-nav-active-bg);
-  color: var(--admin-shell-nav-active-text);
+  color: var(--admin-shell-primary-button-bg);
 }
 
 .admin-dashboard-sidebar-nav-button[data-active='true'] {
   background: var(--admin-shell-nav-active-bg);
-  color: var(--admin-shell-nav-active-text);
+  color: var(--admin-shell-primary-button-bg);
 }
 
 .admin-dashboard-sidebar-subnav {
@@ -1281,13 +1289,13 @@ html[data-theme='light'] [data-radix-popper-content-wrapper]:has(.admin-dashboar
 }
 
 .admin-dashboard-sidebar-subnav-button:hover {
-  background: var(--admin-shell-nav-active-bg) !important;
-  color: var(--admin-shell-nav-active-text);
+  background: transparent !important;
+  color: var(--admin-shell-primary-button-bg);
 }
 
 .admin-dashboard-sidebar-subnav-button[data-active='true'] {
-  background: var(--admin-shell-nav-active-bg) !important;
-  color: var(--admin-shell-nav-active-text);
+  background: transparent !important;
+  color: var(--admin-shell-primary-button-bg);
 }
 
 .admin-shell-workspace {
@@ -1442,13 +1450,21 @@ html[data-theme='light'] [data-radix-popper-content-wrapper]:has(.admin-dashboar
 }
 
 .admin-shell-overview-card-badge-positive {
-  background: rgba(59, 224, 175, 0.14);
+  background: rgba(59, 224, 175, 0.16);
   color: var(--ui-color-accent);
 }
 
 .admin-shell-overview-card-badge-negative {
-  background: rgba(255, 122, 144, 0.14);
+  background: rgba(255, 122, 144, 0.16);
   color: var(--ui-color-danger);
+}
+
+html[data-theme='light'] .admin-shell-overview-card-badge-positive {
+  background: rgba(59, 224, 175, 0.22);
+}
+
+html[data-theme='light'] .admin-shell-overview-card-badge-negative {
+  background: rgba(255, 122, 144, 0.2);
 }
 
 .admin-shell-overview-card-change {
@@ -2980,6 +2996,17 @@ html[data-theme='light'] [data-radix-popper-content-wrapper]:has(.admin-dashboar
   vertical-align: middle;
 }
 
+.admin-shell-athletes-table thead th:first-child,
+.admin-shell-athletes-table tbody td:first-child {
+  width: 44px;
+  padding-right: 6px;
+}
+
+.admin-shell-athletes-table thead th:nth-child(2),
+.admin-shell-athletes-table tbody td:nth-child(2) {
+  padding-left: 8px;
+}
+
 .admin-shell-athletes-row-even {
   background: var(--admin-athletes-row-even-bg);
 }
@@ -2989,7 +3016,7 @@ html[data-theme='light'] [data-radix-popper-content-wrapper]:has(.admin-dashboar
 }
 
 .admin-shell-athletes-checkbox-cell {
-  width: 54px;
+  width: 32px;
 }
 
 .admin-shell-athletes-checkbox-cell .ui-checkbox {
@@ -3296,6 +3323,8 @@ html[data-theme='light'] [data-radix-popper-content-wrapper]:has(.admin-dashboar
   border: 1px solid var(--admin-dashboard-card-border);
   background: var(--admin-dashboard-control-bg);
   color: var(--admin-dashboard-card-text);
+  font-size: 0.8rem;
+  font-weight: 500;
 }
 
 .admin-shell-athletes-example-footer {
@@ -3450,6 +3479,17 @@ html[data-theme='light'] [data-radix-popper-content-wrapper]:has(.admin-dashboar
   vertical-align: middle;
 }
 
+.admin-shell-invites-table thead th:first-child,
+.admin-shell-invites-table tbody td:first-child {
+  width: 44px;
+  padding-right: 6px;
+}
+
+.admin-shell-invites-table thead th:nth-child(2),
+.admin-shell-invites-table tbody td:nth-child(2) {
+  padding-left: 8px;
+}
+
 .admin-shell-invites-row-even {
   background: var(--admin-athletes-row-even-bg);
 }
@@ -3459,7 +3499,7 @@ html[data-theme='light'] [data-radix-popper-content-wrapper]:has(.admin-dashboar
 }
 
 .admin-shell-invites-checkbox-cell {
-  width: 54px;
+  width: 32px;
 }
 
 .admin-shell-invites-checkbox-cell .ui-checkbox {

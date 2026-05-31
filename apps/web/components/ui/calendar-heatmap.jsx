@@ -70,20 +70,21 @@ function CalendarHeatmap({
       modifiers={modifiers}
       modifiersClassNames={modifiersClassNames}
       showOutsideDays={showOutsideDays}
+      navLayout="around"
       className={cn('p-0', className)}
       classNames={{
         months: 'flex flex-col gap-4 min-[1180px]:flex-row min-[1180px]:flex-wrap',
-        month: 'space-y-3 rounded-[14px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-3',
-        month_caption: 'relative flex items-center justify-center px-7',
+        month: 'relative space-y-3 rounded-[14px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-3',
+        month_caption: 'flex items-center justify-center px-7',
         caption_label: 'text-xs font-semibold text-[var(--admin-dashboard-card-text)]',
-        nav: 'absolute inset-x-0 top-0 flex items-center justify-between',
+        nav: 'hidden',
         button_previous: cn(
           buttonVariants({ variant: 'ghost' }),
-          'size-6 rounded-md bg-transparent p-0 text-[var(--admin-dashboard-card-muted)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]',
+          'absolute left-3 top-3 size-6 rounded-md bg-transparent p-0 text-[var(--admin-dashboard-card-muted)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]',
         ),
         button_next: cn(
           buttonVariants({ variant: 'ghost' }),
-          'size-6 rounded-md bg-transparent p-0 text-[var(--admin-dashboard-card-muted)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]',
+          'absolute right-3 top-3 size-6 rounded-md bg-transparent p-0 text-[var(--admin-dashboard-card-muted)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]',
         ),
         month_grid: 'w-full border-collapse',
         weekdays: 'flex',
@@ -92,11 +93,11 @@ function CalendarHeatmap({
         day: 'relative size-7 p-0 text-center text-xs',
         day_button: cn(
           buttonVariants({ variant: 'ghost' }),
-          'size-7 rounded-[7px] border border-transparent p-0 text-xs font-medium text-[var(--admin-dashboard-card-muted)] hover:border-[color:var(--admin-dashboard-card-border)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]',
+          'size-7 rounded-[7px] border border-transparent p-0 text-xs font-medium text-[var(--admin-dashboard-card-text)] hover:border-[color:var(--admin-dashboard-card-border)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]',
         ),
         today: '[&>button]:border-[color:var(--admin-shell-accent)] [&>button]:text-[var(--admin-dashboard-card-text)]',
         outside: 'opacity-25',
-        disabled: 'opacity-30',
+        disabled: 'opacity-100',
         hidden: 'invisible',
         ...classNames,
       }}

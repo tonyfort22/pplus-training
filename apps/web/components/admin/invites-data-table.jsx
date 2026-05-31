@@ -384,7 +384,7 @@ export default function InvitesDataTable({ searchQuery = '' }) {
             setInviteAthleteEmail('')
             setIsInviteDialogOpen(true)
           }}
-          className="admin-shell-invites-invite-button bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d] rounded-[12px] min-h-[40px]"
+          className="admin-shell-invites-invite-button bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] rounded-[12px] min-h-[40px]"
         >
           Invite an athlete
         </Button>
@@ -417,7 +417,7 @@ export default function InvitesDataTable({ searchQuery = '' }) {
                   </label>
                   <Input
                     id="invite-athlete-first-name"
-                    className="h-11 rounded-[12px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
+                    className="h-11 rounded-[12px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:ring-[#3BE0AF]/20"
                     placeholder="First name"
                     value={inviteAthleteFirstName}
                     onChange={(event) => setInviteAthleteFirstName(event.target.value)}
@@ -429,7 +429,7 @@ export default function InvitesDataTable({ searchQuery = '' }) {
                   </label>
                   <Input
                     id="invite-athlete-last-name"
-                    className="h-11 rounded-[12px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
+                    className="h-11 rounded-[12px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:ring-[#3BE0AF]/20"
                     placeholder="Last name"
                     value={inviteAthleteLastName}
                     onChange={(event) => setInviteAthleteLastName(event.target.value)}
@@ -443,7 +443,7 @@ export default function InvitesDataTable({ searchQuery = '' }) {
               </label>
               <Input
                 id="invite-athlete-email"
-                className="h-11 rounded-[12px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
+                className="h-11 rounded-[12px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:ring-[#3BE0AF]/20"
                 placeholder="athlete@email.com"
                 type="email"
                 value={inviteAthleteEmail}
@@ -467,7 +467,7 @@ export default function InvitesDataTable({ searchQuery = '' }) {
             </Button>
             <Button
               type="button"
-              className="rounded-[12px] min-h-[40px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]"
+              className="rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]"
               onClick={handleInviteDialogSubmit}
               disabled={isSubmittingInvite}
             >

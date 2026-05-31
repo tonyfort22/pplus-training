@@ -971,7 +971,7 @@ function renderYearGrid(selectedDate, scheduledEvents, setSelectedDate, setCurre
           <button
             key={monthDate.toISOString()}
             type="button"
-            className="grid gap-3 rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-4 text-left hover:border-[#3BE0AF]"
+            className="grid gap-3 rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-4 text-left hover:border-[var(--admin-shell-accent)]"
             onClick={() => {
               setSelectedDate(monthDate)
               setCurrentView('month')
@@ -2092,7 +2092,7 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
 
               <Button
                 type="button"
-                className="w-full sm:w-auto rounded-[10px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]"
+                className="w-full sm:w-auto rounded-[10px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]"
                 onClick={() => openAssignmentDialog(selectedDate, WEEK_HOURS[0])}
               >
                 <Plus className="size-4" />
@@ -2230,7 +2230,7 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
                   <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--admin-dashboard-card-muted)]">Start date</span>
                   <input
                     type="date"
-                    className="h-11 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] focus-visible:border-[#3BE0AF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3BE0AF]/20"
+                    className="h-11 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3BE0AF]/20"
                     value={formatDateInputValue(assignmentDraft.date)}
                     onChange={(event) => {
                       const nextDate = parseDateInputValue(event.target.value)
@@ -2254,7 +2254,7 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
                     step="3600"
                     min="06:00"
                     max="23:00"
-                    className="h-11 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] focus-visible:border-[#3BE0AF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3BE0AF]/20"
+                    className="h-11 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3BE0AF]/20"
                     value={assignmentDraft.hour}
                     onChange={(event) => {
                       const nextHour = event.target.value
@@ -2273,7 +2273,7 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
                   <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--admin-dashboard-card-muted)]">End date</span>
                   <input
                     type="date"
-                    className="h-11 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] focus-visible:border-[#3BE0AF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3BE0AF]/20"
+                    className="h-11 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3BE0AF]/20"
                     value={formatDateInputValue(assignmentDraft.endDate)}
                     onChange={(event) => {
                       const nextDate = parseDateInputValue(event.target.value)
@@ -2291,7 +2291,7 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
                     step="3600"
                     min="06:00"
                     max="23:59"
-                    className="h-11 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] focus-visible:border-[#3BE0AF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3BE0AF]/20"
+                    className="h-11 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3BE0AF]/20"
                     value={assignmentDraft.endHour}
                     onChange={(event) => {
                       setAssignmentDraft((currentDraft) => ({ ...currentDraft, endHour: event.target.value }))
@@ -2341,8 +2341,8 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
                         className={[
                           'rounded-[16px] border px-4 py-3 text-left transition-colors',
                           isSelected
-                            ? 'border-[#3BE0AF] bg-[var(--admin-shell-nav-active-bg)] text-[var(--admin-dashboard-card-text)]'
-                            : 'border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] text-[var(--admin-dashboard-card-text)] hover:border-[#3BE0AF] hover:bg-[var(--admin-dashboard-control-hover-bg)]',
+                            ? 'border-[var(--admin-shell-accent)] bg-[var(--admin-shell-nav-active-bg)] text-[var(--admin-dashboard-card-text)]'
+                            : 'border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] text-[var(--admin-dashboard-card-text)] hover:border-[var(--admin-shell-accent)] hover:bg-[var(--admin-dashboard-control-hover-bg)]',
                         ].join(' ')}
                         onClick={() => {
                           setAssignmentDraft((currentDraft) => ({ ...currentDraft, selectedWorkoutId: workout.id }))
@@ -2447,7 +2447,7 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
               </Button>
               <Button
                 type="button"
-                className="min-h-[40px] rounded-[12px] border border-[#3BE0AF] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]"
+                className="min-h-[40px] rounded-[12px] border border-[var(--admin-shell-accent)] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]"
                 onClick={createAssignment}
               >
                 Create workout

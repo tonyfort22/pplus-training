@@ -1041,7 +1041,7 @@ export function AthletesDataTable({ searchQuery = '' }) {
               setSendAthleteInvite(true)
               setIsCreateEditAthleteDialogOpen(true)
             }}
-            className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[var(--admin-shell-accent)] text-[#0B1120] hover:bg-[var(--admin-shell-accent)] md:self-auto"
+            className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] md:self-auto"
           >
             Create athlete
           </Button>
@@ -1257,7 +1257,7 @@ export function AthletesDataTable({ searchQuery = '' }) {
             </Button>
             <Button
               type="button"
-              className="admin-shell-athletes-create-submit rounded-[12px] min-h-[40px] bg-[var(--admin-shell-accent)] text-[#0B1120] hover:bg-[var(--admin-shell-accent)]"
+              className="admin-shell-athletes-create-submit rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]"
               onClick={handleCreateEditAthleteSubmit}
               disabled={isSavingAthlete}
             >
@@ -1309,7 +1309,7 @@ export function AthletesDataTable({ searchQuery = '' }) {
             </Button>
             <Button
               type="button"
-              className="rounded-[12px] min-h-[40px] bg-[var(--admin-shell-accent)] text-[#0B1120] hover:bg-[var(--admin-shell-accent)]"
+              className="rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]"
               disabled={isSendingRowInvite}
               onClick={() => {
                 void handleSendAthleteInvite(inviteDialogAthleteId, inviteAthleteEmail)

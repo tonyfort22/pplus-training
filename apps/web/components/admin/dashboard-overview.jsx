@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react'
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import {
   Activity,
-  AlertTriangle,
   BadgeCheck,
   CalendarCheck,
+  Send,
   TrendingDown,
   TrendingUp,
   Users,
@@ -40,19 +40,25 @@ const overviewRangeOptions = [
 ]
 
 const summaryIconById = {
-  activeAthletes: Users,
-  dueWorkouts: CalendarCheck,
-  completedSessions: Activity,
-  planAdherence: BadgeCheck,
-  needsAttention: AlertTriangle,
+  athletes: Users,
+  programs: CalendarCheck,
+  workouts: Activity,
+  exercises: BadgeCheck,
+  invites: Send,
 }
 
-const summaryOrder = ['activeAthletes', 'dueWorkouts', 'completedSessions', 'planAdherence', 'needsAttention']
+const summaryOrder = ['athletes', 'programs', 'workouts', 'exercises', 'invites']
 
 function getTrendTone(direction) {
   if (direction === 'negative') return 'danger'
   if (direction === 'positive') return 'success'
   return 'neutral'
+}
+
+function getTrendBadgeClass(direction) {
+  if (direction === 'negative') return 'admin-shell-overview-card-badge admin-shell-overview-card-badge-negative'
+  if (direction === 'positive') return 'admin-shell-overview-card-badge admin-shell-overview-card-badge-positive'
+  return 'admin-shell-overview-card-badge'
 }
 
 function TrendArrowIcon({ direction }) {
@@ -94,7 +100,7 @@ function OverviewSummaryCard({ card }) {
           {card.value}
         </CardTitle>
         <CardAction>
-          <Badge tone={getTrendTone(card.changeDirection)}>
+          <Badge tone={getTrendTone(card.changeDirection)} className={getTrendBadgeClass(card.changeDirection)}>
             {card.change}
             <TrendArrowIcon direction={card.changeDirection} />
           </Badge>
@@ -120,7 +126,7 @@ function EmptyOverviewState() {
     <Card className="admin-shell-overview-empty" role="status" aria-label="No dashboard data yet">
       <CardHeader>
         <CardTitle>No dashboard data yet</CardTitle>
-        <CardDescription>Real metrics will appear here after athletes, due workouts, completed sessions, or invites exist.</CardDescription>
+        <CardDescription>Real metrics will appear here after athletes, programs, workouts, exercises, or invites exist.</CardDescription>
       </CardHeader>
     </Card>
   )
@@ -163,12 +169,23 @@ const trainingExecutionChartConfig = {
   },
 }
 
-const planAdherenceChartConfig = {
-  adherence: {
-    label: 'Adherence',
+const workoutResultsChartConfig = {
+  assigned: {
+    label: 'Assigned',
+    color: '#58c6ff',
+  },
+  completed: {
+    label: 'Completed',
     color: '#3be0af',
   },
+  missed: {
+    label: 'Missed',
+    color: '#f97373',
+  },
 }
+
+const workoutResultStatusOptions = ['Assigned', 'Completed', 'Missed']
+const workoutResultCategoryOptions = ['Warmup', 'Speed Accelerator', 'Edge Work', 'Conditioning']
 
 const trainingConsistencyHeatmapVariants = [
   'bg-[#DDFBF1] text-[#0B1120] hover:bg-[#DDFBF1] [&>button]:text-[#0B1120]',
@@ -276,42 +293,87 @@ function TrainingExecutionPanel({ trainingExecution, activeRange, onRangeChange 
   )
 }
 
-function PlanAdherencePanel({ planAdherenceChart }) {
-  const buckets = Array.isArray(planAdherenceChart?.buckets) ? planAdherenceChart.buckets : []
-  const chartData = buckets.map((bucket) => ({
-    date: bucket.label,
-    adherence: bucket.adherence ?? 0,
-  }))
+function WorkoutResultsPanel({ workoutResults }) {
+  const statusOptions = Array.isArray(workoutResults?.statusOptions) && workoutResults.statusOptions.length ? workoutResults.statusOptions : workoutResultStatusOptions
+  const categoryOptions = Array.isArray(workoutResults?.categoryOptions) && workoutResults.categoryOptions.length ? workoutResults.categoryOptions : workoutResultCategoryOptions
+  const [statusFilter, setStatusFilter] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('')
+  const buckets = Array.isArray(workoutResults?.buckets) ? workoutResults.buckets : []
+  const defaultCategory = buckets.find((bucket) => categoryOptions.includes(bucket.category))?.category ?? categoryOptions[0]
+  const defaultCategoryBucket = buckets.find((bucket) => bucket.category === defaultCategory)
+  const defaultStatus = statusOptions.find((option) => Number(defaultCategoryBucket?.[option.toLowerCase()] ?? 0) > 0) ?? statusOptions[0]
+  const selectedStatus = statusFilter || defaultStatus
+  const selectedCategory = categoryFilter || defaultCategory
+  const metricKey = String(selectedStatus || 'Assigned').toLowerCase()
+  const chartData = buckets
+    .filter((bucket) => bucket.category === selectedCategory)
+    .map((bucket) => ({
+      workoutName: bucket.workoutName,
+      assigned: metricKey === 'assigned' ? bucket.assigned ?? 0 : 0,
+      completed: metricKey === 'completed' ? bucket.completed ?? 0 : 0,
+      missed: metricKey === 'missed' ? bucket.missed ?? 0 : 0,
+    }))
 
   return (
     <Card className="admin-shell-overview-insight-card">
       <CardHeader>
-        <CardDescription>Plan adherence</CardDescription>
-        <div className="admin-shell-overview-performance-value-row">
-          <CardTitle className="admin-shell-overview-insight-value">{planAdherenceChart?.value ?? '0%'}</CardTitle>
-          <Badge tone="success">{planAdherenceChart?.trend ?? '0%'}</Badge>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <CardDescription>Workout results</CardDescription>
+            <div className="admin-shell-overview-performance-value-row">
+              <CardTitle className="admin-shell-overview-insight-value">{selectedStatus}</CardTitle>
+              <Badge tone="neutral">{selectedCategory}</Badge>
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Select value={selectedStatus} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[150px] rounded-lg" aria-label="Status">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl">
+                {statusOptions.map((option) => (
+                  <SelectItem key={option} value={option} className="rounded-lg">
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={selectedCategory} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[190px] rounded-lg" aria-label="Category">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl">
+                {categoryOptions.map((option) => (
+                  <SelectItem key={option} value={option} className="rounded-lg">
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={planAdherenceChartConfig} className="admin-shell-overview-compliance-chart aspect-auto h-[180px] w-full">
+        <ChartContainer config={workoutResultsChartConfig} className="admin-shell-overview-workout-results-chart aspect-auto h-[220px] w-full">
           <BarChart accessibilityLayer data={chartData}>
             <CartesianGrid vertical={false} stroke="var(--admin-dashboard-chart-grid)" />
             <XAxis
-              dataKey="date"
+              dataKey="workoutName"
               tickLine={false}
               tickMargin={10}
               axisLine={false}
-              tickFormatter={(value) => String(value).slice(0, 3)}
               tick={{ fill: 'var(--admin-dashboard-chart-tick)', fontSize: 11, fontWeight: 500 }}
             />
-            <YAxis hide domain={[0, 100]} />
+            <YAxis hide />
             <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dashed" />} />
-            <Bar dataKey="adherence" fill="var(--color-adherence)" radius={4} />
+            <Bar dataKey="assigned" fill="var(--color-assigned)" radius={4} />
+            <Bar dataKey="completed" fill="var(--color-completed)" radius={4} />
+            <Bar dataKey="missed" fill="var(--color-missed)" radius={4} />
           </BarChart>
         </ChartContainer>
       </CardContent>
       <CardFooter>
-        <span className="admin-shell-overview-link">{planAdherenceChart?.footer ?? 'No due workouts in this range'}</span>
+        <span className="admin-shell-overview-link">Filtered by workout status and training type</span>
       </CardFooter>
     </Card>
   )
@@ -339,7 +401,7 @@ function TrainingConsistencyPanel({ trainingConsistency, activeRange }) {
               numberOfMonths={1}
               weightedDates={heatmapDates}
               variantClassnames={trainingConsistencyHeatmapVariants}
-              disabled
+              disabled={false}
               className="min-w-max"
             />
           </div>
@@ -360,12 +422,12 @@ function TrainingConsistencyPanel({ trainingConsistency, activeRange }) {
   )
 }
 
-function DashboardAnalyticsPanels({ trainingExecution, planAdherenceChart, trainingConsistency, activeRange, onRangeChange }) {
+function DashboardAnalyticsPanels({ trainingExecution, workoutResults, trainingConsistency, activeRange, onRangeChange }) {
   return (
     <section className="admin-shell-overview-analytics-layout" aria-label="Dashboard analytics panels">
       <TrainingExecutionPanel trainingExecution={trainingExecution} activeRange={activeRange} onRangeChange={onRangeChange} />
       <div className="admin-shell-overview-bottom-row admin-shell-overview-side-column">
-        <PlanAdherencePanel planAdherenceChart={planAdherenceChart} />
+        <WorkoutResultsPanel workoutResults={workoutResults} />
         <TrainingConsistencyPanel trainingConsistency={trainingConsistency} activeRange={activeRange} />
       </div>
     </section>
@@ -445,7 +507,7 @@ export default function DashboardOverview() {
 
           <DashboardAnalyticsPanels
             trainingExecution={overview?.trainingExecution}
-            planAdherenceChart={overview?.planAdherenceChart}
+            workoutResults={overview?.workoutResults}
             trainingConsistency={overview?.trainingConsistency}
             activeRange={activeRange}
             onRangeChange={setActiveRange}

@@ -38,7 +38,7 @@ test('workout calendar admin chrome uses light-mode foundation tokens instead of
   assert.match(calendarSource, /bg-\[var\(--admin-dashboard-control-bg\)\]/)
   assert.match(calendarSource, /text-\[var\(--admin-dashboard-card-muted\)\]/)
   assert.match(calendarSource, /focus-visible:ring-\[#3BE0AF\]/)
-  assert.match(calendarSource, /bg-\[#3BE0AF\] text-\[#0B1120\]/)
+  assert.match(calendarSource, /bg-\[var\(--admin-shell-primary-button-bg\)\] text-\[#0B1120\]/)
 
   const weekGridSource = extractFunction(calendarSource, 'renderWeekGrid')
   const dayGridSource = extractFunction(calendarSource, 'renderDayGrid')
