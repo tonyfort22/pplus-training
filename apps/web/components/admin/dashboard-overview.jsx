@@ -200,12 +200,6 @@ function buildTrainingConsistencyWeightedDates(dailyActivity) {
     .filter(Boolean)
 }
 
-function getTrainingConsistencyMonthCount(activeRange) {
-  if (activeRange === 'last-3-months') return 3
-  if (activeRange === 'last-year') return 3
-  return 1
-}
-
 function TrainingExecutionPanel({ trainingExecution, activeRange, onRangeChange }) {
   const buckets = Array.isArray(trainingExecution?.buckets) ? trainingExecution.buckets : []
   const chartData = buckets.map((bucket) => ({
@@ -331,6 +325,7 @@ function TrainingConsistencyPanel({ trainingConsistency, activeRange }) {
     <Card className="admin-shell-overview-insight-card">
       <CardHeader>
         <CardDescription>Training consistency</CardDescription>
+        <p className="text-sm text-[var(--admin-dashboard-card-muted)]">Monthly activity heatmap. Use the arrows to review previous months.</p>
         <div className="admin-shell-overview-performance-value-row">
           <CardTitle className="admin-shell-overview-insight-value">{trainingConsistency?.value ?? '0 / 0'}</CardTitle>
           <Badge tone={hasHeatmapData ? 'success' : 'neutral'}>{hasHeatmapData ? 'Active days' : 'No activity'}</Badge>
@@ -341,7 +336,7 @@ function TrainingConsistencyPanel({ trainingConsistency, activeRange }) {
           <div className="admin-shell-overview-session-chart overflow-x-auto rounded-xl border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-3">
             <CalendarHeatmap
               mode="single"
-              numberOfMonths={getTrainingConsistencyMonthCount(activeRange)}
+              numberOfMonths={1}
               weightedDates={heatmapDates}
               variantClassnames={trainingConsistencyHeatmapVariants}
               disabled
