@@ -7,7 +7,6 @@ import {
   AlertTriangle,
   BadgeCheck,
   CalendarCheck,
-  Flame,
   TrendingDown,
   TrendingUp,
   Users,
@@ -30,6 +29,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from '@/components/ui/chart'
+import { CalendarHeatmap } from '@/components/ui/calendar-heatmap'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 const overviewRangeOptions = [
@@ -170,6 +170,42 @@ const planAdherenceChartConfig = {
   },
 }
 
+const trainingConsistencyHeatmapVariants = [
+  'bg-[#DDFBF1] text-[#0B1120] hover:bg-[#DDFBF1] [&>button]:text-[#0B1120]',
+  'bg-[#9AF0D6] text-[#0B1120] hover:bg-[#9AF0D6] [&>button]:text-[#0B1120]',
+  'bg-[#3BE0AF] text-[#0B1120] hover:bg-[#3BE0AF] [&>button]:text-[#0B1120]',
+  'bg-[#189B79] text-white hover:bg-[#189B79] [&>button]:text-white',
+]
+
+function parseHeatmapDate(dateValue) {
+  if (!dateValue) return null
+  const [year, month, day] = String(dateValue).split('-').map(Number)
+  if (!year || !month || !day) return null
+  const date = new Date(year, month - 1, day)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+function buildTrainingConsistencyWeightedDates(dailyActivity) {
+  if (!Array.isArray(dailyActivity)) return []
+
+  return dailyActivity
+    .map((day) => {
+      const date = parseHeatmapDate(day?.date)
+      if (!date) return null
+      return {
+        date,
+        weight: Number(day?.activeAthletes ?? 0),
+      }
+    })
+    .filter(Boolean)
+}
+
+function getTrainingConsistencyMonthCount(activeRange) {
+  if (activeRange === 'last-3-months') return 3
+  if (activeRange === 'last-year') return 3
+  return 1
+}
+
 function TrainingExecutionPanel({ trainingExecution, activeRange, onRangeChange }) {
   const buckets = Array.isArray(trainingExecution?.buckets) ? trainingExecution.buckets : []
   const chartData = buckets.map((bucket) => ({
@@ -287,24 +323,40 @@ function PlanAdherencePanel({ planAdherenceChart }) {
   )
 }
 
-function TrainingConsistencyPanel({ trainingConsistency }) {
+function TrainingConsistencyPanel({ trainingConsistency, activeRange }) {
+  const heatmapDates = buildTrainingConsistencyWeightedDates(trainingConsistency?.dailyActivity)
+  const hasHeatmapData = trainingConsistency?.heatmapReady && heatmapDates.length > 0
+
   return (
     <Card className="admin-shell-overview-insight-card">
       <CardHeader>
         <CardDescription>Training consistency</CardDescription>
         <div className="admin-shell-overview-performance-value-row">
           <CardTitle className="admin-shell-overview-insight-value">{trainingConsistency?.value ?? '0 / 0'}</CardTitle>
-          <Badge tone="neutral">Next: heatmap</Badge>
+          <Badge tone={hasHeatmapData ? 'success' : 'neutral'}>{hasHeatmapData ? 'Active days' : 'No activity'}</Badge>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="admin-shell-overview-session-chart flex min-h-[220px] flex-col justify-center gap-3 rounded-xl border border-dashed border-[var(--admin-dashboard-card-border)] px-5 text-sm text-[var(--admin-dashboard-card-muted)]">
-          <div className="flex items-center gap-2 font-medium text-[var(--admin-dashboard-card-text)]">
-            <Flame className="h-4 w-4 text-[#3BE0AF]" aria-hidden="true" />
-            Calendar heatmap data seam connected
+        {hasHeatmapData ? (
+          <div className="admin-shell-overview-session-chart overflow-x-auto rounded-xl border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-3">
+            <CalendarHeatmap
+              mode="single"
+              numberOfMonths={getTrainingConsistencyMonthCount(activeRange)}
+              weightedDates={heatmapDates}
+              variantClassnames={trainingConsistencyHeatmapVariants}
+              disabled
+              className="min-w-max"
+            />
           </div>
-          <p>Unique athletes active per day will render here in the next pass.</p>
-        </div>
+        ) : (
+          <div className="admin-shell-overview-session-chart flex min-h-[220px] flex-col justify-center gap-3 rounded-xl border border-dashed border-[var(--admin-dashboard-card-border)] px-5 text-sm text-[var(--admin-dashboard-card-muted)]">
+            <div className="flex items-center gap-2 font-medium text-[var(--admin-dashboard-card-text)]">
+              <CalendarCheck className="h-4 w-4 text-[#3BE0AF]" aria-hidden="true" />
+              No completed sessions in this range
+            </div>
+            <p>Unique active athletes per day will appear here once completed workout sessions exist.</p>
+          </div>
+        )}
       </CardContent>
       <CardFooter>
         <span className="admin-shell-overview-link">{trainingConsistency?.footer ?? 'Based on completed workout sessions'}</span>
@@ -319,7 +371,7 @@ function DashboardAnalyticsPanels({ trainingExecution, planAdherenceChart, train
       <TrainingExecutionPanel trainingExecution={trainingExecution} activeRange={activeRange} onRangeChange={onRangeChange} />
       <div className="admin-shell-overview-bottom-row admin-shell-overview-side-column">
         <PlanAdherencePanel planAdherenceChart={planAdherenceChart} />
-        <TrainingConsistencyPanel trainingConsistency={trainingConsistency} />
+        <TrainingConsistencyPanel trainingConsistency={trainingConsistency} activeRange={activeRange} />
       </div>
     </section>
   )

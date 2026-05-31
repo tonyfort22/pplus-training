@@ -247,22 +247,50 @@ function createPlanAdherenceChart({ window, dueWorkoutRows, completedSessionRows
   }
 }
 
+function formatUtcDateKey(date) {
+  return startOfUtcDay(date).toISOString().slice(0, 10)
+}
+
 function createTrainingConsistency({ activeAthletes, window, completedSessionRows }) {
+  const activeAthleteIds = new Set(activeAthletes.map((athlete) => athlete.id).filter(Boolean))
   const lastSevenDaysWindow = { start: addDays(window.end, -7), end: window.end }
   const activeThisWeek = new Set(
     completedSessionRows
+      .filter((row) => activeAthleteIds.has(row.athlete_id))
       .filter((row) => isBetween(valueDate(row, ['completed_at']), lastSevenDaysWindow.start, lastSevenDaysWindow.end))
       .map((row) => row.athlete_id)
       .filter(Boolean),
   )
 
+  const dailyActivityByDate = new Map()
+  for (const session of completedSessionRows) {
+    if (!activeAthleteIds.has(session.athlete_id)) continue
+    const completedAt = valueDate(session, ['completed_at'])
+    if (!isBetween(completedAt, window.start, window.end)) continue
+
+    const date = formatUtcDateKey(completedAt)
+    const activity = dailyActivityByDate.get(date) ?? { date, completedSessions: 0, activeAthleteIds: new Set() }
+    activity.completedSessions += 1
+    activity.activeAthleteIds.add(session.athlete_id)
+    dailyActivityByDate.set(date, activity)
+  }
+
+  const dailyActivity = [...dailyActivityByDate.values()]
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map((activity) => ({
+      date: activity.date,
+      completedSessions: activity.completedSessions,
+      activeAthletes: activity.activeAthleteIds.size,
+    }))
+
   return {
     title: 'Training consistency',
     value: `${activeThisWeek.size} / ${activeAthletes.length}`,
     footer: 'Based on completed workout sessions',
-    heatmapReady: false,
+    heatmapReady: dailyActivity.length > 0,
     activeThisWeek: activeThisWeek.size,
     activeAthleteCount: activeAthletes.length,
+    dailyActivity,
   }
 }
 

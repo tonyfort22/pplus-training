@@ -49,6 +49,8 @@ test('admin dashboard repository computes v2 coach overview metrics from Supabas
     workout_sessions: [
       { id: 'session-current-1', athlete_id: 'athlete-active-1', program_workout_id: 'due-1', status: 'completed', completed_at: '2026-05-06T14:00:00.000Z', started_at: '2026-05-06T13:00:00.000Z', created_at: '2026-05-06T13:00:00.000Z' },
       { id: 'session-current-2', athlete_id: 'athlete-active-1', program_workout_id: 'due-2', status: 'completed', completed_at: '2026-05-23T22:00:00.000Z', started_at: '2026-05-23T21:00:00.000Z', created_at: '2026-05-23T21:00:00.000Z' },
+      { id: 'session-current-3-same-day-same-athlete', athlete_id: 'athlete-active-1', program_workout_id: null, status: 'completed', completed_at: '2026-05-23T23:00:00.000Z', started_at: '2026-05-23T22:30:00.000Z', created_at: '2026-05-23T22:30:00.000Z' },
+      { id: 'session-current-4-same-day-new-athlete', athlete_id: 'athlete-active-2', program_workout_id: null, status: 'completed', completed_at: '2026-05-23T15:00:00.000Z', started_at: '2026-05-23T14:00:00.000Z', created_at: '2026-05-23T14:00:00.000Z' },
       { id: 'session-prev-1', athlete_id: 'athlete-active-1', program_workout_id: 'prev-due-1', status: 'completed', completed_at: '2026-04-15T09:00:00.000Z', started_at: '2026-04-15T08:00:00.000Z', created_at: '2026-04-15T08:00:00.000Z' },
       { id: 'session-active', athlete_id: 'athlete-active-2', program_workout_id: 'due-3', status: 'in_progress', completed_at: null, started_at: '2026-05-24T12:00:00.000Z', created_at: '2026-05-24T12:00:00.000Z' },
     ],
@@ -64,20 +66,25 @@ test('admin dashboard repository computes v2 coach overview metrics from Supabas
   assert.equal(overview.summary.activeAthletes.value, '3')
   assert.equal(overview.summary.activeAthletes.footerSubtext, '3 active · 1 invited')
   assert.equal(overview.summary.dueWorkouts.value, '4')
-  assert.equal(overview.summary.completedSessions.value, '2')
+  assert.equal(overview.summary.completedSessions.value, '4')
   assert.equal(overview.summary.planAdherence.value, '50%')
   assert.equal(overview.summary.planAdherence.footerSubtext, '2 of 4 due workouts completed')
   assert.equal(overview.summary.needsAttention.value, '2')
-  assert.equal(overview.trainingExecution.total, 2)
+  assert.equal(overview.trainingExecution.total, 4)
   assert.equal(overview.trainingExecution.dueTotal, 4)
   assert.equal(overview.trainingExecution.missedTotal, 2)
-  assert.equal(overview.trainingExecution.buckets.reduce((total, bucket) => total + bucket.completed, 0), 2)
+  assert.equal(overview.trainingExecution.buckets.reduce((total, bucket) => total + bucket.completed, 0), 4)
   assert.equal(overview.trainingExecution.buckets.reduce((total, bucket) => total + bucket.assigned, 0), 4)
   assert.equal(overview.trainingExecution.buckets.reduce((total, bucket) => total + bucket.missed, 0), 2)
   assert.equal(overview.planAdherenceChart.value, '50%')
   assert.equal(overview.planAdherenceChart.buckets.reduce((total, bucket) => total + bucket.assigned, 0), 4)
   assert.equal(overview.trainingConsistency.value, '1 / 3')
   assert.equal(overview.trainingConsistency.footer, 'Based on completed workout sessions')
+  assert.equal(overview.trainingConsistency.heatmapReady, true)
+  assert.deepEqual(overview.trainingConsistency.dailyActivity, [
+    { date: '2026-05-06', completedSessions: 1, activeAthletes: 1 },
+    { date: '2026-05-23', completedSessions: 3, activeAthletes: 2 },
+  ])
 })
 
 test('admin dashboard repository returns honest v2 zero states instead of demo data', async () => {
@@ -99,6 +106,8 @@ test('admin dashboard repository returns honest v2 zero states instead of demo d
   assert.equal(overview.trainingExecution.total, 0)
   assert.ok(overview.trainingExecution.buckets.every((bucket) => bucket.completed === 0 && bucket.assigned === 0 && bucket.missed === 0))
   assert.equal(overview.trainingConsistency.value, '0 / 0')
+  assert.equal(overview.trainingConsistency.heatmapReady, false)
+  assert.deepEqual(overview.trainingConsistency.dailyActivity, [])
 })
 
 test('admin dashboard repository rejects unsupported ranges', async () => {
