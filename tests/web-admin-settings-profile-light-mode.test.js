@@ -32,7 +32,7 @@ test('admin settings profile exposes editable approved coach profile fields with
 
   assert.match(profileSource, /htmlFor="admin-profile-first-name" label="First name"/)
   assert.match(profileSource, /htmlFor="admin-profile-last-name" label="Last name"/)
-  assert.match(profileSource, /htmlFor="admin-profile-phone" label="Phone number"/)
+  assert.match(profileSource, /htmlFor="admin-profile-phone" label="Phone number" className="md:col-span-2"/)
   assert.match(profileSource, /type="tel"/)
   assert.match(uploaderSource, /Change avatar/)
   assert.match(uploaderSource, /type="file"/)

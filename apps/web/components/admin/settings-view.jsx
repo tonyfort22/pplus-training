@@ -39,9 +39,9 @@ function CreateAthleteDialogField({ htmlFor, label, children }) {
   )
 }
 
-function SettingsProfileField({ htmlFor, label, children }) {
+function SettingsProfileField({ htmlFor, label, children, className = '' }) {
   return (
-    <div className="grid gap-2">
+    <div className={`grid gap-2 ${className}`.trim()}>
       <label className="text-sm font-medium text-[var(--admin-shell-text)]" htmlFor={htmlFor}>
         {label}
       </label>
@@ -255,7 +255,7 @@ function AdminSettingsProfileView() {
             onChange={(event) => handleDraftChange('lastName', event.target.value)}
           />
         </SettingsProfileField>
-        <SettingsProfileField htmlFor="admin-profile-phone" label="Phone number">
+        <SettingsProfileField htmlFor="admin-profile-phone" label="Phone number" className="md:col-span-2">
           <Input
             id="admin-profile-phone"
             type="tel"
