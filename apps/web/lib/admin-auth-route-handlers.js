@@ -25,6 +25,22 @@ function routeErrorResponse(error, fallbackMessage = 'Unknown admin auth route e
   )
 }
 
+function requireLoginPayload(body) {
+  if (!String(body?.email || '').trim() || !String(body?.password || '').trim()) {
+    const error = new Error('Email and password are required.')
+    error.status = 400
+    throw error
+  }
+}
+
+function requireEmailPayload(body) {
+  if (!String(body?.email || '').trim()) {
+    const error = new Error('Email is required.')
+    error.status = 400
+    throw error
+  }
+}
+
 function requireResetPayload(body) {
   if (!String(body?.accessToken || '').trim() || !String(body?.password || '').trim()) {
     const error = new Error('Recovery token and password are required.')
@@ -41,6 +57,7 @@ export function createAdminAuthRouteHandlers(options = {}) {
     async login(request) {
       try {
         const body = await readJsonBody(request)
+        requireLoginPayload(body)
         const repository = createRepository()
         const session = await repository.signInAdminWithPassword({
           email: body?.email,
@@ -63,6 +80,7 @@ export function createAdminAuthRouteHandlers(options = {}) {
     async forgotPassword(request) {
       try {
         const body = await readJsonBody(request)
+        requireEmailPayload(body)
         const repository = createRepository()
         await repository.requestPasswordReset({
           email: body?.email,

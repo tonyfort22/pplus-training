@@ -62,6 +62,22 @@ test('login route rejects invalid JSON with a 400', async () => {
   assert.deepEqual(await readPayload(response), { error: 'Invalid JSON request body.' })
 })
 
+test('login route rejects missing credentials before creating the Supabase repository', async () => {
+  const handlers = createAdminAuthRouteHandlers({
+    createRepository: () => {
+      throw new Error('Repository should not be created for invalid login payloads')
+    },
+  })
+
+  const response = await handlers.login(jsonRequest('/api/admin/auth/login', {
+    email: '',
+    password: '',
+  }))
+
+  assert.equal(response.status, 400)
+  assert.deepEqual(await readPayload(response), { error: 'Email and password are required.' })
+})
+
 test('login route sets admin auth cookies and returns the admin redirect', async () => {
   const calls = []
   const handlers = createAdminAuthRouteHandlers({
@@ -155,6 +171,21 @@ test('forgot-password route sends reset email using an absolute reset URL and sa
     email: 'coach@example.com',
     redirectTo: 'https://admin.pplus.test/admin/reset-password',
   }])
+})
+
+test('forgot-password route rejects missing email before creating the Supabase repository', async () => {
+  const handlers = createAdminAuthRouteHandlers({
+    createRepository: () => {
+      throw new Error('Repository should not be created for invalid forgot-password payloads')
+    },
+  })
+
+  const response = await handlers.forgotPassword(jsonRequest('/api/admin/auth/forgot-password', {
+    email: '',
+  }))
+
+  assert.equal(response.status, 400)
+  assert.deepEqual(await readPayload(response), { error: 'Email is required.' })
 })
 
 test('reset-password route rejects missing payload and updates password with a recovery token', async () => {

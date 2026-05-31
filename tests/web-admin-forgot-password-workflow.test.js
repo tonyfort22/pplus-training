@@ -22,7 +22,7 @@ test('admin forgot-password page renders the auth shell and posts to the forgot-
   assert.match(copySource, /Retour à la connexion/)
 
   assert.match(pageSource, /normalizePublicLanguage\(resolvedSearchParams\?\.lang\)/)
-  assert.match(pageSource, /const forgotCopy = copy\.login\.forgot/)
+  assert.match(pageSource, /const forgotCopy = copy\.login\.form\.forgot/)
   assert.match(pageSource, /className="admin-login-pattern"/)
   assert.match(pageSource, /className="admin-auth-frame"/)
   assert.match(pageSource, /<AdminForgotPasswordForm forgotCopy=\{forgotCopy\} language=\{language\}/)

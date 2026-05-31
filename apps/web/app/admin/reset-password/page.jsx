@@ -9,7 +9,7 @@ export default async function ResetPasswordPage({ searchParams }) {
   const language = normalizePublicLanguage(resolvedSearchParams?.lang)
   const copy = getPublicPageCopy(language)
   const loginCopy = copy.login
-  const resetCopy = copy.login.reset
+  const resetCopy = copy.login.form.reset
 
   return (
     <AdminPageShell>

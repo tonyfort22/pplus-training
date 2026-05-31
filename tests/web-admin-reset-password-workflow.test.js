@@ -21,7 +21,7 @@ test('admin reset-password page handles Supabase recovery hash tokens in a clien
   assert.match(copySource, /Create a new password/)
   assert.match(copySource, /Créer un nouveau mot de passe/)
 
-  assert.match(pageSource, /const resetCopy = copy\.login\.reset/)
+  assert.match(pageSource, /const resetCopy = copy\.login\.form\.reset/)
   assert.match(pageSource, /className="admin-login-pattern"/)
   assert.match(pageSource, /className="admin-auth-frame"/)
   assert.match(pageSource, /<AdminResetPasswordForm resetCopy=\{resetCopy\} language=\{language\}/)

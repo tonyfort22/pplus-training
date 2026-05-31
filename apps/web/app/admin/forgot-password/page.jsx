@@ -9,7 +9,7 @@ export default async function ForgotPasswordPage({ searchParams }) {
   const language = normalizePublicLanguage(resolvedSearchParams?.lang)
   const copy = getPublicPageCopy(language)
   const loginCopy = copy.login
-  const forgotCopy = copy.login.forgot
+  const forgotCopy = copy.login.form.forgot
 
   return (
     <AdminPageShell>
