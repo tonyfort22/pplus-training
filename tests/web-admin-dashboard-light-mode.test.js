@@ -1,0 +1,59 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const cssPath = resolve(repoRoot, 'apps/web/app/globals.css')
+const cardPath = resolve(repoRoot, 'apps/web/components/ui/card.jsx')
+const chartPath = resolve(repoRoot, 'apps/web/components/ui/chart.jsx')
+const selectPath = resolve(repoRoot, 'apps/web/components/ui/select.jsx')
+const dashboardPath = resolve(repoRoot, 'apps/web/components/admin/dashboard-overview.jsx')
+
+test('admin dashboard overview body uses light-mode theme tokens for cards charts and controls', () => {
+  const cssSource = readFileSync(cssPath, 'utf8')
+  const cardSource = readFileSync(cardPath, 'utf8')
+  const chartSource = readFileSync(chartPath, 'utf8')
+  const selectSource = readFileSync(selectPath, 'utf8')
+  const dashboardSource = readFileSync(dashboardPath, 'utf8')
+
+  assert.match(cssSource, /html\[data-theme='light'\]\s*\{[^}]*--admin-shell-bg:\s*#F8FAFC;[^}]*--admin-dashboard-card-bg:\s*#ffffff;[^}]*--admin-dashboard-card-text:\s*#0f172a;[^}]*--admin-dashboard-card-muted:\s*#64748b;[^}]*--admin-dashboard-chart-grid:\s*#e2e8f0;[^}]*--admin-dashboard-chart-header-divider:\s*#F8FAFC;/)
+  assert.match(cssSource, /html\[data-theme='dark'\]\s*\{[^}]*--admin-dashboard-card-bg:\s*#0e1828;[^}]*--admin-dashboard-card-text:\s*#eef4ff;[^}]*--admin-dashboard-card-muted:\s*#8ea0bc;[^}]*--admin-dashboard-chart-grid:\s*#24334a;[^}]*--admin-dashboard-chart-header-divider:\s*#24334a;/)
+
+  assert.match(cssSource, /\.admin-shell-workspace\s*\{[^}]*background:\s*var\(--admin-shell-bg\);/)
+  assert.match(cssSource, /\.admin-shell-workspace-title\s*\{[^}]*color:\s*var\(--admin-dashboard-card-text\);/)
+  assert.doesNotMatch(cssSource, /\.admin-shell-overview-range-button\s*\{/)
+  assert.doesNotMatch(cssSource, /\.admin-shell-overview-range-menu\s*\{/)
+  assert.doesNotMatch(cssSource, /\.admin-shell-overview-range-option-active\s*\{/)
+
+  assert.match(selectSource, /border-\[color:var\(--admin-dashboard-card-border\)\]/)
+  assert.match(selectSource, /borderColor:\s*'var\(--admin-dashboard-card-border\)'/)
+  assert.match(selectSource, /bg-\[var\(--admin-dashboard-control-bg\)\]/)
+  assert.match(selectSource, /text-\[var\(--admin-dashboard-card-text\)\]/)
+  assert.match(selectSource, /bg-\[var\(--admin-dashboard-card-bg\)\]/)
+  assert.match(selectSource, /data-\[highlighted\]:bg-\[var\(--admin-shell-nav-active-bg\)\]/)
+  assert.match(selectSource, /data-\[highlighted\]:text-\[var\(--admin-shell-nav-active-text\)\]/)
+  assert.match(selectSource, /bg-\[#F8FAFC\]/)
+  assert.doesNotMatch(selectSource, /border-\[#24334A\]|bg-\[#111D30\]|text-\[#DCE6F8\]|focus:bg-\[#15233A\]/)
+
+  assert.match(cardSource, /border-\[var\(--admin-dashboard-card-border\)\]/)
+  assert.match(cardSource, /text-\[var\(--admin-dashboard-card-text\)\]/)
+  assert.match(cardSource, /backgroundColor:\s*'var\(--admin-dashboard-card-bg\)'/)
+  assert.match(cardSource, /backgroundImage:\s*'var\(--admin-dashboard-card-gradient\)'/)
+  assert.match(cardSource, /text-\[var\(--admin-dashboard-card-muted\)\]/)
+  assert.doesNotMatch(cardSource, /border-\[#24334A\]|text-\[#EEF4FF\]|text-\[#8EA0BC\]/)
+
+  assert.match(chartSource, /bg-\[var\(--admin-dashboard-tooltip-bg\)\]/)
+  assert.match(chartSource, /border-\[var\(--admin-dashboard-tooltip-border\)\]/)
+  assert.match(chartSource, /text-\[var\(--admin-dashboard-card-text\)\]/)
+  assert.match(chartSource, /text-\[var\(--admin-dashboard-card-muted\)\]/)
+  assert.doesNotMatch(chartSource, /bg-\[#0a101d\]|border-\[#30405e\]|text-\[#eef4ff\]|text-\[#7f91af\]/)
+
+  assert.match(dashboardSource, /stroke="var\(--admin-dashboard-chart-grid\)"/)
+  assert.match(dashboardSource, /fill:\s*'var\(--admin-dashboard-chart-tick\)'/)
+  assert.match(dashboardSource, /border-b border-\[var\(--admin-dashboard-chart-header-divider\)\]/)
+  assert.match(dashboardSource, /text-\[var\(--admin-dashboard-card-text\)\]/)
+  assert.match(dashboardSource, /text-\[var\(--admin-dashboard-card-muted\)\]/)
+  assert.doesNotMatch(dashboardSource, /stroke="#24334A"|stroke="#24334a"/)
+})

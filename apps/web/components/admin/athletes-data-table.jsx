@@ -187,10 +187,10 @@ function StatusCell({ status }) {
   const tone = status === 'Inactive' ? 'danger' : status === 'Active' ? 'success' : 'warning'
   const className =
     status === 'Inactive'
-      ? 'border-transparent bg-red-500/15 text-red-300 hover:bg-red-500/20 normal-case tracking-normal'
+      ? 'admin-shell-athletes-status-badge admin-shell-athletes-status-badge-inactive normal-case tracking-normal'
       : status === 'Active'
-        ? 'border-transparent bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/20 normal-case tracking-normal'
-        : 'border-transparent bg-amber-500/15 text-amber-300 hover:bg-amber-500/20 normal-case tracking-normal'
+        ? 'admin-shell-athletes-status-badge admin-shell-athletes-status-badge-active normal-case tracking-normal'
+        : 'admin-shell-athletes-status-badge admin-shell-athletes-status-badge-pending normal-case tracking-normal'
 
   return (
     <Badge tone={tone} className={className}>
@@ -251,7 +251,7 @@ function RowActionsCell({
 function CreateAthleteDialogField({ htmlFor, label, children }) {
   return (
     <div className="grid gap-2">
-      <label className="text-sm font-medium text-[#DCE6F8]" htmlFor={htmlFor}>
+      <label className="text-sm font-medium text-[var(--admin-dashboard-card-text)]" htmlFor={htmlFor}>
         {label}
       </label>
       {children}
@@ -268,19 +268,19 @@ function CreateAthletePhotoUploader({
   const hasPreview = Boolean(previewSrc)
 
   return (
-    <label className="admin-shell-athletes-create-uploader relative flex w-full cursor-pointer flex-col items-center justify-center gap-4 px-6 py-2 text-center transition-colors hover:text-[#EEF4FF]">
+    <label className="admin-shell-athletes-create-uploader relative flex w-full cursor-pointer flex-col items-center justify-center gap-4 px-6 py-2 text-center transition-colors hover:text-[var(--admin-shell-text-strong)]">
       <div className="relative h-[120px] w-[120px] self-center">
         {hasPreview ? (
           <>
             <img
               alt={athleteName || 'Athlete avatar'}
-              className="h-full w-full rounded-[360px] border !border-[#24334A] bg-[#0F1728] text-lg font-semibold text-[#DCE6F8] object-cover"
+              className="h-full w-full rounded-[360px] border !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] text-lg font-semibold text-[var(--admin-dashboard-card-text)] object-cover"
               src={previewSrc}
             />
             <button
               type="button"
               aria-label="Remove uploaded avatar"
-              className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full border !border-[#24334A] bg-[#111D30] text-sm font-medium text-[#EEF4FF] shadow-[0_6px_18px_rgba(0,0,0,0.28)] transition-colors hover:bg-[#15233A]"
+              className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full border !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-sm font-medium text-[var(--admin-shell-text-strong)] shadow-[0_6px_18px_rgba(0,0,0,0.28)] transition-colors hover:bg-[var(--admin-dashboard-control-hover-bg)]"
               onClick={(event) => {
                 event.preventDefault()
                 event.stopPropagation()
@@ -291,7 +291,7 @@ function CreateAthletePhotoUploader({
             </button>
           </>
         ) : (
-          <div className="flex h-full w-full items-center justify-center rounded-[360px] border border-dashed border-[#2B3D57] bg-[#0D1625] text-[#8EA0BC]">
+          <div className="admin-shell-athletes-create-uploader-empty flex h-full w-full items-center justify-center rounded-[360px]">
             <svg viewBox="0 0 24 24" aria-hidden="true" className="h-9 w-9">
               <circle cx="12" cy="8" r="3.25" fill="none" stroke="currentColor" strokeWidth="1.6" />
               <path
@@ -306,8 +306,8 @@ function CreateAthletePhotoUploader({
         )}
       </div>
       <div className="space-y-1">
-        <p className="text-[17px] font-medium text-[#EEF4FF]">{hasPreview ? 'Avatar uploaded' : 'Upload avatar'}</p>
-        <p className="text-sm text-[#8EA0BC]">PNG, JPG up to 2MB</p>
+        <p className="text-[17px] font-medium text-[var(--admin-shell-text-strong)]">{hasPreview ? 'Avatar uploaded' : 'Upload avatar'}</p>
+        <p className="text-sm text-[var(--admin-dashboard-card-muted)]">PNG, JPG up to 2MB</p>
       </div>
       <input className="sr-only" type="file" accept="image/*" onChange={onFileChange} />
     </label>
@@ -335,6 +335,9 @@ function parseAthleteDateValue(value) {
   return Number.isNaN(parsedDate.getTime()) ? null : parsedDate.getTime()
 }
 
+const athleteFilterRangeInputClassName = 'h-8 w-28 !border-0 bg-[var(--admin-dashboard-card-bg)] text-[var(--admin-dashboard-card-text)] shadow-none placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:!border-0 focus-visible:ring-0'
+const athleteFilterRangeSeparatorClassName = 'text-xs text-[var(--admin-dashboard-card-muted)]'
+
 function AthleteRangeFilterValue({
   values = [],
   onChange = () => {},
@@ -355,15 +358,15 @@ function AthleteRangeFilterValue({
           value={firstValue}
           onChange={(event) => onChange([event.target.value, secondValue])}
           placeholder={startPlaceholder}
-className="h-8 w-28 !border-0 bg-[#0F1728] text-[#DCE6F8] shadow-none placeholder:text-[#70809E] focus-visible:!border-0 focus-visible:ring-0"
+          className={athleteFilterRangeInputClassName}
         />
-        <span className="text-xs text-[#8EA0BC]">to</span>
+        <span className={athleteFilterRangeSeparatorClassName}>to</span>
         <Input
           type={type}
           value={secondValue}
           onChange={(event) => onChange([firstValue, event.target.value])}
           placeholder={endPlaceholder}
-className="h-8 w-28 !border-0 bg-[#0F1728] text-[#DCE6F8] shadow-none placeholder:text-[#70809E] focus-visible:!border-0 focus-visible:ring-0"
+          className={athleteFilterRangeInputClassName}
         />
       </div>
     )
@@ -375,7 +378,7 @@ className="h-8 w-28 !border-0 bg-[#0F1728] text-[#DCE6F8] shadow-none placeholde
       value={firstValue}
       onChange={(event) => onChange([event.target.value])}
       placeholder={singleValuePlaceholder}
-className="h-8 w-28 !border-0 bg-[#0F1728] text-[#DCE6F8] shadow-none placeholder:text-[#70809E] focus-visible:!border-0 focus-visible:ring-0"
+          className={athleteFilterRangeInputClassName}
     />
   )
 }
@@ -1038,7 +1041,7 @@ export function AthletesDataTable({ searchQuery = '' }) {
               setSendAthleteInvite(true)
               setIsCreateEditAthleteDialogOpen(true)
             }}
-            className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d] md:self-auto"
+            className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[var(--admin-shell-accent)] text-[#0B1120] hover:bg-[var(--admin-shell-accent)] md:self-auto"
           >
             Create athlete
           </Button>
@@ -1052,7 +1055,7 @@ export function AthletesDataTable({ searchQuery = '' }) {
               <Button
                 type="button"
                 variant="outline"
-                className="rounded-[12px] min-h-[40px] !border !border-[#24334A] bg-transparent text-[#DCE6F8] shadow-none hover:bg-[#15233A] hover:text-[#EEF4FF]"
+                className="admin-shell-athletes-filter-trigger rounded-[12px] min-h-[40px] shadow-none"
               >
                 <Plus className="size-4" />
                 Add filter
@@ -1072,9 +1075,9 @@ export function AthletesDataTable({ searchQuery = '' }) {
       }} modal={false}>
         <DialogContent
           pageScrollable
-          className="admin-shell-athletes-invite-dialog border !border-[#24334A] bg-[#0F1728] p-0 text-[#DCE6F8] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[720px]"
+          className="admin-shell-athletes-invite-dialog border !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] sm:max-w-[720px]"
         >
-          <div className="shrink-0 border-b !border-[#24334A] px-6 py-5">
+          <div className="shrink-0 border-b !border-[color:var(--admin-dashboard-card-border)] px-6 py-5">
             <DialogHeader>
               <DialogTitle>{athleteDialogMode === 'edit' ? 'Edit athlete profile' : 'Create athlete profile'}</DialogTitle>
               <DialogDescription>
@@ -1097,7 +1100,7 @@ export function AthletesDataTable({ searchQuery = '' }) {
               <CreateAthleteDialogField htmlFor="create-athlete-first-name" label="First name">
                 <Input
                   id="create-athlete-first-name"
-                  className="h-11 rounded-[12px] !border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
+                  className="h-11 rounded-[12px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:ring-[var(--admin-shell-accent)]/20"
                   placeholder="First name"
                   value={createAthleteFirstName}
                   onChange={(event) => setCreateAthleteFirstName(event.target.value)}
@@ -1106,7 +1109,7 @@ export function AthletesDataTable({ searchQuery = '' }) {
               <CreateAthleteDialogField htmlFor="create-athlete-last-name" label="Last name">
                 <Input
                   id="create-athlete-last-name"
-                  className="h-11 rounded-[12px] !border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
+                  className="h-11 rounded-[12px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:ring-[var(--admin-shell-accent)]/20"
                   placeholder="Last name"
                   value={createAthleteLastName}
                   onChange={(event) => setCreateAthleteLastName(event.target.value)}
@@ -1120,7 +1123,7 @@ export function AthletesDataTable({ searchQuery = '' }) {
                 type="date"
                 value={createAthleteDateOfBirth}
                 onChange={(event) => setCreateAthleteDateOfBirth(event.target.value)}
-                className="h-11 rounded-[12px] !border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-80"
+                className="h-11 rounded-[12px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:ring-[var(--admin-shell-accent)]/20 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-80"
               />
             </CreateAthleteDialogField>
 
@@ -1166,7 +1169,7 @@ export function AthletesDataTable({ searchQuery = '' }) {
                   <CreateAthleteDialogField htmlFor="create-athlete-height-imperial" label="Height">
                     <Input
                       id="create-athlete-height-imperial"
-                      className="h-11 rounded-[12px] !border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
+                      className="h-11 rounded-[12px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:ring-[var(--admin-shell-accent)]/20"
                       placeholder={`5' 11\"`}
                       value={createAthleteHeightImperial}
                       onChange={(event) => setCreateAthleteHeightImperial(event.target.value)}
@@ -1175,7 +1178,7 @@ export function AthletesDataTable({ searchQuery = '' }) {
                   <CreateAthleteDialogField htmlFor="create-athlete-weight-imperial" label="Weight">
                     <Input
                       id="create-athlete-weight-imperial"
-                      className="h-11 rounded-[12px] !border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
+                      className="h-11 rounded-[12px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:ring-[var(--admin-shell-accent)]/20"
                       placeholder="185 lb"
                       value={createAthleteWeightImperial}
                       onChange={(event) => setCreateAthleteWeightImperial(event.target.value)}
@@ -1183,8 +1186,9 @@ export function AthletesDataTable({ searchQuery = '' }) {
                   </CreateAthleteDialogField>
                 </div>
                 {athleteDialogMode === 'create' ? (
-                  <label className="flex items-center gap-3 text-sm font-medium text-[#DCE6F8]">
+                  <label className="flex items-center gap-3 text-sm font-medium text-[var(--admin-dashboard-card-text)]">
                     <Checkbox
+                      className="admin-shell-athletes-checkbox-input"
                       checked={sendAthleteInvite}
                       onChange={(event) => setSendAthleteInvite(event.target.checked)}
                     />
@@ -1197,7 +1201,7 @@ export function AthletesDataTable({ searchQuery = '' }) {
                   <CreateAthleteDialogField htmlFor="create-athlete-height-metric" label="Height">
                     <Input
                       id="create-athlete-height-metric"
-                      className="h-11 rounded-[12px] !border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
+                      className="h-11 rounded-[12px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:ring-[var(--admin-shell-accent)]/20"
                       placeholder="180 cm"
                       value={createAthleteHeightMetric}
                       onChange={(event) => setCreateAthleteHeightMetric(event.target.value)}
@@ -1206,7 +1210,7 @@ export function AthletesDataTable({ searchQuery = '' }) {
                   <CreateAthleteDialogField htmlFor="create-athlete-weight-metric" label="Weight">
                     <Input
                       id="create-athlete-weight-metric"
-                      className="h-11 rounded-[12px] !border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
+                      className="h-11 rounded-[12px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:ring-[var(--admin-shell-accent)]/20"
                       placeholder="84 kg"
                       value={createAthleteWeightMetric}
                       onChange={(event) => setCreateAthleteWeightMetric(event.target.value)}
@@ -1214,8 +1218,9 @@ export function AthletesDataTable({ searchQuery = '' }) {
                   </CreateAthleteDialogField>
                 </div>
                 {athleteDialogMode === 'create' ? (
-                  <label className="flex items-center gap-3 text-sm font-medium text-[#DCE6F8]">
+                  <label className="flex items-center gap-3 text-sm font-medium text-[var(--admin-dashboard-card-text)]">
                     <Checkbox
+                      className="admin-shell-athletes-checkbox-input"
                       checked={sendAthleteInvite}
                       onChange={(event) => setSendAthleteInvite(event.target.checked)}
                     />
@@ -1231,7 +1236,7 @@ export function AthletesDataTable({ searchQuery = '' }) {
                 <Input
                   id="create-athlete-invite-email"
                   type="email"
-                  className="h-11 rounded-[12px] !border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
+                  className="h-11 rounded-[12px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:ring-[var(--admin-shell-accent)]/20"
                   placeholder="athlete@email.com"
                   value={createAthleteInviteEmail}
                   onChange={(event) => setCreateAthleteInviteEmail(event.target.value)}
@@ -1241,18 +1246,18 @@ export function AthletesDataTable({ searchQuery = '' }) {
             ) : null}
           </div>
 
-          <DialogFooter className="border-t !border-[#24334A] px-6 py-5 sm:justify-end gap-3">
+          <DialogFooter className="border-t !border-[color:var(--admin-dashboard-card-border)] px-6 py-5 sm:justify-end gap-3">
             <Button
               type="button"
               variant="outline"
-              className="rounded-[12px] min-h-[40px] !border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
+              className="rounded-[12px] min-h-[40px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-shell-text-strong)]"
               onClick={() => setIsCreateEditAthleteDialogOpen(false)}
             >
               Cancel
             </Button>
             <Button
               type="button"
-              className="admin-shell-athletes-create-submit rounded-[12px] min-h-[40px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]"
+              className="admin-shell-athletes-create-submit rounded-[12px] min-h-[40px] bg-[var(--admin-shell-accent)] text-[#0B1120] hover:bg-[var(--admin-shell-accent)]"
               onClick={handleCreateEditAthleteSubmit}
               disabled={isSavingAthlete}
             >
@@ -1269,8 +1274,8 @@ export function AthletesDataTable({ searchQuery = '' }) {
           setInviteAthleteEmail('')
         }
       }}>
-        <DialogContent className="admin-shell-athletes-invite-dialog border !border-[#24334A] bg-[#0F1728] p-0 text-[#DCE6F8] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[560px]">
-          <div className="border-b !border-[#24334A] px-6 py-5">
+        <DialogContent className="admin-shell-athletes-invite-dialog border !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] sm:max-w-[560px]">
+          <div className="border-b !border-[color:var(--admin-dashboard-card-border)] px-6 py-5">
             <DialogHeader>
               <DialogTitle>{inviteDialogAthlete?.hasInvite ? 'Resend invite' : 'Invite an athlete'}</DialogTitle>
               <DialogDescription>Bring a coach-managed athlete into the workspace{inviteDialogAthlete?.name ? ' for ' + inviteDialogAthlete.name : ''}.</DialogDescription>
@@ -1279,12 +1284,12 @@ export function AthletesDataTable({ searchQuery = '' }) {
 
           <div className="grid gap-5 px-6 py-6">
             <div className="grid gap-2">
-              <label className="text-sm font-medium text-[#DCE6F8]" htmlFor="invite-athlete-email">
+              <label className="text-sm font-medium text-[var(--admin-dashboard-card-text)]" htmlFor="invite-athlete-email">
                 Email address
               </label>
               <input
                 id="invite-athlete-email"
-                className="h-11 rounded-[12px] border !border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] outline-none placeholder:text-[#70809E] focus:border-[#3BE0AF]"
+                className="h-11 rounded-[12px] border !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] outline-none placeholder:text-[var(--admin-dashboard-card-muted)] focus:border-[var(--admin-shell-accent)]"
                 placeholder="athlete@email.com"
                 type="email"
                 value={inviteAthleteEmail}
@@ -1293,18 +1298,18 @@ export function AthletesDataTable({ searchQuery = '' }) {
             </div>
           </div>
 
-          <DialogFooter className="border-t !border-[#24334A] px-6 py-5 sm:justify-end gap-3">
+          <DialogFooter className="border-t !border-[color:var(--admin-dashboard-card-border)] px-6 py-5 sm:justify-end gap-3">
             <Button
               type="button"
               variant="outline"
-              className="rounded-[12px] min-h-[40px] !border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
+              className="rounded-[12px] min-h-[40px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-shell-text-strong)]"
               onClick={() => setIsInviteDialogOpen(false)}
             >
               Cancel
             </Button>
             <Button
               type="button"
-              className="rounded-[12px] min-h-[40px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]"
+              className="rounded-[12px] min-h-[40px] bg-[var(--admin-shell-accent)] text-[#0B1120] hover:bg-[var(--admin-shell-accent)]"
               disabled={isSendingRowInvite}
               onClick={() => {
                 void handleSendAthleteInvite(inviteDialogAthleteId, inviteAthleteEmail)
@@ -1320,7 +1325,7 @@ export function AthletesDataTable({ searchQuery = '' }) {
       </Dialog>
 
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="admin-shell-athletes-invite-dialog border !border-[#24334A] bg-[#0F1728] p-0 text-[#DCE6F8] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[560px]">
+        <DialogContent className="admin-shell-athletes-invite-dialog border !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] sm:max-w-[560px]">
           <div className="px-6 py-5">
             <DialogHeader>
               <DialogTitle>Delete athlete</DialogTitle>
@@ -1328,11 +1333,11 @@ export function AthletesDataTable({ searchQuery = '' }) {
             </DialogHeader>
           </div>
 
-          <DialogFooter className="border-t !border-[#24334A] px-6 py-5 sm:justify-end gap-3">
+          <DialogFooter className="border-t !border-[color:var(--admin-dashboard-card-border)] px-6 py-5 sm:justify-end gap-3">
             <Button
               type="button"
               variant="outline"
-              className="rounded-[12px] min-h-[40px] !border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
+              className="rounded-[12px] min-h-[40px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-shell-text-strong)]"
               onClick={() => setIsDeleteDialogOpen(false)}
             >
               Cancel
@@ -1418,7 +1423,7 @@ export function AthletesDataTable({ searchQuery = '' }) {
               ))
             ) : (
               <TableRow className="admin-shell-athletes-row-even">
-                <TableCell colSpan={columns.length} className="py-10 text-center text-[#8EA0BC]">
+                <TableCell colSpan={columns.length} className="admin-shell-athletes-empty-state py-10 text-center">
                   {emptyStateMessage}
                 </TableCell>
               </TableRow>
@@ -1427,10 +1432,10 @@ export function AthletesDataTable({ searchQuery = '' }) {
         </Table>
       </div>
 
-      <div className="flex items-center justify-end gap-3 py-4 text-sm text-[#8EA0BC]">
+      <div className="admin-shell-athletes-pagination-bar flex items-center justify-end gap-3 py-4 text-sm">
         <span>Rows per page</span>
         <Select value={String(pagination.pageSize)} onValueChange={(value) => table.setPageSize(Number(value))}>
-          <SelectTrigger className="h-9 w-[76px] rounded-[10px] !border-[#24334A] bg-[#111D30] px-3 text-sm text-[#DCE6F8]">
+          <SelectTrigger className="h-9 w-[76px] rounded-[10px] px-3 text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -1453,7 +1458,7 @@ export function AthletesDataTable({ searchQuery = '' }) {
           <button
             key={`page-${pageNumber}`}
             type="button"
-            className={`admin-shell-athletes-example-pagination-button ${pagination.pageIndex === pageNumber ? 'bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]' : ''}`}
+            className={`admin-shell-athletes-example-pagination-button ${pagination.pageIndex === pageNumber ? 'admin-shell-athletes-example-pagination-button-active' : ''}`}
             onClick={() => table.setPageIndex(pageNumber)}
           >
             {pageNumber + 1}

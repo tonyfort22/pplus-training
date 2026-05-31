@@ -585,7 +585,7 @@ function parseScheduledDate(dateValue) {
 
 function mapAssignmentRowToCalendarEvent(row) {
   const template = getTemplateById(row.workout_template_id)
-  const resolvedScheduledDate = row.scheduled_date ?? row.program_days?.date ?? null
+  const resolvedScheduledDate = row.program_days?.date ?? row.scheduled_date ?? null
   const resolvedTrainingType = row.workout_templates?.training_type ?? row.training_type ?? template?.trainingType ?? 'Workout'
   const resolvedTypeColors = getWorkoutTypeColors(resolvedTrainingType)
 
@@ -747,7 +747,7 @@ function DraggableWeekEventCard({ event, onOpenEventDialog }) {
       }}
       type="button"
       aria-label="Open event editor"
-      className="grid h-full w-full min-w-0 cursor-grab touch-none select-none gap-1 rounded-[12px] border px-3 py-2 text-left shadow-[0_8px_18px_rgba(0,0,0,0.14)] transition-all hover:-translate-y-[1px] hover:opacity-95 active:cursor-grabbing"
+      className="grid h-full w-full min-w-0 cursor-grab touch-none select-none gap-1 rounded-[12px] border px-3 py-2 text-left transition-all hover:-translate-y-[1px] hover:opacity-95 active:cursor-grabbing"
       onClick={() => onOpenEventDialog(event.id)}
       {...draggable.listeners}
       {...draggable.attributes}
@@ -767,7 +767,7 @@ function WeekSlotDropZone({ slotId, children }) {
       data-week-slot={slotId}
       className={[
         'min-h-[92px] rounded-[16px] transition-colors',
-        droppable.isOver ? 'bg-[#15233A]' : '',
+        droppable.isOver ? 'bg-[var(--admin-dashboard-control-hover-bg)]' : '',
       ].join(' ')}
     >
       {children}
@@ -780,7 +780,7 @@ function EventOverlayCard({ event }) {
 
   return (
     <div
-      className="grid min-w-[180px] gap-1 rounded-[16px] border px-3 py-3 text-left shadow-[0_14px_28px_rgba(0,0,0,0.28)]"
+      className="grid min-w-[180px] gap-1 rounded-[16px] border px-3 py-3 text-left"
       style={getEventCardStyle(event)}
     >
       <div className="text-xs font-semibold uppercase tracking-[0.12em]">{event.startHour}</div>
@@ -814,7 +814,7 @@ function DraggableMonthEventCard({ event, onOpenEventDialog }) {
         transform,
         opacity: draggable.isDragging ? 0.55 : 1,
       }}
-      className="grid min-h-[44px] w-full min-w-0 cursor-grab touch-none select-none gap-1 rounded-[10px] border px-2 py-1.5 text-left text-[11px] leading-[1.25] shadow-[0_6px_18px_rgba(0,0,0,0.16)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#3BE0AF] active:cursor-grabbing"
+      className="grid min-h-[44px] w-full min-w-0 cursor-grab touch-none select-none gap-1 rounded-[10px] border px-2 py-1.5 text-left text-[11px] leading-[1.25] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#3BE0AF] active:cursor-grabbing"
       onClick={() => onOpenEventDialog(event.id)}
       {...draggable.listeners}
       {...draggable.attributes}
@@ -837,7 +837,7 @@ function MonthDayDropZone({ slotId, children }) {
       data-month-slot={slotId}
       className={[
         'grid min-h-0 rounded-[12px] transition-colors',
-        droppable.isOver ? 'bg-[#15233A]' : '',
+        droppable.isOver ? 'bg-[var(--admin-dashboard-control-hover-bg)]' : '',
       ].join(' ')}
     >
       {children}
@@ -851,7 +851,7 @@ function StaticEventCard({ event, onOpenEventDialog }) {
       type="button"
       aria-label="Open event editor"
       data-week-event={event.id}
-      className="grid min-h-[44px] w-full min-w-0 gap-1 rounded-[10px] border px-2 py-1.5 text-left text-[11px] leading-[1.25] shadow-[0_6px_18px_rgba(0,0,0,0.16)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#3BE0AF]"
+      className="grid min-h-[44px] w-full min-w-0 gap-1 rounded-[10px] border px-2 py-1.5 text-left text-[11px] leading-[1.25] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#3BE0AF]"
       style={getEventCardStyle(event)}
       onClick={() => onOpenEventDialog(event.id)}
     >
@@ -868,12 +868,12 @@ function renderMonthGrid(selectedDate, scheduledEvents, openEventDialog, openMon
   const cells = createCalendarCells(selectedDate)
 
   return (
-    <div className="overflow-x-auto rounded-[18px] border border-[#24334A] bg-[#111827]">
+    <div className="overflow-x-auto rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)]">
       <div className="min-w-[840px] lg:min-w-[720px]">
-        <div className="grid grid-cols-7 divide-x divide-[#24334A] border-b border-[#24334A]">
+        <div className="grid grid-cols-7 divide-x divide-[var(--admin-dashboard-card-border)] border-b border-[var(--admin-dashboard-card-border)]">
           {WEEK_DAYS.map((day) => (
             <div key={day} className="flex items-center justify-center py-2">
-              <span className="text-xs font-medium text-[#8EA0BC]">{day}</span>
+              <span className="text-xs font-medium text-[var(--admin-dashboard-card-muted)]">{day}</span>
             </div>
           ))}
         </div>
@@ -887,14 +887,14 @@ function renderMonthGrid(selectedDate, scheduledEvents, openEventDialog, openMon
 
             return (
               <MonthDayDropZone key={cell.date.toISOString()} slotId={slotId}>
-                <div className={['flex min-h-[128px] flex-col gap-1 border-l border-t border-[#24334A] py-1.5 lg:pb-2 lg:pt-1', cell.date.getDay() === 0 ? 'border-l-0' : ''].join(' ')}>
+                <div className={['flex min-h-[128px] flex-col gap-1 border-l border-t border-[var(--admin-dashboard-card-border)] py-1.5 lg:pb-2 lg:pt-1', cell.date.getDay() === 0 ? 'border-l-0' : ''].join(' ')}>
                   <button
                     type="button"
                     onClick={() => openMonthOverflow(cell.date)}
                     className={[
-                      'flex h-6 w-6 translate-x-1 items-center justify-center rounded-full text-xs font-semibold hover:bg-[#15233A] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#3BE0AF] lg:px-2',
+                      'flex h-6 w-6 translate-x-1 items-center justify-center rounded-full text-xs font-semibold hover:bg-[var(--admin-dashboard-control-hover-bg)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#3BE0AF] lg:px-2',
                       !cell.currentMonth ? 'opacity-20' : '',
-                      isToday ? 'bg-[#3BE0AF] font-bold text-[#0B1120] hover:bg-[#3BE0AF]' : 'text-[#EEF4FF]',
+                      isToday ? 'bg-[#3BE0AF] font-bold text-[#0B1120] hover:bg-[#3BE0AF]' : 'text-[var(--admin-dashboard-card-text)]',
                     ].join(' ')}
                   >
                     {cell.date.getDate()}
@@ -919,7 +919,7 @@ function renderMonthGrid(selectedDate, scheduledEvents, openEventDialog, openMon
                     <button
                       type="button"
                       aria-label="Open workout overflow for day"
-                      className={['h-4.5 px-1.5 text-left text-xs font-semibold text-[#8EA0BC] hover:text-[#EEF4FF]', !cell.currentMonth ? 'opacity-50' : ''].join(' ')}
+                      className={['h-4.5 px-1.5 text-left text-xs font-semibold text-[var(--admin-dashboard-card-muted)] hover:text-[var(--admin-dashboard-card-text)]', !cell.currentMonth ? 'opacity-50' : ''].join(' ')}
                       onClick={() => openMonthOverflow(cell.date)}
                     >
                       <span className="sm:hidden">+{events.length - 3}</span>
@@ -971,20 +971,20 @@ function renderYearGrid(selectedDate, scheduledEvents, setSelectedDate, setCurre
           <button
             key={monthDate.toISOString()}
             type="button"
-            className="grid gap-3 rounded-[18px] border border-[#24334A] bg-[#111827] p-4 text-left hover:border-[#3BE0AF]"
+            className="grid gap-3 rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-4 text-left hover:border-[#3BE0AF]"
             onClick={() => {
               setSelectedDate(monthDate)
               setCurrentView('month')
             }}
           >
             <div className="flex items-center justify-between gap-3">
-              <div className="text-sm font-semibold text-[#EEF4FF]">{new Intl.DateTimeFormat('en-US', { month: 'long' }).format(monthDate)}</div>
-              <div className="text-xs text-[#8EA0BC]">{monthEvents.length} workout{monthEvents.length === 1 ? '' : 's'}</div>
+              <div className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{new Intl.DateTimeFormat('en-US', { month: 'long' }).format(monthDate)}</div>
+              <div className="text-xs text-[var(--admin-dashboard-card-muted)]">{monthEvents.length} workout{monthEvents.length === 1 ? '' : 's'}</div>
             </div>
-            <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-[#6F84A6]">
+            <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-[var(--admin-dashboard-card-muted)]">
               {WEEK_DAYS.map((day) => <span key={day}>{day.slice(0, 1)}</span>)}
             </div>
-            <div className="grid grid-cols-7 gap-1 text-center text-[11px] text-[#DCE6F8]">
+            <div className="grid grid-cols-7 gap-1 text-center text-[11px] text-[var(--admin-dashboard-card-text)]">
               {cells.map((cell) => {
                 const hasEvents = getEventsForDate(cell.date, scheduledEvents).length > 0
                 return (
@@ -992,7 +992,7 @@ function renderYearGrid(selectedDate, scheduledEvents, setSelectedDate, setCurre
                     key={cell.date.toISOString()}
                     className={[
                       'grid h-7 place-items-center rounded-[8px]',
-                      cell.currentMonth ? 'bg-[#0F1728]' : 'bg-[#0F1728]/50 text-[#5D708F]',
+                      cell.currentMonth ? 'bg-[var(--admin-dashboard-card-bg)]' : 'bg-[var(--admin-dashboard-card-bg)]/50 text-[var(--admin-dashboard-card-soft)]',
                       hasEvents ? 'ring-1 ring-[#3BE0AF]/45' : '',
                     ].join(' ')}
                   >
@@ -1032,7 +1032,7 @@ function renderAgendaView(selectedDate, scheduledEvents, openEventDialog) {
     <div className="grid gap-4">
       {Object.entries(groupedEvents).length ? Object.entries(groupedEvents).map(([dayLabel, dayEvents]) => (
         <div key={dayLabel} className="grid gap-3">
-          <div className="text-sm font-semibold text-[#EEF4FF]">{dayLabel}</div>
+          <div className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{dayLabel}</div>
           <div className="grid gap-2">
             {dayEvents.map((event) => (
               <button
@@ -1049,7 +1049,7 @@ function renderAgendaView(selectedDate, scheduledEvents, openEventDialog) {
           </div>
         </div>
       )) : (
-        <div className="rounded-[18px] border border-dashed border-[#24334A] bg-[#111827] p-6 text-sm text-[#8EA0BC]">No workouts scheduled for this month.</div>
+        <div className="rounded-[18px] border border-dashed border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-6 text-sm text-[var(--admin-dashboard-card-muted)]">No workouts scheduled for this month.</div>
       )}
     </div>
   )
@@ -1070,32 +1070,32 @@ function renderWeekGrid(
   const calendarHeight = WEEK_HOURS.length * WEEK_SLOT_HEIGHT
 
   return (
-    <div className="overflow-x-auto rounded-[24px] border border-[#24334A] bg-[#111827] shadow-[0_18px_40px_rgba(0,0,0,0.26)]">
+    <div className="overflow-x-auto rounded-[24px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)]">
       <div className="min-w-[280px] sm:min-w-[560px]">
-        <div className="border-b border-[#24334A] bg-[#0F1728] px-5 py-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">{singleDay ? 'Daily schedule' : 'Weekly schedule'}</div>
+        <div className="border-b border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-5 py-4">
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--admin-dashboard-card-muted)]">{singleDay ? 'Daily schedule' : 'Weekly schedule'}</div>
         </div>
 
-        <div className={`grid ${singleDay ? 'grid-cols-[92px_minmax(0,1fr)]' : 'grid-cols-[92px_repeat(7,minmax(0,1fr))]'} border-b border-[#24334A] bg-[#0F1728]`}>
-          <div className="border-r border-[#24334A] px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">Time</div>
+        <div className={`grid ${singleDay ? 'grid-cols-[92px_minmax(0,1fr)]' : 'grid-cols-[92px_repeat(7,minmax(0,1fr))]'} border-b border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)]`}>
+          <div className="border-r border-[var(--admin-dashboard-card-border)] px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--admin-dashboard-card-muted)]">Time</div>
           {weekDays.map((day) => {
             const isToday = isSameDay(day, new Date())
 
             return (
-              <div key={day.toISOString()} className="border-r border-[#24334A] px-3 py-3 text-center last:border-r-0">
-                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">{singleDay ? new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(day) : WEEK_DAYS[day.getDay()]}</div>
-                <div className={['mt-1 text-sm font-semibold', isToday ? 'text-[#3BE0AF]' : 'text-[#EEF4FF]'].join(' ')}>{day.getDate()}</div>
+              <div key={day.toISOString()} className="border-r border-[var(--admin-dashboard-card-border)] px-3 py-3 text-center last:border-r-0">
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--admin-dashboard-card-muted)]">{singleDay ? new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(day) : WEEK_DAYS[day.getDay()]}</div>
+                <div className={['mt-1 text-sm font-semibold', isToday ? 'text-[#3BE0AF]' : 'text-[var(--admin-dashboard-card-text)]'].join(' ')}>{day.getDate()}</div>
               </div>
             )
           })}
         </div>
 
         <div className={`grid ${singleDay ? 'grid-cols-[92px_minmax(0,1fr)]' : 'grid-cols-[92px_repeat(7,minmax(0,1fr))]'}`}>
-          <div className="border-r border-[#24334A] bg-[#0F1728]">
+          <div className="border-r border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)]">
             {WEEK_HOURS.map((hour) => (
               <div
                 key={hour}
-                className="border-b border-[#24334A] px-4 py-3 text-xs font-medium text-[#8EA0BC]"
+                className="border-b border-[var(--admin-dashboard-card-border)] px-4 py-3 text-xs font-medium text-[var(--admin-dashboard-card-muted)]"
                 style={{ height: `${WEEK_SLOT_HEIGHT}px` }}
               >
                 {hour}
@@ -1112,7 +1112,7 @@ function renderWeekGrid(
               .sort((left, right) => convertHourStringToMinutes(left.startHour) - convertHourStringToMinutes(right.startHour))
 
             return (
-              <div key={day.toISOString()} className="relative border-r border-[#24334A] last:border-r-0" style={{ height: `${calendarHeight}px` }}>
+              <div key={day.toISOString()} className="relative border-r border-[var(--admin-dashboard-card-border)] last:border-r-0" style={{ height: `${calendarHeight}px` }}>
                 <div className="absolute inset-0">
                   {WEEK_HOURS.map((hour) => {
                     const slotId = encodeWeekSlotId(day, hour)
@@ -1120,10 +1120,10 @@ function renderWeekGrid(
                     return (
                       <div
                         key={`${day.toISOString()}-${hour}`}
-                        className="relative border-b border-[#24334A] px-2 py-2"
+                        className="relative border-b border-[var(--admin-dashboard-card-border)] px-2 py-2"
                         style={{ height: `${WEEK_SLOT_HEIGHT}px` }}
                       >
-                        <div className="pointer-events-none absolute inset-x-0 top-1/2 border-t border-[#1A2840]" />
+                        <div className="pointer-events-none absolute inset-x-0 top-1/2 border-t border-[var(--admin-dashboard-chart-header-divider)]" />
                         <WeekSlotDropZone slotId={slotId}>
                           <button
                             type="button"
@@ -1404,17 +1404,13 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
       return
     }
 
-    if (!selectedAthleteId) {
-      setScheduledEvents([])
-      setHydrationState('idle')
-      setEventConflictMessage('')
-      return
-    }
-
     setHydrationState('loading')
 
     try {
-      const payload = await requestCalendarApi(`?athleteId=${encodeURIComponent(selectedAthleteId)}`)
+      const calendarAssignmentsPath = selectedAthleteId
+        ? `?athleteId=${encodeURIComponent(selectedAthleteId)}`
+        : ''
+      const payload = await requestCalendarApi(calendarAssignmentsPath)
       const assignments = Array.isArray(payload.assignments) ? payload.assignments : []
       const hydratedEvents = assignments
         .map(mapAssignmentRowToCalendarEvent)
@@ -1986,25 +1982,25 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
 
   return (
     <>
-      <section className="admin-shell-workouts-calendar-view grid gap-5" aria-label="Workout calendar admin view">
-        <div className="admin-shell-workouts-calendar-header grid gap-4 border-b border-[#24334A] pb-4">
+      <section className="admin-shell-workouts-calendar-view grid gap-5 text-[var(--admin-dashboard-card-text)]" aria-label="Workout calendar admin view">
+        <div className="admin-shell-workouts-calendar-header grid gap-4 border-b border-[var(--admin-dashboard-card-border)] pb-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-wrap items-start gap-4">
               <button
                 type="button"
-                className="grid h-[72px] w-[72px] place-items-center rounded-[20px] border border-[#24334A] bg-[#111D30] text-[#EEF4FF]"
+                className="grid h-[72px] w-[72px] place-items-center rounded-[20px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)]"
                 onClick={() => setSelectedDate(REFERENCE_TODAY)}
               >
-                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8EA0BC]">{referenceDateBadgeMonth}</span>
+                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--admin-dashboard-card-muted)]">{referenceDateBadgeMonth}</span>
                 <span className="text-2xl font-black leading-none">{referenceDateBadgeDay}</span>
               </button>
 
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
-                  <span className="text-lg font-semibold text-[#EEF4FF]">
+                  <span className="text-lg font-semibold text-[var(--admin-dashboard-card-text)]">
                     {monthLabel}
                   </span>
-                  <span className="rounded-md border border-[#24334A] px-1.5 py-0.5 text-xs font-medium text-[#DCE6F8]">
+                  <span className="rounded-md border border-[var(--admin-dashboard-card-border)] px-1.5 py-0.5 text-xs font-medium text-[var(--admin-dashboard-card-text)]">
                     {referenceEventCountLabel}
                   </span>
                 </div>
@@ -2013,18 +2009,18 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
                   <Button
                     type="button"
                     variant="outline"
-                    className="size-6.5 px-0 rounded-r-none border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
+                    className="size-6.5 px-0 rounded-r-none border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]"
                     onClick={() => shiftDate(-1)}
                   >
                     <ChevronLeft className="size-4.5" />
                   </Button>
 
-                  <p className="text-sm text-[#8EA0BC]">{rangeLabel}</p>
+                  <p className="text-sm text-[var(--admin-dashboard-card-muted)]">{rangeLabel}</p>
 
                   <Button
                     type="button"
                     variant="outline"
-                    className="size-6.5 px-0 rounded-l-none border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
+                    className="size-6.5 px-0 rounded-l-none border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]"
                     onClick={() => shiftDate(1)}
                   >
                     <ChevronRight className="size-4.5" />
@@ -2041,7 +2037,7 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
                     aria-label="View by day"
                     variant={currentView === 'day' ? 'default' : 'outline'}
                     size="icon"
-                    className="rounded-r-none border-[#24334A] bg-[#111D30] text-[#DCE6F8] [&_svg]:size-5"
+                    className="rounded-r-none border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] [&_svg]:size-5"
                     onClick={() => setCurrentView('day')}
                   >
                     <List strokeWidth={1.8} />
@@ -2052,7 +2048,7 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
                     aria-label="View by week"
                     variant={currentView === 'week' ? 'default' : 'outline'}
                     size="icon"
-                    className="-ml-px rounded-none border-[#24334A] bg-[#111D30] text-[#DCE6F8] [&_svg]:size-5"
+                    className="-ml-px rounded-none border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] [&_svg]:size-5"
                     onClick={() => setCurrentView('week')}
                   >
                     <Columns strokeWidth={1.8} />
@@ -2063,7 +2059,7 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
                     aria-label="View by month"
                     variant={currentView === 'month' ? 'default' : 'outline'}
                     size="icon"
-                    className="-ml-px rounded-none border-[#24334A] bg-[#111D30] text-[#DCE6F8] [&_svg]:size-5"
+                    className="-ml-px rounded-none border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] [&_svg]:size-5"
                     onClick={() => setCurrentView('month')}
                   >
                     <Grid2x2 strokeWidth={1.8} />
@@ -2074,7 +2070,7 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
                     aria-label="View by year"
                     variant={currentView === 'year' ? 'default' : 'outline'}
                     size="icon"
-                    className="-ml-px rounded-none border-[#24334A] bg-[#111D30] text-[#DCE6F8] [&_svg]:size-5"
+                    className="-ml-px rounded-none border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] [&_svg]:size-5"
                     onClick={() => setCurrentView('year')}
                   >
                     <Grid3x3 strokeWidth={1.8} />
@@ -2085,7 +2081,7 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
                     aria-label="View by agenda"
                     variant={currentView === 'agenda' ? 'default' : 'outline'}
                     size="icon"
-                    className="-ml-px rounded-l-none border-[#24334A] bg-[#111D30] text-[#DCE6F8] [&_svg]:size-5"
+                    className="-ml-px rounded-l-none border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] [&_svg]:size-5"
                     onClick={() => setCurrentView('agenda')}
                   >
                     <CalendarRange strokeWidth={1.8} />
@@ -2119,38 +2115,38 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
           setMonthOverflowDate(null)
         }
       }}>
-        <DialogContent className="fixed inset-x-2 bottom-2 top-auto z-50 grid w-full max-w-[calc(100%-1rem)] translate-y-0 gap-4 rounded-t-[28px] rounded-b-[18px] border border-[#24334A] bg-[#111827] p-5 text-[#EEF4FF] shadow-[0_-24px_80px_rgba(0,0,0,0.5)] duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-bottom-[18%] data-[state=open]:slide-in-from-bottom-[18%] sm:left-1/2 sm:right-auto sm:bottom-auto sm:top-[50%] sm:max-w-[420px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[28px] sm:shadow-[0_24px_80px_rgba(0,0,0,0.5)]">
+        <DialogContent className="fixed inset-x-2 bottom-2 top-auto z-50 grid w-full max-w-[calc(100%-1rem)] translate-y-0 gap-4 rounded-t-[28px] rounded-b-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-5 text-[var(--admin-dashboard-card-text)] shadow-[0_-24px_80px_rgba(0,0,0,0.5)] duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-bottom-[18%] data-[state=open]:slide-in-from-bottom-[18%] sm:left-1/2 sm:right-auto sm:bottom-auto sm:top-[50%] sm:max-w-[420px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[28px] sm:shadow-[0_24px_80px_rgba(0,0,0,0.5)]">
           <DialogHeader>
             <DialogTitle>{monthOverflowEvents.length} workout{monthOverflowEvents.length === 1 ? '' : 's'}</DialogTitle>
-            <DialogDescription className="text-[#8EA0BC]">
+            <DialogDescription className="text-[var(--admin-dashboard-card-muted)]">
               Review the hidden workouts for this day and open any one to edit it.
             </DialogDescription>
           </DialogHeader>
 
             <div className="grid gap-3 py-2">
               {monthOverflowDate ? (
-                <div className="grid gap-2 rounded-[18px] border border-[#24334A] bg-[#0F1728] px-4 py-4">
+                <div className="grid gap-2 rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-4 py-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">Day</div>
-                      <div className="mt-1 text-sm font-semibold text-[#EEF4FF]">{new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).format(monthOverflowDate)}</div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--admin-dashboard-card-muted)]">Day</div>
+                      <div className="mt-1 text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).format(monthOverflowDate)}</div>
                     </div>
-                    <div className="rounded-full border border-[#29496B] bg-[#142235] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8FC7FF]">
+                    <div className="rounded-full border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-shell-nav-active-bg)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--admin-shell-nav-active-text)]">
                       Sorted by time
                     </div>
                   </div>
                 </div>
               ) : null}
 
-              <div className="flex items-center justify-between gap-3 border-t border-[#24334A] pt-3">
+              <div className="flex items-center justify-between gap-3 border-t border-[var(--admin-dashboard-card-border)] pt-3">
                 <div>
-                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">Workout count</div>
-                  <div className="mt-1 text-sm font-semibold text-[#EEF4FF]">{monthOverflowEvents.length} total workouts</div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--admin-dashboard-card-muted)]">Workout count</div>
+                  <div className="mt-1 text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{monthOverflowEvents.length} total workouts</div>
                 </div>
                 <Button
                   type="button"
                   variant="outline"
-                  className="rounded-[12px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
+                  className="rounded-[12px] border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]"
                   onClick={() => openAllDayWorkouts(monthOverflowEvents)}
                 >
                   Open all in day
@@ -2188,7 +2184,7 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
             <Button
               type="button"
               variant="outline"
-              className="rounded-[12px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
+              className="rounded-[12px] border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]"
               onClick={() => {
                 setIsMonthOverflowDialogOpen(false)
                 setMonthOverflowDate(null)
@@ -2213,28 +2209,28 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
           setEventConflictMessage('')
         }
       }}>
-        <DialogContent pageScrollable className="border border-[#24334A] bg-[#111827] p-0 text-[#EEF4FF] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[640px]">
+        <DialogContent pageScrollable className="border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[640px]">
           <div className="grid gap-4 p-6">
             <DialogHeader>
               <DialogTitle>Add Workout</DialogTitle>
-              <DialogDescription className="text-[#8EA0BC]">
+              <DialogDescription className="text-[var(--admin-dashboard-card-muted)]">
                 Pick a workout template, start date/time, and end date/time before handing the new assignment to the shared program workout flow.
               </DialogDescription>
             </DialogHeader>
 
             <div className="grid gap-4 py-2">
               {(assignmentConflictMessage || eventConflictMessage) ? (
-                <div className="rounded-[14px] border border-[#6A4A1A] bg-[#3D2B12] px-3 py-2 text-sm text-[#F5D08A]">
+                <div className="rounded-[14px] border border-[#f59e0b]/40 bg-[#fef3c7] px-3 py-2 text-sm text-[#92400e]">
                   {assignmentConflictMessage || eventConflictMessage}
                 </div>
               ) : null}
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="grid gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">Start date</span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--admin-dashboard-card-muted)]">Start date</span>
                   <input
                     type="date"
-                    className="h-11 rounded-[12px] border border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] focus-visible:border-[#3BE0AF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3BE0AF]/20"
+                    className="h-11 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] focus-visible:border-[#3BE0AF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3BE0AF]/20"
                     value={formatDateInputValue(assignmentDraft.date)}
                     onChange={(event) => {
                       const nextDate = parseDateInputValue(event.target.value)
@@ -2252,13 +2248,13 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
                 </label>
 
                 <label className="grid gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">Start time</span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--admin-dashboard-card-muted)]">Start time</span>
                   <input
                     type="time"
                     step="3600"
                     min="06:00"
                     max="23:00"
-                    className="h-11 rounded-[12px] border border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] focus-visible:border-[#3BE0AF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3BE0AF]/20"
+                    className="h-11 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] focus-visible:border-[#3BE0AF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3BE0AF]/20"
                     value={assignmentDraft.hour}
                     onChange={(event) => {
                       const nextHour = event.target.value
@@ -2274,10 +2270,10 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
                 </label>
 
                 <label className="grid gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">End date</span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--admin-dashboard-card-muted)]">End date</span>
                   <input
                     type="date"
-                    className="h-11 rounded-[12px] border border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] focus-visible:border-[#3BE0AF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3BE0AF]/20"
+                    className="h-11 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] focus-visible:border-[#3BE0AF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3BE0AF]/20"
                     value={formatDateInputValue(assignmentDraft.endDate)}
                     onChange={(event) => {
                       const nextDate = parseDateInputValue(event.target.value)
@@ -2289,13 +2285,13 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
                 </label>
 
                 <label className="grid gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">End time</span>
+                  <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--admin-dashboard-card-muted)]">End time</span>
                   <input
                     type="time"
                     step="3600"
                     min="06:00"
                     max="23:59"
-                    className="h-11 rounded-[12px] border border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] focus-visible:border-[#3BE0AF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3BE0AF]/20"
+                    className="h-11 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] focus-visible:border-[#3BE0AF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3BE0AF]/20"
                     value={assignmentDraft.endHour}
                     onChange={(event) => {
                       setAssignmentDraft((currentDraft) => ({ ...currentDraft, endHour: event.target.value }))
@@ -2307,11 +2303,11 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
               </div>
 
               <div className="grid gap-2">
-                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">Workout templates</div>
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--admin-dashboard-card-muted)]">Workout templates</div>
                 <div className="grid gap-2">
                   {workoutTemplateHydrationState === 'loading'
                     ? workoutTemplateSkeletonRows.map((rowIndex) => (
-                        <div key={`workout-template-skeleton-${rowIndex}`} className="rounded-[16px] border border-[#24334A] bg-[#0F1728] px-4 py-3">
+                        <div key={`workout-template-skeleton-${rowIndex}`} className="rounded-[16px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-4 py-3">
                           <div className="flex flex-col gap-2">
                             <Skeleton className="h-4 w-[160px] bg-[#1B2A40]" />
                             <Skeleton className="h-3 w-[112px] bg-[#1B2A40]" />
@@ -2322,13 +2318,13 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
                     : null}
 
                   {workoutTemplateHydrationState === 'error' && !workoutTemplateOptions.length ? (
-                    <div className="rounded-[16px] border border-[#5A2F2F] bg-[#261515] px-4 py-3 text-sm text-[#F5B5B5]">
+                    <div className="rounded-[16px] border border-[#fecaca] bg-[#fef2f2] px-4 py-3 text-sm text-[#991b1b]">
                       Real workout templates could not be loaded.
                     </div>
                   ) : null}
 
                   {workoutTemplateHydrationState === 'ready' && !workoutTemplateOptions.length ? (
-                    <div className="rounded-[16px] border border-[#24334A] bg-[#0F1728] px-4 py-3 text-sm text-[#8EA0BC]">
+                    <div className="rounded-[16px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-4 py-3 text-sm text-[var(--admin-dashboard-card-muted)]">
                       No active workout templates found.
                     </div>
                   ) : null}
@@ -2345,8 +2341,8 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
                         className={[
                           'rounded-[16px] border px-4 py-3 text-left transition-colors',
                           isSelected
-                            ? 'border-[#3BE0AF] bg-[#153C35] text-[#EEF4FF]'
-                            : 'border-[#24334A] bg-[#0F1728] text-[#DCE6F8] hover:border-[#3BE0AF] hover:bg-[#15233A]',
+                            ? 'border-[#3BE0AF] bg-[var(--admin-shell-nav-active-bg)] text-[var(--admin-dashboard-card-text)]'
+                            : 'border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] text-[var(--admin-dashboard-card-text)] hover:border-[#3BE0AF] hover:bg-[var(--admin-dashboard-control-hover-bg)]',
                         ].join(' ')}
                         onClick={() => {
                           setAssignmentDraft((currentDraft) => ({ ...currentDraft, selectedWorkoutId: workout.id }))
@@ -2363,7 +2359,7 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
                 </div>
 
                 {workoutTemplateHydrationState === 'ready' && workoutTemplateOptions.length > 0 ? (
-                  <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-sm text-[#8EA0BC]">
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-sm text-[var(--admin-dashboard-card-muted)]">
                     <div className="flex items-center gap-2">
                       <span>Rows per page</span>
                       <Select
@@ -2376,7 +2372,7 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
                           })
                         }}
                       >
-                        <SelectTrigger className="h-9 w-[76px] rounded-[10px] !border-[#24334A] bg-[#111D30] px-3 text-sm text-[#DCE6F8]">
+                        <SelectTrigger className="h-9 w-[76px] rounded-[10px] !border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-3 text-sm text-[var(--admin-dashboard-card-text)]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -2393,7 +2389,7 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
                         <button
                           type="button"
                           aria-label="Go to previous workout template page"
-                          className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-[#24334A] bg-[#111D30] text-[#DCE6F8] transition hover:bg-[#15233A] hover:text-[#EEF4FF] disabled:opacity-50"
+                          className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] transition hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)] disabled:opacity-50"
                           onClick={() => setWorkoutTemplatePagination((current) => ({ ...current, pageIndex: Math.max(0, current.pageIndex - 1) }))}
                           disabled={workoutTemplatePagination.pageIndex === 0}
                         >
@@ -2407,7 +2403,7 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
                               'flex h-9 min-w-9 items-center justify-center rounded-[10px] border px-3 text-sm transition',
                               workoutTemplatePagination.pageIndex === pageNumber
                                 ? 'border-[#3BE0AF] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]'
-                                : 'border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]',
+                                : 'border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]',
                             ].join(' ')}
                             onClick={() => setWorkoutTemplatePagination((current) => ({ ...current, pageIndex: pageNumber }))}
                           >
@@ -2417,7 +2413,7 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
                         <button
                           type="button"
                           aria-label="Go to next workout template page"
-                          className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-[#24334A] bg-[#111D30] text-[#DCE6F8] transition hover:bg-[#15233A] hover:text-[#EEF4FF] disabled:opacity-50"
+                          className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] transition hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)] disabled:opacity-50"
                           onClick={() => setWorkoutTemplatePagination((current) => ({ ...current, pageIndex: Math.min(workoutTemplatePageCount - 1, current.pageIndex + 1) }))}
                           disabled={workoutTemplatePagination.pageIndex >= workoutTemplatePageCount - 1}
                         >
@@ -2430,11 +2426,11 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
               </div>
             </div>
 
-            <DialogFooter className="flex flex-col gap-3 border-t border-[#24334A] pt-4 sm:flex-row sm:justify-end">
+            <DialogFooter className="flex flex-col gap-3 border-t border-[var(--admin-dashboard-card-border)] pt-4 sm:flex-row sm:justify-end">
               <Button
                 type="button"
                 variant="outline"
-                className="min-h-[40px] rounded-[12px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
+                className="min-h-[40px] rounded-[12px] border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]"
                 onClick={() => {
                   setIsAssignmentDialogOpen(false)
                   setSelectedEventId(null)

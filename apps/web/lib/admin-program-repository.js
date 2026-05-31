@@ -121,8 +121,8 @@ function formatStatusLabel(status) {
   return status.charAt(0).toUpperCase() + status.slice(1)
 }
 
-function formatProgramTypeLabel() {
-  return 'Assigned'
+function formatProgramTypeLabel(row) {
+  return row?.athlete_id ? 'Assigned' : 'Unassigned'
 }
 
 function createCounter(rows, key) {
@@ -191,7 +191,7 @@ function formatProgramRow(row, context) {
     athleteId: row.athlete_id ?? null,
     athleteIds: row.athlete_id ? [row.athlete_id] : [],
     coachId: row.coach_id ?? null,
-    programType: formatProgramTypeLabel(),
+    programType: formatProgramTypeLabel(row),
     name: row.name ?? 'Untitled program',
     athletesLabel: formatAthleteLabel(row),
     duration: formatDurationLabel(weekCount),

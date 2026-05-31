@@ -226,6 +226,30 @@ function normalizeUploadInput(upload) {
   }
 }
 
+function normalizeDirectExerciseVideoUrl(input = {}, supabaseBaseUrl = '') {
+  const directVideoUrl = normalizeOptionalString(input?.video_url ?? input?.videoUrl)
+  if (!directVideoUrl) return null
+
+  let parsedUrl = null
+  try {
+    parsedUrl = new URL(directVideoUrl)
+  } catch {
+    throw createRepositoryError('Exercise video_url must be a direct Supabase mp4 URL.', 400)
+  }
+
+  const parsedBaseUrl = supabaseBaseUrl ? new URL(supabaseBaseUrl) : null
+  const isSupabaseStorageUrl = parsedUrl.pathname.includes('/storage/v1/object/public/exercise-videos/')
+  const isConfiguredSupabaseHost = parsedBaseUrl ? parsedUrl.host === parsedBaseUrl.host : false
+  const isSupabaseProjectHost = parsedUrl.hostname.endsWith('.supabase.co')
+  const isMp4Url = parsedUrl.pathname.toLowerCase().endsWith('.mp4')
+
+  if (!isSupabaseStorageUrl || (!isConfiguredSupabaseHost && !isSupabaseProjectHost) || !isMp4Url) {
+    throw createRepositoryError('Exercise video_url must be a direct Supabase mp4 URL.', 400)
+  }
+
+  return directVideoUrl
+}
+
 function compareMuscleMaps(left, right) {
   const leftRoleRank = left?.role === 'primary' ? 0 : left?.role === 'secondary' ? 1 : 2
   const rightRoleRank = right?.role === 'primary' ? 0 : right?.role === 'secondary' ? 1 : 2
@@ -493,6 +517,7 @@ export function createAdminExerciseRepository(overrides = {}) {
         exerciseId,
         videoUpload: input?.videoUpload,
       })
+      const directVideoUrl = normalizeDirectExerciseVideoUrl(input, client.config.baseUrl)
       const directThumbnailUrl = normalizeOptionalString(input?.thumbnailUrl)
       if (directThumbnailUrl) {
         payload.thumbnail_url = directThumbnailUrl
@@ -500,7 +525,6 @@ export function createAdminExerciseRepository(overrides = {}) {
       if (uploadedVideoUrl) {
         payload.video_url = uploadedVideoUrl
       }
-      const directVideoUrl = normalizeOptionalString(input?.videoUrl)
       if (directVideoUrl) {
         payload.video_url = directVideoUrl
       }
@@ -534,6 +558,7 @@ export function createAdminExerciseRepository(overrides = {}) {
         exerciseId: normalizedExerciseId,
         videoUpload: input?.videoUpload,
       })
+      const directVideoUrl = normalizeDirectExerciseVideoUrl(input, client.config.baseUrl)
       const directThumbnailUrl = normalizeOptionalString(input?.thumbnailUrl)
       if (directThumbnailUrl) {
         payload.thumbnail_url = directThumbnailUrl
@@ -541,7 +566,6 @@ export function createAdminExerciseRepository(overrides = {}) {
       if (uploadedVideoUrl) {
         payload.video_url = uploadedVideoUrl
       }
-      const directVideoUrl = normalizeOptionalString(input?.videoUrl)
       if (directVideoUrl) {
         payload.video_url = directVideoUrl
       }

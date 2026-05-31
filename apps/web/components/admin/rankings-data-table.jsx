@@ -23,7 +23,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Progress } from '@/components/ui/progress'
-import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
@@ -43,14 +42,12 @@ function getInitials(name) {
     .join('')
 }
 
-function RankCell({ badgeSrc = '', rank }) {
-  return badgeSrc ? (
-    <img src={badgeSrc} alt={`Rank ${rank} badge`} className="h-8 w-8 object-contain" />
-  ) : (
-    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#24334A] bg-[#111D30] text-sm font-semibold text-[#DCE6F8]">
-      {rank}
-    </span>
-  )
+function RankCell({ rank, badgeSrc = '' }) {
+  if (badgeSrc) {
+    return <img src={badgeSrc} alt={`Rank ${rank}`} className="admin-shell-rankings-rank-badge-image" />
+  }
+
+  return <span className="admin-shell-rankings-rank-number">{rank}</span>
 }
 
 function NameCell({ name, ageLabel, avatarUrl = '' }) {
@@ -69,7 +66,7 @@ function WorkoutsCell({ workoutsCompleted, workoutsTarget, workoutsPercentage })
   return (
     <div className="admin-shell-athletes-workouts-cell">
       <div className="admin-shell-athletes-workouts-header">
-        <span className="admin-shell-athletes-workouts-label">{workoutsCompleted} / {workoutsTarget}</span>
+        <span className="admin-shell-athletes-workouts-label">{workoutsCompleted}/{workoutsTarget}</span>
         <span className="admin-shell-athletes-workouts-percent">{workoutsPercentage}%</span>
       </div>
       <Progress className="admin-shell-athletes-workouts-progress" value={workoutsPercentage} />
@@ -78,13 +75,13 @@ function WorkoutsCell({ workoutsCompleted, workoutsTarget, workoutsPercentage })
 }
 
 function StatusCell({ status }) {
-  const tone = status === 'Active' ? 'success' : status === 'Watch' ? 'warning' : 'danger'
+  const tone = status === 'Inactive' ? 'danger' : status === 'Active' ? 'success' : 'warning'
   const className =
-    status === 'Active'
-      ? 'border-transparent bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/20 normal-case tracking-normal'
-      : status === 'Watch'
-        ? 'border-transparent bg-amber-500/15 text-amber-300 hover:bg-amber-500/20 normal-case tracking-normal'
-        : 'border-transparent bg-red-500/15 text-red-300 hover:bg-red-500/20 normal-case tracking-normal'
+    status === 'Inactive'
+      ? 'admin-shell-athletes-status-badge admin-shell-athletes-status-badge-inactive normal-case tracking-normal'
+      : status === 'Active'
+        ? 'admin-shell-athletes-status-badge admin-shell-athletes-status-badge-active normal-case tracking-normal'
+        : 'admin-shell-athletes-status-badge admin-shell-athletes-status-badge-pending normal-case tracking-normal'
 
   return (
     <Badge tone={tone} className={className}>
@@ -107,7 +104,7 @@ function RowActionsCell() {
         <DropdownMenuItem>View athlete</DropdownMenuItem>
         <DropdownMenuItem>Open program</DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>Compare ranking</DropdownMenuItem>
+        <DropdownMenuItem>Review workout progress</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -169,24 +166,20 @@ export default function RankingsDataTable({ searchQuery = '' }) {
       {
         id: 'select',
         header: ({ table }) => (
-          <div className="admin-shell-athletes-checkbox-cell">
-            <Checkbox
-              className="admin-shell-athletes-checkbox-input"
-              checked={table.getIsAllPageRowsSelected()}
-              onChange={(event) => table.toggleAllPageRowsSelected(event.target.checked)}
-              aria-label="Select all"
-            />
-          </div>
+          <Checkbox
+            className="admin-shell-athletes-checkbox-input"
+            checked={table.getIsAllPageRowsSelected()}
+            onChange={(event) => table.toggleAllPageRowsSelected(event.target.checked)}
+            aria-label="Select all"
+          />
         ),
         cell: ({ row }) => (
-          <div className="admin-shell-athletes-checkbox-cell">
-            <Checkbox
-              className="admin-shell-athletes-checkbox-input"
-              checked={row.getIsSelected()}
-              onChange={(event) => row.toggleSelected(event.target.checked)}
-              aria-label="Select row"
-            />
-          </div>
+          <Checkbox
+            className="admin-shell-athletes-checkbox-input"
+            checked={row.getIsSelected()}
+            onChange={(event) => row.toggleSelected(event.target.checked)}
+            aria-label="Select row"
+          />
         ),
         enableSorting: false,
         enableHiding: false,
@@ -211,8 +204,8 @@ export default function RankingsDataTable({ searchQuery = '' }) {
       },
       {
         accessorKey: 'workoutsPercentage',
-        header: 'Workouts',
-        meta: { label: 'Workouts' },
+        header: 'Workout progress',
+        meta: { label: 'Workout progress' },
         cell: ({ row }) => (
           <WorkoutsCell
             workoutsCompleted={row.original.workoutsCompleted}
@@ -266,7 +259,7 @@ export default function RankingsDataTable({ searchQuery = '' }) {
     table.getColumn('name')?.setFilterValue(searchQuery)
   }, [searchQuery, table])
 
-  const emptyStateMessage = error || 'No ranked athletes found.'
+  const emptyStateMessage = error || (searchQuery ? 'No athletes match the current ranking search.' : 'No ranked athletes found.')
   const pageSizeOptions = [5, 10, 20, 30]
   const totalRows = table.getFilteredRowModel().rows.length
   const pageStart = totalRows === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1
@@ -300,9 +293,6 @@ export default function RankingsDataTable({ searchQuery = '' }) {
               ))}
           </DropdownMenuContent>
         </DropdownMenu>
-        <Button type="button" variant="outline" className="rounded-[12px] min-h-[40px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A]">
-          Leaderboard window
-        </Button>
       </div>
 
       <div className="admin-shell-athletes-table-shell">
@@ -325,12 +315,8 @@ export default function RankingsDataTable({ searchQuery = '' }) {
             {loading ? (
               skeletonRows.map((rowIndex) => (
                 <TableRow key={`skeleton-${rowIndex}`} className={rowIndex % 2 === 0 ? 'admin-shell-athletes-row-even' : 'admin-shell-athletes-row-odd'}>
-                  <TableCell>
-                    <Skeleton className="h-4 w-4 rounded-[4px]" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-8 w-8 rounded-full" />
-                  </TableCell>
+                  <TableCell><Skeleton className="h-4 w-4 rounded-[4px]" /></TableCell>
+                  <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Skeleton className="h-10 w-10 rounded-full" />
@@ -340,24 +326,16 @@ export default function RankingsDataTable({ searchQuery = '' }) {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-[120px]" />
-                  </TableCell>
+                  <TableCell><Skeleton className="h-4 w-[120px]" /></TableCell>
                   <TableCell>
                     <div className="space-y-2">
                       <Skeleton className="h-4 w-[84px]" />
                       <Skeleton className="h-2 w-[132px] rounded-full" />
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-[88px]" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-8 w-[96px] rounded-full" />
-                  </TableCell>
-                  <TableCell className="admin-shell-athletes-actions-cell">
-                    <Skeleton className="ml-auto h-8 w-8 rounded-full" />
-                  </TableCell>
+                  <TableCell><Skeleton className="h-4 w-[88px]" /></TableCell>
+                  <TableCell><Skeleton className="h-8 w-[132px] rounded-full" /></TableCell>
+                  <TableCell className="admin-shell-athletes-actions-cell"><Skeleton className="ml-auto h-8 w-8 rounded-full" /></TableCell>
                 </TableRow>
               ))
             ) : table.getRowModel().rows?.length ? (
@@ -378,8 +356,8 @@ export default function RankingsDataTable({ searchQuery = '' }) {
                 </TableRow>
               ))
             ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center text-[#8EA0BC]">
+              <TableRow className="admin-shell-athletes-row-even">
+                <TableCell colSpan={columns.length} className="admin-shell-athletes-empty-state py-10 text-center">
                   {emptyStateMessage}
                 </TableCell>
               </TableRow>
@@ -388,10 +366,10 @@ export default function RankingsDataTable({ searchQuery = '' }) {
         </Table>
       </div>
 
-      <div className="flex items-center justify-end gap-3 py-4 text-sm text-[#8EA0BC]">
+      <div className="admin-shell-athletes-pagination-bar flex items-center justify-end gap-3 py-4 text-sm">
         <span>Rows per page</span>
         <Select value={String(pagination.pageSize)} onValueChange={(value) => table.setPageSize(Number(value))}>
-          <SelectTrigger className="h-9 w-[76px] rounded-[10px] !border-[#24334A] bg-[#111D30] px-3 text-sm text-[#DCE6F8]">
+          <SelectTrigger className="h-9 w-[76px] rounded-[10px] px-3 text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -414,7 +392,7 @@ export default function RankingsDataTable({ searchQuery = '' }) {
           <button
             key={`page-${pageNumber}`}
             type="button"
-            className={`admin-shell-athletes-example-pagination-button ${pagination.pageIndex === pageNumber ? 'bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]' : ''}`}
+            className={`admin-shell-athletes-example-pagination-button ${pagination.pageIndex === pageNumber ? 'admin-shell-athletes-example-pagination-button-active' : ''}`}
             onClick={() => table.setPageIndex(pageNumber)}
           >
             {pageNumber + 1}

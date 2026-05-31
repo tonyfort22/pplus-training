@@ -14,8 +14,8 @@ function handleRouteError(error) {
 export async function GET() {
   try {
     const repository = createAdminRankingRepository()
-    const rankings = await repository.listRankings()
-    return json({ rankings })
+    const rankingPayload = await repository.listRankings()
+    return json(rankingPayload)
   } catch (error) {
     return handleRouteError(error)
   }

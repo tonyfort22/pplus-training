@@ -268,6 +268,66 @@ test('createAdminExerciseRepository patches an exercise and replaces muscle mapp
   ])
 })
 
+test('createAdminExerciseRepository accepts only direct Supabase mp4 exercise video_url values', async () => {
+  const calls = []
+  const repository = createAdminExerciseRepository({
+    supabaseUrl: 'https://example.supabase.co',
+    serviceRoleKey: 'service-role-key',
+    fetchImpl: async (url, options = {}) => {
+      const parsedUrl = new URL(url)
+      const table = parsedUrl.pathname.split('/').pop()
+      const method = options.method || 'GET'
+      const body = options.body ? JSON.parse(options.body) : null
+      calls.push({ table, method, body })
+
+      if (table === 'exercises' && method === 'POST') {
+        return jsonResponse([
+          {
+            id: body.id,
+            name: body.name,
+            slug: body.slug,
+            description: body.description,
+            difficulty: body.difficulty,
+            stimulus_type: body.stimulus_type,
+            default_equipment: body.default_equipment,
+            thumbnail_url: body.thumbnail_url ?? null,
+            video_url: body.video_url ?? null,
+            created_at: '2026-05-26T18:00:00.000Z',
+            exercise_muscle_maps: [],
+          },
+        ])
+      }
+
+      throw new Error(`Unexpected request in direct video_url test: ${method} ${parsedUrl.toString()}`)
+    },
+  })
+
+  const directVideoUrl = 'https://example.supabase.co/storage/v1/object/public/exercise-videos/exercise-1/demo.mp4'
+  const exercise = await repository.createExercise({
+    name: 'Direct Video Demo',
+    video_url: directVideoUrl,
+  })
+
+  assert.equal(exercise.videoUrl, directVideoUrl)
+  assert.equal(calls[0].body.video_url, directVideoUrl)
+
+  await assert.rejects(
+    () => repository.createExercise({
+      name: 'YouTube Video Demo',
+      videoUrl: 'https://www.youtube.com/watch?v=WepkDTJaBvw',
+    }),
+    /direct Supabase mp4 URL/,
+  )
+  await assert.rejects(
+    () => repository.createExercise({
+      name: 'Non-mp4 Video Demo',
+      videoUrl: 'https://example.supabase.co/storage/v1/object/public/exercise-videos/exercise-1/demo.mov',
+    }),
+    /direct Supabase mp4 URL/,
+  )
+  assert.equal(calls.length, 1)
+})
+
 test('createAdminExerciseRepository fetches one exercise detail with saved media urls for the editor', async () => {
   const repository = createAdminExerciseRepository({
     supabaseUrl: 'https://example.supabase.co',

@@ -97,6 +97,9 @@ function parseProgramMetricValue(value) {
   return Number.isFinite(normalized) ? normalized : null
 }
 
+const programFilterRangeInputClassName = 'h-8 w-28 !border-0 bg-[var(--admin-dashboard-card-bg)] text-[var(--admin-dashboard-card-text)] shadow-none placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:!border-0 focus-visible:ring-0'
+const programFilterRangeSeparatorClassName = 'text-xs text-[var(--admin-dashboard-card-muted)]'
+
 function ProgramRangeFilterValue({
   values = [],
   onChange = () => {},
@@ -116,15 +119,15 @@ function ProgramRangeFilterValue({
           value={firstValue}
           onChange={(event) => onChange([event.target.value, secondValue])}
           placeholder={startPlaceholder}
-          className="h-8 w-28 !border-0 bg-[#0F1728] text-[#DCE6F8] shadow-none placeholder:text-[#70809E] focus-visible:!border-0 focus-visible:ring-0"
+          className={programFilterRangeInputClassName}
         />
-        <span className="text-xs text-[#8EA0BC]">to</span>
+        <span className={programFilterRangeSeparatorClassName}>to</span>
         <Input
           type={type}
           value={secondValue}
           onChange={(event) => onChange([firstValue, event.target.value])}
           placeholder={endPlaceholder}
-          className="h-8 w-28 !border-0 bg-[#0F1728] text-[#DCE6F8] shadow-none placeholder:text-[#70809E] focus-visible:!border-0 focus-visible:ring-0"
+          className={programFilterRangeInputClassName}
         />
       </div>
     )
@@ -136,7 +139,7 @@ function ProgramRangeFilterValue({
       value={firstValue}
       onChange={(event) => onChange([event.target.value])}
       placeholder={singleValuePlaceholder}
-      className="h-8 w-28 !border-0 bg-[#0F1728] text-[#DCE6F8] shadow-none placeholder:text-[#70809E] focus-visible:!border-0 focus-visible:ring-0"
+      className={programFilterRangeInputClassName}
     />
   )
 }
@@ -163,7 +166,7 @@ const programFilterFields = [
     defaultOperator: 'is',
     options: [
       { value: 'assigned', label: 'Assigned' },
-      { value: 'template', label: 'Template' },
+      { value: 'unassigned', label: 'Unassigned' },
     ],
   },
   {
@@ -313,8 +316,16 @@ function ProgramCell({ programId, name, athletesLabel }) {
 }
 
 function StatusCell({ status }) {
+  const tone = status === 'Archived' ? 'danger' : status === 'Draft' || status === 'Unknown' ? 'warning' : 'success'
+  const className =
+    status === 'Archived'
+      ? 'admin-shell-athletes-status-badge admin-shell-athletes-status-badge-inactive normal-case tracking-normal'
+      : status === 'Draft' || status === 'Unknown'
+        ? 'admin-shell-athletes-status-badge admin-shell-athletes-status-badge-pending normal-case tracking-normal'
+        : 'admin-shell-athletes-status-badge admin-shell-athletes-status-badge-active normal-case tracking-normal'
+
   return (
-    <Badge tone="success" className="border-transparent bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/20 normal-case tracking-normal">
+    <Badge tone={tone} className={className}>
       {status}
     </Badge>
   )
@@ -343,8 +354,6 @@ function RowActionsCell({
         >
           Edit
         </DropdownMenuItem>
-        <DropdownMenuItem>Assign</DropdownMenuItem>
-        <DropdownMenuItem>Archive</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -550,16 +559,22 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
     }
   }
 
-  function handleToggleProgramAthlete(athleteId) {
+  function handleSelectProgramAthlete(athleteId) {
     const nextAthleteId = String(athleteId ?? '').trim()
     if (!nextAthleteId) return
 
     setError('')
     setProgramFormValues((current) => ({
       ...current,
-      athleteIds: current.athleteIds.includes(nextAthleteId)
-        ? current.athleteIds.filter((value) => value !== nextAthleteId)
-        : [...current.athleteIds, nextAthleteId],
+      athleteIds: [nextAthleteId],
+    }))
+  }
+
+  function handleClearProgramAthlete() {
+    setError('')
+    setProgramFormValues((current) => ({
+      ...current,
+      athleteIds: [],
     }))
   }
 
@@ -795,7 +810,7 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
               <Button
                 type="button"
                 variant="outline"
-                className="rounded-[12px] min-h-[40px] !border !border-[#24334A] bg-transparent text-[#DCE6F8] shadow-none hover:bg-[#15233A] hover:text-[#EEF4FF]"
+                className="admin-shell-athletes-filter-trigger rounded-[12px] min-h-[40px] shadow-none"
               >
                 <Plus className="size-4" />
                 Add filter
@@ -810,30 +825,30 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
           <div className="flex w-full max-w-[420px] flex-col gap-3">
             <div
               className={[
-                'pointer-events-auto flex w-full items-start gap-3 rounded-[16px] border px-4 py-3 text-[#DCE6F8] shadow-[0_20px_50px_rgba(0,0,0,0.35)] transition-all duration-200',
+                'pointer-events-auto flex w-full items-start gap-3 rounded-[16px] border px-4 py-3 text-[var(--admin-dashboard-card-text)] shadow-[var(--admin-shell-shadow)] transition-all duration-200',
                 programToast.variant === 'loading'
-                  ? 'border-[#24334A] bg-[#111D30]'
+                  ? 'border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)]'
                   : programToast.variant === 'success'
-                    ? 'border-[#1E5B4A] bg-[#0F1728]'
-                    : 'border-[#5A2830] bg-[#0F1728]',
+                    ? 'border-[var(--admin-shell-accent)] bg-[var(--admin-dashboard-card-bg)]'
+                    : 'border-red-200 bg-[var(--admin-dashboard-card-bg)]',
               ].join(' ')}
             >
               <div className="mt-0.5 shrink-0">
                 {programToast.variant === 'loading' ? (
-                  <LoaderCircle className="size-4 animate-spin text-[#8EA0BC]" />
+                  <LoaderCircle className="size-4 animate-spin text-[var(--admin-dashboard-card-muted)]" />
                 ) : programToast.variant === 'success' ? (
-                  <CircleCheckBig className="size-4 text-[#3BE0AF]" />
+                  <CircleCheckBig className="size-4 text-[var(--admin-shell-accent)]" />
                 ) : (
                   <CircleAlert className="size-4 text-[#F87171]" />
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-[#EEF4FF]">{programToast.title}</p>
-                {programToast.description ? <p className="mt-1 text-sm leading-5 text-[#8EA0BC]">{programToast.description}</p> : null}
+                <p className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{programToast.title}</p>
+                {programToast.description ? <p className="mt-1 text-sm leading-5 text-[var(--admin-dashboard-card-muted)]">{programToast.description}</p> : null}
               </div>
               <button
                 type="button"
-                className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-[#8EA0BC] transition-colors hover:bg-[#15233A] hover:text-[#EEF4FF]"
+                className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-[var(--admin-dashboard-card-muted)] transition-colors hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]"
                 onClick={dismissProgramToast}
                 aria-label="Dismiss toast"
               >
@@ -860,9 +875,9 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
       >
         <DialogContent
           pageScrollable
-          className="admin-shell-athletes-invite-dialog border border-[#24334A] bg-[#0F1728] p-0 text-[#DCE6F8] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[720px]"
+          className="admin-shell-athletes-invite-dialog border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] shadow-[var(--admin-shell-shadow)] sm:max-w-[720px]"
         >
-          <div className="shrink-0 border-b border-[#24334A] px-6 py-5">
+          <div className="shrink-0 border-b border-[var(--admin-dashboard-card-border)] px-6 py-5">
             <DialogHeader>
               <DialogTitle>{programDialogMode === 'edit' ? 'Edit program' : 'Create a program'}</DialogTitle>
               <DialogDescription>
@@ -880,19 +895,19 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
                 if (!isProgramPersisted && nextTab === 'athletes') return
                 setActiveProgramDialogTab(nextTab)
               }}
-              className="grid gap-5"
+              className="grid gap-5 admin-shell-athletes-create-tabs"
             >
               {isProgramPersisted ? (
-                <TabsList>
-                  <TabsTrigger value="details">Details</TabsTrigger>
-                  <TabsTrigger value="athletes">Athletes</TabsTrigger>
+                <TabsList className="admin-shell-program-dialog-tabs-list">
+                  <TabsTrigger value="details" className="admin-shell-program-dialog-tabs-trigger">Details</TabsTrigger>
+                  <TabsTrigger value="athletes" className="admin-shell-program-dialog-tabs-trigger">Athletes</TabsTrigger>
                 </TabsList>
               ) : null}
 
               <TabsContent value="details" className="grid gap-5">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
-                    <label className="text-sm font-medium text-[#DCE6F8]" htmlFor="create-program-name">
+                    <label className="text-sm font-medium text-[var(--admin-dashboard-card-text)]" htmlFor="create-program-name">
                       Name
                     </label>
                     <input
@@ -900,12 +915,12 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
                       type="text"
                       value={programFormValues.name}
                       onChange={(event) => setProgramFormValues((current) => ({ ...current, name: event.target.value }))}
-                      className="h-11 rounded-[12px] border border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] outline-none placeholder:text-[#70809E] focus:border-[#3BE0AF]"
+                      className="h-11 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] outline-none placeholder:text-[var(--admin-dashboard-card-muted)] focus:border-[var(--admin-shell-accent)]"
                       placeholder="Enter program name"
                     />
                   </div>
                   <div className="grid gap-2">
-                    <label className="text-sm font-medium text-[#DCE6F8]" htmlFor="create-program-weeks">
+                    <label className="text-sm font-medium text-[var(--admin-dashboard-card-text)]" htmlFor="create-program-weeks">
                       Weeks
                     </label>
                     <input
@@ -915,7 +930,7 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
                       value={programFormValues.weeks}
                       onChange={(event) => setProgramFormValues((current) => ({ ...current, weeks: event.target.value }))}
                       disabled={isProgramPersisted}
-                      className="h-11 rounded-[12px] border border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] outline-none placeholder:text-[#70809E] focus:border-[#3BE0AF] disabled:cursor-not-allowed disabled:opacity-60"
+                      className="h-11 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] outline-none placeholder:text-[var(--admin-dashboard-card-muted)] focus:border-[var(--admin-shell-accent)] disabled:cursor-not-allowed disabled:opacity-60"
                       placeholder="Enter total weeks"
                     />
                   </div>
@@ -923,7 +938,7 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
-                    <label className="text-sm font-medium text-[#DCE6F8]" htmlFor="create-program-start-date">
+                    <label className="text-sm font-medium text-[var(--admin-dashboard-card-text)]" htmlFor="create-program-start-date">
                       Start date
                     </label>
                     <input
@@ -931,11 +946,11 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
                       type="date"
                       value={programFormValues.startDate}
                       onChange={(event) => setProgramFormValues((current) => ({ ...current, startDate: event.target.value }))}
-                      className="h-11 rounded-[12px] border border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] outline-none focus:border-[#3BE0AF]"
+                      className="h-11 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] outline-none focus:border-[var(--admin-shell-accent)]"
                     />
                   </div>
                   <div className="grid gap-2">
-                    <label className="text-sm font-medium text-[#DCE6F8]" htmlFor="create-program-end-date">
+                    <label className="text-sm font-medium text-[var(--admin-dashboard-card-text)]" htmlFor="create-program-end-date">
                       End date
                     </label>
                     <input
@@ -943,20 +958,20 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
                       type="date"
                       value={programFormValues.endDate}
                       onChange={(event) => setProgramFormValues((current) => ({ ...current, endDate: event.target.value }))}
-                      className="h-11 rounded-[12px] border border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] outline-none focus:border-[#3BE0AF]"
+                      className="h-11 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] outline-none focus:border-[var(--admin-shell-accent)]"
                     />
                   </div>
                 </div>
 
                 <div className="grid gap-2">
-                  <label className="text-sm font-medium text-[#DCE6F8]" htmlFor="create-program-description">
+                  <label className="text-sm font-medium text-[var(--admin-dashboard-card-text)]" htmlFor="create-program-description">
                     Description
                   </label>
                   <Textarea
                     id="create-program-description"
                     value={programFormValues.description}
                     onChange={(event) => setProgramFormValues((current) => ({ ...current, description: event.target.value }))}
-                    className="min-h-[140px] rounded-[12px] border border-[#24334A] bg-[#111D30] px-4 py-3 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
+                    className="min-h-[140px] rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 py-3 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:ring-[var(--admin-shell-accent)]/20"
                     placeholder="Add a short description for this program"
                   />
                 </div>
@@ -964,9 +979,9 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
 
               <TabsContent value="athletes" className="grid gap-3">
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-[#DCE6F8]">Athletes</p>
-                  <p className="text-sm text-[#8EA0BC]">Choose the athletes assigned to this program from the real athlete list.</p>
-                  <p className="text-xs text-[#70809E]">{programFormValues.athleteIds.length} athlete{programFormValues.athleteIds.length === 1 ? '' : 's'} selected</p>
+                  <p className="text-sm font-medium text-[var(--admin-dashboard-card-text)]">Athlete assignment</p>
+                  <p className="text-sm text-[var(--admin-dashboard-card-muted)]">Select one athlete from the real athlete list, or leave this program unassigned.</p>
+                  <p className="text-xs text-[var(--admin-dashboard-card-muted)]">{programFormValues.athleteIds.length === 1 ? '1 athlete assigned' : 'No athlete assigned'}</p>
                 </div>
 
                 <ItemGroup className="gap-0">
@@ -975,30 +990,36 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
 
                     return (
                       <div key={athlete.id}>
-                        <Item className="rounded-none px-0 py-3 text-[#DCE6F8] shadow-none transition-colors hover:bg-transparent">
+                        <Item className="rounded-none px-0 py-3 text-[var(--admin-dashboard-card-text)] shadow-none transition-colors hover:bg-transparent">
                           <ItemMedia>
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[#2B3D57] bg-[#162235] text-sm font-semibold text-[#EEF4FF]">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-shell-avatar-bg)] text-sm font-semibold text-[var(--admin-dashboard-card-text)]">
                               {getInitials(athlete.name)}
                             </div>
                           </ItemMedia>
                           <ItemContent className="gap-1">
-                            <ItemTitle className="text-[#EEF4FF]">{athlete.name}</ItemTitle>
-                            <ItemDescription className="text-[#8EA0BC]">{isSelectedAthlete ? 'Added to program' : 'Available to add'}</ItemDescription>
+                            <ItemTitle className="text-[var(--admin-dashboard-card-text)]">{athlete.name}</ItemTitle>
+                            <ItemDescription className="text-[var(--admin-dashboard-card-muted)]">{isSelectedAthlete ? 'Added to program' : 'Available to add'}</ItemDescription>
                           </ItemContent>
                           <ItemActions>
                             <Button
                               type="button"
                               variant="ghost"
                               size="icon"
-                              onClick={() => handleToggleProgramAthlete(athlete.id)}
-                              className="h-9 w-9 rounded-full border border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
+                              onClick={() => {
+                                if (isSelectedAthlete) {
+                                  handleClearProgramAthlete()
+                                  return
+                                }
+                                handleSelectProgramAthlete(athlete.id)
+                              }}
+                              className="h-9 w-9 rounded-full border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]"
                             >
                               {isSelectedAthlete ? <Trash2 className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-                              <span className="sr-only">{isSelectedAthlete ? 'Remove athlete from program' : 'Add athlete to program'}</span>
+                              <span className="sr-only">{isSelectedAthlete ? 'Clear athlete assignment' : 'Assign athlete to program'}</span>
                             </Button>
                           </ItemActions>
                         </Item>
-                        {index != athleteOptions.length - 1 ? <ItemSeparator className="bg-[#24334A]" /> : null}
+                        {index != athleteOptions.length - 1 ? <ItemSeparator className="bg-[var(--admin-dashboard-card-border)]" /> : null}
                       </div>
                     )
                   })}
@@ -1007,11 +1028,11 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
             </Tabs>
           </div>
 
-          <DialogFooter className="border-t border-[#24334A] px-6 py-5 sm:justify-end gap-3">
+          <DialogFooter className="border-t border-[var(--admin-dashboard-card-border)] px-6 py-5 sm:justify-end gap-3">
             <Button
               type="button"
               variant="outline"
-              className="rounded-[12px] min-h-[40px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
+              className="rounded-[12px] min-h-[40px] border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]"
               onClick={() => setIsCreateProgramDialogOpen(false)}
             >
               Cancel
@@ -1092,7 +1113,7 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center text-[#8EA0BC]">
+                <TableCell colSpan={columns.length} className="admin-shell-athletes-empty-state h-24 text-center">
                   {emptyStateMessage}
                 </TableCell>
               </TableRow>
@@ -1101,10 +1122,10 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
         </Table>
       </div>
 
-      <div className="flex items-center justify-end gap-3 py-4 text-sm text-[#8EA0BC]">
+      <div className="admin-shell-athletes-pagination-bar flex items-center justify-end gap-3 py-4 text-sm">
         <span>Rows per page</span>
         <Select value={String(pagination.pageSize)} onValueChange={(value) => table.setPageSize(Number(value))}>
-          <SelectTrigger className="h-9 w-[76px] rounded-[10px] !border-[#24334A] bg-[#111D30] px-3 text-sm text-[#DCE6F8]">
+          <SelectTrigger className="h-9 w-[76px] rounded-[10px] !border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-3 text-sm text-[var(--admin-dashboard-card-text)]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -1127,7 +1148,7 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
           <button
             key={`page-${pageNumber}`}
             type="button"
-            className={`admin-shell-athletes-example-pagination-button ${pagination.pageIndex === pageNumber ? 'bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]' : ''}`}
+            className={`admin-shell-athletes-example-pagination-button ${pagination.pageIndex === pageNumber ? 'admin-shell-athletes-example-pagination-button-active' : ''}`}
             onClick={() => table.setPageIndex(pageNumber)}
           >
             {pageNumber + 1}

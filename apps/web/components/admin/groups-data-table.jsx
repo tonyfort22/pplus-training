@@ -8,7 +8,8 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { ChevronDown, MoreHorizontal } from 'lucide-react'
+import { ChevronDown, MoreHorizontal, Plus } from 'lucide-react'
+import { parseAsJson, useQueryState } from 'nuqs'
 
 import Badge from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -40,6 +41,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import Textarea from '@/components/ui/textarea'
+import { Filters } from '@/components/reui/filters'
 
 function formatAthletePreview(athleteNames = []) {
   if (!Array.isArray(athleteNames) || athleteNames.length === 0) return 'No athlete memberships yet'
@@ -52,15 +54,15 @@ function GroupCell({ name, athleteCountLabel, athleteNames = [], description = '
     <div className="admin-shell-athletes-name-copy gap-1">
       <span className="admin-shell-athletes-name-text">{name}</span>
       <span className="admin-shell-athletes-name-meta">{athleteCountLabel}</span>
-      <span className="text-xs text-[#8EA0BC]">{formatAthletePreview(athleteNames)}</span>
-      {description ? <span className="text-xs text-[#70809E] line-clamp-2">{description}</span> : null}
+      <span className="text-xs text-[var(--admin-dashboard-card-muted)]">{formatAthletePreview(athleteNames)}</span>
+      {description ? <span className="line-clamp-2 text-xs text-[var(--admin-dashboard-card-soft)]">{description}</span> : null}
     </div>
   )
 }
 
 function AccessCell({ access }) {
   return (
-    <Badge tone="neutral" className="border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] normal-case tracking-normal">
+    <Badge tone="neutral" className="admin-shell-groups-access-badge normal-case tracking-normal">
       {access}
     </Badge>
   )
@@ -73,8 +75,8 @@ function StatusCell({ status }) {
       tone={isArchived ? 'warning' : 'success'}
       className={
         isArchived
-          ? 'border-transparent bg-amber-500/15 text-amber-300 hover:bg-amber-500/20 normal-case tracking-normal'
-          : 'border-transparent bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/20 normal-case tracking-normal'
+          ? 'admin-shell-athletes-status-badge admin-shell-athletes-status-badge-pending normal-case tracking-normal'
+          : 'admin-shell-athletes-status-badge admin-shell-athletes-status-badge-active normal-case tracking-normal'
       }
     >
       {status}
@@ -85,7 +87,7 @@ function StatusCell({ status }) {
 function GroupDialogField({ htmlFor, label, children }) {
   return (
     <div className="grid gap-2">
-      <label className="text-sm font-medium text-[#DCE6F8]" htmlFor={htmlFor}>
+      <label className="text-sm font-medium text-[var(--admin-dashboard-card-text)]" htmlFor={htmlFor}>
         {label}
       </label>
       {children}
@@ -135,6 +137,124 @@ function createGroupFormValues(group = null) {
   }
 }
 
+function normalizeGroupFilterValue(value) {
+  return String(value ?? '').trim().toLowerCase()
+}
+
+function parseGroupAthleteCount(value) {
+  if (value === null || value === undefined || value === '') return null
+  const normalizedValue = Number(value)
+  return Number.isFinite(normalizedValue) ? normalizedValue : null
+}
+
+const groupFilterRangeInputClassName = 'h-8 w-28 !border-0 bg-[var(--admin-dashboard-card-bg)] text-[var(--admin-dashboard-card-text)] shadow-none placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:!border-0 focus-visible:ring-0'
+const groupFilterRangeSeparatorClassName = 'text-xs text-[var(--admin-dashboard-card-muted)]'
+
+function GroupRangeFilterValue({ values = [], onChange = () => {}, operator = 'between' }) {
+  const [firstValue = '', secondValue = ''] = values
+  const singleValuePlaceholder = operator === 'greater_than' ? 'Min' : operator === 'less_than' ? 'Max' : 'Value'
+
+  if (operator === 'between') {
+    return (
+      <div className="flex items-center gap-2">
+        <Input type="number" value={firstValue} onChange={(event) => onChange([event.target.value, secondValue])} placeholder="Min" className={groupFilterRangeInputClassName} />
+        <span className={groupFilterRangeSeparatorClassName}>to</span>
+        <Input type="number" value={secondValue} onChange={(event) => onChange([firstValue, event.target.value])} placeholder="Max" className={groupFilterRangeInputClassName} />
+      </div>
+    )
+  }
+
+  return <Input type="number" value={firstValue} onChange={(event) => onChange([event.target.value])} placeholder={singleValuePlaceholder} className={groupFilterRangeInputClassName} />
+}
+
+const groupFilterFields = [
+  {
+    key: 'status',
+    label: 'Status',
+    field: 'status',
+    type: 'select',
+    defaultOperator: 'is',
+    options: [
+      { value: 'active', label: 'Active' },
+      { value: 'archived', label: 'Archived' },
+    ],
+  },
+  {
+    key: 'access',
+    label: 'Access',
+    field: 'access',
+    type: 'select',
+    defaultOperator: 'is',
+    options: [
+      { value: 'private', label: 'Private' },
+      { value: 'public', label: 'Public' },
+    ],
+  },
+  {
+    key: 'athleteCount',
+    label: 'Athlete count',
+    field: 'athleteCount',
+    type: 'custom',
+    defaultOperator: 'between',
+    operators: [
+      { value: 'between', label: 'between' },
+      { value: 'greater_than', label: 'greater than' },
+      { value: 'less_than', label: 'less than' },
+      { value: 'empty', label: 'is empty' },
+      { value: 'not_empty', label: 'is not empty' },
+    ],
+    customRenderer: ({ values, onChange, operator }) => <GroupRangeFilterValue values={values} onChange={onChange} operator={operator} />,
+  },
+]
+
+function groupMatchesFilter(group, filter) {
+  if (!filter?.field) return true
+  const values = Array.isArray(filter.values) ? filter.values : []
+  const primaryValue = values[0]
+  const secondaryValue = values[1]
+
+  switch (filter.field) {
+    case 'status': {
+      const groupStatus = normalizeGroupFilterValue(group.statusValue || group.status)
+      if (filter.operator === 'empty') return !group.statusValue && !group.status
+      if (filter.operator === 'not_empty') return Boolean(group.statusValue || group.status)
+      const selectedStatus = normalizeGroupFilterValue(primaryValue)
+      if (!selectedStatus) return true
+      if (filter.operator === 'is_not') return groupStatus !== selectedStatus
+      return groupStatus === selectedStatus
+    }
+    case 'access': {
+      const groupAccess = normalizeGroupFilterValue(group.accessLevel || group.access)
+      if (filter.operator === 'empty') return !group.accessLevel && !group.access
+      if (filter.operator === 'not_empty') return Boolean(group.accessLevel || group.access)
+      const selectedAccess = normalizeGroupFilterValue(primaryValue)
+      if (!selectedAccess) return true
+      if (filter.operator === 'is_not') return groupAccess !== selectedAccess
+      return groupAccess === selectedAccess
+    }
+    case 'athleteCount': {
+      const groupAthleteCount = parseGroupAthleteCount(group.athleteCount)
+      const minCount = parseGroupAthleteCount(primaryValue)
+      const maxCount = parseGroupAthleteCount(secondaryValue)
+      if (filter.operator === 'empty') return group.athleteCount === null || group.athleteCount === undefined
+      if (filter.operator === 'not_empty') return group.athleteCount !== null && group.athleteCount !== undefined
+      if (groupAthleteCount === null) return false
+      if (filter.operator === 'greater_than') return minCount === null ? true : groupAthleteCount > minCount
+      if (filter.operator === 'less_than') return minCount === null ? true : groupAthleteCount < minCount
+      if (minCount !== null && maxCount !== null) return groupAthleteCount >= minCount && groupAthleteCount <= maxCount
+      if (minCount !== null) return groupAthleteCount >= minCount
+      if (maxCount !== null) return groupAthleteCount <= maxCount
+      return true
+    }
+    default:
+      return true
+  }
+}
+
+function groupMatchesFilters(group, filters) {
+  return filters.every((filter) => groupMatchesFilter(group, filter))
+}
+
 export default function GroupsDataTable({ searchQuery = '' }) {
   const [groups, setGroups] = useState([])
   const [athleteOptions, setAthleteOptions] = useState([])
@@ -156,6 +276,10 @@ export default function GroupsDataTable({ searchQuery = '' }) {
   const [openRowActionMenuId, setOpenRowActionMenuId] = useState(null)
   const [pendingRowAction, setPendingRowAction] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [groupFilters, setGroupFilters] = useQueryState(
+    'groupFilters',
+    parseAsJson((value) => (Array.isArray(value) ? value : [])).withDefault([]),
+  )
   const [rowSelection, setRowSelection] = useState({})
   const [columnFilters, setColumnFilters] = useState([])
   const [columnVisibility, setColumnVisibility] = useState({})
@@ -258,8 +382,13 @@ export default function GroupsDataTable({ searchQuery = '' }) {
     },
   ], [openRowActionMenuId])
 
+  const filteredGroups = useMemo(() => {
+    const normalizedFilters = Array.isArray(groupFilters) ? groupFilters : []
+    return groups.filter((group) => groupMatchesFilters(group, normalizedFilters))
+  }, [groupFilters, groups])
+
   const table = useReactTable({
-    data: groups,
+    data: filteredGroups,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -432,7 +561,7 @@ export default function GroupsDataTable({ searchQuery = '' }) {
     }
   }
 
-  const emptyStateMessage = error || 'No groups found.'
+  const emptyStateMessage = error || (groupFilters.length > 0 ? 'No groups match the current filters.' : 'No groups found.')
   const pageSizeOptions = [5, 10, 20, 30]
   const totalRows = table.getFilteredRowModel().rows.length
   const pageStart = totalRows === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1
@@ -442,28 +571,43 @@ export default function GroupsDataTable({ searchQuery = '' }) {
 
   return (
     <div className="admin-shell-athletes-table-example">
-      <div className="admin-shell-athletes-example-controls flex items-center justify-between gap-3">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button type="button" className="admin-shell-athletes-example-columns-button">
-              Columns
-              <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {table.getAllColumns().filter((column) => column.getCanHide()).map((column) => (
-              <DropdownMenuCheckboxItem key={column.id} className="capitalize" checked={column.getIsVisible()} onCheckedChange={(value) => column.toggleVisibility(!!value)}>
-                {column.columnDef.meta?.label ?? column.id}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <Button type="button" onClick={openCreateGroupDialog} className="admin-shell-athletes-invite-button bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d] rounded-[12px] min-h-[40px]">Create group</Button>
+      <div className="flex flex-col gap-3">
+        <div className="flex w-full items-center justify-between gap-3">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button type="button" className="admin-shell-athletes-example-columns-button">
+                Columns
+                <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {table.getAllColumns().filter((column) => column.getCanHide()).map((column) => (
+                <DropdownMenuCheckboxItem key={column.id} className="capitalize" checked={column.getIsVisible()} onCheckedChange={(value) => column.toggleVisibility(!!value)}>
+                  {column.columnDef.meta?.label ?? column.id}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button type="button" onClick={openCreateGroupDialog} className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d] md:self-auto">Create group</Button>
+        </div>
+        <div className="flex w-full flex-wrap items-center justify-start gap-2">
+          <Filters
+            filters={groupFilters}
+            fields={groupFilterFields}
+            onChange={setGroupFilters}
+            trigger={
+              <Button type="button" variant="outline" className="admin-shell-athletes-filter-trigger rounded-[12px] min-h-[40px] shadow-none">
+                <Plus className="size-4" />
+                Add filter
+              </Button>
+            }
+          />
+        </div>
       </div>
 
       <Dialog open={isCreateEditGroupDialogOpen} onOpenChange={setIsCreateEditGroupDialogOpen}>
-        <DialogContent pageScrollable className="admin-shell-athletes-invite-dialog border border-[#24334A] bg-[#0F1728] p-0 text-[#DCE6F8] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[720px]">
-          <div className="border-b border-[#24334A] px-6 py-5">
+        <DialogContent pageScrollable className="admin-shell-athletes-invite-dialog border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] shadow-[var(--admin-shell-shadow)] sm:max-w-[720px]">
+          <div className="border-b border-[color:var(--admin-dashboard-card-border)] px-6 py-5">
             <DialogHeader>
               <DialogTitle>{groupDialogMode === 'edit' ? 'Edit group' : 'Create a group'}</DialogTitle>
               <DialogDescription>{groupDialogMode === 'edit' ? 'Manage memberships, access, and naming for this group.' : 'Create a new coach-managed athlete group.'}</DialogDescription>
@@ -472,7 +616,7 @@ export default function GroupsDataTable({ searchQuery = '' }) {
           <div className="grid gap-5 px-6 py-6">
             <div className="grid gap-4 md:grid-cols-2">
               <GroupDialogField htmlFor="create-group-name" label="Name">
-                <Input id="create-group-name" className="h-11 rounded-[12px] border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20" placeholder="Off-season forwards" value={groupFormValues.name} onChange={(event) => updateGroupFormValue('name', event.target.value)} />
+                <Input id="create-group-name" className="h-11 rounded-[12px] border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20" placeholder="Off-season forwards" value={groupFormValues.name} onChange={(event) => updateGroupFormValue('name', event.target.value)} />
               </GroupDialogField>
               <GroupDialogField htmlFor="create-group-access-level" label="Access">
                 <Select value={groupFormValues.accessLevel} onValueChange={(value) => updateGroupFormValue('accessLevel', value)}>
@@ -485,46 +629,46 @@ export default function GroupsDataTable({ searchQuery = '' }) {
               </GroupDialogField>
             </div>
             <GroupDialogField htmlFor="create-group-description" label="Description">
-              <Textarea id="create-group-description" className="min-h-[120px] rounded-[12px] border-[#24334A] bg-[#111D30] px-4 py-3 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20" placeholder="Optional notes about who belongs in this group." value={groupFormValues.description} onChange={(event) => updateGroupFormValue('description', event.target.value)} />
+              <Textarea id="create-group-description" className="min-h-[120px] rounded-[12px] border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 py-3 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20" placeholder="Optional notes about who belongs in this group." value={groupFormValues.description} onChange={(event) => updateGroupFormValue('description', event.target.value)} />
             </GroupDialogField>
             <div className="grid gap-3">
               <div>
-                <h3 className="text-sm font-medium text-[#EEF4FF]">Manage memberships</h3>
-                <p className="mt-1 text-sm text-[#8EA0BC]">Add or remove athlete memberships for this group.</p>
+                <h3 className="text-sm font-medium text-[var(--admin-dashboard-card-text)]">Manage memberships</h3>
+                <p className="mt-1 text-sm text-[var(--admin-dashboard-card-muted)]">Add or remove athlete memberships for this group.</p>
               </div>
               <div className="max-h-[280px] overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                 <div className="grid gap-2">
                   {athleteOptions.length ? athleteOptions.map((athlete) => {
                     const isChecked = groupFormValues.athleteIds.includes(athlete.id)
                     return (
-                      <label key={athlete.id} className="flex items-center justify-between gap-3 rounded-[12px] border border-[#24334A] bg-[#0F1728] px-3 py-3 text-sm text-[#DCE6F8]">
+                      <label key={athlete.id} className="flex items-center justify-between gap-3 rounded-[12px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-3 py-3 text-sm text-[var(--admin-dashboard-card-text)]">
                         <span>{athlete.name}</span>
                         <Checkbox className="admin-shell-athletes-checkbox-input" checked={isChecked} onChange={() => toggleAthleteMembership(athlete.id)} aria-label={`Toggle ${athlete.name} membership`} />
                       </label>
                     )
-                  }) : <div className="rounded-[12px] border border-[#24334A] bg-[#0F1728] px-3 py-4 text-sm text-[#8EA0BC]">No athletes available.</div>}
+                  }) : <div className="rounded-[12px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-3 py-4 text-sm text-[var(--admin-dashboard-card-muted)]">No athletes available.</div>}
                 </div>
               </div>
             </div>
           </div>
-          <DialogFooter className="border-t border-[#24334A] px-6 py-5 sm:justify-end gap-3">
-            <Button type="button" variant="outline" className="rounded-[12px] min-h-[40px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]" onClick={() => setIsCreateEditGroupDialogOpen(false)}>Cancel</Button>
+          <DialogFooter className="border-t border-[color:var(--admin-dashboard-card-border)] px-6 py-5 sm:justify-end gap-3">
+            <Button type="button" variant="outline" className="rounded-[12px] min-h-[40px] border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-shell-nav-active-bg)] hover:text-[var(--admin-shell-nav-active-text)]" onClick={() => setIsCreateEditGroupDialogOpen(false)}>Cancel</Button>
             <Button type="button" disabled={isSavingGroup} className="rounded-[12px] min-h-[40px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]" onClick={handleGroupSubmit}>{isSavingGroup ? 'Saving...' : groupDialogMode === 'edit' ? 'Save group' : 'Create group'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={isAssignProgramDialogOpen} onOpenChange={setIsAssignProgramDialogOpen}>
-        <DialogContent className="admin-shell-athletes-invite-dialog border border-[#24334A] bg-[#0F1728] p-0 text-[#DCE6F8] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[620px]">
-          <div className="border-b border-[#24334A] px-6 py-5">
+        <DialogContent className="admin-shell-athletes-invite-dialog border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] shadow-[var(--admin-shell-shadow)] sm:max-w-[620px]">
+          <div className="border-b border-[color:var(--admin-dashboard-card-border)] px-6 py-5">
             <DialogHeader>
               <DialogTitle>Assign program</DialogTitle>
               <DialogDescription>Clone a source program to each athlete in this group as a bulk action.</DialogDescription>
             </DialogHeader>
           </div>
           <div className="grid gap-5 px-6 py-6">
-            <div className="rounded-[12px] border border-[#24334A] bg-[#111D30] px-4 py-3 text-sm text-[#8EA0BC]">
-              <div className="text-[#EEF4FF] font-medium">{selectedGroup?.name ?? 'Selected group'}</div>
+            <div className="rounded-[12px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 py-3 text-sm text-[var(--admin-dashboard-card-muted)]">
+              <div className="font-medium text-[var(--admin-dashboard-card-text)]">{selectedGroup?.name ?? 'Selected group'}</div>
               <div className="mt-1">{formatAthletePreview(selectedGroup?.athleteNames ?? [])}</div>
             </div>
             <GroupDialogField htmlFor="assign-program-select" label="Program">
@@ -536,38 +680,38 @@ export default function GroupsDataTable({ searchQuery = '' }) {
               </Select>
             </GroupDialogField>
           </div>
-          <DialogFooter className="border-t border-[#24334A] px-6 py-5 sm:justify-end gap-3">
-            <Button type="button" variant="outline" className="rounded-[12px] min-h-[40px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]" onClick={() => setIsAssignProgramDialogOpen(false)}>Cancel</Button>
+          <DialogFooter className="border-t border-[color:var(--admin-dashboard-card-border)] px-6 py-5 sm:justify-end gap-3">
+            <Button type="button" variant="outline" className="rounded-[12px] min-h-[40px] border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-shell-nav-active-bg)] hover:text-[var(--admin-shell-nav-active-text)]" onClick={() => setIsAssignProgramDialogOpen(false)}>Cancel</Button>
             <Button type="button" disabled={isAssigningProgram || !selectedProgramId} className="rounded-[12px] min-h-[40px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]" onClick={handleAssignProgram}>{isAssigningProgram ? 'Assigning...' : 'Assign program'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={isArchiveGroupDialogOpen} onOpenChange={setIsArchiveGroupDialogOpen}>
-        <DialogContent className="admin-shell-athletes-invite-dialog border border-[#24334A] bg-[#0F1728] p-0 text-[#DCE6F8] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[560px]">
+        <DialogContent className="admin-shell-athletes-invite-dialog border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] shadow-[var(--admin-shell-shadow)] sm:max-w-[560px]">
           <div className="px-6 py-5">
             <DialogHeader>
               <DialogTitle>Archive group</DialogTitle>
               <DialogDescription>Archive this group and remove it from active access.</DialogDescription>
             </DialogHeader>
           </div>
-          <DialogFooter className="border-t border-[#24334A] px-6 py-5 sm:justify-end gap-3">
-            <Button type="button" variant="outline" className="rounded-[12px] min-h-[40px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]" onClick={() => setIsArchiveGroupDialogOpen(false)}>Cancel</Button>
+          <DialogFooter className="border-t border-[color:var(--admin-dashboard-card-border)] px-6 py-5 sm:justify-end gap-3">
+            <Button type="button" variant="outline" className="rounded-[12px] min-h-[40px] border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-shell-nav-active-bg)] hover:text-[var(--admin-shell-nav-active-text)]" onClick={() => setIsArchiveGroupDialogOpen(false)}>Cancel</Button>
             <Button type="button" disabled={isArchivingGroup} className="rounded-[12px] min-h-[40px] bg-red-500/90 text-white hover:bg-red-500" onClick={handleArchiveGroup}>{isArchivingGroup ? 'Archiving...' : 'Archive group'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={isDeleteGroupDialogOpen} onOpenChange={setIsDeleteGroupDialogOpen}>
-        <DialogContent className="admin-shell-athletes-invite-dialog border border-[#24334A] bg-[#0F1728] p-0 text-[#DCE6F8] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[560px]">
+        <DialogContent className="admin-shell-athletes-invite-dialog border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] shadow-[var(--admin-shell-shadow)] sm:max-w-[560px]">
           <div className="px-6 py-5">
             <DialogHeader>
               <DialogTitle>Delete group</DialogTitle>
               <DialogDescription>Permanently delete this group and remove all memberships.</DialogDescription>
             </DialogHeader>
           </div>
-          <DialogFooter className="border-t border-[#24334A] px-6 py-5 sm:justify-end gap-3">
-            <Button type="button" variant="outline" className="rounded-[12px] min-h-[40px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]" onClick={() => setIsDeleteGroupDialogOpen(false)}>Cancel</Button>
+          <DialogFooter className="border-t border-[color:var(--admin-dashboard-card-border)] px-6 py-5 sm:justify-end gap-3">
+            <Button type="button" variant="outline" className="rounded-[12px] min-h-[40px] border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-shell-nav-active-bg)] hover:text-[var(--admin-shell-nav-active-text)]" onClick={() => setIsDeleteGroupDialogOpen(false)}>Cancel</Button>
             <Button type="button" disabled={isDeletingGroup} className="rounded-[12px] min-h-[40px] bg-red-500/90 text-white hover:bg-red-500" onClick={handleDeleteGroup}>{isDeletingGroup ? 'Deleting...' : 'Delete group'}</Button>
           </DialogFooter>
         </DialogContent>
@@ -622,16 +766,16 @@ export default function GroupsDataTable({ searchQuery = '' }) {
                 ))}
               </TableRow>
             )) : (
-              <TableRow><TableCell colSpan={columns.length} className="h-24 text-center text-[#8EA0BC]">{emptyStateMessage}</TableCell></TableRow>
+              <TableRow><TableCell colSpan={columns.length} className="admin-shell-athletes-empty-state h-24 text-center">{emptyStateMessage}</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
       </div>
 
-      <div className="flex items-center justify-end gap-3 py-4 text-sm text-[#8EA0BC]">
+      <div className="admin-shell-athletes-pagination-bar flex items-center justify-end gap-3 py-4 text-sm">
         <span>Rows per page</span>
         <Select value={String(pagination.pageSize)} onValueChange={(value) => table.setPageSize(Number(value))}>
-          <SelectTrigger className="h-9 w-[76px] rounded-[10px] !border-[#24334A] bg-[#111D30] px-3 text-sm text-[#DCE6F8]">
+          <SelectTrigger className="admin-shell-athletes-page-size-select h-9 w-[76px] rounded-[10px] px-3 text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -654,7 +798,7 @@ export default function GroupsDataTable({ searchQuery = '' }) {
           <button
             key={`page-${pageNumber}`}
             type="button"
-            className={`admin-shell-athletes-example-pagination-button ${pagination.pageIndex === pageNumber ? 'bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]' : ''}`}
+            className={`admin-shell-athletes-example-pagination-button ${pagination.pageIndex === pageNumber ? 'admin-shell-athletes-example-pagination-button-active' : ''}`}
             onClick={() => table.setPageIndex(pageNumber)}
           >
             {pageNumber + 1}

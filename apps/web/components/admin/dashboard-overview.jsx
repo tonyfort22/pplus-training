@@ -5,7 +5,6 @@ import {
   Activity,
   BadgeCheck,
   CalendarRange,
-  ChevronDown,
   Send,
   TrendingDown,
   TrendingUp,
@@ -47,13 +46,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-
-const overviewRangeOptions = [
-  { id: 'last-7-days', label: 'Last 7 days' },
-  { id: 'last-month', label: 'Last month' },
-  { id: 'last-3-months', label: 'Last 3 months' },
-  { id: 'last-year', label: 'Last year' },
-]
 
 const overviewChartTabs = [
   { id: 'last-year', label: '12 month' },
@@ -625,18 +617,21 @@ function OverviewSummaryCard({ card }) {
           <span className="admin-shell-overview-card-label">{card.label}</span>
         </CardDescription>
         <CardAction>
-          <Badge tone={card.changeDirection === 'negative' ? 'danger' : 'success'}>
+          <Badge
+            tone={card.changeDirection === 'negative' ? 'danger' : 'success'}
+            className={`admin-shell-overview-card-badge ${card.changeDirection === 'negative' ? 'admin-shell-overview-card-badge-negative' : 'admin-shell-overview-card-badge-positive'}`}
+          >
             {card.change}
             <TrendArrowIcon direction={card.changeDirection} />
           </Badge>
         </CardAction>
-        <CardTitle className="text-2xl font-semibold tabular-nums">{card.value}</CardTitle>
+        <CardTitle className="text-[2.6rem] font-semibold leading-none tabular-nums">{card.value}</CardTitle>
       </CardHeader>
       <CardFooter className="flex-col items-start gap-1.5 text-sm">
-        <div className="line-clamp-1 flex gap-2 font-medium text-[#EEF4FF]">
+        <div className="line-clamp-1 flex gap-2 font-medium text-[var(--admin-dashboard-card-text)]">
           {card.footerHeadline} <TrendArrowIcon direction={card.changeDirection} />
         </div>
-        <div className="text-[#8EA0BC]">{card.footerSubtext}</div>
+        <div className="text-[var(--admin-dashboard-card-muted)]">{card.footerSubtext}</div>
       </CardFooter>
     </Card>
   )
@@ -690,7 +685,7 @@ function AreaChartInteractiveCard() {
 
   return (
     <Card>
-      <CardHeader className="flex items-center gap-2 space-y-0 border-b border-[#24334A] py-5 sm:flex-row">
+      <CardHeader className="flex items-center gap-2 space-y-0 border-b border-[var(--admin-dashboard-chart-header-divider)] py-5 sm:flex-row">
         <div className="grid flex-1 gap-1">
           <CardTitle>Area Chart - Interactive</CardTitle>
           <CardDescription>Showing total visitors for the last 3 months</CardDescription>
@@ -727,14 +722,14 @@ function AreaChartInteractiveCard() {
                 <stop offset="95%" stopColor="var(--color-mobile)" stopOpacity={0.1} />
               </linearGradient>
             </defs>
-            <CartesianGrid vertical={false} stroke="#24334A" />
+            <CartesianGrid vertical={false} stroke="var(--admin-dashboard-chart-grid)" />
             <XAxis
               dataKey="date"
               tickLine={false}
               axisLine={false}
               minTickGap={32}
               tickMargin={8}
-              tick={{ fill: '#AEB9E1', fontSize: 11, fontWeight: 500 }}
+              tick={{ fill: 'var(--admin-dashboard-chart-tick)', fontSize: 11, fontWeight: 500 }}
               tickFormatter={(value) => {
                 const date = new Date(value)
                 return date.toLocaleDateString('en-US', {
@@ -777,13 +772,13 @@ function BarChartMultipleCard() {
       <CardContent>
         <ChartContainer config={areaChartLegendConfig} className="h-[250px] w-full">
           <BarChart accessibilityLayer data={areaChartLegendData} margin={{ left: 12, right: 12 }}>
-            <CartesianGrid vertical={false} stroke="#24334A" />
+            <CartesianGrid vertical={false} stroke="var(--admin-dashboard-chart-grid)" />
             <XAxis
               dataKey="month"
               tickLine={false}
               tickMargin={10}
               axisLine={false}
-              tick={{ fill: '#AEB9E1', fontSize: 11, fontWeight: 500 }}
+              tick={{ fill: 'var(--admin-dashboard-chart-tick)', fontSize: 11, fontWeight: 500 }}
               tickFormatter={(value) => value.slice(0, 3)}
             />
             <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dashed" />} />
@@ -793,10 +788,10 @@ function BarChartMultipleCard() {
         </ChartContainer>
       </CardContent>
       <CardFooter className="flex-col items-start gap-2 text-sm">
-        <div className="flex gap-2 leading-none font-medium text-[#EEF4FF]">
+        <div className="flex gap-2 leading-none font-medium text-[var(--admin-dashboard-card-text)]">
           Trending up by 5.2% this month <TrendingUp className="h-4 w-4" />
         </div>
-        <div className="leading-none text-[#8EA0BC]">Showing total visitors for the last 6 months</div>
+        <div className="leading-none text-[var(--admin-dashboard-card-muted)]">Showing total visitors for the last 6 months</div>
       </CardFooter>
     </Card>
   )
@@ -824,12 +819,12 @@ function SessionTimeChart({ data }) {
     <div className="admin-shell-overview-session-chart">
       <ChartContainer config={chartConfig} className="h-[132px] w-full">
         <LineChart data={chartData} accessibilityLayer margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
-          <CartesianGrid vertical={false} stroke="#24334a" />
+          <CartesianGrid vertical={false} stroke="var(--admin-dashboard-chart-grid)" />
           <XAxis
             axisLine={false}
             dataKey="index"
             domain={[0, data.points.length - 1]}
-            tick={{ fill: '#aeb9e1', fontSize: 11, fontWeight: 500 }}
+            tick={{ fill: 'var(--admin-dashboard-chart-tick)', fontSize: 11, fontWeight: 500 }}
             tickFormatter={(value) => labelMap[value] ?? ''}
             tickLine={false}
             tickMargin={10}
@@ -839,13 +834,13 @@ function SessionTimeChart({ data }) {
           <YAxis
             axisLine={false}
             domain={[0, maxValue]}
-            tick={{ fill: '#aeb9e1', fontSize: 11, fontWeight: 500 }}
+            tick={{ fill: 'var(--admin-dashboard-chart-tick)', fontSize: 11, fontWeight: 500 }}
             tickLine={false}
             tickMargin={8}
             ticks={tickValues}
             width={28}
           />
-          <ChartTooltip content={<ChartTooltipContent hideLabel />} cursor={{ stroke: 'rgba(36, 51, 74, 1)', strokeWidth: 1 }} />
+          <ChartTooltip content={<ChartTooltipContent hideLabel />} cursor={{ stroke: 'var(--admin-dashboard-chart-grid)', strokeWidth: 1 }} />
           <Line dataKey="sessions" dot={false} stroke="#AEB9E1" strokeWidth={3} type="monotone" />
         </LineChart>
       </ChartContainer>
@@ -870,13 +865,13 @@ function AreaChartLegendCard() {
               right: 12,
             }}
           >
-            <CartesianGrid vertical={false} stroke="#24334A" />
+            <CartesianGrid vertical={false} stroke="var(--admin-dashboard-chart-grid)" />
             <XAxis
               dataKey="month"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              tick={{ fill: '#AEB9E1', fontSize: 11, fontWeight: 500 }}
+              tick={{ fill: 'var(--admin-dashboard-chart-tick)', fontSize: 11, fontWeight: 500 }}
               tickFormatter={(value) => value.slice(0, 3)}
             />
             <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" />} />
@@ -903,10 +898,10 @@ function AreaChartLegendCard() {
       <CardFooter>
         <div className="flex w-full items-start gap-2 text-sm">
           <div className="grid gap-2">
-            <div className="flex items-center gap-2 leading-none font-medium text-[#EEF4FF]">
+            <div className="flex items-center gap-2 leading-none font-medium text-[var(--admin-dashboard-card-text)]">
               Trending up by 5.2% this month <TrendingUp className="h-4 w-4" />
             </div>
-            <div className="flex items-center gap-2 leading-none text-[#8EA0BC]">January - June 2024</div>
+            <div className="flex items-center gap-2 leading-none text-[var(--admin-dashboard-card-muted)]">January - June 2024</div>
           </div>
         </div>
       </CardFooter>
@@ -915,13 +910,7 @@ function AreaChartLegendCard() {
 }
 
 export default function DashboardOverview() {
-  const [activeRange, setActiveRange] = useState('last-month')
-  const [menuOpen, setMenuOpen] = useState(false)
-
-  const activeOption = useMemo(
-    () => overviewRangeOptions.find((option) => option.id === activeRange) ?? overviewRangeOptions[1],
-    [activeRange],
-  )
+  const activeRange = 'last-month'
 
   const cards = overviewRangeCardData[activeRange] ?? overviewRangeCardData['last-month']
   const summaryCardRows = [cards.slice(0, 3), cards.slice(3)]
@@ -934,42 +923,6 @@ export default function DashboardOverview() {
       <div className="admin-shell-overview-toolbar">
         <div className="admin-shell-workspace-header">
           <h1 className="admin-shell-workspace-title">Dashboard</h1>
-        </div>
-
-        <div className="admin-shell-overview-range-shell">
-          <button
-            type="button"
-            className="admin-shell-overview-range-button"
-            aria-haspopup="menu"
-            aria-expanded={menuOpen ? 'true' : 'false'}
-            onClick={() => setMenuOpen((open) => !open)}
-          >
-            <span className="admin-shell-overview-range-button-label">{activeOption.label}</span>
-            <ChevronDown className={['admin-shell-overview-range-chevron', menuOpen ? 'admin-shell-overview-range-chevron-open' : ''].join(' ')} />
-          </button>
-
-          {menuOpen ? (
-            <div className="admin-shell-overview-range-menu" role="menu" aria-label="Dashboard range options">
-              {overviewRangeOptions.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  role="menuitemradio"
-                  aria-checked={option.id === activeRange ? 'true' : 'false'}
-                  className={[
-                    'admin-shell-overview-range-option',
-                    option.id === activeRange ? 'admin-shell-overview-range-option-active' : '',
-                  ].filter(Boolean).join(' ')}
-                  onClick={() => {
-                    setActiveRange(option.id)
-                    setMenuOpen(false)
-                  }}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          ) : null}
         </div>
       </div>
 

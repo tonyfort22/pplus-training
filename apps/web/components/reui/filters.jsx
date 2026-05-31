@@ -47,6 +47,19 @@ const DEFAULT_OPERATORS = {
   ],
 }
 
+
+const filterMenuContentClassName = "border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-1 text-[var(--admin-dashboard-card-text)] shadow-[var(--admin-shell-shadow)]"
+const filterMenuItemClassName = "rounded-xl focus:bg-[var(--admin-shell-nav-active-bg)] focus:text-[var(--admin-shell-nav-active-text)] data-[highlighted]:bg-[var(--admin-shell-nav-active-bg)] data-[highlighted]:text-[var(--admin-shell-nav-active-text)]"
+const filterControlButtonClassName = "bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] shadow-none hover:bg-[var(--admin-shell-nav-active-bg)] hover:text-[var(--admin-shell-nav-active-text)]"
+const filterControlMutedButtonClassName = "bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-muted)] shadow-none hover:bg-[var(--admin-shell-nav-active-bg)] hover:text-[var(--admin-shell-nav-active-text)]"
+const filterChipClassName = "overflow-hidden rounded-[12px] border border-[color:var(--admin-dashboard-chart-header-divider)] bg-[var(--admin-dashboard-control-bg)] [&>*]:h-10 [&>*]:border-0 [&>*]:bg-[var(--admin-dashboard-control-bg)] [&>*]:text-[var(--admin-dashboard-card-text)] [&>*]:hover:bg-[var(--admin-shell-nav-active-bg)] [&>*]:hover:text-[var(--admin-shell-nav-active-text)]"
+const filterChipDividerClassName = "border-[color:var(--admin-dashboard-chart-header-divider)]"
+const filterChipLabelClassName = "rounded-l-[12px] bg-[var(--admin-dashboard-card-bg)] px-3 text-[var(--admin-dashboard-card-text)]"
+const filterValueShellClassName = "flex min-h-10 items-center gap-2 bg-[var(--admin-dashboard-control-bg)] px-3 py-1"
+const filterInputClassName = "h-8 w-36 rounded-[10px] !border-0 bg-[var(--admin-dashboard-card-bg)] text-[var(--admin-dashboard-card-text)] shadow-none placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:!border-0 focus-visible:ring-0"
+const filterSearchInputClassName = "h-9 rounded-none border-0 bg-transparent px-2 pl-8 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] shadow-none focus-visible:ring-0"
+const filterMutedIconClassName = "size-4 text-[var(--admin-dashboard-card-muted)]"
+
 function createFilter(field, operator = "is", values = []) {
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
@@ -78,7 +91,8 @@ function FilterRemoveButton({ onClick }) {
       variant="outline"
       size="icon-sm"
       onClick={onClick}
-      className="rounded-r-[12px] !border-0 !border-l !border-[#24334A] bg-[#111D30] text-[#8EA0BC] shadow-none hover:bg-[#15233A] hover:text-[#EEF4FF]"
+      className={cn("rounded-r-[12px] !border-0 !border-l", filterChipDividerClassName, filterControlMutedButtonClassName)}
+      style={{ borderColor: 'var(--admin-dashboard-chart-header-divider)' }}
     >
       <X className="size-4" />
     </Button>
@@ -92,17 +106,18 @@ function FilterOperatorDropdown({ field, operator, onChange }) {
         <Button
           variant="outline"
           size="sm"
-          className="rounded-none !border-0 !border-l !border-r !border-[#24334A] bg-[#111D30] px-3 text-[#8EA0BC] shadow-none hover:bg-[#15233A] hover:text-[#EEF4FF]"
+          className={cn("rounded-none !border-0 !border-l !border-r px-3", filterChipDividerClassName, filterControlMutedButtonClassName)}
+          style={{ borderColor: 'var(--admin-dashboard-chart-header-divider)' }}
         >
           {getOperatorLabel(field, operator)}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-fit min-w-fit rounded-2xl border border-[#24334A] bg-[#111D30] p-1 text-[#DCE6F8] shadow-[0_16px_40px_rgba(0,0,0,0.45)]">
+      <DropdownMenuContent align="start" className={cn("w-fit min-w-fit rounded-2xl", filterMenuContentClassName)}>
         {getOperators(field).map((item) => (
           <DropdownMenuItem
             key={item.value}
             onClick={() => onChange(item.value)}
-            className="flex items-center justify-between gap-3 rounded-xl focus:bg-[#15233A] focus:text-[#EEF4FF]"
+            className={cn("flex items-center justify-between gap-3", filterMenuItemClassName)}
           >
             <span>{item.label}</span>
             <Check className={cn("size-4", item.value === operator ? "opacity-100" : "opacity-0")} />
@@ -124,13 +139,13 @@ function FilterSelectValue({ field, values, onChange }) {
         <Button
           variant="outline"
           size="sm"
-          className="max-w-[180px] justify-between gap-2 rounded-none !border-0 bg-[#111D30] px-3 text-[#DCE6F8] shadow-none hover:bg-[#15233A] hover:text-[#EEF4FF]"
+          className={cn("max-w-[180px] justify-between gap-2 rounded-none !border-0 px-3", filterControlButtonClassName)}
         >
           <span className="truncate">{selectedLabels.length ? selectedLabels.join(", ") : field.placeholder || "Select..."}</span>
-          <ChevronDown className="size-4 text-[#8EA0BC]" />
+          <ChevronDown className={filterMutedIconClassName} />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-[220px] rounded-2xl border border-[#24334A] bg-[#111D30] p-1 text-[#DCE6F8] shadow-[0_16px_40px_rgba(0,0,0,0.45)]">
+      <DropdownMenuContent align="start" className={cn("w-[220px] rounded-2xl", filterMenuContentClassName)}>
         <DropdownMenuGroup>
           {(field.options || []).map((option) => {
             const checked = selectedValues.includes(option.value)
@@ -138,7 +153,7 @@ function FilterSelectValue({ field, values, onChange }) {
               <DropdownMenuCheckboxItem
                 key={String(option.value)}
                 checked={checked}
-                className="rounded-xl focus:bg-[#15233A] focus:text-[#EEF4FF]"
+                className={filterMenuItemClassName}
                 onCheckedChange={(nextChecked) => {
                   if (!allowsMultipleValues) {
                     onChange(nextChecked ? [option.value] : [])
@@ -169,7 +184,7 @@ function FilterTextValue({ field, values, onChange }) {
       value={currentValue}
       onChange={(event) => onChange([event.target.value])}
       placeholder={field.placeholder || "Enter value..."}
-      className="h-8 w-36 rounded-[10px] !border-0 bg-[#0F1728] text-[#DCE6F8] shadow-none placeholder:text-[#70809E] focus-visible:!border-0 focus-visible:ring-0"
+      className={filterInputClassName}
     />
   )
 }
@@ -261,13 +276,13 @@ export function Filters({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             {trigger || (
-              <Button variant="outline" className="rounded-[12px] min-h-[40px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]">
+              <Button variant="outline" className={cn("rounded-[12px] min-h-[40px] border-[color:var(--admin-dashboard-card-border)]", filterControlButtonClassName)}>
                 <Plus className="size-4" />
                 Add filter
               </Button>
             )}
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-[220px] rounded-2xl border border-[#24334A] bg-[#111D30] p-1 text-[#DCE6F8] shadow-[0_16px_40px_rgba(0,0,0,0.45)]">
+          <DropdownMenuContent align="start" className={cn("w-[220px] rounded-2xl", filterMenuContentClassName)}>
             {showSearchInput ? (
               <>
                 <div className="relative">
@@ -275,34 +290,34 @@ export function Filters({
                     value={searchInput}
                     onChange={(event) => setSearchInput(event.target.value)}
                     placeholder="Filter..."
-                    className="h-9 rounded-none border-0 bg-transparent px-2 pl-8 text-sm text-[#DCE6F8] placeholder:text-[#70809E] shadow-none focus-visible:ring-0"
+                    className={filterSearchInputClassName}
                   />
-                  <Search className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-[#70809E]" />
-                  {enableShortcut ? <Kbd className="absolute right-2 top-1/2 -translate-y-1/2 border border-[#24334A] bg-[#0F1728]">{shortcutLabel}</Kbd> : null}
+                  <Search className="pointer-events-none absolute left-2 top-1/2 size-4 -translate-y-1/2 text-[var(--admin-dashboard-card-muted)]" />
+                  {enableShortcut ? <Kbd className="absolute right-2 top-1/2 -translate-y-1/2 border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] text-[var(--admin-dashboard-card-muted)]">{shortcutLabel}</Kbd> : null}
                 </div>
                 <DropdownMenuSeparator />
               </>
             ) : null}
             <ScrollArea className="max-h-80">
               {filteredFields.length === 0 ? (
-                <div className="px-3 py-2 text-sm text-[#8EA0BC]">No filters found.</div>
+                <div className="px-3 py-2 text-sm text-[var(--admin-dashboard-card-muted)]">No filters found.</div>
               ) : (
                 filteredFields.map((field) => {
                   const hasOptions = Array.isArray(field.options) && field.options.length > 0 && !field.customRenderer
                   if (hasOptions) {
                     return (
                       <DropdownMenuSub key={field.key}>
-                        <DropdownMenuSubTrigger className="rounded-xl focus:bg-[#15233A] data-[state=open]:bg-[#15233A]">
+                        <DropdownMenuSubTrigger className={cn(filterMenuItemClassName, "data-[state=open]:bg-[var(--admin-shell-nav-active-bg)] data-[state=open]:text-[var(--admin-shell-nav-active-text)]")}>
                           <span>{field.label}</span>
                         </DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent className="w-[220px] rounded-2xl border border-[#24334A] bg-[#111D30] p-1 text-[#DCE6F8] shadow-[0_16px_40px_rgba(0,0,0,0.45)]">
+                        <DropdownMenuSubContent className={cn("w-[220px] rounded-2xl", filterMenuContentClassName)}>
                           <DropdownMenuLabel>{field.label}</DropdownMenuLabel>
                           <DropdownMenuSeparator />
                           {(field.options || []).map((option) => (
                             <DropdownMenuItem
                               key={String(option.value)}
                               onClick={() => onChange([...filters, createFilter(field.key, field.defaultOperator || "is", [option.value])])}
-                              className="rounded-xl focus:bg-[#15233A] focus:text-[#EEF4FF]"
+                              className={filterMenuItemClassName}
                             >
                               {option.label}
                             </DropdownMenuItem>
@@ -316,7 +331,7 @@ export function Filters({
                     <DropdownMenuItem
                       key={field.key}
                       onClick={() => addFilterForField(field)}
-                      className="rounded-xl focus:bg-[#15233A] focus:text-[#EEF4FF]"
+                      className={filterMenuItemClassName}
                     >
                       {field.label}
                     </DropdownMenuItem>
@@ -335,9 +350,9 @@ export function Filters({
         return (
           <ButtonGroup
             key={filter.id}
-            className="overflow-hidden rounded-[12px] border border-[#24334A] bg-[#111D30] [&>*]:h-10 [&>*]:border-0 [&>*]:bg-[#111D30] [&>*]:text-[#DCE6F8] [&>*]:hover:bg-[#15233A] [&>*]:hover:text-[#EEF4FF]"
+            className={filterChipClassName}
           >
-            <ButtonGroupText className="rounded-l-[12px] bg-[#0F1728] px-3 text-[#DCE6F8]">
+            <ButtonGroupText className={filterChipLabelClassName}>
               {field.label}
             </ButtonGroupText>
             <FilterOperatorDropdown
@@ -350,7 +365,7 @@ export function Filters({
                 })
               }}
             />
-            <div className="flex min-h-10 items-center gap-2 bg-[#111D30] px-3 py-1">
+            <div className={filterValueShellClassName}>
               <FilterValueRenderer field={field} filter={filter} onChange={(values) => updateFilter(filter.id, { values })} />
             </div>
             <FilterRemoveButton onClick={() => removeFilter(filter.id)} />

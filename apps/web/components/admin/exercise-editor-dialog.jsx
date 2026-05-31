@@ -26,7 +26,7 @@ import AvatarFileUpload from '@/components/ui/avatar-file-upload'
 
 function FieldLabel({ children, htmlFor }) {
   return (
-    <label className="text-sm font-medium text-[#DCE6F8]" htmlFor={htmlFor}>
+    <label className="text-sm font-medium text-[var(--admin-dashboard-card-text)]" htmlFor={htmlFor}>
       {children}
     </label>
   )
@@ -39,7 +39,7 @@ function FieldInput({ id, value, onChange, placeholder = '', disabled = false })
       type="text"
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className="h-11 rounded-[12px] border border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] outline-none placeholder:text-[#70809E] focus:border-[#3BE0AF] disabled:cursor-not-allowed disabled:opacity-60"
+      className="h-11 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] outline-none placeholder:text-[var(--admin-dashboard-card-muted)] focus:border-[var(--admin-shell-accent)] disabled:cursor-not-allowed disabled:opacity-60"
       placeholder={placeholder}
       disabled={disabled}
     />
@@ -47,7 +47,7 @@ function FieldInput({ id, value, onChange, placeholder = '', disabled = false })
 }
 
 function UnsupportedFieldNote() {
-  return <p className="text-xs text-[#70809E]">This field is visible for layout parity, but it does not save in v1.</p>
+  return <p className="text-xs text-[var(--admin-dashboard-card-muted)]">This field is visible for layout parity, but it does not save in v1.</p>
 }
 
 export default function ExerciseEditorDialog({
@@ -88,9 +88,9 @@ export default function ExerciseEditorDialog({
     <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
       <DialogContent
         pageScrollable
-        className="admin-shell-athletes-invite-dialog border border-[#24334A] bg-[#0F1728] p-0 text-[#DCE6F8] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[760px]"
+        className="admin-shell-athletes-invite-dialog border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] shadow-[var(--admin-shell-shadow)] sm:max-w-[760px]"
       >
-        <div className="shrink-0 border-b border-[#24334A] px-6 py-5">
+        <div className="shrink-0 border-b border-[var(--admin-dashboard-card-border)] px-6 py-5">
           <DialogHeader>
             <DialogTitle>{mode === 'edit' ? 'Edit exercise' : 'Create exercise'}</DialogTitle>
             <DialogDescription>
@@ -102,10 +102,10 @@ export default function ExerciseEditorDialog({
         </div>
 
         <div className="grid gap-5 px-6 py-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="grid gap-5">
-            <TabsList>
-              <TabsTrigger value="details">Details</TabsTrigger>
-              <TabsTrigger value="muscles">Muscles</TabsTrigger>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="grid gap-5 admin-shell-athletes-create-tabs">
+            <TabsList className="admin-shell-exercise-dialog-tabs-list">
+              <TabsTrigger value="details" className="admin-shell-exercise-dialog-tabs-trigger">Details</TabsTrigger>
+              <TabsTrigger value="muscles" className="admin-shell-exercise-dialog-tabs-trigger">Muscles</TabsTrigger>
             </TabsList>
 
             <TabsContent value="details" className="grid gap-5">
@@ -277,22 +277,22 @@ export default function ExerciseEditorDialog({
                   id="exercise-description"
                   value={values.description}
                   onChange={(event) => updateField('description', event.target.value)}
-                  className="min-h-[140px] rounded-[12px] border border-[#24334A] bg-[#111D30] px-4 py-3 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
+                  className="min-h-[140px] rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 py-3 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
                   placeholder="Add a short description for this exercise"
                 />
               </div>
 
               {saveDisclaimer ? (
-                <div className="rounded-[16px] border border-[#24334A] bg-[#111D30] p-4 text-sm leading-6 text-[#8EA0BC]">
-                  <p className="font-medium text-[#EEF4FF]">What actually saves in v1</p>
+                <div className="rounded-[16px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-4 text-sm leading-6 text-[var(--admin-dashboard-card-muted)]">
+                  <p className="font-medium text-[var(--admin-shell-text-strong)]">What actually saves in v1</p>
                   <p className="mt-2">{saveDisclaimer}</p>
                 </div>
               ) : null}
             </TabsContent>
 
             <TabsContent value="muscles" className="grid gap-4">
-              <div className="rounded-[16px] border border-[#24334A] bg-[#111D30] p-4 text-sm leading-6 text-[#8EA0BC]">
-                <p className="font-medium text-[#EEF4FF]">Current muscle-mapping reality</p>
+              <div className="rounded-[16px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-4 text-sm leading-6 text-[var(--admin-dashboard-card-muted)]">
+                <p className="font-medium text-[var(--admin-shell-text-strong)]">Current muscle-mapping reality</p>
                 <p className="mt-2">
                   V1 saves honest primary and secondary role mappings into <code>exercise_muscle_maps</code> from the Details tab.
                 </p>
@@ -310,12 +310,12 @@ export default function ExerciseEditorDialog({
           </Tabs>
         </div>
 
-        <DialogFooter className="shrink-0 gap-3 border-t border-[#24334A] px-6 py-5 sm:justify-end">
+        <DialogFooter className="shrink-0 gap-3 border-t border-[var(--admin-dashboard-card-border)] px-6 py-5 sm:justify-end">
           {errorMessage ? <p className="mr-auto text-sm text-[#F38BA8]">{errorMessage}</p> : null}
           <Button
             type="button"
             variant="outline"
-            className="rounded-[12px] min-h-[40px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
+            className="rounded-[12px] min-h-[40px] border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-shell-text-strong)]"
             onClick={() => onOpenChange(false)}
             disabled={isSaving}
           >

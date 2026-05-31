@@ -1,7 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { CheckCircle2, Mail } from 'lucide-react'
+import { Info } from 'lucide-react'
 
 import Avatar from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -9,10 +8,16 @@ import { Input } from '@/components/ui/input'
 
 const ADMIN_PROFILE_SEED = {
   avatarUrl: '',
-  firstName: 'Anthony',
-  lastName: 'Fortugno',
+  name: '',
+  phone: '',
+}
+
+const ADMIN_ACCOUNT_SEED = {
   email: 'tonyfortugno22@gmail.com',
 }
+
+const settingsFieldInputClassName = 'h-11 rounded-[12px] border-[var(--admin-shell-control-border)] bg-[var(--admin-shell-control-bg)] px-4 text-sm text-[var(--admin-shell-text)] placeholder:text-[var(--admin-shell-soft)] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20 disabled:cursor-not-allowed disabled:opacity-70'
+const settingsProfileFieldInputClassName = 'h-11 rounded-[12px] border-[var(--admin-shell-control-border)] bg-[var(--admin-shell-control-bg)] px-4 text-sm text-[var(--admin-shell-text)] placeholder:text-[var(--admin-shell-soft)] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20 disabled:cursor-not-allowed disabled:opacity-70'
 
 function getActiveSettingsTab(currentPath = '') {
   if (currentPath.endsWith('/account')) return 'account'
@@ -22,7 +27,7 @@ function getActiveSettingsTab(currentPath = '') {
 function CreateAthleteDialogField({ htmlFor, label, children }) {
   return (
     <div className="grid gap-2">
-      <label className="text-sm font-medium text-[#DCE6F8]" htmlFor={htmlFor}>
+      <label className="text-sm font-medium text-[var(--admin-shell-text)]" htmlFor={htmlFor}>
         {label}
       </label>
       {children}
@@ -30,33 +35,41 @@ function CreateAthleteDialogField({ htmlFor, label, children }) {
   )
 }
 
-function ProfilePhotoUploader({ previewSrc = '', profileName = '', onFileChange = () => {}, onClearPreview = () => {} }) {
+function SettingsProfileField({ htmlFor, label, children }) {
+  return (
+    <div className="grid gap-2">
+      <label className="text-sm font-medium text-[var(--admin-shell-text)]" htmlFor={htmlFor}>
+        {label}
+      </label>
+      {children}
+    </div>
+  )
+}
+
+function SettingsField({ htmlFor, label, children }) {
+  return (
+    <div className="grid gap-2">
+      <label className="text-sm font-medium text-[var(--admin-shell-text)]" htmlFor={htmlFor}>
+        {label}
+      </label>
+      {children}
+    </div>
+  )
+}
+
+function ProfilePhotoUploader({ previewSrc = '', profileName = '' }) {
   const hasPreview = Boolean(previewSrc)
 
   return (
-    <label className="admin-shell-athletes-create-uploader relative flex cursor-pointer flex-col items-center justify-center justify-self-start gap-4 px-6 py-2 text-center transition-colors hover:text-[#EEF4FF]">
+    <div className="relative flex cursor-not-allowed flex-col items-center justify-center justify-self-start gap-4 px-0 py-1 text-center opacity-85">
       {hasPreview ? (
-        <div className="relative">
-          <Avatar
-            alt={profileName || 'Admin avatar'}
-            className="h-36 w-36 rounded-full border border-[#24334A] bg-[#0F1728] text-lg font-semibold text-[#DCE6F8]"
-            src={previewSrc}
-          />
-          <button
-            type="button"
-            aria-label="Remove uploaded avatar"
-            className="absolute -right-2 -top-1 flex h-5 w-5 items-center justify-center rounded-full border border-[#24334A] bg-[#111D30] text-[10px] font-medium text-[#EEF4FF] shadow-[0_6px_18px_rgba(0,0,0,0.28)] transition-colors hover:bg-[#15233A]"
-            onClick={(event) => {
-              event.preventDefault()
-              event.stopPropagation()
-              onClearPreview()
-            }}
-          >
-            ×
-          </button>
-        </div>
+        <Avatar
+          alt={profileName || 'Coach avatar'}
+          className="h-36 w-36 rounded-full border border-[var(--admin-shell-control-border)] bg-[var(--admin-shell-avatar-bg)] text-lg font-semibold text-[var(--admin-shell-avatar-text)]"
+          src={previewSrc}
+        />
       ) : (
-        <div className="flex h-36 w-36 items-center justify-center rounded-full border border-dashed border-[#2B3D57] bg-[#0D1625] text-[#8EA0BC]">
+        <div className="flex h-36 w-36 items-center justify-center rounded-full border border-dashed border-[var(--admin-shell-control-border)] bg-[var(--admin-shell-avatar-bg)] text-[var(--admin-shell-avatar-text)]">
           <svg viewBox="0 0 24 24" aria-hidden="true" className="h-9 w-9">
             <circle cx="12" cy="8" r="3.25" fill="none" stroke="currentColor" strokeWidth="1.6" />
             <path
@@ -70,149 +83,107 @@ function ProfilePhotoUploader({ previewSrc = '', profileName = '', onFileChange 
         </div>
       )}
       <div className="space-y-1">
-        <p className="text-[17px] font-medium text-[#EEF4FF]">{hasPreview ? 'Avatar uploaded' : 'Upload avatar'}</p>
-        <p className="text-sm text-[#8EA0BC]">PNG, JPG up to 2MB</p>
+        <p className="text-[17px] font-medium text-[var(--admin-shell-text-strong)]">Coach avatar</p>
+        <p className="text-sm text-[var(--admin-shell-muted)]">Avatar updates are unavailable in this admin view.</p>
       </div>
-      <input className="sr-only" type="file" accept="image/*" onChange={onFileChange} />
-    </label>
+    </div>
   )
 }
 
 function AdminSettingsProfileView() {
-  const [profileDraft, setProfileDraft] = useState(ADMIN_PROFILE_SEED)
-  const [notice, setNotice] = useState('')
-
-  function handleProfilePhotoChange(event) {
-    const file = event.target.files?.[0]
-    if (!file) {
-      setProfileDraft((current) => ({ ...current, avatarUrl: '' }))
-      return
-    }
-
-    const previewUrl = URL.createObjectURL(file)
-    setProfileDraft((current) => {
-      if (current.avatarUrl) URL.revokeObjectURL(current.avatarUrl)
-      return { ...current, avatarUrl: previewUrl }
-    })
-    setNotice('')
-  }
-
-  function handleClearProfilePhoto() {
-    setProfileDraft((current) => {
-      if (current.avatarUrl) URL.revokeObjectURL(current.avatarUrl)
-      return { ...current, avatarUrl: '' }
-    })
-    setNotice('')
-  }
-
-  function handleSaveProfile(event) {
-    event.preventDefault()
-    setNotice('Profile updated.')
-  }
+  const profileDraft = ADMIN_PROFILE_SEED
 
   return (
-    <form className="grid w-full gap-6" onSubmit={handleSaveProfile}>
-      <ProfilePhotoUploader
-        previewSrc={profileDraft.avatarUrl}
-        profileName={[profileDraft.firstName, profileDraft.lastName].filter(Boolean).join(' ')}
-        onFileChange={handleProfilePhotoChange}
-        onClearPreview={handleClearProfilePhoto}
-      />
+    <form className="grid w-full gap-6" aria-describedby="admin-profile-disabled-notice">
+      <ProfilePhotoUploader previewSrc={profileDraft.avatarUrl} profileName={profileDraft.name} />
 
       <div className="grid w-full gap-4 md:grid-cols-2">
-        <CreateAthleteDialogField htmlFor="admin-profile-first-name" label="First name">
+        <SettingsProfileField htmlFor="admin-profile-name" label="Name">
           <Input
-            id="admin-profile-first-name"
-            className="h-11 rounded-[12px] border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
-            value={profileDraft.firstName}
-            placeholder="First name"
-            onChange={(event) => setProfileDraft((current) => ({ ...current, firstName: event.target.value }))}
+            id="admin-profile-name"
+            className={settingsProfileFieldInputClassName}
+            value={profileDraft.name}
+            placeholder="Coach name"
+            disabled
+            readOnly
           />
-        </CreateAthleteDialogField>
-        <CreateAthleteDialogField htmlFor="admin-profile-last-name" label="Last name">
+        </SettingsProfileField>
+        <SettingsProfileField htmlFor="admin-profile-phone" label="Phone">
           <Input
-            id="admin-profile-last-name"
-            className="h-11 rounded-[12px] border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
-            value={profileDraft.lastName}
-            placeholder="Last name"
-            onChange={(event) => setProfileDraft((current) => ({ ...current, lastName: event.target.value }))}
+            id="admin-profile-phone"
+            type="tel"
+            className={settingsProfileFieldInputClassName}
+            value={profileDraft.phone}
+            placeholder="Coach phone"
+            disabled
+            readOnly
           />
-        </CreateAthleteDialogField>
+        </SettingsProfileField>
       </div>
 
-      {notice ? (
-        <div className="flex items-center gap-2 rounded-[14px] border border-[#2D4C4C] bg-[#0B2F2A] px-4 py-3 text-sm text-[#3BE0AF]">
-          <CheckCircle2 className="h-4 w-4" />
-          {notice}
-        </div>
-      ) : null}
+      <div id="admin-profile-disabled-notice" className="flex w-full items-start gap-2 rounded-[14px] border border-[#3BE0AF]/30 bg-[#3BE0AF]/10 px-4 py-3 text-sm leading-6 text-[var(--admin-shell-text)]">
+        <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#06b486]" />
+        <span>Profile editing is unavailable in this admin shell until a current authenticated coach profile API is connected. The view is read-only to avoid fake saves.</span>
+      </div>
 
       <div>
-        <Button type="submit" className="admin-shell-athletes-create-submit rounded-[12px] min-h-[40px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]">Save changes</Button>
+        <Button type="button" disabled className="admin-shell-athletes-create-submit min-h-[40px] rounded-[12px] bg-[#3BE0AF] text-[#0B1120] opacity-60 hover:bg-[#3BE0AF] disabled:cursor-not-allowed">Save changes unavailable</Button>
       </div>
     </form>
   )
 }
 
 function AdminSettingsAccountView() {
-  const [accountDraft, setAccountDraft] = useState({
-    email: ADMIN_PROFILE_SEED.email,
-    currentPassword: '',
-    newPassword: '',
-  })
-  const [notice, setNotice] = useState('')
-
-  function handleSaveAccount(event) {
-    event.preventDefault()
-    setNotice('Account updated.')
-    setAccountDraft((current) => ({ ...current, currentPassword: '', newPassword: '' }))
-  }
+  const accountDraft = ADMIN_ACCOUNT_SEED
 
   return (
-    <form className="grid w-full gap-6" onSubmit={handleSaveAccount}>
-      <CreateAthleteDialogField htmlFor="admin-account-email" label="Email">
-        <Input
-          id="admin-account-email"
-          type="email"
-          className="h-11 rounded-[12px] border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
-          value={accountDraft.email}
-          placeholder="admin@email.com"
-          onChange={(event) => setAccountDraft((current) => ({ ...current, email: event.target.value }))}
-        />
-      </CreateAthleteDialogField>
+    <form className="grid w-full gap-6" aria-describedby="admin-account-disabled-notice">
+      <div className="grid w-full gap-4">
+        <SettingsField htmlFor="admin-account-email" label="Email">
+          <Input
+            id="admin-account-email"
+            type="email"
+            className={settingsFieldInputClassName}
+            value={accountDraft.email}
+            placeholder="admin@email.com"
+            disabled
+            readOnly
+          />
+        </SettingsField>
+      </div>
 
       <div className="grid w-full gap-4 md:grid-cols-2">
-        <CreateAthleteDialogField htmlFor="admin-account-current-password" label="Current password">
+        <SettingsField htmlFor="admin-account-current-password" label="Current password">
           <Input
             id="admin-account-current-password"
             type="password"
-            className="h-11 rounded-[12px] border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
-            value={accountDraft.currentPassword}
+            className={settingsFieldInputClassName}
+            value=""
             placeholder="Current password"
-            onChange={(event) => setAccountDraft((current) => ({ ...current, currentPassword: event.target.value }))}
+            disabled
+            readOnly
           />
-        </CreateAthleteDialogField>
-        <CreateAthleteDialogField htmlFor="admin-account-new-password" label="New password">
+        </SettingsField>
+        <SettingsField htmlFor="admin-account-confirm-password" label="Confirm password">
           <Input
-            id="admin-account-new-password"
+            id="admin-account-confirm-password"
             type="password"
-            className="h-11 rounded-[12px] border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
-            value={accountDraft.newPassword}
-            placeholder="New password"
-            onChange={(event) => setAccountDraft((current) => ({ ...current, newPassword: event.target.value }))}
+            className={settingsFieldInputClassName}
+            value=""
+            placeholder="Confirm password"
+            disabled
+            readOnly
           />
-        </CreateAthleteDialogField>
+        </SettingsField>
       </div>
 
-      {notice ? (
-        <div className="flex items-center gap-2 rounded-[14px] border border-[#2D4C4C] bg-[#0B2F2A] px-4 py-3 text-sm text-[#3BE0AF]">
-          <Mail className="h-4 w-4" />
-          {notice}
-        </div>
-      ) : null}
+      <div id="admin-account-disabled-notice" className="flex w-full items-start gap-2 rounded-[14px] border border-[#3BE0AF]/30 bg-[#3BE0AF]/10 px-4 py-3 text-sm leading-6 text-[var(--admin-shell-text)]">
+        <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#06b486]" />
+        <span>Account changes are unavailable in this admin shell until a current authenticated account update API is connected. The view is read-only to avoid fake saves.</span>
+      </div>
 
       <div>
-        <Button type="submit" className="admin-shell-athletes-create-submit rounded-[12px] min-h-[40px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]">Save changes</Button>
+        <Button type="button" disabled className="admin-shell-athletes-create-submit min-h-[40px] rounded-[12px] bg-[#3BE0AF] text-[#0B1120] opacity-60 hover:bg-[#3BE0AF] disabled:cursor-not-allowed">Account actions unavailable</Button>
       </div>
     </form>
   )
@@ -225,7 +196,7 @@ export default function AdminSettingsView({ currentPath = '/admin/settings' }) {
     <section className="grid gap-6">
       <div className="admin-shell-workspace-header">
         <h1 className="admin-shell-athletes-page-title">{activeTab === 'account' ? 'Account' : 'Profile'}</h1>
-        <p className="admin-shell-workspace-description">{activeTab === 'profile' ? 'Update your profile image and name shown in the admin dashboard.' : 'Update your sign-in email and password credentials.'}</p>
+        <p className="admin-shell-workspace-description">{activeTab === 'profile' ? 'View the approved coach profile fields: avatar, name, and phone.' : 'View the current admin sign-in email. Account updates are unavailable until connected to the authenticated account API.'}</p>
       </div>
 
       {activeTab === 'account' ? (

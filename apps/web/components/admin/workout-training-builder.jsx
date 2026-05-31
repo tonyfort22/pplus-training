@@ -137,11 +137,11 @@ function SortableSetRow({ sectionId, exerciseId, setIndex, setValues, updateSetF
   }
 
   return (
-    <tr ref={setNodeRef} style={style} className={isDragging ? 'border-[#1C2940] bg-[#15233A]' : 'border-[#1C2940]'}>
+    <tr ref={setNodeRef} style={style} className={isDragging ? 'border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-hover-bg)]' : 'border-[var(--admin-dashboard-card-border)]'}>
       <td className="w-[52px] px-2 py-2 align-middle">
         <button
           type="button"
-          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#24334A] bg-[#111D30] text-[#8EA0BC] hover:text-[#EEF4FF]"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-muted)] hover:text-[var(--admin-dashboard-card-text)]"
           {...attributes}
           {...listeners}
         >
@@ -149,33 +149,33 @@ function SortableSetRow({ sectionId, exerciseId, setIndex, setValues, updateSetF
           <span className="sr-only">Drag set row</span>
         </button>
       </td>
-      <td className="px-2 py-2 align-middle text-[#8EA0BC]">{setIndex + 1}</td>
+      <td className="px-2 py-2 align-middle text-[var(--admin-dashboard-card-muted)]">{setIndex + 1}</td>
       <td className="px-2 py-2 align-middle">
-        <Input value={setValues.tempo} onChange={(event) => updateSetField(sectionId, exerciseId, setValues.id, 'tempo', event.target.value)} className="h-9 border-[#24334A] bg-[#111D30] text-[#DCE6F8]" />
+        <Input value={setValues.tempo} onChange={(event) => updateSetField(sectionId, exerciseId, setValues.id, 'tempo', event.target.value)} className="h-9 border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)]" />
       </td>
       <td className="px-2 py-2 align-middle">
-        <Input value={setValues.effort} onChange={(event) => updateSetField(sectionId, exerciseId, setValues.id, 'effort', event.target.value)} className="h-9 border-[#24334A] bg-[#111D30] text-[#DCE6F8]" />
+        <Input value={setValues.effort} onChange={(event) => updateSetField(sectionId, exerciseId, setValues.id, 'effort', event.target.value)} className="h-9 border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)]" />
       </td>
       <td className="px-2 py-2 align-middle">
-        <Input value={setValues.side} onChange={(event) => updateSetField(sectionId, exerciseId, setValues.id, 'side', event.target.value)} className="h-9 border-[#24334A] bg-[#111D30] text-[#DCE6F8]" />
+        <Input value={setValues.side} onChange={(event) => updateSetField(sectionId, exerciseId, setValues.id, 'side', event.target.value)} className="h-9 border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)]" />
       </td>
       <td className="px-2 py-2 align-middle">
-        <Input value={setValues.duration} onChange={(event) => updateSetField(sectionId, exerciseId, setValues.id, 'duration', event.target.value)} className="h-9 border-[#24334A] bg-[#111D30] text-[#DCE6F8]" />
+        <Input value={setValues.duration} onChange={(event) => updateSetField(sectionId, exerciseId, setValues.id, 'duration', event.target.value)} className="h-9 border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)]" />
       </td>
       <td className="px-2 py-2 align-middle">
-        <Input value={setValues.distance} onChange={(event) => updateSetField(sectionId, exerciseId, setValues.id, 'distance', event.target.value)} className="h-9 border-[#24334A] bg-[#111D30] text-[#DCE6F8]" />
+        <Input value={setValues.distance} onChange={(event) => updateSetField(sectionId, exerciseId, setValues.id, 'distance', event.target.value)} className="h-9 border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)]" />
       </td>
       <td className="px-2 py-2 align-middle">
-        <Input value={setValues.rest} onChange={(event) => updateSetField(sectionId, exerciseId, setValues.id, 'rest', event.target.value)} className="h-9 border-[#24334A] bg-[#111D30] text-[#DCE6F8]" />
+        <Input value={setValues.rest} onChange={(event) => updateSetField(sectionId, exerciseId, setValues.id, 'rest', event.target.value)} className="h-9 border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)]" />
       </td>
       <td className="px-2 py-2 align-middle">
-        <Input value={setValues.reps} onChange={(event) => updateSetField(sectionId, exerciseId, setValues.id, 'reps', event.target.value)} className="h-9 border-[#24334A] bg-[#111D30] text-[#DCE6F8]" />
+        <Input value={setValues.reps} onChange={(event) => updateSetField(sectionId, exerciseId, setValues.id, 'reps', event.target.value)} className="h-9 border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)]" />
       </td>
       <td className="px-2 py-2 align-middle">
         <button
           type="button"
           onClick={() => deleteSet(sectionId, exerciseId, setValues.id)}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#24334A] bg-[#111D30] text-[#8EA0BC] hover:text-[#EEF4FF]"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-muted)] hover:text-[var(--admin-dashboard-card-text)]"
         >
           <Trash2 className="h-4 w-4" />
           <span className="sr-only">Delete set</span>
@@ -283,10 +283,10 @@ export default function WorkoutTrainingBuilder({
   return (
     <div className="grid gap-4">
       {sections.length === 0 ? (
-        <div className="grid gap-4 rounded-[18px] border border-dashed border-[#24334A] bg-[#0F1728] px-6 py-8 text-center">
+        <div className="grid gap-4 rounded-[18px] border border-dashed border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-6 py-8 text-center">
           <div className="grid gap-2">
-            <p className="text-base font-semibold text-[#EEF4FF]">No sections yet</p>
-            <p className="text-sm text-[#8EA0BC]">Add a section to this workout.</p>
+            <p className="text-base font-semibold text-[var(--admin-dashboard-card-text)]">No sections yet</p>
+            <p className="text-sm text-[var(--admin-dashboard-card-muted)]">Add a section to this workout.</p>
           </div>
           <div className="flex justify-center">
             <Button type="button" onClick={addSection} disabled={readOnly} className="min-h-[40px] rounded-[12px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]">
@@ -305,28 +305,28 @@ export default function WorkoutTrainingBuilder({
           <KanbanBoard className="gap-4" onDragEnd={handleSectionDragEnd}>
             <KanbanColumn itemIds={sections.map((section) => section.id)}>
               {sections.map((section) => (
-                <KanbanItem key={section.id} id={section.id} columnId="training-sections" className="rounded-[18px] border border-[#24334A] bg-[#111827] shadow-[0_18px_40px_rgba(0,0,0,0.26)]">
+                <KanbanItem key={section.id} id={section.id} columnId="training-sections" className="rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] shadow-none">
                   <div className="grid gap-0">
-                <div className="flex items-center justify-between gap-3 border-b border-[#24334A] px-4 py-4">
+                <div className="flex items-center justify-between gap-3 border-b border-[var(--admin-dashboard-card-border)] px-4 py-4">
                   <div className="flex items-center gap-3">
-                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#2F4563] bg-[#0F1728] text-xs font-semibold tracking-[0.18em] text-[#7DF5CD]">
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-xs font-semibold tracking-[0.18em] text-[#06B486]">
                       {section.label}
                     </span>
                     <div>
-                      <p className="text-sm font-semibold text-[#EEF4FF]">{section.label}</p>
-                      <p className="text-xs text-[#8EA0BC]">{section.exercises.length} exercises</p>
+                      <p className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{section.label}</p>
+                      <p className="text-xs text-[var(--admin-dashboard-card-muted)]">{section.exercises.length} exercises</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => updateSection(section.id, (currentSection) => ({ ...currentSection, isExpanded: !currentSection.isExpanded }))}
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#24334A] bg-[#0F1728] text-[#8EA0BC] hover:text-[#EEF4FF]"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-muted)] hover:text-[var(--admin-dashboard-card-text)]"
                     >
                       {section.isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                       <span className="sr-only">Toggle {section.label}</span>
                     </button>
-                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#24334A] bg-[#0F1728] text-[#8EA0BC]">
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-muted)]">
                       <GripVertical className="h-4 w-4" />
                     </span>
                   </div>
@@ -335,18 +335,18 @@ export default function WorkoutTrainingBuilder({
                 {section.isExpanded ? (
                   <div className="grid gap-4 px-4 py-4">
                     <div className="grid gap-2">
-                      <label className="text-sm font-medium text-[#DCE6F8]">Exercises</label>
-                      <div className="rounded-[14px] border border-[#24334A] bg-[#0F1728] p-3">
-                        <div className="flex items-center gap-2 rounded-[12px] border border-[#24334A] bg-[#111D30] px-3">
-                          <Search className="h-4 w-4 text-[#6F84A6]" />
+                      <label className="text-sm font-medium text-[var(--admin-dashboard-card-text)]">Exercises</label>
+                      <div className="rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-3">
+                        <div className="flex items-center gap-2 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-3">
+                          <Search className="h-4 w-4 text-[var(--admin-dashboard-card-muted)]" />
                           <Input
                             value={section.draftExerciseQuery}
                             onChange={(event) => updateSection(section.id, (currentSection) => ({ ...currentSection, draftExerciseQuery: event.target.value }))}
                             placeholder="Type here..."
-                            className="h-11 border-0 bg-transparent px-0 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:ring-0 focus-visible:border-0"
+                            className="h-11 border-0 bg-transparent px-0 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:ring-0 focus-visible:border-0"
                           />
                         </div>
-                        <p className="mt-3 text-xs uppercase tracking-[0.16em] text-[#60708F]">Search exercises</p>
+                        <p className="mt-3 text-xs uppercase tracking-[0.16em] text-[var(--admin-dashboard-card-muted)]">Search exercises</p>
                         {section.draftExerciseQuery ? (
                           <div className="mt-3 grid gap-2">
                             {EXERCISE_LIBRARY.filter((exerciseOption) => exerciseOption.title.toLowerCase().includes(section.draftExerciseQuery.toLowerCase())).map((exerciseOption) => (
@@ -354,7 +354,7 @@ export default function WorkoutTrainingBuilder({
                                 key={exerciseOption.id}
                                 type="button"
                                 onClick={() => addExercise(section.id, exerciseOption)}
-                                className="rounded-[12px] border border-[#24334A] bg-[#111D30] px-3 py-3 text-left text-sm text-[#DCE6F8] hover:border-[#3BE0AF] hover:text-[#EEF4FF]"
+                                className="rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-3 py-3 text-left text-sm text-[var(--admin-dashboard-card-text)] hover:border-[#3BE0AF] hover:text-[var(--admin-dashboard-card-text)]"
                               >
                                 {exerciseOption.title}
                               </button>
@@ -362,7 +362,7 @@ export default function WorkoutTrainingBuilder({
                             <button
                               type="button"
                               onClick={() => updateSection(section.id, (currentSection) => ({ ...currentSection, draftExerciseQuery: '' }))}
-                              className="text-left text-sm font-medium text-[#7DF5CD] hover:text-[#A6F8DB]"
+                              className="text-left text-sm font-medium text-[#06B486] hover:text-[#059669]"
                             >
                               Show less
                             </button>
@@ -375,7 +375,7 @@ export default function WorkoutTrainingBuilder({
                       <button
                         type="button"
                         onClick={() => updateSection(section.id, (currentSection) => ({ ...currentSection, showInstruction: !currentSection.showInstruction }))}
-                        className="w-fit text-sm font-medium text-[#7DF5CD] hover:text-[#A6F8DB]"
+                        className="w-fit text-sm font-medium text-[#06B486] hover:text-[#059669]"
                       >
                         {section.showInstruction ? 'Show less' : 'Add instruction'}
                       </button>
@@ -384,7 +384,7 @@ export default function WorkoutTrainingBuilder({
                           value={section.instruction}
                           onChange={(event) => updateSection(section.id, (currentSection) => ({ ...currentSection, instruction: event.target.value }))}
                           placeholder="Add a coaching cue for this section"
-                          className="min-h-[100px] rounded-[12px] border border-[#24334A] bg-[#111D30] px-4 py-3 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
+                          className="min-h-[100px] rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 py-3 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
                         />
                       ) : null}
                     </div>
@@ -395,23 +395,23 @@ export default function WorkoutTrainingBuilder({
                           const setCountLabel = `${exercise.sets.length} set${exercise.sets.length === 1 ? '' : 's'}`
 
                           return (
-                            <KanbanItem key={exercise.id} id={exercise.id} columnId={section.id} className="rounded-[16px] border border-[#24334A] bg-[#0F1728]">
+                            <KanbanItem key={exercise.id} id={exercise.id} columnId={section.id} className="rounded-[16px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)]">
                               <div className="grid gap-0">
-                                <div className="flex items-center justify-between gap-3 border-b border-[#24334A] px-4 py-4">
+                                <div className="flex items-center justify-between gap-3 border-b border-[var(--admin-dashboard-card-border)] px-4 py-4">
                                   <div className="flex items-center gap-3">
-                                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#24334A] bg-[#111D30] text-[#8EA0BC]">
+                                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-muted)]">
                                       <GripVertical className="h-4 w-4" />
                                     </span>
                                     <div>
-                                      <p className="text-sm font-semibold text-[#EEF4FF]">{exercise.title}</p>
-                                      <p className="text-xs text-[#8EA0BC]">{setCountLabel}</p>
+                                      <p className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{exercise.title}</p>
+                                      <p className="text-xs text-[var(--admin-dashboard-card-muted)]">{setCountLabel}</p>
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-2">
                                     <button
                                       type="button"
                                       onClick={() => updateExercise(section.id, exercise.id, (currentExercise) => ({ ...currentExercise, isExpanded: !currentExercise.isExpanded }))}
-                                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#24334A] bg-[#111D30] text-[#8EA0BC] hover:text-[#EEF4FF]"
+                                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-muted)] hover:text-[var(--admin-dashboard-card-text)]"
                                     >
                                       {exercise.isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                                       <span className="sr-only">Toggle {exercise.title}</span>
@@ -419,7 +419,7 @@ export default function WorkoutTrainingBuilder({
                                     <button
                                       type="button"
                                       onClick={() => updateSection(section.id, (currentSection) => ({ ...currentSection, exercises: currentSection.exercises.filter((currentExercise) => currentExercise.id !== exercise.id) }))}
-                                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#24334A] bg-[#111D30] text-[#8EA0BC] hover:text-[#EEF4FF]"
+                                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-muted)] hover:text-[var(--admin-dashboard-card-text)]"
                                     >
                                       <Trash2 className="h-4 w-4" />
                                       <span className="sr-only">Delete {exercise.title}</span>
@@ -430,9 +430,9 @@ export default function WorkoutTrainingBuilder({
                                 {exercise.isExpanded ? (
                                   <div className="grid gap-4 px-4 py-4">
                                     <DndContext sensors={setRowSensors} collisionDetection={closestCenter} onDragEnd={(event) => handleSetDragEnd(section.id, exercise.id, event)}>
-                                      <Table className="[&_th]:border-b [&_th]:border-[#24334A] [&_td]:border-b [&_td]:border-[#1C2940]">
+                                      <Table className="[&_th]:border-b [&_th]:border-[var(--admin-dashboard-card-border)] [&_td]:border-b [&_td]:border-[var(--admin-dashboard-card-border)]">
                                         <TableHeader>
-                                          <TableRow className="border-[#24334A]">
+                                          <TableRow className="border-[var(--admin-dashboard-card-border)]">
                                             <TableHead className="w-[52px]"></TableHead>
                                             <TableHead>#</TableHead>
                                             <TableHead>Tempo</TableHead>
@@ -464,13 +464,13 @@ export default function WorkoutTrainingBuilder({
                                     </DndContext>
 
                                     <div className="flex items-center justify-between gap-3">
-                                      <Button type="button" variant="outline" onClick={() => addSet(section.id, exercise.id)} className="rounded-[12px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]">
+                                      <Button type="button" variant="outline" onClick={() => addSet(section.id, exercise.id)} className="rounded-[12px] border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]">
                                         Add Set
                                       </Button>
                                       <button
                                         type="button"
                                         onClick={() => updateExercise(section.id, exercise.id, (currentExercise) => ({ ...currentExercise, showInstruction: !currentExercise.showInstruction }))}
-                                        className="text-sm font-medium text-[#7DF5CD] hover:text-[#A6F8DB]"
+                                        className="text-sm font-medium text-[#06B486] hover:text-[#059669]"
                                       >
                                         {exercise.showInstruction ? 'Show less' : 'Add instruction'}
                                       </button>
@@ -481,7 +481,7 @@ export default function WorkoutTrainingBuilder({
                                         value={exercise.instruction}
                                         onChange={(event) => updateExercise(section.id, exercise.id, (currentExercise) => ({ ...currentExercise, instruction: event.target.value }))}
                                         placeholder="Add a coaching cue for this exercise"
-                                        className="min-h-[100px] rounded-[12px] border border-[#24334A] bg-[#111D30] px-4 py-3 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
+                                        className="min-h-[100px] rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 py-3 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
                                       />
                                     ) : null}
                                   </div>

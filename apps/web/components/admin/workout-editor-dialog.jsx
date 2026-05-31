@@ -13,7 +13,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import MultiCombobox from '@/components/ui/multi-combobox'
 import {
   Select,
   SelectContent,
@@ -24,58 +23,31 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import Textarea from '@/components/ui/textarea'
 
-const programOptions = [
-  { value: 'program-1', label: 'Program 1' },
-  { value: 'program-2', label: 'Program 2' },
-  { value: 'program-3', label: 'Program 3' },
-]
-
-const trainerOptions = [
-  { value: 'thibault', label: 'Thibault' },
-  { value: 'anthony', label: 'Anthony' },
-  { value: 'mason', label: 'Mason' },
-]
-
-const equipmentOptions = [
-  { value: 'dumbbells', label: 'Dumbbells' },
-  { value: 'sled', label: 'Sled' },
-  { value: 'spirit-bike', label: 'Spirit Bike' },
-  { value: 'cable', label: 'Cable' },
-  { value: 'trap-bar', label: 'Trap Bar' },
-  { value: 'stability-ball', label: 'Stability Ball' },
-  { value: 'bike', label: 'Bike' },
-]
-
-const categoryOptions = [
-  { value: 'speed', label: 'Speed' },
-  { value: 'conditioning', label: 'Conditioning' },
-  { value: 'strength', label: 'Strength' },
-]
-
-const difficultyOptions = [
-  { value: 'beginner', label: 'Beginner' },
-  { value: 'intermediate', label: 'Intermediate' },
-  { value: 'advanced', label: 'Advanced' },
-]
-
-const statusOptions = [
-  { value: 'active', label: 'Active' },
-  { value: 'draft', label: 'Draft' },
-  { value: 'archived', label: 'Archived' },
-]
-
-const focusAreaOptions = [
-  { value: 'acceleration', label: 'Acceleration' },
-  { value: 'edge-work', label: 'Edge Work' },
-  { value: 'conditioning', label: 'Conditioning' },
-]
-
 function FieldLabel({ children, htmlFor }) {
   return (
-    <label className="text-sm font-medium text-[#DCE6F8]" htmlFor={htmlFor}>
+    <label className="text-sm font-medium text-[var(--admin-dashboard-card-text)]" htmlFor={htmlFor}>
       {children}
     </label>
   )
+}
+
+function FieldInput({ id, value, onChange, placeholder = '' }) {
+  return (
+    <input
+      id={id}
+      type="text"
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      className="h-11 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] outline-none placeholder:text-[var(--admin-dashboard-card-muted)] focus:border-[#3BE0AF]"
+      placeholder={placeholder}
+    />
+  )
+}
+
+const WORKOUT_TEMPLATE_SAVE_UNAVAILABLE_MESSAGE = 'No workout template save endpoint is wired yet.'
+
+function UnsupportedFieldNote() {
+  return <p className="text-xs text-[var(--admin-dashboard-card-muted)]">This field is visible for layout parity, but it does not save in v1.</p>
 }
 
 export default function WorkoutEditorDialog({
@@ -92,6 +64,10 @@ export default function WorkoutEditorDialog({
   primaryActionLabel,
   onPrimaryAction,
   onDelete = null,
+  focusAreaOptions = [],
+  statusOptions = [],
+  saveDisclaimer = '',
+  errorMessage = '',
 }) {
   const [activeTab, setActiveTab] = useState('details')
 
@@ -115,9 +91,9 @@ export default function WorkoutEditorDialog({
     <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
       <DialogContent
         pageScrollable
-        className="admin-shell-athletes-invite-dialog border border-[#24334A] bg-[#0F1728] p-0 text-[#DCE6F8] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[760px]"
+        className="admin-shell-athletes-invite-dialog border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] shadow-[var(--admin-shell-shadow)] sm:max-w-[760px]"
       >
-        <div className="shrink-0 border-b border-[#24334A] px-6 py-5">
+        <div className="shrink-0 border-b border-[var(--admin-dashboard-card-border)] px-6 py-5">
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription>{description}</DialogDescription>
@@ -125,7 +101,17 @@ export default function WorkoutEditorDialog({
         </div>
 
         <div className="grid gap-5 px-6 py-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="grid gap-5">
+          {saveDisclaimer ? (
+            <p className="rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 py-3 text-sm text-[var(--admin-dashboard-card-muted)]">
+              {saveDisclaimer}
+            </p>
+          ) : null}
+          {errorMessage ? (
+            <p className="admin-shell-workout-editor-message rounded-[12px] px-4 py-3 text-sm">
+              {errorMessage}
+            </p>
+          ) : null}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="grid gap-5 admin-shell-athletes-create-tabs">
             <TabsList>
               <TabsTrigger value="details">Details</TabsTrigger>
               {showTrainingTab ? <TabsTrigger value="training">Training</TabsTrigger> : null}
@@ -135,23 +121,19 @@ export default function WorkoutEditorDialog({
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="grid gap-2">
                   <FieldLabel htmlFor="create-workout-name">Name</FieldLabel>
-                  <input
+                  <FieldInput
                     id="create-workout-name"
-                    type="text"
                     value={detailsValues.name}
-                    onChange={(event) => updateDetailsField('name', event.target.value)}
-                    className="h-11 rounded-[12px] border border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] outline-none placeholder:text-[#70809E] focus:border-[#3BE0AF]"
+                    onChange={(value) => updateDetailsField('name', value)}
                     placeholder="Enter workout name"
                   />
                 </div>
                 <div className="grid gap-2">
                   <FieldLabel htmlFor="create-workout-duration">Duration</FieldLabel>
-                  <input
+                  <FieldInput
                     id="create-workout-duration"
-                    type="text"
                     value={detailsValues.duration}
-                    onChange={(event) => updateDetailsField('duration', event.target.value)}
-                    className="h-11 rounded-[12px] border border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] outline-none placeholder:text-[#70809E] focus:border-[#3BE0AF]"
+                    onChange={(value) => updateDetailsField('duration', value)}
                     placeholder="60 min"
                   />
                 </div>
@@ -161,90 +143,11 @@ export default function WorkoutEditorDialog({
                 <FieldLabel htmlFor="create-workout-thumbnail">Thumbnail</FieldLabel>
                 <CompactFileUpload
                   id="create-workout-thumbnail"
-                  buttonLabel="Choose File"
-                  helperText="Drop files here or click to browse (max 3 files)"
+                  buttonLabel="Choose file"
+                  helperText="Drop a workout thumbnail here or click to browse. This field is not saved until workout template writes are wired."
                   fileName={detailsValues.thumbnailName}
                   onFileChange={(file) => updateDetailsField('thumbnailName', file?.name ?? '')}
                 />
-              </div>
-
-              <div className="grid gap-2">
-                <FieldLabel htmlFor="create-workout-program">Program</FieldLabel>
-                <Select value={detailsValues.program} onValueChange={(value) => updateDetailsField('program', value)}>
-                  <SelectTrigger id="create-workout-program" className="h-11 rounded-[12px]">
-                    <SelectValue placeholder="Choose some options..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {programOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="grid gap-2">
-                  <FieldLabel htmlFor="create-workout-trainer">Trainer</FieldLabel>
-                  <Select value={detailsValues.trainer} onValueChange={(value) => updateDetailsField('trainer', value)}>
-                    <SelectTrigger id="create-workout-trainer" className="h-11 rounded-[12px]">
-                      <SelectValue placeholder="Select trainer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {trainerOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <FieldLabel htmlFor="create-workout-equipment">Equipment needed</FieldLabel>
-                  <MultiCombobox
-                    id="create-workout-equipment"
-                    placeholder="Choose some options..."
-                    searchPlaceholder="Search equipment..."
-                    maxVisibleBadges={3}
-                    options={equipmentOptions}
-                    selectedValues={detailsValues.equipmentNeeded}
-                    onSelectedValuesChange={(equipmentNeeded) => updateDetailsField('equipmentNeeded', equipmentNeeded)}
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="grid gap-2">
-                  <FieldLabel htmlFor="create-workout-category">Category</FieldLabel>
-                  <Select value={detailsValues.category} onValueChange={(value) => updateDetailsField('category', value)}>
-                    <SelectTrigger id="create-workout-category" className="h-11 rounded-[12px]">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categoryOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid gap-2">
-                  <FieldLabel htmlFor="create-workout-difficulty">Difficulty</FieldLabel>
-                  <Select value={detailsValues.difficulty} onValueChange={(value) => updateDetailsField('difficulty', value)}>
-                    <SelectTrigger id="create-workout-difficulty" className="h-11 rounded-[12px]">
-                      <SelectValue placeholder="Select difficulty" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {difficultyOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
@@ -255,7 +158,11 @@ export default function WorkoutEditorDialog({
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
-                      {statusOptions.map((option) => (
+                      {(statusOptions.length ? statusOptions : [
+                        { value: 'active', label: 'Active' },
+                        { value: 'draft', label: 'Draft' },
+                        { value: 'archived', label: 'Archived' },
+                      ]).map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                           {option.label}
                         </SelectItem>
@@ -270,11 +177,13 @@ export default function WorkoutEditorDialog({
                       <SelectValue placeholder="Select focus area" />
                     </SelectTrigger>
                     <SelectContent>
-                      {focusAreaOptions.map((option) => (
+                      {focusAreaOptions.length ? focusAreaOptions.map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                           {option.label}
                         </SelectItem>
-                      ))}
+                      )) : (
+                        <SelectItem value="none">No focus areas available</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -286,9 +195,14 @@ export default function WorkoutEditorDialog({
                   id="create-workout-description"
                   value={detailsValues.description}
                   onChange={(event) => updateDetailsField('description', event.target.value)}
-                  className="min-h-[140px] rounded-[12px] border border-[#24334A] bg-[#111D30] px-4 py-3 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
+                  className="min-h-[140px] rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 py-3 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
                   placeholder="Add a short description for this workout"
                 />
+              </div>
+
+              <div className="grid gap-2 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 py-3">
+                <FieldLabel>Unsupported template fields</FieldLabel>
+                <UnsupportedFieldNote />
               </div>
             </TabsContent>
 
@@ -300,13 +214,13 @@ export default function WorkoutEditorDialog({
           </Tabs>
         </div>
 
-        <DialogFooter className="shrink-0 border-t border-[#24334A] px-6 py-5 sm:justify-between gap-3">
+        <DialogFooter className="shrink-0 border-t border-[var(--admin-dashboard-card-border)] px-6 py-5 sm:justify-between gap-3">
           <div className="flex items-center gap-3">
             {onDelete ? (
               <Button
                 type="button"
                 variant="outline"
-                className="rounded-[12px] min-h-[40px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
+                className="rounded-[12px] min-h-[40px]"
                 onClick={onDelete}
               >
                 Delete
@@ -317,7 +231,7 @@ export default function WorkoutEditorDialog({
             <Button
               type="button"
               variant="outline"
-              className="rounded-[12px] min-h-[40px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
+              className="rounded-[12px] min-h-[40px]"
               onClick={() => onOpenChange(false)}
             >
               Cancel

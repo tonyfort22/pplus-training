@@ -54,24 +54,20 @@ function getInitials(name) {
 
 function NameCell({ name, email }) {
   return (
-    <div className="admin-shell-athletes-name-cell">
-      <Avatar alt={name} className="admin-shell-athletes-avatar" initials={getInitials(name)} />
-      <div className="admin-shell-athletes-name-copy">
-        <span className="admin-shell-athletes-name-text">{name}</span>
-        <span className="admin-shell-athletes-name-meta">{email}</span>
+    <div className="admin-shell-invites-name-cell">
+      <Avatar alt={name} className="admin-shell-invites-avatar" initials={getInitials(name)} />
+      <div className="admin-shell-invites-name-copy">
+        <span className="admin-shell-invites-name-text">{name}</span>
+        <span className="admin-shell-invites-name-meta">{email}</span>
       </div>
     </div>
   )
 }
 
 function StatusCell({ status }) {
+  const normalizedStatus = String(status || '').trim().toLowerCase()
   const tone = status === 'Accepted' ? 'success' : status === 'Pending' ? 'warning' : 'danger'
-  const className =
-    status === 'Accepted'
-      ? 'border-transparent bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/20 normal-case tracking-normal'
-      : status === 'Pending'
-        ? 'border-transparent bg-amber-500/15 text-amber-300 hover:bg-amber-500/20 normal-case tracking-normal'
-        : 'border-transparent bg-red-500/15 text-red-300 hover:bg-red-500/20 normal-case tracking-normal'
+  const className = `admin-shell-invites-status-badge admin-shell-invites-status-badge-${normalizedStatus || 'unknown'} normal-case tracking-normal`
 
   return (
     <Badge tone={tone} className={className}>
@@ -82,26 +78,26 @@ function StatusCell({ status }) {
 
 function RoleCell({ role }) {
   return (
-    <Badge tone="neutral" className="border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] normal-case tracking-normal">
+    <Badge tone="neutral" className="admin-shell-invites-role-chip normal-case tracking-normal">
       {role}
     </Badge>
   )
 }
 
-function RowActionsCell({ onResendInvite = () => {}, onCancelInvite = () => {} }) {
+function RowActionsCell({ onResendInvite = () => {} }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button type="button" className="admin-shell-athletes-row-menu" aria-label="Open menu">
+        <button type="button" className="admin-shell-invites-row-menu" aria-label="Open menu">
           <span className="sr-only">Open menu</span>
-          <MoreHorizontal className="admin-shell-athletes-row-menu-icon" aria-hidden="true" />
+          <MoreHorizontal className="admin-shell-invites-row-menu-icon" aria-hidden="true" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
         <DropdownMenuItem onSelect={onResendInvite}>Resend invite</DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={onCancelInvite}>Cancel invite</DropdownMenuItem>
+        <DropdownMenuItem disabled>Cancel unavailable</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -120,7 +116,6 @@ export default function InvitesDataTable({ searchQuery = '' }) {
   const [inviteAthleteEmail, setInviteAthleteEmail] = useState('')
   const [isSubmittingInvite, setIsSubmittingInvite] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
-  const [isCancelInviteDialogOpen, setIsCancelInviteDialogOpen] = useState(false)
   const [rowSelection, setRowSelection] = useState({})
   const [columnFilters, setColumnFilters] = useState([])
   const [columnVisibility, setColumnVisibility] = useState({})
@@ -255,7 +250,7 @@ export default function InvitesDataTable({ searchQuery = '' }) {
       {
         id: 'select',
         header: ({ table }) => (
-          <div className="admin-shell-athletes-checkbox-cell">
+          <div className="admin-shell-invites-checkbox-cell">
             <Checkbox
               className="admin-shell-athletes-checkbox-input"
               checked={table.getIsAllPageRowsSelected()}
@@ -265,7 +260,7 @@ export default function InvitesDataTable({ searchQuery = '' }) {
           </div>
         ),
         cell: ({ row }) => (
-          <div className="admin-shell-athletes-checkbox-cell">
+          <div className="admin-shell-invites-checkbox-cell">
             <Checkbox
               className="admin-shell-athletes-checkbox-input"
               checked={row.getIsSelected()}
@@ -293,7 +288,7 @@ export default function InvitesDataTable({ searchQuery = '' }) {
         accessorKey: 'sent',
         header: 'Sent',
         meta: { label: 'Sent' },
-        cell: ({ row }) => <span className="admin-shell-athletes-last-active-cell">{row.original.sent}</span>,
+        cell: ({ row }) => <span className="admin-shell-invites-join-date-cell">{row.original.sent}</span>,
       },
       {
         accessorKey: 'status',
@@ -314,7 +309,6 @@ export default function InvitesDataTable({ searchQuery = '' }) {
               setInviteAthleteEmail(row.original.email ?? '')
               setIsInviteDialogOpen(true)
             }}
-            onCancelInvite={() => setIsCancelInviteDialogOpen(true)}
           />
         ),
         enableSorting: false,
@@ -355,13 +349,13 @@ export default function InvitesDataTable({ searchQuery = '' }) {
   const skeletonRows = Array.from({ length: pagination.pageSize }, (_, rowIndex) => rowIndex)
 
   return (
-    <div className="admin-shell-athletes-table-example">
-      <div className="admin-shell-athletes-example-controls flex items-center justify-between gap-3">
+    <div className="admin-shell-invites-table-example">
+      <div className="admin-shell-invites-example-controls flex items-center justify-between gap-3">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button type="button" className="admin-shell-athletes-example-columns-button">
+            <button type="button" className="admin-shell-invites-example-columns-button">
               Columns
-              <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
+              <ChevronDown className="admin-shell-invites-example-columns-icon" aria-hidden="true" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -390,7 +384,7 @@ export default function InvitesDataTable({ searchQuery = '' }) {
             setInviteAthleteEmail('')
             setIsInviteDialogOpen(true)
           }}
-          className="admin-shell-athletes-invite-button bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d] rounded-[12px] min-h-[40px]"
+          className="admin-shell-invites-invite-button bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d] rounded-[12px] min-h-[40px]"
         >
           Invite an athlete
         </Button>
@@ -402,8 +396,8 @@ export default function InvitesDataTable({ searchQuery = '' }) {
           resetInviteDialogState()
         }
       }}>
-        <DialogContent className="admin-shell-athletes-invite-dialog border border-[#24334A] bg-[#0F1728] p-0 text-[#DCE6F8] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[560px]">
-          <div className="border-b border-[#24334A] px-6 py-5">
+        <DialogContent className="admin-shell-invites-invite-dialog border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] shadow-[var(--admin-shell-shadow)] sm:max-w-[560px]">
+          <div className="border-b border-[color:var(--admin-dashboard-card-border)] px-6 py-5">
             <DialogHeader>
               <DialogTitle>{inviteDialogMode === 'resend' ? 'Resend invite' : 'Invite an athlete'}</DialogTitle>
               <DialogDescription>
@@ -418,24 +412,24 @@ export default function InvitesDataTable({ searchQuery = '' }) {
             {inviteDialogMode === 'create' ? (
               <>
                 <div className="grid gap-2">
-                  <label className="text-sm font-medium text-[#DCE6F8]" htmlFor="invite-athlete-first-name">
+                  <label className="text-sm font-medium text-[var(--admin-dashboard-card-text)]" htmlFor="invite-athlete-first-name">
                     First name
                   </label>
                   <Input
                     id="invite-athlete-first-name"
-                    className="h-11 rounded-[12px] !border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
+                    className="h-11 rounded-[12px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
                     placeholder="First name"
                     value={inviteAthleteFirstName}
                     onChange={(event) => setInviteAthleteFirstName(event.target.value)}
                   />
                 </div>
                 <div className="grid gap-2">
-                  <label className="text-sm font-medium text-[#DCE6F8]" htmlFor="invite-athlete-last-name">
+                  <label className="text-sm font-medium text-[var(--admin-dashboard-card-text)]" htmlFor="invite-athlete-last-name">
                     Last name
                   </label>
                   <Input
                     id="invite-athlete-last-name"
-                    className="h-11 rounded-[12px] !border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
+                    className="h-11 rounded-[12px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
                     placeholder="Last name"
                     value={inviteAthleteLastName}
                     onChange={(event) => setInviteAthleteLastName(event.target.value)}
@@ -444,12 +438,12 @@ export default function InvitesDataTable({ searchQuery = '' }) {
               </>
             ) : null}
             <div className="grid gap-2">
-              <label className="text-sm font-medium text-[#DCE6F8]" htmlFor="invite-athlete-email">
+              <label className="text-sm font-medium text-[var(--admin-dashboard-card-text)]" htmlFor="invite-athlete-email">
                 Email address
               </label>
               <Input
                 id="invite-athlete-email"
-                className="h-11 rounded-[12px] !border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
+                className="h-11 rounded-[12px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
                 placeholder="athlete@email.com"
                 type="email"
                 value={inviteAthleteEmail}
@@ -458,11 +452,11 @@ export default function InvitesDataTable({ searchQuery = '' }) {
             </div>
           </div>
 
-          <DialogFooter className="border-t border-[#24334A] px-6 py-5 sm:justify-end gap-3">
+          <DialogFooter className="border-t border-[color:var(--admin-dashboard-card-border)] px-6 py-5 sm:justify-end gap-3">
             <Button
               type="button"
               variant="outline"
-              className="rounded-[12px] min-h-[40px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
+              className="rounded-[12px] min-h-[40px] border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]"
               onClick={() => {
                 setIsInviteDialogOpen(false)
                 resetInviteDialogState()
@@ -483,43 +477,15 @@ export default function InvitesDataTable({ searchQuery = '' }) {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isCancelInviteDialogOpen} onOpenChange={setIsCancelInviteDialogOpen}>
-        <DialogContent className="admin-shell-athletes-invite-dialog border border-[#24334A] bg-[#0F1728] p-0 text-[#DCE6F8] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[560px]">
-          <div className="px-6 py-5">
-            <DialogHeader>
-              <DialogTitle>Cancel invite</DialogTitle>
-              <DialogDescription>This invite will be canceled and removed from the invites list.</DialogDescription>
-            </DialogHeader>
-          </div>
-
-          <DialogFooter className="border-t border-[#24334A] px-6 py-5 sm:justify-end gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-[12px] min-h-[40px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
-              onClick={() => setIsCancelInviteDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              className="rounded-[12px] min-h-[40px] bg-red-500/90 text-white hover:bg-red-500"
-            >
-              Cancel invite
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <div className="admin-shell-athletes-table-shell">
-        <Table className="admin-shell-athletes-table">
+      <div className="admin-shell-invites-table-shell">
+        <Table className="admin-shell-invites-table">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className={header.column.id === 'actions' ? 'admin-shell-athletes-actions-cell' : ''}
+                    className={header.column.id === 'actions' ? 'admin-shell-invites-actions-cell' : ''}
                   >
                     {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
@@ -530,7 +496,7 @@ export default function InvitesDataTable({ searchQuery = '' }) {
           <TableBody>
             {loading ? (
               skeletonRows.map((rowIndex) => (
-                <TableRow key={`skeleton-${rowIndex}`} className={rowIndex % 2 === 0 ? 'admin-shell-athletes-row-even' : 'admin-shell-athletes-row-odd'}>
+                <TableRow key={`skeleton-${rowIndex}`} className={rowIndex % 2 === 0 ? 'admin-shell-invites-row-even' : 'admin-shell-invites-row-odd'}>
                   <TableCell>
                     <Skeleton className="h-4 w-4 rounded-[4px]" />
                   </TableCell>
@@ -552,7 +518,7 @@ export default function InvitesDataTable({ searchQuery = '' }) {
                   <TableCell>
                     <Skeleton className="h-8 w-[112px] rounded-full" />
                   </TableCell>
-                  <TableCell className="admin-shell-athletes-actions-cell">
+                  <TableCell className="admin-shell-invites-actions-cell">
                     <Skeleton className="ml-auto h-8 w-8 rounded-full" />
                   </TableCell>
                 </TableRow>
@@ -562,12 +528,12 @@ export default function InvitesDataTable({ searchQuery = '' }) {
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() ? 'selected' : undefined}
-                  className={index % 2 === 0 ? 'admin-shell-athletes-row-even' : 'admin-shell-athletes-row-odd'}
+                  className={index % 2 === 0 ? 'admin-shell-invites-row-even' : 'admin-shell-invites-row-odd'}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}
-                      className={cell.column.id === 'actions' ? 'admin-shell-athletes-actions-cell' : ''}
+                      className={cell.column.id === 'actions' ? 'admin-shell-invites-actions-cell' : ''}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
@@ -576,7 +542,7 @@ export default function InvitesDataTable({ searchQuery = '' }) {
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center text-[#8EA0BC]">
+                <TableCell colSpan={columns.length} className="admin-shell-invites-empty-state h-24 text-center">
                   {emptyStateMessage}
                 </TableCell>
               </TableRow>
@@ -585,10 +551,10 @@ export default function InvitesDataTable({ searchQuery = '' }) {
         </Table>
       </div>
 
-      <div className="flex items-center justify-end gap-3 py-4 text-sm text-[#8EA0BC]">
+      <div className="admin-shell-invites-pagination-bar flex items-center justify-end gap-3 py-4 text-sm">
         <span>Rows per page</span>
         <Select value={String(pagination.pageSize)} onValueChange={(value) => table.setPageSize(Number(value))}>
-          <SelectTrigger className="h-9 w-[76px] rounded-[10px] !border-[#24334A] bg-[#111D30] px-3 text-sm text-[#DCE6F8]">
+          <SelectTrigger className="admin-shell-invites-rows-select h-9 w-[76px] rounded-[10px] px-3 text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -601,7 +567,7 @@ export default function InvitesDataTable({ searchQuery = '' }) {
         <button
           type="button"
           aria-label="Go to previous page"
-          className="admin-shell-athletes-example-pagination-button"
+          className="admin-shell-invites-example-pagination-button"
           onClick={() => table.previousPage()}
           disabled={!table.getCanPreviousPage()}
         >
@@ -611,7 +577,7 @@ export default function InvitesDataTable({ searchQuery = '' }) {
           <button
             key={`page-${pageNumber}`}
             type="button"
-            className={`admin-shell-athletes-example-pagination-button ${pagination.pageIndex === pageNumber ? 'bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]' : ''}`}
+            className={`admin-shell-invites-example-pagination-button ${pagination.pageIndex === pageNumber ? 'admin-shell-invites-example-pagination-button-active' : ''}`}
             onClick={() => table.setPageIndex(pageNumber)}
           >
             {pageNumber + 1}
@@ -620,7 +586,7 @@ export default function InvitesDataTable({ searchQuery = '' }) {
         <button
           type="button"
           aria-label="Go to next page"
-          className="admin-shell-athletes-example-pagination-button"
+          className="admin-shell-invites-example-pagination-button"
           onClick={() => table.nextPage()}
           disabled={!table.getCanNextPage()}
         >

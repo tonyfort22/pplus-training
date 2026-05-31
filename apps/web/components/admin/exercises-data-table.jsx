@@ -695,7 +695,7 @@ export default function ExercisesDataTable({ searchQuery = '' }) {
               <Button
                 type="button"
                 variant="outline"
-                className="rounded-[12px] min-h-[40px] !border !border-[#24334A] bg-transparent text-[#DCE6F8] shadow-none hover:bg-[#15233A] hover:text-[#EEF4FF]"
+                className="admin-shell-athletes-filter-trigger rounded-[12px] min-h-[40px] shadow-none"
               >
                 <Plus className="size-4" />
                 Add filter
@@ -775,8 +775,8 @@ export default function ExercisesDataTable({ searchQuery = '' }) {
                 </TableRow>
               ))
             ) : (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center text-[#8EA0BC]">
+              <TableRow className="admin-shell-athletes-row-even">
+                <TableCell colSpan={columns.length} className="admin-shell-athletes-empty-state py-10 text-center">
                   {emptyStateMessage}
                 </TableCell>
               </TableRow>
@@ -804,10 +804,10 @@ export default function ExercisesDataTable({ searchQuery = '' }) {
         onPrimaryAction={handleExerciseEditorSubmit}
       />
 
-      <div className="flex flex-wrap items-center justify-end gap-3 py-4 text-sm text-[#8EA0BC]">
+      <div className="admin-shell-athletes-pagination-bar flex flex-wrap items-center justify-end gap-3 py-4 text-sm">
         <span>Rows per page</span>
         <Select value={String(pagination.pageSize)} onValueChange={(value) => table.setPageSize(Number(value))}>
-          <SelectTrigger className="h-9 w-[76px] rounded-[10px] !border-[#24334A] bg-[#111D30] px-3 text-sm text-[#DCE6F8]">
+          <SelectTrigger className="admin-shell-athletes-page-size-select h-9 w-[76px] rounded-[10px] px-3 text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -834,7 +834,7 @@ export default function ExercisesDataTable({ searchQuery = '' }) {
               return (
                 <span
                   key={pageItem.key}
-                  className="flex h-9 min-w-9 items-center justify-center px-1 text-sm text-[#8EA0BC]"
+                  className="flex h-9 min-w-9 items-center justify-center px-1 text-sm text-[var(--admin-shell-muted)]"
                   aria-hidden="true"
                 >
                   ...
