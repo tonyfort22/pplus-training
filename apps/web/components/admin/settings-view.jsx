@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
 import { Info } from 'lucide-react'
 
 import Avatar from '@/components/ui/avatar'
@@ -10,6 +11,7 @@ const ADMIN_PROFILE_SEED = {
   avatarUrl: '',
   name: '',
   phone: '',
+  avatarUpload: null,
 }
 
 const ADMIN_ACCOUNT_SEED = {
@@ -57,11 +59,33 @@ function SettingsField({ htmlFor, label, children }) {
   )
 }
 
-function ProfilePhotoUploader({ previewSrc = '', profileName = '' }) {
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result || ''))
+    reader.onerror = () => reject(reader.error || new Error('Unable to read avatar file.'))
+    reader.readAsDataURL(file)
+  })
+}
+
+function ProfilePhotoUploader({ previewSrc = '', profileName = '', onAvatarChange }) {
+  const fileInputRef = useRef(null)
   const hasPreview = Boolean(previewSrc)
 
+  async function handleAvatarFileChange(event) {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const dataUrl = await readFileAsDataUrl(file)
+    onAvatarChange?.({
+      dataUrl,
+      fileName: file.name || 'profile.jpg',
+      contentType: file.type || 'image/jpeg',
+    })
+  }
+
   return (
-    <div className="relative flex cursor-not-allowed flex-col items-center justify-center justify-self-start gap-4 px-0 py-1 text-center opacity-85">
+    <div className="relative flex flex-col items-center justify-center justify-self-start gap-4 px-0 py-1 text-center">
       {hasPreview ? (
         <Avatar
           alt={profileName || 'Coach avatar'}
@@ -82,20 +106,121 @@ function ProfilePhotoUploader({ previewSrc = '', profileName = '' }) {
           </svg>
         </div>
       )}
-      <div className="space-y-1">
+      <div className="space-y-2">
         <p className="text-[17px] font-medium text-[var(--admin-shell-text-strong)]">Coach avatar</p>
-        <p className="text-sm text-[var(--admin-shell-muted)]">Avatar updates are unavailable in this admin view.</p>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          className="sr-only"
+          onChange={handleAvatarFileChange}
+        />
+        <Button
+          type="button"
+          className="min-h-[36px] rounded-[12px] border border-[#3BE0AF]/40 bg-[#3BE0AF]/10 px-4 text-sm font-semibold text-[#06b486] hover:bg-[#3BE0AF]/15"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          Change avatar
+        </Button>
+        <p className="text-xs text-[var(--admin-shell-muted)]">PNG, JPG, or WEBP.</p>
       </div>
     </div>
   )
 }
 
 function AdminSettingsProfileView() {
-  const profileDraft = ADMIN_PROFILE_SEED
+  const [profileDraft, setProfileDraft] = useState(ADMIN_PROFILE_SEED)
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true)
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [notice, setNotice] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadProfile() {
+      setIsLoadingProfile(true)
+      setErrorMessage('')
+      try {
+        const response = await fetch('/admin/api/settings/profile', { cache: 'no-store' })
+        const payload = await response.json()
+        if (!response.ok) {
+          throw new Error(payload?.error || 'Unable to load profile.')
+        }
+        if (!isMounted) return
+        setProfileDraft({
+          avatarUrl: payload.profile?.avatarUrl || '',
+          name: payload.profile?.name || '',
+          phone: payload.profile?.phone || '',
+          avatarUpload: null,
+        })
+      } catch (error) {
+        if (isMounted) setErrorMessage(error?.message || 'Unable to load profile.')
+      } finally {
+        if (isMounted) setIsLoadingProfile(false)
+      }
+    }
+
+    loadProfile()
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  function handleDraftChange(field, value) {
+    setNotice('')
+    setErrorMessage('')
+    setProfileDraft((currentDraft) => ({ ...currentDraft, [field]: value }))
+  }
+
+  function handleAvatarChange(avatarUpload) {
+    setNotice('')
+    setErrorMessage('')
+    setProfileDraft((currentDraft) => ({
+      ...currentDraft,
+      avatarUrl: avatarUpload.dataUrl,
+      avatarUpload,
+    }))
+  }
+
+  async function handleSaveProfile(event) {
+    event.preventDefault()
+    setIsSavingProfile(true)
+    setNotice('')
+    setErrorMessage('')
+
+    try {
+      const response = await fetch('/admin/api/settings/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: profileDraft.name,
+          phone: profileDraft.phone,
+          avatarUrl: profileDraft.avatarUrl,
+          avatarUpload: profileDraft.avatarUpload,
+        }),
+      })
+      const payload = await response.json()
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Unable to save profile.')
+      }
+      setProfileDraft({
+        avatarUrl: payload.profile?.avatarUrl || '',
+        name: payload.profile?.name || '',
+        phone: payload.profile?.phone || '',
+        avatarUpload: null,
+      })
+      setNotice('Profile updated.')
+    } catch (error) {
+      setErrorMessage(error?.message || 'Unable to save profile.')
+    } finally {
+      setIsSavingProfile(false)
+    }
+  }
 
   return (
-    <form className="grid w-full gap-6" aria-describedby="admin-profile-disabled-notice">
-      <ProfilePhotoUploader previewSrc={profileDraft.avatarUrl} profileName={profileDraft.name} />
+    <form className="grid w-full gap-6" onSubmit={handleSaveProfile} aria-describedby="admin-profile-status-notice">
+      <ProfilePhotoUploader previewSrc={profileDraft.avatarUrl} profileName={profileDraft.name} onAvatarChange={handleAvatarChange} />
 
       <div className="grid w-full gap-4 md:grid-cols-2">
         <SettingsProfileField htmlFor="admin-profile-name" label="Name">
@@ -104,8 +229,7 @@ function AdminSettingsProfileView() {
             className={settingsProfileFieldInputClassName}
             value={profileDraft.name}
             placeholder="Coach name"
-            disabled
-            readOnly
+            onChange={(event) => handleDraftChange('name', event.target.value)}
           />
         </SettingsProfileField>
         <SettingsProfileField htmlFor="admin-profile-phone" label="Phone">
@@ -115,19 +239,20 @@ function AdminSettingsProfileView() {
             className={settingsProfileFieldInputClassName}
             value={profileDraft.phone}
             placeholder="Coach phone"
-            disabled
-            readOnly
+            onChange={(event) => handleDraftChange('phone', event.target.value)}
           />
         </SettingsProfileField>
       </div>
 
-      <div id="admin-profile-disabled-notice" className="flex w-full items-start gap-2 rounded-[14px] border border-[#3BE0AF]/30 bg-[#3BE0AF]/10 px-4 py-3 text-sm leading-6 text-[var(--admin-shell-text)]">
+      <div id="admin-profile-status-notice" className="flex w-full items-start gap-2 rounded-[14px] border border-[#3BE0AF]/30 bg-[#3BE0AF]/10 px-4 py-3 text-sm leading-6 text-[var(--admin-shell-text)]">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#06b486]" />
-        <span>Profile editing is unavailable in this admin shell until a current authenticated coach profile API is connected. The view is read-only to avoid fake saves.</span>
+        <span>{errorMessage || notice || (isLoadingProfile ? 'Loading your connected coach profile.' : 'Edit the connected coach profile fields and save changes to Supabase.')}</span>
       </div>
 
       <div>
-        <Button type="button" disabled className="admin-shell-athletes-create-submit min-h-[40px] rounded-[12px] bg-[#3BE0AF] text-[#0B1120] opacity-60 hover:bg-[#3BE0AF] disabled:cursor-not-allowed">Save changes unavailable</Button>
+        <Button type="submit" disabled={isLoadingProfile || isSavingProfile} className="admin-shell-athletes-create-submit min-h-[40px] rounded-[12px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#3BE0AF] disabled:cursor-not-allowed disabled:opacity-60">
+          {isSavingProfile ? 'Saving...' : 'Save changes'}
+        </Button>
       </div>
     </form>
   )
@@ -196,7 +321,7 @@ export default function AdminSettingsView({ currentPath = '/admin/settings' }) {
     <section className="grid gap-6">
       <div className="admin-shell-workspace-header">
         <h1 className="admin-shell-athletes-page-title">{activeTab === 'account' ? 'Account' : 'Profile'}</h1>
-        <p className="admin-shell-workspace-description">{activeTab === 'profile' ? 'View the approved coach profile fields: avatar, name, and phone.' : 'View the current admin sign-in email. Account updates are unavailable until connected to the authenticated account API.'}</p>
+        <p className="admin-shell-workspace-description">{activeTab === 'profile' ? 'Edit the approved coach profile fields: avatar, name, and phone.' : 'View the current admin sign-in email. Account updates are unavailable until connected to the authenticated account API.'}</p>
       </div>
 
       {activeTab === 'account' ? (

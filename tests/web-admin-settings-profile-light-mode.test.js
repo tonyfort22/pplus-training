@@ -17,23 +17,31 @@ function extractFunction(source, name) {
   return source.slice(start, end)
 }
 
-test('admin settings profile only exposes approved coach profile fields and honest read-only state', () => {
+test('admin settings profile exposes editable approved coach profile fields with real save state', () => {
   const settingsSource = readFileSync(settingsViewPath, 'utf8')
   const profileSource = extractFunction(settingsSource, 'AdminSettingsProfileView')
   const uploaderSource = extractFunction(settingsSource, 'ProfilePhotoUploader')
 
-  assert.match(settingsSource, /name:\s*''/)
-  assert.match(settingsSource, /phone:\s*''/)
-  assert.doesNotMatch(settingsSource, /firstName|lastName|setProfileDraft|handleSaveProfile|setNotice\('Profile updated\.'\)/)
+  assert.match(settingsSource, /useEffect/)
+  assert.match(settingsSource, /useState/)
+  assert.match(settingsSource, /fetch\('\/admin\/api\/settings\/profile'/)
+  assert.match(settingsSource, /setProfileDraft/)
+  assert.match(settingsSource, /handleSaveProfile/)
+  assert.match(settingsSource, /Profile updated\./)
+  assert.doesNotMatch(settingsSource, /firstName|lastName/)
   assert.doesNotMatch(settingsSource, /organizationName|bio|themePreference|unitsPreference|weightUnitPreference|distanceUnitPreference/)
 
   assert.match(profileSource, /htmlFor="admin-profile-name" label="Name"/)
   assert.match(profileSource, /htmlFor="admin-profile-phone" label="Phone"/)
   assert.match(profileSource, /type="tel"/)
-  assert.match(uploaderSource, /Coach avatar/)
-  assert.match(profileSource, /Profile editing is unavailable[\s\S]*read-only to avoid fake saves\./)
-  assert.match(profileSource, /Save changes unavailable/)
-  assert.doesNotMatch(profileSource, /onSubmit|type="submit"|onChange=|type="file"|Upload avatar|PNG, JPG/)
+  assert.match(uploaderSource, /Change avatar/)
+  assert.match(uploaderSource, /type="file"/)
+  assert.match(profileSource, /onSubmit=\{handleSaveProfile\}/)
+  assert.match(profileSource, /onChange=\{\(event\) => handleDraftChange\('name', event\.target\.value\)\}/)
+  assert.match(profileSource, /onChange=\{\(event\) => handleDraftChange\('phone', event\.target\.value\)\}/)
+  assert.match(profileSource, /type="submit"/)
+  assert.match(profileSource, /Save changes/)
+  assert.doesNotMatch(profileSource, /Profile editing is unavailable|Save changes unavailable|readOnly|disabled\s*\n/)
 })
 
 test('admin settings profile uses light-mode admin tokens instead of dark-coded field colors', () => {
@@ -61,7 +69,7 @@ test('admin settings profile and account layouts fill the content width without 
   assert.doesNotMatch(accountSource, /max-w-3xl/)
 
   assert.match(profileSource, /<div className="grid w-full gap-4 md:grid-cols-2">/)
-  assert.match(profileSource, /id="admin-profile-disabled-notice" className="flex w-full items-start/)
+  assert.match(profileSource, /id="admin-profile-status-notice" className="flex w-full items-start/)
   assert.match(accountSource, /<div className="grid w-full gap-4">[\s\S]*htmlFor="admin-account-email" label="Email"/)
   assert.match(accountSource, /id="admin-account-disabled-notice" className="flex w-full items-start/)
 
