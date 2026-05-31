@@ -4,9 +4,12 @@ import { useEffect, useState } from 'react'
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import {
   Activity,
+  BadgeCheck,
   CalendarCheck,
+  Send,
   TrendingDown,
   TrendingUp,
+  Users,
 } from 'lucide-react'
 
 import Badge from '@/components/ui/badge'
@@ -35,6 +38,14 @@ const overviewRangeOptions = [
   { id: 'last-3-months', label: 'Last 3 months' },
   { id: 'last-year', label: 'Last year' },
 ]
+
+const summaryIconById = {
+  athletes: Users,
+  programs: CalendarCheck,
+  workouts: Activity,
+  exercises: BadgeCheck,
+  invites: Send,
+}
 
 const summaryOrder = ['athletes', 'programs', 'workouts', 'exercises', 'invites']
 
@@ -66,6 +77,9 @@ function normalizeSummaryCard(card, fallbackId) {
     value: card?.value ?? '0',
     change: card?.change ?? '0%',
     changeDirection: card?.changeDirection ?? 'neutral',
+    footerHeadline: card?.footerHeadline ?? 'No real data yet',
+    footerSubtext: card?.footerSubtext ?? 'This metric will update when real dashboard data exists.',
+    icon: summaryIconById[id] ?? Activity,
   }
 }
 
@@ -74,6 +88,8 @@ function buildSummaryCards(summary) {
 }
 
 function OverviewSummaryCard({ card }) {
+  const CardIcon = card.icon
+
   return (
     <Card className="@container/card h-full">
       <CardHeader className="admin-shell-overview-card-header">
@@ -90,6 +106,17 @@ function OverviewSummaryCard({ card }) {
           </Badge>
         </CardAction>
       </CardHeader>
+      <CardFooter>
+        <div className="flex w-full items-start gap-2 text-sm">
+          <CardIcon className="admin-shell-overview-card-change-arrow-icon mt-0.5 text-[#3BE0AF]" aria-hidden="true" />
+          <div className="grid gap-2">
+            <div className="flex items-center gap-2 leading-none font-medium text-[var(--admin-dashboard-card-text)]">
+              {card.footerHeadline} <TrendArrowIcon direction={card.changeDirection} />
+            </div>
+            <div className="leading-none text-[var(--admin-dashboard-card-muted)]">{card.footerSubtext}</div>
+          </div>
+        </div>
+      </CardFooter>
     </Card>
   )
 }
