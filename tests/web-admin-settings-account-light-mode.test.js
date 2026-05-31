@@ -17,23 +17,24 @@ function extractFunction(source, name) {
   return source.slice(start, end)
 }
 
-test('admin settings account renders an honest light-mode read-only account state', () => {
+test('admin settings account renders a functional light-mode account update state', () => {
   const settingsSource = readFileSync(settingsViewPath, 'utf8')
   const accountSource = extractFunction(settingsSource, 'AdminSettingsAccountView')
 
-  assert.match(settingsSource, /const ADMIN_ACCOUNT_SEED = \{\s*email: 'tonyfortugno22@gmail\.com'/)
+  assert.match(settingsSource, /const ADMIN_ACCOUNT_SEED = \{\s*email: '',\s*password: '',\s*confirmPassword: '',/)
   assert.match(accountSource, /htmlFor="admin-account-email" label="Email"/)
   assert.match(accountSource, /value=\{accountDraft\.email\}/)
-  assert.match(accountSource, /readOnly/)
-  assert.match(accountSource, /disabled/)
-  assert.match(accountSource, /htmlFor="admin-account-current-password" label="Current password"/)
+  assert.match(accountSource, /onChange=\{\(event\) => handleAccountDraftChange\('email', event\.target\.value\)\}/)
+  assert.match(accountSource, /htmlFor="admin-account-new-password" label="New password"/)
   assert.match(accountSource, /htmlFor="admin-account-confirm-password" label="Confirm password"/)
   assert.match(accountSource, /type="password"/)
-  assert.match(accountSource, /Account changes are unavailable[\s\S]*current authenticated account update API is connected\./)
-  assert.match(accountSource, /Account actions unavailable/)
+  assert.match(accountSource, /fetch\('\/admin\/api\/settings\/account', \{ cache: 'no-store' \}\)/)
+  assert.match(accountSource, /fetch\('\/admin\/api\/settings\/account', \{[\s\S]*method: 'PATCH'/)
+  assert.match(accountSource, /body: JSON\.stringify\(\{[\s\S]*email: accountDraft\.email,[\s\S]*password: accountDraft\.password,[\s\S]*confirmPassword: accountDraft\.confirmPassword/)
+  assert.match(accountSource, /Account updated\./)
+  assert.match(accountSource, /Save changes/)
 
-  assert.doesNotMatch(accountSource, /New password/)
-  assert.doesNotMatch(accountSource, /onSubmit|handleSaveAccount|setNotice|Account updated\.|onChange=/)
+  assert.doesNotMatch(accountSource, /readOnly|admin-account-current-password|Account actions unavailable|current authenticated account update API is connected/)
   assert.doesNotMatch(accountSource, /Delete account|Deactivate account|Billing|Security|Two-factor|Reset password|Change password/)
 })
 

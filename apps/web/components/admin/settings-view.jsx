@@ -17,7 +17,9 @@ const ADMIN_PROFILE_SEED = {
 }
 
 const ADMIN_ACCOUNT_SEED = {
-  email: 'tonyfortugno22@gmail.com',
+  email: '',
+  password: '',
+  confirmPassword: '',
 }
 
 const settingsFieldInputClassName = 'h-11 rounded-[12px] border-[var(--admin-shell-control-border)] bg-[var(--admin-shell-control-bg)] px-4 text-sm text-[var(--admin-shell-text)] placeholder:text-[var(--admin-shell-soft)] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20 disabled:cursor-not-allowed disabled:opacity-70'
@@ -282,10 +284,84 @@ function AdminSettingsProfileView() {
 }
 
 function AdminSettingsAccountView() {
-  const accountDraft = ADMIN_ACCOUNT_SEED
+  const [accountDraft, setAccountDraft] = useState(ADMIN_ACCOUNT_SEED)
+  const [isLoadingAccount, setIsLoadingAccount] = useState(true)
+  const [isSavingAccount, setIsSavingAccount] = useState(false)
+  const [notice, setNotice] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadAccount() {
+      setIsLoadingAccount(true)
+      setErrorMessage('')
+      try {
+        const response = await fetch('/admin/api/settings/account', { cache: 'no-store' })
+        const payload = await response.json()
+        if (!response.ok) {
+          throw new Error(payload?.error || 'Unable to load account.')
+        }
+        if (!isMounted) return
+        setAccountDraft({
+          email: payload.account?.email || '',
+          password: '',
+          confirmPassword: '',
+        })
+      } catch (error) {
+        if (isMounted) setErrorMessage(error?.message || 'Unable to load account.')
+      } finally {
+        if (isMounted) setIsLoadingAccount(false)
+      }
+    }
+
+    loadAccount()
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  function handleAccountDraftChange(field, value) {
+    setNotice('')
+    setErrorMessage('')
+    setAccountDraft((currentDraft) => ({ ...currentDraft, [field]: value }))
+  }
+
+  async function handleSaveAccount(event) {
+    event.preventDefault()
+    setIsSavingAccount(true)
+    setNotice('')
+    setErrorMessage('')
+
+    try {
+      const response = await fetch('/admin/api/settings/account', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: accountDraft.email,
+          password: accountDraft.password,
+          confirmPassword: accountDraft.confirmPassword,
+        }),
+      })
+      const payload = await response.json()
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Unable to save account.')
+      }
+      setAccountDraft({
+        email: payload.account?.email || accountDraft.email,
+        password: '',
+        confirmPassword: '',
+      })
+      setNotice('Account updated.')
+    } catch (error) {
+      setErrorMessage(error?.message || 'Unable to save account.')
+    } finally {
+      setIsSavingAccount(false)
+    }
+  }
 
   return (
-    <form className="grid w-full gap-6" aria-describedby="admin-account-disabled-notice">
+    <form className="grid w-full gap-6" onSubmit={handleSaveAccount} aria-describedby="admin-account-status-notice">
       <div className="grid w-full gap-4">
         <SettingsField htmlFor="admin-account-email" label="Email">
           <Input
@@ -294,22 +370,20 @@ function AdminSettingsAccountView() {
             className={settingsFieldInputClassName}
             value={accountDraft.email}
             placeholder="admin@email.com"
-            disabled
-            readOnly
+            onChange={(event) => handleAccountDraftChange('email', event.target.value)}
           />
         </SettingsField>
       </div>
 
       <div className="grid w-full gap-4 md:grid-cols-2">
-        <SettingsField htmlFor="admin-account-current-password" label="Current password">
+        <SettingsField htmlFor="admin-account-new-password" label="New password">
           <Input
-            id="admin-account-current-password"
+            id="admin-account-new-password"
             type="password"
             className={settingsFieldInputClassName}
-            value=""
-            placeholder="Current password"
-            disabled
-            readOnly
+            value={accountDraft.password}
+            placeholder="New password"
+            onChange={(event) => handleAccountDraftChange('password', event.target.value)}
           />
         </SettingsField>
         <SettingsField htmlFor="admin-account-confirm-password" label="Confirm password">
@@ -317,21 +391,22 @@ function AdminSettingsAccountView() {
             id="admin-account-confirm-password"
             type="password"
             className={settingsFieldInputClassName}
-            value=""
+            value={accountDraft.confirmPassword}
             placeholder="Confirm password"
-            disabled
-            readOnly
+            onChange={(event) => handleAccountDraftChange('confirmPassword', event.target.value)}
           />
         </SettingsField>
       </div>
 
-      <div id="admin-account-disabled-notice" className="flex w-full items-start gap-2 rounded-[14px] border border-[#3BE0AF]/30 bg-[#3BE0AF]/10 px-4 py-3 text-sm leading-6 text-[var(--admin-shell-text)]">
+      <div id="admin-account-status-notice" className="flex w-full items-start gap-2 rounded-[14px] border border-[#3BE0AF]/30 bg-[#3BE0AF]/10 px-4 py-3 text-sm leading-6 text-[var(--admin-shell-text)]">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#06b486]" />
-        <span>Account changes are unavailable in this admin shell until a current authenticated account update API is connected. The view is read-only to avoid fake saves.</span>
+        <span>{errorMessage || notice || (isLoadingAccount ? 'Loading your authenticated account.' : 'Update your sign-in email or set a new password. Leave password blank to keep it unchanged.')}</span>
       </div>
 
       <div>
-        <Button type="button" disabled className="admin-shell-athletes-create-submit min-h-[40px] rounded-[12px] bg-[#3BE0AF] text-[#0B1120] opacity-60 hover:bg-[#3BE0AF] disabled:cursor-not-allowed">Account actions unavailable</Button>
+        <Button type="submit" disabled={isLoadingAccount || isSavingAccount} className="admin-shell-athletes-create-submit min-h-[40px] rounded-[12px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#3BE0AF] disabled:cursor-not-allowed disabled:opacity-60">
+          {isSavingAccount ? 'Saving...' : 'Save changes'}
+        </Button>
       </div>
     </form>
   )
@@ -344,7 +419,7 @@ export default function AdminSettingsView({ currentPath = '/admin/settings' }) {
     <section className="grid gap-6">
       <div className="admin-shell-workspace-header">
         <h1 className="admin-shell-athletes-page-title">{activeTab === 'account' ? 'Account' : 'Profile'}</h1>
-        <p className="admin-shell-workspace-description">{activeTab === 'profile' ? 'Edit the approved coach profile fields: avatar, name, and phone.' : 'View the current admin sign-in email. Account updates are unavailable until connected to the authenticated account API.'}</p>
+        <p className="admin-shell-workspace-description">{activeTab === 'profile' ? 'Edit the approved coach profile fields: avatar, name, and phone.' : 'Update the current admin sign-in email or set a new password.'}</p>
       </div>
 
       {activeTab === 'account' ? (
