@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts'
 import {
   Activity,
   BadgeCheck,
   CalendarRange,
-  ChevronDown,
   Send,
   TrendingDown,
   TrendingUp,
@@ -22,6 +22,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import {
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '@/components/ui/chart'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 const overviewRangeOptions = [
   { id: 'last-7-days', label: 'Last 7 days' },
@@ -139,57 +147,29 @@ function ErrorOverviewState({ message }) {
   )
 }
 
-function buildOverviewLinePoints(values, width = 640, height = 260, maxValue = 1) {
-  const left = 48
-  const right = 18
-  const top = 20
-  const bottom = 38
-  const plotWidth = width - left - right
-  const plotHeight = height - top - bottom
-  const divisor = Math.max(1, values.length - 1)
-
-  return values.map((value, index) => ({
-    x: left + (plotWidth * index) / divisor,
-    y: top + plotHeight - ((value ?? 0) / maxValue) * plotHeight,
-  }))
+const sessionsChartConfig = {
+  completed: {
+    label: 'Completed',
+    color: '#3be0af',
+  },
+  assigned: {
+    label: 'Assigned',
+    color: '#58c6ff',
+  },
 }
 
-function buildOverviewLinePath(points) {
-  if (!points.length) return ''
-  return points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(' ')
-}
-
-function buildOverviewAreaPath(points, baseline = 222) {
-  if (!points.length) return ''
-  const linePath = buildOverviewLinePath(points)
-  const first = points[0]
-  const last = points[points.length - 1]
-
-  return `${linePath} L ${last.x.toFixed(2)} ${baseline} L ${first.x.toFixed(2)} ${baseline} Z`
-}
-
-function SessionsPanel({ sessionsChart }) {
+function SessionsPanel({ sessionsChart, activeRange, onRangeChange }) {
   const buckets = Array.isArray(sessionsChart?.buckets) ? sessionsChart.buckets : []
-  const completedValues = buckets.map((bucket) => bucket.completed ?? 0)
-  const assignedValues = buckets.map((bucket) => bucket.assigned ?? 0)
-  const maxValue = Math.max(1, ...completedValues, ...assignedValues)
-  const chartWidth = 640
-  const chartHeight = 260
-  const baseline = 222
-  const completedPoints = buildOverviewLinePoints(completedValues, chartWidth, chartHeight, maxValue)
-  const assignedPoints = buildOverviewLinePoints(assignedValues, chartWidth, chartHeight, maxValue)
-  const completedLinePath = buildOverviewLinePath(completedPoints)
-  const assignedLinePath = buildOverviewLinePath(assignedPoints)
-  const completedAreaPath = buildOverviewAreaPath(completedPoints, baseline)
-  const assignedAreaPath = buildOverviewAreaPath(assignedPoints, baseline)
-  const activeIndex = Math.max(0, Math.min(buckets.length - 1, Math.floor((buckets.length - 1) / 2)))
-  const activeBucket = buckets[activeIndex]
-  const ticks = [maxValue, Math.round(maxValue / 2), 0]
+  const chartData = buckets.map((bucket) => ({
+    date: bucket.label,
+    completed: bucket.completed ?? 0,
+    assigned: bucket.assigned ?? 0,
+  }))
 
   return (
-    <Card className="admin-shell-overview-performance-panel">
-      <CardHeader className="admin-shell-overview-performance-header">
-        <div className="admin-shell-overview-performance-title-block">
+    <Card className="admin-shell-overview-performance-panel pt-0">
+      <CardHeader className="admin-shell-overview-performance-header border-b border-[var(--admin-dashboard-card-border)] py-5 sm:flex-row sm:items-center">
+        <div className="admin-shell-overview-performance-title-block flex-1">
           <div className="admin-shell-overview-performance-kicker-row">
             <Activity className="admin-shell-overview-performance-kicker-icon" aria-hidden="true" />
             <span className="admin-shell-overview-performance-kicker">Sessions</span>
@@ -200,91 +180,61 @@ function SessionsPanel({ sessionsChart }) {
           </div>
           <CardDescription>{sessionsChart?.footer ?? 'No sessions in this range'}</CardDescription>
         </div>
-        <span className="admin-shell-overview-performance-tab admin-shell-overview-performance-tab-first">
-          {sessionsChart?.rangeLabel ?? 'Selected range'}
-        </span>
+        <CardAction>
+          <Select value={activeRange} onValueChange={onRangeChange}>
+            <SelectTrigger className="hidden w-[160px] rounded-lg sm:ml-auto sm:flex" aria-label="Select a value">
+              <SelectValue placeholder="Last month" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl">
+              {overviewRangeOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id} className="rounded-lg">
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardAction>
       </CardHeader>
-      <CardContent>
-        <div className="admin-shell-overview-performance-legend">
-          <span className="admin-shell-overview-performance-legend-item">
-            <span className="admin-shell-overview-performance-legend-dot admin-shell-overview-performance-legend-dot-completed" />
-            Completed
-          </span>
-          <span className="admin-shell-overview-performance-legend-item">
-            <span className="admin-shell-overview-performance-legend-dot admin-shell-overview-performance-legend-dot-assigned" />
-            Assigned
-          </span>
-        </div>
-        <div className="admin-shell-overview-performance-chart" aria-label="Completed and assigned sessions area chart">
-          <svg className="admin-shell-overview-performance-chart-svg" viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img">
+      <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+        <ChartContainer config={sessionsChartConfig} className="admin-shell-overview-performance-chart aspect-auto h-[250px] w-full">
+          <AreaChart accessibilityLayer data={chartData}>
             <defs>
-              <linearGradient id="adminSessionsCompletedFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="rgba(59, 224, 175, 0.28)" />
-                <stop offset="100%" stopColor="rgba(59, 224, 175, 0.02)" />
+              <linearGradient id="fillCompleted" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="var(--color-completed)" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="var(--color-completed)" stopOpacity={0.1} />
               </linearGradient>
-              <linearGradient id="adminSessionsAssignedFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="rgba(88, 198, 255, 0.18)" />
-                <stop offset="100%" stopColor="rgba(88, 198, 255, 0.01)" />
+              <linearGradient id="fillAssigned" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="var(--color-assigned)" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="var(--color-assigned)" stopOpacity={0.1} />
               </linearGradient>
             </defs>
-            {ticks.map((tick, index) => (
-              <g key={tick}>
-                <line
-                  className="admin-shell-overview-chart-grid-line"
-                  x1="48"
-                  x2="622"
-                  y1={20 + index * 101}
-                  y2={20 + index * 101}
-                />
-                <text className="admin-shell-overview-chart-axis-label" x="0" y={24 + index * 101}>
-                  {tick}
-                </text>
-              </g>
-            ))}
-            {assignedAreaPath ? <path className="admin-shell-overview-chart-area-assigned" d={assignedAreaPath} /> : null}
-            {completedAreaPath ? <path className="admin-shell-overview-chart-area-completed" d={completedAreaPath} /> : null}
-            {assignedLinePath ? <path className="admin-shell-overview-chart-line-assigned" d={assignedLinePath} /> : null}
-            {completedLinePath ? <path className="admin-shell-overview-chart-line-completed" d={completedLinePath} /> : null}
-            {assignedPoints.map((point, index) => (
-              <circle
-                key={`assigned-${buckets[index]?.label ?? index}`}
-                className="admin-shell-overview-chart-point admin-shell-overview-chart-point-assigned"
-                cx={point.x}
-                cy={point.y}
-                r="4"
-              />
-            ))}
-            {completedPoints.map((point, index) => (
-              <circle
-                key={`completed-${buckets[index]?.label ?? index}`}
-                className={index === activeIndex ? 'admin-shell-overview-chart-point admin-shell-overview-chart-point-active' : 'admin-shell-overview-chart-point'}
-                cx={point.x}
-                cy={point.y}
-                r={index === activeIndex ? '7' : '4'}
-              />
-            ))}
-            {buckets.map((bucket, index) => {
-              const point = completedPoints[index]
-              if (!point) return null
-              return (
-                <text key={bucket.label} className="admin-shell-overview-chart-axis-label" x={point.x} y="252" textAnchor="middle">
-                  {bucket.label}
-                </text>
-              )
-            })}
-          </svg>
-          {activeBucket ? (
-            <div className="admin-shell-overview-performance-tooltip">
-              <div className="admin-shell-overview-performance-tooltip-header">
-                <strong>{activeBucket.completed ?? 0}</strong>
-                <span>completed</span>
-              </div>
-              <span className="admin-shell-overview-performance-tooltip-date">
-                {activeBucket.label} · {activeBucket.assigned ?? 0} assigned
-              </span>
-            </div>
-          ) : null}
-        </div>
+            <CartesianGrid vertical={false} stroke="var(--admin-dashboard-chart-grid)" />
+            <XAxis
+              dataKey="date"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              minTickGap={32}
+              tick={{ fill: 'var(--admin-dashboard-chart-tick)', fontSize: 11, fontWeight: 500 }}
+            />
+            <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
+            <Area
+              dataKey="assigned"
+              type="natural"
+              fill="url(#fillAssigned)"
+              stroke="var(--color-assigned)"
+              stackId="a"
+            />
+            <Area
+              dataKey="completed"
+              type="natural"
+              fill="url(#fillCompleted)"
+              stroke="var(--color-completed)"
+              stackId="a"
+            />
+            <ChartLegend content={<ChartLegendContent />} />
+          </AreaChart>
+        </ChartContainer>
       </CardContent>
     </Card>
   )
@@ -354,10 +304,10 @@ function SessionsByTimePanel({ sessionsByTime }) {
   )
 }
 
-function DashboardAnalyticsPanels({ sessionsChart, complianceChart, sessionsByTime }) {
+function DashboardAnalyticsPanels({ sessionsChart, complianceChart, sessionsByTime, activeRange, onRangeChange }) {
   return (
     <section className="admin-shell-overview-analytics-layout" aria-label="Dashboard analytics panels">
-      <SessionsPanel sessionsChart={sessionsChart} />
+      <SessionsPanel sessionsChart={sessionsChart} activeRange={activeRange} onRangeChange={onRangeChange} />
       <div className="admin-shell-overview-bottom-row admin-shell-overview-side-column">
         <CompliancePanel complianceChart={complianceChart} />
         <SessionsByTimePanel sessionsByTime={sessionsByTime} />
@@ -368,15 +318,10 @@ function DashboardAnalyticsPanels({ sessionsChart, complianceChart, sessionsByTi
 
 export default function DashboardOverview() {
   const [activeRange, setActiveRange] = useState('last-month')
-  const [menuOpen, setMenuOpen] = useState(false)
   const [overview, setOverview] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  const activeOption = useMemo(
-    () => overviewRangeOptions.find((option) => option.id === activeRange) ?? overviewRangeOptions[1],
-    [activeRange],
-  )
 
   useEffect(() => {
     let cancelled = false
@@ -423,41 +368,6 @@ export default function DashboardOverview() {
           <h1 className="admin-shell-workspace-title">Dashboard</h1>
         </div>
 
-        <div className="admin-shell-overview-range-shell">
-          <button
-            type="button"
-            className="admin-shell-overview-range-button"
-            aria-haspopup="menu"
-            aria-expanded={menuOpen ? 'true' : 'false'}
-            onClick={() => setMenuOpen((open) => !open)}
-          >
-            <span className="admin-shell-overview-range-button-label">{activeOption.label}</span>
-            <ChevronDown className={['admin-shell-overview-range-chevron', menuOpen ? 'admin-shell-overview-range-chevron-open' : ''].join(' ')} />
-          </button>
-
-          {menuOpen ? (
-            <div className="admin-shell-overview-range-menu" role="menu" aria-label="Dashboard range options">
-              {overviewRangeOptions.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  role="menuitemradio"
-                  aria-checked={option.id === activeRange ? 'true' : 'false'}
-                  className={[
-                    'admin-shell-overview-range-option',
-                    option.id === activeRange ? 'admin-shell-overview-range-option-active' : '',
-                  ].filter(Boolean).join(' ')}
-                  onClick={() => {
-                    setActiveRange(option.id)
-                    setMenuOpen(false)
-                  }}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
       </div>
 
       {loading ? <LoadingOverviewState /> : null}
@@ -483,6 +393,8 @@ export default function DashboardOverview() {
             sessionsChart={overview?.sessionsChart}
             complianceChart={overview?.complianceChart}
             sessionsByTime={overview?.sessionsByTime}
+            activeRange={activeRange}
+            onRangeChange={setActiveRange}
           />
         </>
       ) : null}

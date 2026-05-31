@@ -1506,8 +1506,9 @@ html[data-theme='light'] [data-radix-popper-content-wrapper]:has(.admin-dashboar
 
 .admin-shell-overview-performance-header {
   display: flex;
-  flex-direction: column;
-  row-gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .admin-shell-overview-performance-title-block {
@@ -1619,9 +1620,10 @@ html[data-theme='light'] [data-radix-popper-content-wrapper]:has(.admin-dashboar
 
 .admin-shell-overview-performance-chart {
   position: relative;
-  min-height: 320px;
-  display: block;
-  padding-top: 8px;
+  min-height: 250px;
+  height: 250px;
+  display: flex;
+  padding-top: 0;
 }
 
 .admin-shell-overview-performance-chart-svg {
