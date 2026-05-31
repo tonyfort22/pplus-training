@@ -26,6 +26,11 @@ function requirePasswordResetPayload(accessToken, password) {
   }
 }
 
+function isSupabaseBadCredentialError(error) {
+  const message = String(error?.message || '')
+  return /Supabase identity request failed \((400|401)\)/.test(message)
+}
+
 async function readJsonResponse(response) {
   const text = await response.text()
   if (!text) return null
@@ -55,10 +60,18 @@ export function createAdminAuthRepository(overrides = {}) {
         anonKey,
         fetchImpl,
       })
-      const authSession = await signInRepository.signInWithPassword({
-        email: String(email).trim(),
-        password,
-      })
+      let authSession
+      try {
+        authSession = await signInRepository.signInWithPassword({
+          email: String(email).trim(),
+          password,
+        })
+      } catch (error) {
+        if (isSupabaseBadCredentialError(error)) {
+          throw createAdminAuthError('Invalid email or password.', 401, error)
+        }
+        throw error
+      }
 
       if (!authSession?.accessToken) {
         throw createAdminAuthError('Invalid email or password.', 401)

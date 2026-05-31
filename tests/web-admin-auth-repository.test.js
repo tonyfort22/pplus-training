@@ -85,6 +85,23 @@ test('signInAdminWithPassword signs in, verifies the current user coach profile,
   })
 })
 
+test('signInAdminWithPassword maps Supabase bad credential responses to a safe 401', async () => {
+  const repository = createAdminAuthRepository({
+    supabaseUrl: 'https://example.supabase.co',
+    anonKey: 'anon-key',
+    identityRepositoryFactory: () => ({
+      async signInWithPassword() {
+        throw new Error('Supabase identity request failed (400): Bad Request')
+      },
+    }),
+  })
+
+  await assert.rejects(
+    () => repository.signInAdminWithPassword({ email: 'coach@example.com', password: 'wrong-password' }),
+    (error) => error.message === 'Invalid email or password.' && error.status === 401,
+  )
+})
+
 test('signInAdminWithPassword rejects a signed-in user without a coach profile', async () => {
   const { factory } = createIdentityRepositoryFactory([
     {
