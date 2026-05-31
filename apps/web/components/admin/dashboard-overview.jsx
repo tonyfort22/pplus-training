@@ -186,6 +186,35 @@ const workoutResultsChartConfig = {
 
 const workoutResultCategoryOptions = ['Warmup', 'Speed Accelerator', 'Edge Work', 'Conditioning']
 
+const workoutResultCategoryLabelByType = {
+  Warmup: 'Warmup',
+  'Speed Accelerator': 'Speed',
+  'Edge Work': 'Edge',
+  Conditioning: 'Cond',
+}
+
+function createWorkoutResultShortLabel(workoutName, category) {
+  const name = String(workoutName || 'Workout').trim()
+  const categoryLabel = workoutResultCategoryLabelByType[category] ?? category ?? ''
+  const phaseMatch = name.match(/^Phase\s+(\d+)\s+(.+?)\s+([A-Z])$/i)
+
+  if (phaseMatch) {
+    const [, phaseNumber, middleLabel, suffix] = phaseMatch
+    const normalizedMiddleLabel = middleLabel.toLowerCase()
+    const compactCategory = workoutResultCategoryLabelByType[category] ?? middleLabel
+
+    if (!category || normalizedMiddleLabel === String(category).toLowerCase()) {
+      return `P${phaseNumber} ${compactCategory} ${suffix.toUpperCase()}`
+    }
+  }
+
+  if (categoryLabel && name.toLowerCase().includes(String(category).toLowerCase())) {
+    return name.replace(new RegExp(String(category).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), categoryLabel)
+  }
+
+  return name.length > 14 ? `${name.slice(0, 12).trim()}…` : name
+}
+
 const trainingConsistencyHeatmapVariants = [
   'bg-[#DDFBF1] text-[#0B1120] hover:bg-[#DDFBF1] [&>button]:text-[#0B1120]',
   'bg-[#9AF0D6] text-[#0B1120] hover:bg-[#9AF0D6] [&>button]:text-[#0B1120]',
@@ -302,6 +331,7 @@ function WorkoutResultsPanel({ workoutResults }) {
     .filter((bucket) => bucket.category === selectedCategory)
     .map((bucket) => ({
       workoutName: bucket.workoutName,
+      workoutLabel: createWorkoutResultShortLabel(bucket.workoutName, bucket.category),
       assigned: bucket.assigned ?? 0,
       completed: bucket.completed ?? 0,
       missed: bucket.missed ?? 0,
@@ -348,14 +378,17 @@ function WorkoutResultsPanel({ workoutResults }) {
           >
             <CartesianGrid vertical={false} stroke="var(--admin-dashboard-chart-grid)" />
             <XAxis
-              dataKey="workoutName"
+              dataKey="workoutLabel"
               tickLine={false}
               tickMargin={10}
               axisLine={false}
               tick={{ fill: 'var(--admin-dashboard-chart-tick)', fontSize: 11, fontWeight: 500 }}
             />
             <YAxis tickLine={false} axisLine={false} tickMargin={8} tick={{ fill: 'var(--admin-dashboard-chart-tick)', fontSize: 11, fontWeight: 500 }} />
-            <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dashed" />} />
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent indicator="dashed" labelFormatter={(_, payload) => payload?.[0]?.payload?.workoutName ?? ''} />}
+            />
             <Bar dataKey="assigned" fill="var(--color-assigned)" radius={4} />
             <Bar dataKey="completed" fill="var(--color-completed)" radius={4} />
             <Bar dataKey="missed" fill="var(--color-missed)" radius={4} />
