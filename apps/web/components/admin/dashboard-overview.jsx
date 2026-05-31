@@ -1,12 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, PolarAngleAxis, PolarGrid, Radar, RadarChart, XAxis } from 'recharts'
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import {
   Activity,
+  AlertTriangle,
   BadgeCheck,
-  CalendarRange,
-  Send,
+  CalendarCheck,
+  Flame,
   TrendingDown,
   TrendingUp,
   Users,
@@ -39,14 +40,14 @@ const overviewRangeOptions = [
 ]
 
 const summaryIconById = {
-  athletes: Users,
-  programs: CalendarRange,
-  sessions: Activity,
-  compliance: BadgeCheck,
-  pendingInvites: Send,
+  activeAthletes: Users,
+  dueWorkouts: CalendarCheck,
+  completedSessions: Activity,
+  planAdherence: BadgeCheck,
+  needsAttention: AlertTriangle,
 }
 
-const summaryOrder = ['athletes', 'programs', 'sessions', 'compliance', 'pendingInvites']
+const summaryOrder = ['activeAthletes', 'dueWorkouts', 'completedSessions', 'planAdherence', 'needsAttention']
 
 function getTrendTone(direction) {
   if (direction === 'negative') return 'danger'
@@ -119,7 +120,7 @@ function EmptyOverviewState() {
     <Card className="admin-shell-overview-empty" role="status" aria-label="No dashboard data yet">
       <CardHeader>
         <CardTitle>No dashboard data yet</CardTitle>
-        <CardDescription>Real metrics will appear here after athletes, assignments, sessions, or invites exist.</CardDescription>
+        <CardDescription>Real metrics will appear here after athletes, due workouts, completed sessions, or invites exist.</CardDescription>
       </CardHeader>
     </Card>
   )
@@ -147,7 +148,7 @@ function ErrorOverviewState({ message }) {
   )
 }
 
-const sessionsChartConfig = {
+const trainingExecutionChartConfig = {
   completed: {
     label: 'Completed',
     color: '#3be0af',
@@ -156,32 +157,26 @@ const sessionsChartConfig = {
     label: 'Assigned',
     color: '#58c6ff',
   },
-}
-
-const complianceChartConfig = {
-  completed: {
-    label: 'Completed',
-    color: '#3be0af',
-  },
-  assigned: {
-    label: 'Assigned',
-    color: '#58c6ff',
+  missed: {
+    label: 'Missed',
+    color: '#f97373',
   },
 }
 
-const sessionTimeChartConfig = {
-  sessions: {
-    label: 'Sessions',
+const planAdherenceChartConfig = {
+  adherence: {
+    label: 'Adherence',
     color: '#3be0af',
   },
 }
 
-function SessionsPanel({ sessionsChart, activeRange, onRangeChange }) {
-  const buckets = Array.isArray(sessionsChart?.buckets) ? sessionsChart.buckets : []
+function TrainingExecutionPanel({ trainingExecution, activeRange, onRangeChange }) {
+  const buckets = Array.isArray(trainingExecution?.buckets) ? trainingExecution.buckets : []
   const chartData = buckets.map((bucket) => ({
     date: bucket.label,
     completed: bucket.completed ?? 0,
     assigned: bucket.assigned ?? 0,
+    missed: bucket.missed ?? 0,
   }))
 
   return (
@@ -190,13 +185,13 @@ function SessionsPanel({ sessionsChart, activeRange, onRangeChange }) {
         <div className="admin-shell-overview-performance-title-block flex-1">
           <div className="admin-shell-overview-performance-kicker-row">
             <Activity className="admin-shell-overview-performance-kicker-icon" aria-hidden="true" />
-            <span className="admin-shell-overview-performance-kicker">Sessions</span>
+            <span className="admin-shell-overview-performance-kicker">Training execution</span>
           </div>
           <div className="admin-shell-overview-performance-value-row">
-            <CardTitle className="admin-shell-overview-performance-value">{sessionsChart?.value ?? '0'}</CardTitle>
-            <Badge tone="success">{sessionsChart?.trend ?? '0%'}</Badge>
+            <CardTitle className="admin-shell-overview-performance-value">{trainingExecution?.value ?? '0 completed'}</CardTitle>
+            <Badge tone="success">{trainingExecution?.trend ?? '0%'}</Badge>
           </div>
-          <CardDescription>{sessionsChart?.footer ?? 'No sessions in this range'}</CardDescription>
+          <CardDescription>{trainingExecution?.footer ?? 'No due workouts in this range'}</CardDescription>
         </div>
         <CardAction>
           <Select value={activeRange} onValueChange={onRangeChange}>
@@ -214,7 +209,7 @@ function SessionsPanel({ sessionsChart, activeRange, onRangeChange }) {
         </CardAction>
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
-        <ChartContainer config={sessionsChartConfig} className="admin-shell-overview-performance-chart aspect-auto h-[250px] w-full">
+        <ChartContainer config={trainingExecutionChartConfig} className="admin-shell-overview-performance-chart aspect-auto h-[250px] w-full">
           <AreaChart accessibilityLayer data={chartData}>
             <defs>
               <linearGradient id="fillCompleted" x1="0" y1="0" x2="0" y2="1">
@@ -222,8 +217,12 @@ function SessionsPanel({ sessionsChart, activeRange, onRangeChange }) {
                 <stop offset="95%" stopColor="var(--color-completed)" stopOpacity={0.1} />
               </linearGradient>
               <linearGradient id="fillAssigned" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--color-assigned)" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="var(--color-assigned)" stopOpacity={0.1} />
+                <stop offset="5%" stopColor="var(--color-assigned)" stopOpacity={0.45} />
+                <stop offset="95%" stopColor="var(--color-assigned)" stopOpacity={0.05} />
+              </linearGradient>
+              <linearGradient id="fillMissed" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="var(--color-missed)" stopOpacity={0.28} />
+                <stop offset="95%" stopColor="var(--color-missed)" stopOpacity={0.04} />
               </linearGradient>
             </defs>
             <CartesianGrid vertical={false} stroke="var(--admin-dashboard-chart-grid)" />
@@ -236,20 +235,9 @@ function SessionsPanel({ sessionsChart, activeRange, onRangeChange }) {
               tick={{ fill: 'var(--admin-dashboard-chart-tick)', fontSize: 11, fontWeight: 500 }}
             />
             <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
-            <Area
-              dataKey="assigned"
-              type="natural"
-              fill="url(#fillAssigned)"
-              stroke="var(--color-assigned)"
-              stackId="a"
-            />
-            <Area
-              dataKey="completed"
-              type="natural"
-              fill="url(#fillCompleted)"
-              stroke="var(--color-completed)"
-              stackId="a"
-            />
+            <Area dataKey="assigned" type="natural" fill="url(#fillAssigned)" stroke="var(--color-assigned)" stackId="a" />
+            <Area dataKey="missed" type="natural" fill="url(#fillMissed)" stroke="var(--color-missed)" stackId="a" />
+            <Area dataKey="completed" type="natural" fill="url(#fillCompleted)" stroke="var(--color-completed)" stackId="a" />
             <ChartLegend content={<ChartLegendContent />} />
           </AreaChart>
         </ChartContainer>
@@ -258,25 +246,24 @@ function SessionsPanel({ sessionsChart, activeRange, onRangeChange }) {
   )
 }
 
-function CompliancePanel({ complianceChart }) {
-  const buckets = Array.isArray(complianceChart?.buckets) ? complianceChart.buckets : []
+function PlanAdherencePanel({ planAdherenceChart }) {
+  const buckets = Array.isArray(planAdherenceChart?.buckets) ? planAdherenceChart.buckets : []
   const chartData = buckets.map((bucket) => ({
     date: bucket.label,
-    completed: bucket.completed ?? 0,
-    assigned: bucket.assigned ?? 0,
+    adherence: bucket.adherence ?? 0,
   }))
 
   return (
     <Card className="admin-shell-overview-insight-card">
       <CardHeader>
-        <CardDescription>Overall compliance</CardDescription>
+        <CardDescription>Plan adherence</CardDescription>
         <div className="admin-shell-overview-performance-value-row">
-          <CardTitle className="admin-shell-overview-insight-value">{complianceChart?.value ?? '0%'}</CardTitle>
-          <Badge tone="success">{complianceChart?.trend ?? '0%'}</Badge>
+          <CardTitle className="admin-shell-overview-insight-value">{planAdherenceChart?.value ?? '0%'}</CardTitle>
+          <Badge tone="success">{planAdherenceChart?.trend ?? '0%'}</Badge>
         </div>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={complianceChartConfig} className="admin-shell-overview-compliance-chart aspect-auto h-[180px] w-full">
+        <ChartContainer config={planAdherenceChartConfig} className="admin-shell-overview-compliance-chart aspect-auto h-[180px] w-full">
           <BarChart accessibilityLayer data={chartData}>
             <CartesianGrid vertical={false} stroke="var(--admin-dashboard-chart-grid)" />
             <XAxis
@@ -287,60 +274,52 @@ function CompliancePanel({ complianceChart }) {
               tickFormatter={(value) => String(value).slice(0, 3)}
               tick={{ fill: 'var(--admin-dashboard-chart-tick)', fontSize: 11, fontWeight: 500 }}
             />
+            <YAxis hide domain={[0, 100]} />
             <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dashed" />} />
-            <Bar dataKey="completed" fill="var(--color-completed)" radius={4} />
-            <Bar dataKey="assigned" fill="var(--color-assigned)" radius={4} />
+            <Bar dataKey="adherence" fill="var(--color-adherence)" radius={4} />
           </BarChart>
         </ChartContainer>
       </CardContent>
       <CardFooter>
-        <span className="admin-shell-overview-link">{complianceChart?.footer ?? 'No assigned sessions in this range'}</span>
+        <span className="admin-shell-overview-link">{planAdherenceChart?.footer ?? 'No due workouts in this range'}</span>
       </CardFooter>
     </Card>
   )
 }
 
-function SessionsByTimePanel({ sessionsByTime }) {
-  const buckets = Array.isArray(sessionsByTime?.buckets) ? sessionsByTime.buckets : []
-  const chartData = buckets.map((bucket) => ({
-    time: bucket.label,
-    sessions: bucket.value ?? 0,
-  }))
-
+function TrainingConsistencyPanel({ trainingConsistency }) {
   return (
     <Card className="admin-shell-overview-insight-card">
       <CardHeader>
-        <CardDescription>Sessions by time of the day</CardDescription>
+        <CardDescription>Training consistency</CardDescription>
         <div className="admin-shell-overview-performance-value-row">
-          <CardTitle className="admin-shell-overview-insight-value">{sessionsByTime?.value ?? '0'}</CardTitle>
-          <Badge tone="success">{sessionsByTime?.trend ?? '0%'}</Badge>
+          <CardTitle className="admin-shell-overview-insight-value">{trainingConsistency?.value ?? '0 / 0'}</CardTitle>
+          <Badge tone="neutral">Next: heatmap</Badge>
         </div>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={sessionTimeChartConfig} className="admin-shell-overview-session-chart aspect-auto h-[220px] w-full">
-          <RadarChart accessibilityLayer data={chartData}>
-            <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
-            <PolarAngleAxis dataKey="time" tick={{ fill: 'var(--admin-dashboard-chart-tick)', fontSize: 11, fontWeight: 500 }} />
-            <PolarGrid radialLines={false} stroke="var(--admin-dashboard-chart-grid)" />
-            <Radar dataKey="sessions" fill="var(--color-sessions)" fillOpacity={0.6} stroke="var(--color-sessions)" />
-            <ChartLegend content={<ChartLegendContent />} />
-          </RadarChart>
-        </ChartContainer>
+        <div className="admin-shell-overview-session-chart flex min-h-[220px] flex-col justify-center gap-3 rounded-xl border border-dashed border-[var(--admin-dashboard-card-border)] px-5 text-sm text-[var(--admin-dashboard-card-muted)]">
+          <div className="flex items-center gap-2 font-medium text-[var(--admin-dashboard-card-text)]">
+            <Flame className="h-4 w-4 text-[#3BE0AF]" aria-hidden="true" />
+            Calendar heatmap data seam connected
+          </div>
+          <p>Unique athletes active per day will render here in the next pass.</p>
+        </div>
       </CardContent>
       <CardFooter>
-        <span className="admin-shell-overview-link">{sessionsByTime?.footer ?? 'No completed sessions in this range'}</span>
+        <span className="admin-shell-overview-link">{trainingConsistency?.footer ?? 'Based on completed workout sessions'}</span>
       </CardFooter>
     </Card>
   )
 }
 
-function DashboardAnalyticsPanels({ sessionsChart, complianceChart, sessionsByTime, activeRange, onRangeChange }) {
+function DashboardAnalyticsPanels({ trainingExecution, planAdherenceChart, trainingConsistency, activeRange, onRangeChange }) {
   return (
     <section className="admin-shell-overview-analytics-layout" aria-label="Dashboard analytics panels">
-      <SessionsPanel sessionsChart={sessionsChart} activeRange={activeRange} onRangeChange={onRangeChange} />
+      <TrainingExecutionPanel trainingExecution={trainingExecution} activeRange={activeRange} onRangeChange={onRangeChange} />
       <div className="admin-shell-overview-bottom-row admin-shell-overview-side-column">
-        <CompliancePanel complianceChart={complianceChart} />
-        <SessionsByTimePanel sessionsByTime={sessionsByTime} />
+        <PlanAdherencePanel planAdherenceChart={planAdherenceChart} />
+        <TrainingConsistencyPanel trainingConsistency={trainingConsistency} />
       </div>
     </section>
   )
@@ -351,7 +330,6 @@ export default function DashboardOverview() {
   const [overview, setOverview] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-
 
   useEffect(() => {
     let cancelled = false
@@ -397,7 +375,6 @@ export default function DashboardOverview() {
         <div className="admin-shell-workspace-header">
           <h1 className="admin-shell-workspace-title">Dashboard</h1>
         </div>
-
       </div>
 
       {loading ? <LoadingOverviewState /> : null}
@@ -420,9 +397,9 @@ export default function DashboardOverview() {
           </section>
 
           <DashboardAnalyticsPanels
-            sessionsChart={overview?.sessionsChart}
-            complianceChart={overview?.complianceChart}
-            sessionsByTime={overview?.sessionsByTime}
+            trainingExecution={overview?.trainingExecution}
+            planAdherenceChart={overview?.planAdherenceChart}
+            trainingConsistency={overview?.trainingConsistency}
             activeRange={activeRange}
             onRangeChange={setActiveRange}
           />

@@ -6,7 +6,7 @@ import { resolve } from 'node:path'
 const repoRoot = resolve(import.meta.dirname, '..')
 const dashboardOverviewPath = resolve(repoRoot, 'apps/web/components/admin/dashboard-overview.jsx')
 
-test('dashboard overview fetches real overview API data instead of hardcoded KPI mocks', () => {
+test('dashboard overview fetches real v2 coach overview API data instead of hardcoded KPI mocks', () => {
   const source = readFileSync(dashboardOverviewPath, 'utf8')
 
   assert.match(source, /fetch\(`\/api\/admin\/dashboard\/overview\?range=\$\{activeRange\}`/)
@@ -17,10 +17,19 @@ test('dashboard overview fetches real overview API data instead of hardcoded KPI
   assert.match(source, /Dashboard overview error/)
   assert.match(source, /No dashboard data yet/)
   assert.match(source, /const cards = buildSummaryCards\(overview\?\.summary\)/)
-  assert.match(source, /sessionsChart=\{overview\?\.sessionsChart\}/)
-  assert.match(source, /complianceChart=\{overview\?\.complianceChart\}/)
-  assert.match(source, /sessionsByTime=\{overview\?\.sessionsByTime\}/)
+  assert.match(source, /activeAthletes/)
+  assert.match(source, /dueWorkouts/)
+  assert.match(source, /completedSessions/)
+  assert.match(source, /planAdherence/)
+  assert.match(source, /needsAttention/)
+  assert.match(source, /trainingExecution=\{overview\?\.trainingExecution\}/)
+  assert.match(source, /planAdherenceChart=\{overview\?\.planAdherenceChart\}/)
+  assert.match(source, /trainingConsistency=\{overview\?\.trainingConsistency\}/)
+  assert.match(source, /Training execution/)
+  assert.match(source, /Training consistency/)
   assert.doesNotMatch(source, /const overviewRangeCardData = \{/)
   assert.doesNotMatch(source, /value: '148'/)
   assert.doesNotMatch(source, /Daily adherence meets projections/)
+  assert.doesNotMatch(source, /Sessions by time of the day/)
+  assert.doesNotMatch(source, /RadarChart/)
 })

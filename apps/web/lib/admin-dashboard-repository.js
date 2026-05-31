@@ -92,7 +92,7 @@ function createTrend(current, previous) {
   }
 }
 
-function createSummaryMetric({ id, label, value, previousValue, footerHeadline, footerSubtext }) {
+function createSummaryMetric({ id, label, value, previousValue = 0, footerHeadline, footerSubtext }) {
   const trend = createTrend(value, previousValue)
   return {
     id,
@@ -105,18 +105,18 @@ function createSummaryMetric({ id, label, value, previousValue, footerHeadline, 
   }
 }
 
-function createComplianceMetric(currentCompleted, currentAssigned, previousCompleted, previousAssigned) {
-  const currentPercent = currentAssigned ? Math.round((currentCompleted / currentAssigned) * 100) : 0
-  const previousPercent = previousAssigned ? Math.round((previousCompleted / previousAssigned) * 100) : 0
+function createPlanAdherenceMetric(currentCompletedDue, currentDue, previousCompletedDue, previousDue) {
+  const currentPercent = currentDue ? Math.round((currentCompletedDue / currentDue) * 100) : 0
+  const previousPercent = previousDue ? Math.round((previousCompletedDue / previousDue) * 100) : 0
   const trend = createTrend(currentPercent, previousPercent)
   return {
-    id: 'compliance',
-    label: 'Compliance',
+    id: 'planAdherence',
+    label: 'Plan adherence',
     value: `${currentPercent}%`,
     change: trend.change,
     changeDirection: trend.direction,
-    footerHeadline: currentAssigned ? 'Real assigned session adherence' : 'No assigned sessions yet',
-    footerSubtext: currentAssigned ? `${currentCompleted} of ${currentAssigned} assigned sessions completed` : 'No assigned sessions in this range',
+    footerHeadline: currentDue ? 'Completed due scheduled work' : 'No due workouts yet',
+    footerSubtext: currentDue ? `${currentCompletedDue} of ${currentDue} due workouts completed` : 'No due workouts in this range',
   }
 }
 
@@ -146,74 +146,6 @@ function createBuckets(window) {
   })
 }
 
-function createSessionsChart({ window, assignmentRows, completedSessionRows }) {
-  const bucketWindows = createBuckets(window)
-  const buckets = bucketWindows.map((bucket) => ({
-    label: bucket.label,
-    completed: countRowsInWindow(completedSessionRows, ['completed_at'], bucket),
-    assigned: countRowsInWindow(assignmentRows, ['scheduled_date', 'created_at'], bucket, isAssignedWorkout),
-  }))
-  const total = buckets.reduce((sum, bucket) => sum + bucket.completed, 0)
-  const assignedTotal = buckets.reduce((sum, bucket) => sum + bucket.assigned, 0)
-  return {
-    title: 'Sessions',
-    total,
-    value: String(total),
-    trend: createTrend(total, countRowsInWindow(completedSessionRows, ['completed_at'], { start: window.previousStart, end: window.previousEnd })).change,
-    rangeLabel: labelForRange(window.range),
-    buckets,
-    legend: ['Completed', 'Assigned'],
-    footer: assignedTotal ? `${total} completed of ${assignedTotal} assigned` : 'No assigned sessions in this range',
-  }
-}
-
-function createComplianceChart({ window, assignmentRows, completedSessionRows }) {
-  const bucketWindows = createBuckets(window)
-  const buckets = bucketWindows.map((bucket) => {
-    const assigned = countRowsInWindow(assignmentRows, ['scheduled_date', 'created_at'], bucket, isAssignedWorkout)
-    const completed = countRowsInWindow(completedSessionRows, ['completed_at'], bucket)
-    const compliance = assigned ? Math.round((completed / assigned) * 100) : 0
-    return { label: bucket.label, completed, assigned, compliance }
-  })
-  const currentAssigned = countRowsInWindow(assignmentRows, ['scheduled_date', 'created_at'], window, isAssignedWorkout)
-  const currentCompleted = countRowsInWindow(completedSessionRows, ['completed_at'], window)
-  return {
-    title: 'Overall compliance',
-    value: formatPercent(currentCompleted, currentAssigned),
-    trend: createTrend(currentAssigned ? Math.round((currentCompleted / currentAssigned) * 100) : 0, 0).change,
-    buckets,
-    footer: currentAssigned ? `${currentCompleted} of ${currentAssigned} assigned sessions` : 'No assigned sessions in this range',
-  }
-}
-
-function createSessionsByTime({ window, completedSessionRows }) {
-  const rows = completedSessionRows.filter((row) => isBetween(valueDate(row, ['completed_at']), window.start, window.end))
-  const buckets = [
-    { label: 'Early', value: 0 },
-    { label: 'Morning', value: 0 },
-    { label: 'Afternoon', value: 0 },
-    { label: 'Evening', value: 0 },
-  ]
-
-  for (const row of rows) {
-    const date = valueDate(row, ['completed_at'])
-    const hour = date.getUTCHours()
-    if (hour < 6) buckets[0].value += 1
-    else if (hour < 12) buckets[1].value += 1
-    else if (hour < 18) buckets[2].value += 1
-    else buckets[3].value += 1
-  }
-
-  return {
-    title: 'Sessions by time of the day',
-    total: rows.length,
-    value: String(rows.length),
-    trend: createTrend(rows.length, countRowsInWindow(completedSessionRows, ['completed_at'], { start: window.previousStart, end: window.previousEnd })).change,
-    buckets,
-    footer: rows.length ? 'Based on completed session timestamps' : 'No completed sessions in this range',
-  }
-}
-
 function labelForRange(range) {
   return overviewRangeLabelById[range] ?? 'Selected range'
 }
@@ -229,12 +161,14 @@ function isActiveAthlete(row) {
   return row?.status !== 'inactive' && row?.status !== 'archived'
 }
 
-function isActiveProgram(row) {
-  return row?.status !== 'archived'
+function isDueWorkout(row, now) {
+  if (row?.status === 'skipped' || row?.status === 'cancelled') return false
+  const scheduledDate = valueDate(row, ['scheduled_date', 'created_at'])
+  return Boolean(scheduledDate) && scheduledDate.getTime() <= now.getTime()
 }
 
-function isAssignedWorkout(row) {
-  return row?.status !== 'skipped' && row?.status !== 'cancelled'
+function isMissedWorkout(row) {
+  return row?.status === 'missed'
 }
 
 function isCompletedSession(row) {
@@ -245,6 +179,112 @@ function isPendingInvite(row, now) {
   if (row?.used_at || row?.revoked_at) return false
   const expiresAt = parseDate(row?.expires_at)
   return !expiresAt || expiresAt.getTime() >= now.getTime()
+}
+
+function countCompletedDueWorkouts(dueWorkouts, completedSessionRows) {
+  const dueById = new Map(dueWorkouts.map((row) => [row.id, row]))
+  const completedDueIds = new Set(
+    completedSessionRows
+      .map((row) => row.program_workout_id)
+      .filter((id) => id && dueById.has(id)),
+  )
+
+  for (const workout of dueWorkouts) {
+    if (workout.status === 'completed') {
+      completedDueIds.add(workout.id)
+    }
+  }
+
+  return completedDueIds.size
+}
+
+function createTrainingExecution({ window, dueWorkoutRows, completedSessionRows }) {
+  const bucketWindows = createBuckets(window)
+  const buckets = bucketWindows.map((bucket) => {
+    const dueRows = dueWorkoutRows.filter((row) => isBetween(valueDate(row, ['scheduled_date', 'created_at']), bucket.start, bucket.end))
+    const completedRows = completedSessionRows.filter((row) => isBetween(valueDate(row, ['completed_at']), bucket.start, bucket.end))
+    return {
+      label: bucket.label,
+      completed: completedRows.length,
+      assigned: dueRows.length,
+      missed: dueRows.filter(isMissedWorkout).length,
+    }
+  })
+  const total = buckets.reduce((sum, bucket) => sum + bucket.completed, 0)
+  const dueTotal = buckets.reduce((sum, bucket) => sum + bucket.assigned, 0)
+  const missedTotal = buckets.reduce((sum, bucket) => sum + bucket.missed, 0)
+  return {
+    title: 'Training execution',
+    total,
+    dueTotal,
+    missedTotal,
+    value: `${total} completed`,
+    trend: createTrend(total, countRowsInWindow(completedSessionRows, ['completed_at'], { start: window.previousStart, end: window.previousEnd })).change,
+    rangeLabel: labelForRange(window.range),
+    buckets,
+    legend: ['Completed', 'Assigned', 'Missed'],
+    footer: dueTotal ? `${total} completed · ${dueTotal} due · ${missedTotal} missed` : 'No due workouts in this range',
+  }
+}
+
+function createPlanAdherenceChart({ window, dueWorkoutRows, completedSessionRows }) {
+  const bucketWindows = createBuckets(window)
+  const buckets = bucketWindows.map((bucket) => {
+    const dueRows = dueWorkoutRows.filter((row) => isBetween(valueDate(row, ['scheduled_date', 'created_at']), bucket.start, bucket.end))
+    const completedRows = completedSessionRows.filter((row) => isBetween(valueDate(row, ['completed_at']), bucket.start, bucket.end))
+    const completedDue = countCompletedDueWorkouts(dueRows, completedRows)
+    const adherence = dueRows.length ? Math.round((completedDue / dueRows.length) * 100) : 0
+    return { label: bucket.label, completed: completedDue, assigned: dueRows.length, adherence }
+  })
+  const currentDue = dueWorkoutRows.length
+  const currentCompletedDue = countCompletedDueWorkouts(dueWorkoutRows, completedSessionRows)
+  return {
+    title: 'Plan adherence',
+    value: formatPercent(currentCompletedDue, currentDue),
+    trend: createTrend(currentDue ? Math.round((currentCompletedDue / currentDue) * 100) : 0, 0).change,
+    buckets,
+    footer: currentDue ? `${currentCompletedDue} of ${currentDue} due workouts completed` : 'No due workouts in this range',
+  }
+}
+
+function createTrainingConsistency({ activeAthletes, window, completedSessionRows }) {
+  const lastSevenDaysWindow = { start: addDays(window.end, -7), end: window.end }
+  const activeThisWeek = new Set(
+    completedSessionRows
+      .filter((row) => isBetween(valueDate(row, ['completed_at']), lastSevenDaysWindow.start, lastSevenDaysWindow.end))
+      .map((row) => row.athlete_id)
+      .filter(Boolean),
+  )
+
+  return {
+    title: 'Training consistency',
+    value: `${activeThisWeek.size} / ${activeAthletes.length}`,
+    footer: 'Based on completed workout sessions',
+    heatmapReady: false,
+    activeThisWeek: activeThisWeek.size,
+    activeAthleteCount: activeAthletes.length,
+  }
+}
+
+function countNeedsAttention({ activeAthletes, dueWorkoutRows, completedSessionRows, now }) {
+  const missedByAthlete = new Map()
+  for (const workout of dueWorkoutRows.filter(isMissedWorkout)) {
+    if (!workout.athlete_id) continue
+    missedByAthlete.set(workout.athlete_id, (missedByAthlete.get(workout.athlete_id) ?? 0) + 1)
+  }
+
+  const lastSevenDaysWindow = { start: addDays(now, -7), end: now }
+  const recentlyActiveAthletes = new Set(
+    completedSessionRows
+      .filter((row) => isBetween(valueDate(row, ['completed_at']), lastSevenDaysWindow.start, lastSevenDaysWindow.end))
+      .map((row) => row.athlete_id)
+      .filter(Boolean),
+  )
+
+  return activeAthletes.filter((athlete) => {
+    const missedCount = missedByAthlete.get(athlete.id) ?? 0
+    return missedCount >= 2 || !recentlyActiveAthletes.has(athlete.id)
+  }).length
 }
 
 export function createAdminDashboardRepository(options = {}) {
@@ -278,65 +318,60 @@ export function createAdminDashboardRepository(options = {}) {
       }
 
       const window = getRangeWindow(range, now)
-      const [athleteRows, programRows, assignmentRows, sessionRows, inviteRows] = await Promise.all([
+      const [athleteRows, assignmentRows, sessionRows, inviteRows] = await Promise.all([
         requestTable('athlete_profiles', '?select=id,status,created_at'),
-        requestTable('programs', '?select=id,status,created_at'),
-        requestTable('program_workouts', '?select=id,status,scheduled_date,created_at'),
-        requestTable('workout_sessions', '?select=id,status,completed_at,started_at,created_at'),
+        requestTable('program_workouts', '?select=id,athlete_id,status,scheduled_date,created_at'),
+        requestTable('workout_sessions', '?select=id,athlete_id,program_workout_id,status,completed_at,started_at,created_at'),
         requestTable('athlete_invitations', '?select=id,used_at,revoked_at,expires_at,created_at'),
       ])
 
       const athletes = Array.isArray(athleteRows) ? athleteRows : []
-      const programs = Array.isArray(programRows) ? programRows : []
+      const activeAthletes = athletes.filter(isActiveAthlete)
       const assignments = Array.isArray(assignmentRows) ? assignmentRows : []
       const completedSessions = (Array.isArray(sessionRows) ? sessionRows : []).filter(isCompletedSession)
       const invites = Array.isArray(inviteRows) ? inviteRows : []
-
-      const previousWindow = { start: window.previousStart, end: window.previousEnd }
-      const currentAthletes = countRowsInWindow(athletes, ['created_at'], window, isActiveAthlete)
-      const previousAthletes = countRowsInWindow(athletes, ['created_at'], previousWindow, isActiveAthlete)
-      const currentPrograms = countRowsInWindow(programs, ['created_at'], window, isActiveProgram)
-      const previousPrograms = countRowsInWindow(programs, ['created_at'], previousWindow, isActiveProgram)
-      const currentSessions = countRowsInWindow(completedSessions, ['completed_at'], window)
-      const previousSessions = countRowsInWindow(completedSessions, ['completed_at'], previousWindow)
-      const currentAssigned = countRowsInWindow(assignments, ['scheduled_date', 'created_at'], window, isAssignedWorkout)
-      const previousAssigned = countRowsInWindow(assignments, ['scheduled_date', 'created_at'], previousWindow, isAssignedWorkout)
-      const currentPendingInvites = invites.filter((row) => isPendingInvite(row, new Date(now)) && isBetween(valueDate(row, ['created_at']), window.start, window.end)).length
-      const previousPendingInvites = invites.filter((row) => isPendingInvite(row, new Date(now)) && isBetween(valueDate(row, ['created_at']), window.previousStart, window.previousEnd)).length
+      const dueWorkouts = assignments.filter((row) => isDueWorkout(row, new Date(now)) && isBetween(valueDate(row, ['scheduled_date', 'created_at']), window.start, window.end))
+      const previousDueWorkouts = assignments.filter((row) => isDueWorkout(row, new Date(now)) && isBetween(valueDate(row, ['scheduled_date', 'created_at']), window.previousStart, window.previousEnd))
+      const previousCompletedSessions = completedSessions.filter((row) => isBetween(valueDate(row, ['completed_at']), window.previousStart, window.previousEnd))
+      const currentCompletedSessions = completedSessions.filter((row) => isBetween(valueDate(row, ['completed_at']), window.start, window.end))
+      const currentCompletedDue = countCompletedDueWorkouts(dueWorkouts, currentCompletedSessions)
+      const previousCompletedDue = countCompletedDueWorkouts(previousDueWorkouts, previousCompletedSessions)
+      const pendingInviteCount = invites.filter((row) => isPendingInvite(row, new Date(now))).length
+      const needsAttention = countNeedsAttention({ activeAthletes, dueWorkoutRows: dueWorkouts, completedSessionRows: completedSessions, now: new Date(now) })
 
       const summary = {
-        athletes: createSummaryMetric({
-          id: 'athletes',
-          label: 'Athletes',
-          value: currentAthletes,
-          previousValue: previousAthletes,
-          footerHeadline: currentAthletes ? 'Real athlete roster growth' : 'No athletes added',
-          footerSubtext: currentAthletes ? `${currentAthletes} active athletes added in ${labelForRange(range)}` : 'No active athletes added in this range',
+        activeAthletes: createSummaryMetric({
+          id: 'activeAthletes',
+          label: 'Active athletes',
+          value: activeAthletes.length,
+          previousValue: activeAthletes.length,
+          footerHeadline: activeAthletes.length ? 'Current coach-visible roster' : 'No active athletes yet',
+          footerSubtext: `${activeAthletes.length} active · ${pendingInviteCount} invited`,
         }),
-        programs: createSummaryMetric({
-          id: 'programs',
-          label: 'Programs',
-          value: currentPrograms,
-          previousValue: previousPrograms,
-          footerHeadline: currentPrograms ? 'Real program activity' : 'No programs added',
-          footerSubtext: currentPrograms ? `${currentPrograms} non-archived programs added` : 'No programs added in this range',
+        dueWorkouts: createSummaryMetric({
+          id: 'dueWorkouts',
+          label: 'Due workouts',
+          value: dueWorkouts.length,
+          previousValue: previousDueWorkouts.length,
+          footerHeadline: dueWorkouts.length ? 'Scheduled in selected range' : 'No due workouts',
+          footerSubtext: dueWorkouts.length ? 'Scheduled in selected range' : 'No due workouts in this range',
         }),
-        sessions: createSummaryMetric({
-          id: 'sessions',
-          label: 'Sessions',
-          value: currentSessions,
-          previousValue: previousSessions,
-          footerHeadline: currentSessions ? 'Completed sessions from logs' : 'No completed sessions',
-          footerSubtext: currentSessions ? `${currentSessions} completed workout sessions` : 'No completed sessions in this range',
+        completedSessions: createSummaryMetric({
+          id: 'completedSessions',
+          label: 'Completed sessions',
+          value: currentCompletedSessions.length,
+          previousValue: previousCompletedSessions.length,
+          footerHeadline: currentCompletedSessions.length ? 'Logged by athletes' : 'No completed sessions',
+          footerSubtext: currentCompletedSessions.length ? 'Logged by athletes' : 'No completed sessions in this range',
         }),
-        compliance: createComplianceMetric(currentSessions, currentAssigned, previousSessions, previousAssigned),
-        pendingInvites: createSummaryMetric({
-          id: 'invites',
-          label: 'Pending invites',
-          value: currentPendingInvites,
-          previousValue: previousPendingInvites,
-          footerHeadline: currentPendingInvites ? 'Pending athlete invitations' : 'No pending invites',
-          footerSubtext: currentPendingInvites ? `${currentPendingInvites} invites still pending` : 'No pending invites created in this range',
+        planAdherence: createPlanAdherenceMetric(currentCompletedDue, dueWorkouts.length, previousCompletedDue, previousDueWorkouts.length),
+        needsAttention: createSummaryMetric({
+          id: 'needsAttention',
+          label: 'Needs attention',
+          value: needsAttention,
+          previousValue: 0,
+          footerHeadline: needsAttention ? 'Follow-up candidates' : 'No follow-up flags',
+          footerSubtext: needsAttention ? 'Missed 2+ workouts or inactive 7d' : 'No athletes currently flagged',
         }),
       }
 
@@ -345,9 +380,9 @@ export function createAdminDashboardRepository(options = {}) {
         rangeLabel: labelForRange(range),
         generatedAt: new Date(now).toISOString(),
         summary,
-        sessionsChart: createSessionsChart({ window, assignmentRows: assignments, completedSessionRows: completedSessions }),
-        complianceChart: createComplianceChart({ window, assignmentRows: assignments, completedSessionRows: completedSessions }),
-        sessionsByTime: createSessionsByTime({ window, completedSessionRows: completedSessions }),
+        trainingExecution: createTrainingExecution({ window, dueWorkoutRows: dueWorkouts, completedSessionRows: currentCompletedSessions }),
+        planAdherenceChart: createPlanAdherenceChart({ window, dueWorkoutRows: dueWorkouts, completedSessionRows: currentCompletedSessions }),
+        trainingConsistency: createTrainingConsistency({ activeAthletes, window, completedSessionRows: completedSessions }),
       }
     },
   }
