@@ -43,7 +43,7 @@ test('dashboard overview fetches real v2 coach overview API data instead of hard
   assert.doesNotMatch(source, /layout="vertical"/)
   assert.match(source, /createWorkoutResultShortLabel/)
   assert.match(source, /workoutLabel:\s*createWorkoutResultShortLabel\(bucket\.workoutName, bucket\.category\)/)
-  assert.match(source, /XAxis[\s\S]*dataKey="workoutLabel"[\s\S]*tickLine=\{false\}[\s\S]*tickMargin=\{10\}[\s\S]*axisLine=\{false\}/)
+  assert.match(source, /XAxis[\s\S]*dataKey="workoutLabel"[\s\S]*tickLine=\{false\}[\s\S]*tickMargin=\{10\}[\s\S]*axisLine=\{false\}[\s\S]*angle=\{-45\}[\s\S]*textAnchor="end"[\s\S]*height=\{72\}/)
   assert.match(source, /YAxis[\s\S]*tickLine=\{false\}[\s\S]*axisLine=\{false\}[\s\S]*tickMargin=\{8\}/)
   assert.match(source, /const workoutResultsChartHeight = 320/)
   assert.match(source, /Card className="admin-shell-overview-insight-card admin-shell-overview-workout-results-card"/)

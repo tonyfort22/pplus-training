@@ -374,7 +374,7 @@ function WorkoutResultsPanel({ workoutResults }) {
           <BarChart
             accessibilityLayer
             data={chartData}
-            margin={{ top: 12, right: 12, left: -24, bottom: 8 }}
+            margin={{ top: 12, right: 12, left: -24, bottom: 32 }}
           >
             <CartesianGrid vertical={false} stroke="var(--admin-dashboard-chart-grid)" />
             <XAxis
@@ -382,6 +382,9 @@ function WorkoutResultsPanel({ workoutResults }) {
               tickLine={false}
               tickMargin={10}
               axisLine={false}
+              angle={-45}
+              textAnchor="end"
+              height={72}
               tick={{ fill: 'var(--admin-dashboard-chart-tick)', fontSize: 11, fontWeight: 500 }}
             />
             <YAxis tickLine={false} axisLine={false} tickMargin={8} tick={{ fill: 'var(--admin-dashboard-chart-tick)', fontSize: 11, fontWeight: 500 }} />

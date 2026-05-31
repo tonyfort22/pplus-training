@@ -540,7 +540,7 @@ test('admin navigation uses real nested routes driven by shared config', () => {
   assert.doesNotMatch(dashboardOverviewSource, /layout="vertical"/)
   assert.match(dashboardOverviewSource, /createWorkoutResultShortLabel/)
   assert.match(dashboardOverviewSource, /workoutLabel:\s*createWorkoutResultShortLabel\(bucket\.workoutName, bucket\.category\)/)
-  assert.match(dashboardOverviewSource, /XAxis[\s\S]*dataKey="workoutLabel"[\s\S]*tickLine=\{false\}[\s\S]*tickMargin=\{10\}[\s\S]*axisLine=\{false\}/)
+  assert.match(dashboardOverviewSource, /XAxis[\s\S]*dataKey="workoutLabel"[\s\S]*tickLine=\{false\}[\s\S]*tickMargin=\{10\}[\s\S]*axisLine=\{false\}[\s\S]*angle=\{-45\}[\s\S]*textAnchor="end"[\s\S]*height=\{72\}/)
   assert.match(dashboardOverviewSource, /YAxis[\s\S]*tickLine=\{false\}[\s\S]*axisLine=\{false\}[\s\S]*tickMargin=\{8\}/)
   assert.match(dashboardOverviewSource, /const workoutResultsChartHeight = 320/)
   assert.match(dashboardOverviewSource, /Card className="admin-shell-overview-insight-card admin-shell-overview-workout-results-card"/)
