@@ -326,9 +326,10 @@ function WorkoutResultsPanel({ workoutResults }) {
       value: bucket[metricKey] ?? 0,
       fill: getWorkoutResultBarFill(index, metricKey),
     }))
+  const workoutResultsChartHeight = Math.max(260, chartData.length * 38 + 24)
 
   return (
-    <Card className="admin-shell-overview-insight-card">
+    <Card className="admin-shell-overview-insight-card admin-shell-overview-workout-results-card">
       <CardHeader>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
@@ -366,8 +367,12 @@ function WorkoutResultsPanel({ workoutResults }) {
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <ChartContainer config={workoutResultsChartConfig} className="admin-shell-overview-workout-results-chart aspect-auto h-[220px] w-full">
+      <CardContent className="admin-shell-overview-workout-results-content">
+        <ChartContainer
+          config={workoutResultsChartConfig}
+          className="admin-shell-overview-workout-results-chart aspect-auto w-full"
+          style={{ height: workoutResultsChartHeight, minHeight: workoutResultsChartHeight }}
+        >
           <BarChart
             accessibilityLayer
             data={chartData}
