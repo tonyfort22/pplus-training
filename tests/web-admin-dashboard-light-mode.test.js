@@ -52,6 +52,7 @@ test('admin dashboard overview body uses light-mode theme tokens for cards chart
 
   assert.match(dashboardSource, /admin-shell-overview-performance-chart/)
   assert.match(dashboardSource, /AreaChart/)
+  assert.match(dashboardSource, /BarChart/)
   assert.match(dashboardSource, /ChartContainer/)
   assert.match(dashboardSource, /ChartTooltipContent/)
   assert.match(dashboardSource, /ChartLegendContent/)

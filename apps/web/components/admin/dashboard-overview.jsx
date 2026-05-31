@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Area, AreaChart, CartesianGrid, XAxis } from 'recharts'
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis } from 'recharts'
 import {
   Activity,
   BadgeCheck,
@@ -158,6 +158,17 @@ const sessionsChartConfig = {
   },
 }
 
+const complianceChartConfig = {
+  completed: {
+    label: 'Completed',
+    color: '#3be0af',
+  },
+  assigned: {
+    label: 'Assigned',
+    color: '#58c6ff',
+  },
+}
+
 function SessionsPanel({ sessionsChart, activeRange, onRangeChange }) {
   const buckets = Array.isArray(sessionsChart?.buckets) ? sessionsChart.buckets : []
   const chartData = buckets.map((bucket) => ({
@@ -242,6 +253,12 @@ function SessionsPanel({ sessionsChart, activeRange, onRangeChange }) {
 
 function CompliancePanel({ complianceChart }) {
   const buckets = Array.isArray(complianceChart?.buckets) ? complianceChart.buckets : []
+  const chartData = buckets.map((bucket) => ({
+    date: bucket.label,
+    completed: bucket.completed ?? 0,
+    assigned: bucket.assigned ?? 0,
+  }))
+
   return (
     <Card className="admin-shell-overview-insight-card">
       <CardHeader>
@@ -252,16 +269,22 @@ function CompliancePanel({ complianceChart }) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="admin-shell-overview-mini-bars" aria-label="Compliance by range bucket">
-          {buckets.map((bucket) => (
-            <span
-              key={bucket.label}
-              className="admin-shell-overview-mini-bar-completed"
-              style={{ height: `${Math.max(4, bucket.compliance ?? 0)}%` }}
-              title={`${bucket.label} ${bucket.compliance ?? 0}%`}
+        <ChartContainer config={complianceChartConfig} className="admin-shell-overview-compliance-chart aspect-auto h-[180px] w-full">
+          <BarChart accessibilityLayer data={chartData}>
+            <CartesianGrid vertical={false} stroke="var(--admin-dashboard-chart-grid)" />
+            <XAxis
+              dataKey="date"
+              tickLine={false}
+              tickMargin={10}
+              axisLine={false}
+              tickFormatter={(value) => String(value).slice(0, 3)}
+              tick={{ fill: 'var(--admin-dashboard-chart-tick)', fontSize: 11, fontWeight: 500 }}
             />
-          ))}
-        </div>
+            <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dashed" />} />
+            <Bar dataKey="completed" fill="var(--color-completed)" radius={4} />
+            <Bar dataKey="assigned" fill="var(--color-assigned)" radius={4} />
+          </BarChart>
+        </ChartContainer>
       </CardContent>
       <CardFooter>
         <span className="admin-shell-overview-link">{complianceChart?.footer ?? 'No assigned sessions in this range'}</span>

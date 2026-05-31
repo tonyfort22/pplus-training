@@ -76,6 +76,8 @@ test('admin dashboard repository computes real overview metrics from Supabase ro
   assert.equal(overview.sessionsChart.buckets.reduce((total, bucket) => total + bucket.completed, 0), 2)
   assert.equal(overview.sessionsChart.buckets.reduce((total, bucket) => total + bucket.assigned, 0), 3)
   assert.equal(overview.complianceChart.value, '67%')
+  assert.equal(overview.complianceChart.buckets.reduce((total, bucket) => total + bucket.completed, 0), 2)
+  assert.equal(overview.complianceChart.buckets.reduce((total, bucket) => total + bucket.assigned, 0), 3)
   assert.equal(overview.sessionsByTime.total, 2)
   assert.deepEqual(
     overview.sessionsByTime.buckets.map((bucket) => bucket.label),

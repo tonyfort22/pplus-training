@@ -173,7 +173,7 @@ function createComplianceChart({ window, assignmentRows, completedSessionRows })
     const assigned = countRowsInWindow(assignmentRows, ['scheduled_date', 'created_at'], bucket, isAssignedWorkout)
     const completed = countRowsInWindow(completedSessionRows, ['completed_at'], bucket)
     const compliance = assigned ? Math.round((completed / assigned) * 100) : 0
-    return { label: bucket.label, compliance }
+    return { label: bucket.label, completed, assigned, compliance }
   })
   const currentAssigned = countRowsInWindow(assignmentRows, ['scheduled_date', 'created_at'], window, isAssignedWorkout)
   const currentCompleted = countRowsInWindow(completedSessionRows, ['completed_at'], window)
