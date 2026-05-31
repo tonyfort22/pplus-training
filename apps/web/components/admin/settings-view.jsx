@@ -18,6 +18,7 @@ const ADMIN_PROFILE_SEED = {
 
 const ADMIN_ACCOUNT_SEED = {
   email: '',
+  currentPassword: '',
   password: '',
   confirmPassword: '',
 }
@@ -305,6 +306,7 @@ function AdminSettingsAccountView() {
         if (!isMounted) return
         setAccountDraft({
           email: payload.account?.email || '',
+          currentPassword: '',
           password: '',
           confirmPassword: '',
         })
@@ -339,6 +341,7 @@ function AdminSettingsAccountView() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: accountDraft.email,
+          currentPassword: accountDraft.currentPassword,
           password: accountDraft.password,
           confirmPassword: accountDraft.confirmPassword,
         }),
@@ -349,6 +352,7 @@ function AdminSettingsAccountView() {
       }
       setAccountDraft({
         email: payload.account?.email || accountDraft.email,
+        currentPassword: '',
         password: '',
         confirmPassword: '',
       })
@@ -375,7 +379,17 @@ function AdminSettingsAccountView() {
         </SettingsField>
       </div>
 
-      <div className="grid w-full gap-4 md:grid-cols-2">
+      <div className="grid w-full gap-4 md:grid-cols-3">
+        <SettingsField htmlFor="admin-account-current-password" label="Current password">
+          <Input
+            id="admin-account-current-password"
+            type="password"
+            className={settingsFieldInputClassName}
+            value={accountDraft.currentPassword}
+            placeholder="Current password"
+            onChange={(event) => handleAccountDraftChange('currentPassword', event.target.value)}
+          />
+        </SettingsField>
         <SettingsField htmlFor="admin-account-new-password" label="New password">
           <Input
             id="admin-account-new-password"
@@ -400,7 +414,7 @@ function AdminSettingsAccountView() {
 
       <div id="admin-account-status-notice" className="flex w-full items-start gap-2 rounded-[14px] border border-[#3BE0AF]/30 bg-[#3BE0AF]/10 px-4 py-3 text-sm leading-6 text-[var(--admin-shell-text)]">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#06b486]" />
-        <span>{errorMessage || notice || (isLoadingAccount ? 'Loading your authenticated account.' : 'Update your sign-in email or set a new password. Leave password blank to keep it unchanged.')}</span>
+        <span>{errorMessage || notice || (isLoadingAccount ? 'Loading your authenticated account.' : 'Update your sign-in email or change your password. Current password is required only when setting a new password.')}</span>
       </div>
 
       <div>

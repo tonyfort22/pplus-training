@@ -74,14 +74,42 @@ export function createAdminAccountRepository(overrides = {}) {
     return payload
   }
 
+  async function verifyCurrentPassword(email, currentPassword) {
+    requireAccessToken(accessToken)
+    if (typeof fetchImpl !== 'function') {
+      throw createAdminAccountError('Fetch support is required for admin account updates.', 500)
+    }
+
+    const response = await fetchImpl(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: {
+        apikey: anonKey,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        password: currentPassword,
+      }),
+    })
+    const payload = await readJsonResponse(response)
+
+    if (!response.ok) {
+      throw createAdminAccountError('Current password is incorrect.', 401, payload)
+    }
+
+    return payload
+  }
+
   return {
     async getCurrentAccount() {
       const payload = await requestCurrentUser('GET')
       return mapAccount(payload)
     },
 
-    async updateCurrentAccount({ email, password = '', confirmPassword = '' } = {}) {
+    async updateCurrentAccount({ email, currentPassword = '', password = '', confirmPassword = '' } = {}) {
       const nextEmail = normalizeText(email)
+      const nextCurrentPassword = String(currentPassword || '')
       const nextPassword = String(password || '')
       const nextConfirmPassword = String(confirmPassword || '')
 
@@ -92,6 +120,10 @@ export function createAdminAccountRepository(overrides = {}) {
         if (nextPassword !== nextConfirmPassword) {
           throw createAdminAccountError('New password and confirmation must match.', 400)
         }
+        if (!nextCurrentPassword) {
+          throw createAdminAccountError('Current password is required to set a new password.', 400)
+        }
+        await verifyCurrentPassword(nextEmail, nextCurrentPassword)
       }
 
       const updates = { email: nextEmail }
