@@ -297,7 +297,6 @@ function createWorkoutResults({ dueWorkoutRows, completedSessionRows, workoutTem
 
   return {
     title: 'Workout results',
-    statusOptions: ['Assigned', 'Completed', 'Missed'],
     categoryOptions: ['Warmup', 'Speed Accelerator', 'Edge Work', 'Conditioning'],
     buckets: [...bucketByKey.values()].filter((bucket) => bucket.assigned || bucket.completed || bucket.missed),
   }

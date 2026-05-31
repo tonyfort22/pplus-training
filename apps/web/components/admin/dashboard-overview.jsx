@@ -170,9 +170,6 @@ const trainingExecutionChartConfig = {
 }
 
 const workoutResultsChartConfig = {
-  value: {
-    label: 'Workouts',
-  },
   assigned: {
     label: 'Assigned',
     color: '#58c6ff',
@@ -187,18 +184,6 @@ const workoutResultsChartConfig = {
   },
 }
 
-const workoutResultBarFills = {
-  assigned: ['#7DD3FC', '#38BDF8', '#0EA5E9', '#0284C7', '#075985'],
-  completed: ['#9AF0D6', '#5EE9C4', '#3BE0AF', '#20B891', '#137C65'],
-  missed: ['#FDA4AF', '#FB7185', '#F43F5E', '#E11D48', '#9F1239'],
-}
-
-function getWorkoutResultBarFill(index, metricKey) {
-  const palette = workoutResultBarFills[metricKey] ?? workoutResultBarFills.assigned
-  return palette[index % palette.length]
-}
-
-const workoutResultStatusOptions = ['Assigned', 'Completed', 'Missed']
 const workoutResultCategoryOptions = ['Warmup', 'Speed Accelerator', 'Edge Work', 'Conditioning']
 
 const trainingConsistencyHeatmapVariants = [
@@ -308,25 +293,20 @@ function TrainingExecutionPanel({ trainingExecution, activeRange, onRangeChange 
 }
 
 function WorkoutResultsPanel({ workoutResults }) {
-  const statusOptions = Array.isArray(workoutResults?.statusOptions) && workoutResults.statusOptions.length ? workoutResults.statusOptions : workoutResultStatusOptions
   const categoryOptions = Array.isArray(workoutResults?.categoryOptions) && workoutResults.categoryOptions.length ? workoutResults.categoryOptions : workoutResultCategoryOptions
-  const [statusFilter, setStatusFilter] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const buckets = Array.isArray(workoutResults?.buckets) ? workoutResults.buckets : []
   const defaultCategory = buckets.find((bucket) => categoryOptions.includes(bucket.category))?.category ?? categoryOptions[0]
-  const defaultCategoryBucket = buckets.find((bucket) => bucket.category === defaultCategory)
-  const defaultStatus = statusOptions.find((option) => Number(defaultCategoryBucket?.[option.toLowerCase()] ?? 0) > 0) ?? statusOptions[0]
-  const selectedStatus = statusFilter || defaultStatus
   const selectedCategory = categoryFilter || defaultCategory
-  const metricKey = String(selectedStatus || 'Assigned').toLowerCase()
   const chartData = buckets
     .filter((bucket) => bucket.category === selectedCategory)
-    .map((bucket, index) => ({
+    .map((bucket) => ({
       workoutName: bucket.workoutName,
-      value: bucket[metricKey] ?? 0,
-      fill: getWorkoutResultBarFill(index, metricKey),
+      assigned: bucket.assigned ?? 0,
+      completed: bucket.completed ?? 0,
+      missed: bucket.missed ?? 0,
     }))
-  const workoutResultsChartHeight = Math.max(260, chartData.length * 38 + 24)
+  const workoutResultsChartHeight = 320
 
   return (
     <Card className="admin-shell-overview-insight-card admin-shell-overview-workout-results-card">
@@ -335,23 +315,11 @@ function WorkoutResultsPanel({ workoutResults }) {
           <div>
             <CardDescription>Workout results</CardDescription>
             <div className="admin-shell-overview-performance-value-row">
-              <CardTitle className="admin-shell-overview-insight-value">{selectedStatus}</CardTitle>
+              <CardTitle className="admin-shell-overview-insight-value">Assigned / Completed / Missed</CardTitle>
               <Badge tone="neutral">{selectedCategory}</Badge>
             </div>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <Select value={selectedStatus} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[150px] rounded-lg" aria-label="Status">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl">
-                {statusOptions.map((option) => (
-                  <SelectItem key={option} value={option} className="rounded-lg">
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <Select value={selectedCategory} onValueChange={setCategoryFilter}>
               <SelectTrigger className="w-[190px] rounded-lg" aria-label="Category">
                 <SelectValue placeholder="Category" />
@@ -376,28 +344,27 @@ function WorkoutResultsPanel({ workoutResults }) {
           <BarChart
             accessibilityLayer
             data={chartData}
-            layout="vertical"
-            margin={{
-              left: 0,
-            }}
+            margin={{ top: 12, right: 12, left: -24, bottom: 8 }}
           >
-            <YAxis
+            <CartesianGrid vertical={false} stroke="var(--admin-dashboard-chart-grid)" />
+            <XAxis
               dataKey="workoutName"
-              type="category"
               tickLine={false}
               tickMargin={10}
               axisLine={false}
-              tickFormatter={(value) => value}
               tick={{ fill: 'var(--admin-dashboard-chart-tick)', fontSize: 11, fontWeight: 500 }}
             />
-            <XAxis dataKey="value" type="number" hide />
-            <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-            <Bar dataKey="value" radius={5} />
+            <YAxis tickLine={false} axisLine={false} tickMargin={8} tick={{ fill: 'var(--admin-dashboard-chart-tick)', fontSize: 11, fontWeight: 500 }} />
+            <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dashed" />} />
+            <Bar dataKey="assigned" fill="var(--color-assigned)" radius={4} />
+            <Bar dataKey="completed" fill="var(--color-completed)" radius={4} />
+            <Bar dataKey="missed" fill="var(--color-missed)" radius={4} />
+            <ChartLegend content={<ChartLegendContent />} />
           </BarChart>
         </ChartContainer>
       </CardContent>
       <CardFooter>
-        <span className="admin-shell-overview-link">Filtered by workout status and training type</span>
+        <span className="admin-shell-overview-link">Filtered by training type</span>
       </CardFooter>
     </Card>
   )

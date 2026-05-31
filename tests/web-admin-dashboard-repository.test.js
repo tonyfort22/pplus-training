@@ -97,8 +97,8 @@ test('admin dashboard repository computes v2 coach overview metrics from Supabas
   assert.equal(overview.trainingExecution.buckets.reduce((total, bucket) => total + bucket.assigned, 0), 4)
   assert.equal(overview.trainingExecution.buckets.reduce((total, bucket) => total + bucket.missed, 0), 2)
   assert.equal(overview.workoutResults.title, 'Workout results')
-  assert.deepEqual(overview.workoutResults.statusOptions, ['Assigned', 'Completed', 'Missed'])
   assert.deepEqual(overview.workoutResults.categoryOptions, ['Warmup', 'Speed Accelerator', 'Edge Work', 'Conditioning'])
+  assert.equal('statusOptions' in overview.workoutResults, false)
   assert.deepEqual(overview.workoutResults.buckets, [
     { workoutName: 'Stride Warmup', category: 'Warmup', assigned: 1, completed: 1, missed: 0 },
     { workoutName: 'Acceleration Ladder', category: 'Speed Accelerator', assigned: 0, completed: 1, missed: 0 },
