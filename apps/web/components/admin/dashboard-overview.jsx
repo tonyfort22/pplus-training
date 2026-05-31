@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis } from 'recharts'
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, PolarAngleAxis, PolarGrid, Radar, RadarChart, XAxis } from 'recharts'
 import {
   Activity,
   BadgeCheck,
@@ -317,31 +317,14 @@ function SessionsByTimePanel({ sessionsByTime }) {
         </div>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={sessionTimeChartConfig} className="admin-shell-overview-session-chart aspect-auto h-[180px] w-full">
-          <AreaChart accessibilityLayer data={chartData} margin={{ left: 0, right: 0 }}>
-            <defs>
-              <linearGradient id="fillSessionTime" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--color-sessions)" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="var(--color-sessions)" stopOpacity={0.1} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid vertical={false} stroke="var(--admin-dashboard-chart-grid)" />
-            <XAxis
-              dataKey="time"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              tick={{ fill: 'var(--admin-dashboard-chart-tick)', fontSize: 11, fontWeight: 500 }}
-            />
+        <ChartContainer config={sessionTimeChartConfig} className="admin-shell-overview-session-chart aspect-auto h-[220px] w-full">
+          <RadarChart accessibilityLayer data={chartData}>
             <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
-            <Area
-              dataKey="sessions"
-              type="natural"
-              fill="url(#fillSessionTime)"
-              fillOpacity={0.4}
-              stroke="var(--color-sessions)"
-            />
-          </AreaChart>
+            <PolarAngleAxis dataKey="time" tick={{ fill: 'var(--admin-dashboard-chart-tick)', fontSize: 11, fontWeight: 500 }} />
+            <PolarGrid radialLines={false} stroke="var(--admin-dashboard-chart-grid)" />
+            <Radar dataKey="sessions" fill="var(--color-sessions)" fillOpacity={0.6} stroke="var(--color-sessions)" />
+            <ChartLegend content={<ChartLegendContent />} />
+          </RadarChart>
         </ChartContainer>
       </CardContent>
       <CardFooter>
