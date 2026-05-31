@@ -170,6 +170,9 @@ const trainingExecutionChartConfig = {
 }
 
 const workoutResultsChartConfig = {
+  value: {
+    label: 'Workouts',
+  },
   assigned: {
     label: 'Assigned',
     color: '#58c6ff',
@@ -182,6 +185,17 @@ const workoutResultsChartConfig = {
     label: 'Missed',
     color: '#f97373',
   },
+}
+
+const workoutResultBarFills = {
+  assigned: ['#7DD3FC', '#38BDF8', '#0EA5E9', '#0284C7', '#075985'],
+  completed: ['#9AF0D6', '#5EE9C4', '#3BE0AF', '#20B891', '#137C65'],
+  missed: ['#FDA4AF', '#FB7185', '#F43F5E', '#E11D48', '#9F1239'],
+}
+
+function getWorkoutResultBarFill(index, metricKey) {
+  const palette = workoutResultBarFills[metricKey] ?? workoutResultBarFills.assigned
+  return palette[index % palette.length]
 }
 
 const workoutResultStatusOptions = ['Assigned', 'Completed', 'Missed']
@@ -307,11 +321,10 @@ function WorkoutResultsPanel({ workoutResults }) {
   const metricKey = String(selectedStatus || 'Assigned').toLowerCase()
   const chartData = buckets
     .filter((bucket) => bucket.category === selectedCategory)
-    .map((bucket) => ({
+    .map((bucket, index) => ({
       workoutName: bucket.workoutName,
-      assigned: metricKey === 'assigned' ? bucket.assigned ?? 0 : 0,
-      completed: metricKey === 'completed' ? bucket.completed ?? 0 : 0,
-      missed: metricKey === 'missed' ? bucket.missed ?? 0 : 0,
+      value: bucket[metricKey] ?? 0,
+      fill: getWorkoutResultBarFill(index, metricKey),
     }))
 
   return (
@@ -355,20 +368,26 @@ function WorkoutResultsPanel({ workoutResults }) {
       </CardHeader>
       <CardContent>
         <ChartContainer config={workoutResultsChartConfig} className="admin-shell-overview-workout-results-chart aspect-auto h-[220px] w-full">
-          <BarChart accessibilityLayer data={chartData}>
-            <CartesianGrid vertical={false} stroke="var(--admin-dashboard-chart-grid)" />
-            <XAxis
+          <BarChart
+            accessibilityLayer
+            data={chartData}
+            layout="vertical"
+            margin={{
+              left: 0,
+            }}
+          >
+            <YAxis
               dataKey="workoutName"
+              type="category"
               tickLine={false}
               tickMargin={10}
               axisLine={false}
+              tickFormatter={(value) => value}
               tick={{ fill: 'var(--admin-dashboard-chart-tick)', fontSize: 11, fontWeight: 500 }}
             />
-            <YAxis hide />
-            <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dashed" />} />
-            <Bar dataKey="assigned" fill="var(--color-assigned)" radius={4} />
-            <Bar dataKey="completed" fill="var(--color-completed)" radius={4} />
-            <Bar dataKey="missed" fill="var(--color-missed)" radius={4} />
+            <XAxis dataKey="value" type="number" hide />
+            <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+            <Bar dataKey="value" radius={5} />
           </BarChart>
         </ChartContainer>
       </CardContent>
