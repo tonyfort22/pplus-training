@@ -1272,12 +1272,17 @@ html[data-theme='light'] [data-radix-popper-content-wrapper]:has(.admin-dashboar
 
 .admin-dashboard-sidebar-nav-button:hover {
   background: var(--admin-shell-nav-active-bg);
-  color: var(--admin-shell-primary-button-bg);
+  color: var(--admin-shell-primary-button-bg) !important;
 }
 
 .admin-dashboard-sidebar-nav-button[data-active='true'] {
   background: var(--admin-shell-nav-active-bg);
-  color: var(--admin-shell-primary-button-bg);
+  color: var(--admin-shell-primary-button-bg) !important;
+}
+
+.admin-dashboard-sidebar-nav-button:hover svg,
+.admin-dashboard-sidebar-nav-button[data-active='true'] svg {
+  color: var(--admin-shell-primary-button-bg) !important;
 }
 
 .admin-dashboard-sidebar-subnav {
@@ -1290,12 +1295,17 @@ html[data-theme='light'] [data-radix-popper-content-wrapper]:has(.admin-dashboar
 
 .admin-dashboard-sidebar-subnav-button:hover {
   background: transparent !important;
-  color: var(--admin-shell-primary-button-bg);
+  color: var(--admin-shell-primary-button-bg) !important;
 }
 
 .admin-dashboard-sidebar-subnav-button[data-active='true'] {
   background: transparent !important;
-  color: var(--admin-shell-primary-button-bg);
+  color: var(--admin-shell-primary-button-bg) !important;
+}
+
+.admin-dashboard-sidebar-subnav-button:hover svg,
+.admin-dashboard-sidebar-subnav-button[data-active='true'] svg {
+  color: var(--admin-shell-primary-button-bg) !important;
 }
 
 .admin-shell-workspace {
