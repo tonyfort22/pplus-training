@@ -1852,10 +1852,8 @@ html[data-theme='light'] [data-radix-popper-content-wrapper]:has(.admin-dashboar
 
 .admin-shell-overview-session-chart {
   min-height: 132px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(46px, 1fr));
-  align-items: end;
-  gap: 10px;
+  display: flex;
+  align-items: stretch;
 }
 
 .admin-shell-overview-session-chart-svg {

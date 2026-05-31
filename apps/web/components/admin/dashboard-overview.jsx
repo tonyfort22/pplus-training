@@ -169,6 +169,13 @@ const complianceChartConfig = {
   },
 }
 
+const sessionTimeChartConfig = {
+  sessions: {
+    label: 'Sessions',
+    color: '#3be0af',
+  },
+}
+
 function SessionsPanel({ sessionsChart, activeRange, onRangeChange }) {
   const buckets = Array.isArray(sessionsChart?.buckets) ? sessionsChart.buckets : []
   const chartData = buckets.map((bucket) => ({
@@ -295,7 +302,10 @@ function CompliancePanel({ complianceChart }) {
 
 function SessionsByTimePanel({ sessionsByTime }) {
   const buckets = Array.isArray(sessionsByTime?.buckets) ? sessionsByTime.buckets : []
-  const maxValue = Math.max(1, ...buckets.map((bucket) => bucket.value ?? 0))
+  const chartData = buckets.map((bucket) => ({
+    time: bucket.label,
+    sessions: bucket.value ?? 0,
+  }))
 
   return (
     <Card className="admin-shell-overview-insight-card">
@@ -307,18 +317,32 @@ function SessionsByTimePanel({ sessionsByTime }) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="admin-shell-overview-session-chart" aria-label="Completed sessions by time of day">
-          {buckets.map((bucket) => (
-            <div key={bucket.label} className="admin-shell-overview-mini-bar-group">
-              <span
-                className="admin-shell-overview-mini-bar-assigned"
-                style={{ height: `${Math.max(4, ((bucket.value ?? 0) / maxValue) * 100)}%` }}
-                title={`${bucket.label} ${bucket.value ?? 0}`}
-              />
-              <span>{bucket.label}</span>
-            </div>
-          ))}
-        </div>
+        <ChartContainer config={sessionTimeChartConfig} className="admin-shell-overview-session-chart aspect-auto h-[180px] w-full">
+          <AreaChart accessibilityLayer data={chartData} margin={{ left: 0, right: 0 }}>
+            <defs>
+              <linearGradient id="fillSessionTime" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="var(--color-sessions)" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="var(--color-sessions)" stopOpacity={0.1} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid vertical={false} stroke="var(--admin-dashboard-chart-grid)" />
+            <XAxis
+              dataKey="time"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              tick={{ fill: 'var(--admin-dashboard-chart-tick)', fontSize: 11, fontWeight: 500 }}
+            />
+            <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
+            <Area
+              dataKey="sessions"
+              type="natural"
+              fill="url(#fillSessionTime)"
+              fillOpacity={0.4}
+              stroke="var(--color-sessions)"
+            />
+          </AreaChart>
+        </ChartContainer>
       </CardContent>
       <CardFooter>
         <span className="admin-shell-overview-link">{sessionsByTime?.footer ?? 'No completed sessions in this range'}</span>
