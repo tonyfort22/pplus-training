@@ -9,6 +9,19 @@ const PUBLIC_ADMIN_PATHS = [
   '/admin/support/reference',
 ]
 
+const PUBLIC_ASSET_EXTENSIONS = [
+  '.svg',
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.webp',
+  '.ico',
+]
+
+function isPublicAssetPath(pathname) {
+  return PUBLIC_ASSET_EXTENSIONS.some((extension) => pathname.endsWith(extension))
+}
+
 function isPublicAdminPath(pathname) {
   return PUBLIC_ADMIN_PATHS.includes(pathname)
 }
@@ -16,7 +29,7 @@ function isPublicAdminPath(pathname) {
 export function middleware(request) {
   const { pathname, search } = request.nextUrl
 
-  if (!pathname.startsWith('/admin') || pathname.startsWith('/api/') || isPublicAdminPath(pathname)) {
+  if (!pathname.startsWith('/admin') || pathname.startsWith('/api/') || isPublicAdminPath(pathname) || isPublicAssetPath(pathname)) {
     return NextResponse.next()
   }
 

@@ -20,6 +20,8 @@ test('admin middleware gates dashboard routes and leaves auth/support routes pub
   assert.match(source, /'\/admin\/support'/)
   assert.match(source, /'\/admin\/support\/reference'/)
   assert.match(source, /pathname\.startsWith\('\/api\/'\)/)
+  assert.match(source, /isPublicAssetPath\(pathname\)/)
+  assert.match(source, /'\.svg'/)
   assert.match(source, /request\.cookies\.get\(PPLUS_ADMIN_ACCESS_TOKEN_COOKIE\)\?\.value/)
   assert.match(source, /redirectUrl\.pathname = '\/admin\/login'/)
   assert.match(source, /redirectUrl\.searchParams\.set\('next', pathname \+ search\)/)
