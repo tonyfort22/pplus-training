@@ -458,7 +458,7 @@ test('admin navigation uses real nested routes driven by shared config', () => {
   assert.match(dashboardOverviewSource, /programs:\s*CalendarRange/)
   assert.match(dashboardOverviewSource, /sessions:\s*Activity/)
   assert.match(dashboardOverviewSource, /compliance:\s*BadgeCheck/)
-  assert.match(dashboardOverviewSource, /invites:\s*Send/)
+  assert.match(dashboardOverviewSource, /pendingInvites:\s*Send/)
   assert.doesNotMatch(dashboardOverviewSource, /ClipboardList/)
   assert.doesNotMatch(dashboardOverviewSource, /SendHorizontal/)
   assert.match(dashboardOverviewSource, /overviewRangeOptions/)

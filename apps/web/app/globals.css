@@ -1389,8 +1389,10 @@ html[data-theme='light'] [data-radix-popper-content-wrapper]:has(.admin-dashboar
 }
 
 .admin-shell-overview-card-header {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px 16px;
   padding: 24px 24px 12px;
 }
 
@@ -1619,7 +1621,9 @@ html[data-theme='light'] [data-radix-popper-content-wrapper]:has(.admin-dashboar
   position: relative;
   min-height: 320px;
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(42px, 1fr));
   align-items: end;
+  gap: 10px;
   padding-top: 8px;
 }
 
@@ -1756,6 +1760,31 @@ html[data-theme='light'] [data-radix-popper-content-wrapper]:has(.admin-dashboar
   gap: 8px;
 }
 
+.admin-shell-overview-mini-bar-group {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+  min-height: 100%;
+  color: var(--admin-dashboard-card-muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.admin-shell-overview-performance-chart .admin-shell-overview-mini-bars {
+  min-height: 280px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-shell-overview-performance-chart .admin-shell-overview-mini-bar-completed,
+.admin-shell-overview-performance-chart .admin-shell-overview-mini-bar-assigned,
+.admin-shell-overview-session-chart .admin-shell-overview-mini-bar-assigned {
+  width: 100%;
+  border-radius: 999px 999px 10px 10px;
+  align-self: end;
+}
+
 .admin-shell-overview-mini-bar {
   width: 100%;
   border-radius: 999px 999px 10px 10px;
@@ -1791,7 +1820,9 @@ html[data-theme='light'] [data-radix-popper-content-wrapper]:has(.admin-dashboar
 .admin-shell-overview-session-chart {
   min-height: 132px;
   display: grid;
-  align-items: stretch;
+  grid-template-columns: repeat(auto-fit, minmax(46px, 1fr));
+  align-items: end;
+  gap: 10px;
 }
 
 .admin-shell-overview-session-chart-svg {

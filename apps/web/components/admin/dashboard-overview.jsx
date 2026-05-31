@@ -35,7 +35,7 @@ const summaryIconById = {
   programs: CalendarRange,
   sessions: Activity,
   compliance: BadgeCheck,
-  invites: Send,
+  pendingInvites: Send,
 }
 
 const summaryOrder = ['athletes', 'programs', 'sessions', 'compliance', 'pendingInvites']
@@ -95,10 +95,10 @@ function OverviewSummaryCard({ card }) {
         <div className="flex w-full items-start gap-2 text-sm">
           <CardIcon className="admin-shell-overview-card-change-arrow-icon mt-0.5 text-[#3BE0AF]" aria-hidden="true" />
           <div className="grid gap-2">
-            <div className="flex items-center gap-2 leading-none font-medium text-[#EEF4FF]">
+            <div className="flex items-center gap-2 leading-none font-medium text-[var(--admin-dashboard-card-text)]">
               {card.footerHeadline} <TrendArrowIcon direction={card.changeDirection} />
             </div>
-            <div className="leading-none text-[#8EA0BC]">{card.footerSubtext}</div>
+            <div className="leading-none text-[var(--admin-dashboard-card-muted)]">{card.footerSubtext}</div>
           </div>
         </div>
       </CardFooter>
