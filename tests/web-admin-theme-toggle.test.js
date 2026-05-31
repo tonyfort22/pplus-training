@@ -19,7 +19,7 @@ test('admin dashboard topbar places the dark-light switcher between search and a
   const lightToggleAssetSource = readFileSync(lightToggleAssetPath, 'utf8')
 
   assert.match(adminShellSource, /import AdminThemeToggle from '\.\/admin-theme-toggle'/)
-  assert.match(adminShellSource, /function DashboardShellHeader\(\{ searchQuery = '', onSearchQueryChange = \(\) => \{\} \}\) \{[\s\S]*<div className="admin-dashboard-topbar-search[\s\S]*<\/div>\s*<AdminThemeToggle \/>\s*<DropdownMenu>/)
+  assert.match(adminShellSource, /function DashboardShellHeader\(\{ searchQuery = '', onSearchQueryChange = \(\) => \{\}, accountProfile = accountSwitcher \}\) \{[\s\S]*<div className="admin-dashboard-topbar-search[\s\S]*<\/div>\s*<AdminThemeToggle \/>\s*<DropdownMenu>/)
 
   assert.match(toggleSource, /'use client'/)
   assert.match(toggleSource, /export default function AdminThemeToggle/)

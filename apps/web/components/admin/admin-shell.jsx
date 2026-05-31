@@ -77,6 +77,7 @@ const iconMap = {
 const accountSwitcher = {
   name: 'Anthony Fortugno',
   email: 'tonyfortugno22@gmail.com',
+  avatarUrl: '',
 }
 
 const accountMenuItems = [
@@ -182,6 +183,42 @@ async function requestAdminAthletes() {
   return Array.isArray(payload.athletes) ? payload.athletes : []
 }
 
+async function requestAdminCoachProfile() {
+  const response = await fetch('/admin/api/settings/profile', {
+    method: 'GET',
+    cache: 'no-store',
+  })
+
+  const payload = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    throw new Error(payload?.error || 'Failed to load admin coach profile.')
+  }
+
+  return payload.profile || null
+}
+
+function getAccountInitials(profile = accountSwitcher) {
+  const nameParts = String(profile?.name || '').trim().split(/\s+/).filter(Boolean)
+  const firstInitial = nameParts[0]?.[0] || ''
+  const lastInitial = nameParts.length > 1 ? nameParts[nameParts.length - 1]?.[0] || '' : ''
+  const initials = `${firstInitial}${lastInitial}`.trim().toUpperCase()
+
+  return initials || 'AF'
+}
+
+function AccountAvatar({ profile, className = '', fallbackClassName = '' }) {
+  return profile?.avatarUrl ? (
+    <img
+      src={profile.avatarUrl}
+      alt={profile.name ? `${profile.name} profile image` : 'Admin profile image'}
+      className={`${className} shrink-0 rounded-full object-cover`}
+    />
+  ) : (
+    <span className={fallbackClassName}>{getAccountInitials(profile)}</span>
+  )
+}
+
 function isPathActive(currentPath = '', href = '') {
   if (!href) return false
   return currentPath === href || currentPath.startsWith(`${href}/`)
@@ -264,7 +301,7 @@ function AdminSidebarNavItem({ currentPath = '', group, isExpanded = false, onEx
   )
 }
 
-function DashboardShellHeader({ searchQuery = '', onSearchQueryChange = () => {} }) {
+function DashboardShellHeader({ searchQuery = '', onSearchQueryChange = () => {}, accountProfile = accountSwitcher }) {
   return (
     <header className="admin-dashboard-topbar px-6 py-[18px]">
       <div className="flex items-center justify-between gap-4">
@@ -299,9 +336,13 @@ function DashboardShellHeader({ searchQuery = '', onSearchQueryChange = () => {}
             <button
               type="button"
               aria-label="Open top account menu"
-              className="admin-dashboard-topbar-avatar flex h-8 w-8 items-center justify-center rounded-full text-[12px] font-bold leading-none transition-all hover:opacity-90"
+              className="rounded-full transition-all hover:opacity-90"
             >
-              AF
+              <AccountAvatar
+                profile={accountProfile}
+                className="admin-dashboard-topbar-avatar h-8 w-8"
+                fallbackClassName="admin-dashboard-topbar-avatar flex h-8 w-8 items-center justify-center rounded-full text-[12px] font-bold leading-none"
+              />
             </button>
           </DropdownMenuTrigger>
 
@@ -453,19 +494,21 @@ function SidebarWorkspaceSwitcher({
   )
 }
 
-function SidebarAccountSwitcher() {
+function SidebarAccountSwitcher({ accountProfile = accountSwitcher }) {
   return (
     <SidebarMenu>
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton size="lg" className="admin-dashboard-sidebar-account-button h-14 w-full rounded-2xl px-3 group-data-[collapsible=icon]:hidden">
-              <span className="admin-dashboard-sidebar-account-avatar flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[12px] font-bold leading-none">
-                AF
-              </span>
+              <AccountAvatar
+                profile={accountProfile}
+                className="admin-dashboard-sidebar-account-avatar h-8 w-8"
+                fallbackClassName="admin-dashboard-sidebar-account-avatar flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[12px] font-bold leading-none"
+              />
               <span className="grid min-w-0 flex-1 text-left text-[13px] leading-tight group-data-[collapsible=icon]:hidden">
-                <span className="admin-dashboard-sidebar-primary-text truncate font-semibold">{accountSwitcher.name}</span>
-                <span className="admin-dashboard-sidebar-secondary-text truncate text-[11px]">{accountSwitcher.email}</span>
+                <span className="admin-dashboard-sidebar-primary-text truncate font-semibold">{accountProfile.name}</span>
+                <span className="admin-dashboard-sidebar-secondary-text truncate text-[11px]">{accountProfile.email}</span>
               </span>
               <BadgeCheck className="h-4 w-4 shrink-0 text-[#3BE0AF] group-data-[collapsible=icon]:hidden" />
               <ChevronsUpDown className="admin-dashboard-sidebar-secondary-text h-4 w-4 shrink-0 group-data-[collapsible=icon]:hidden" />
@@ -495,6 +538,7 @@ function SidebarAccountSwitcher() {
 function AdminDashboardSidebar({
   athletes = [],
   athleteSearchQuery = '',
+  accountProfile = accountSwitcher,
   currentPath = '',
   loadingState = 'idle',
   onAthleteSearchQueryChange = () => {},
@@ -548,7 +592,7 @@ function AdminDashboardSidebar({
 
       <SidebarSeparator className="admin-dashboard-sidebar-separator mx-5" />
       <SidebarFooter className="admin-dashboard-sidebar-footer px-3 py-4 group-data-[collapsible=icon]:px-2">
-        <SidebarAccountSwitcher />
+        <SidebarAccountSwitcher accountProfile={accountProfile} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
@@ -561,11 +605,45 @@ export default function AdminShell({ currentPath = '', contentOverride = null })
   const searchParams = useSearchParams()
   const [topbarSearchQuery, setTopbarSearchQuery] = useState('')
   const [athleteSearchQuery, setAthleteSearchQuery] = useState('')
+  const [accountProfile, setAccountProfile] = useState(accountSwitcher)
   const [athleteLoadState, setAthleteLoadState] = useState('idle')
   const [availableAthletes, setAvailableAthletes] = useState([])
   const [selectedAthleteId, setSelectedAthleteId] = useState(() => searchParams.get('athleteId') || '')
   const resolvedRoute = findAdminRoute(currentPath)
   const shouldRenderContentOverride = Boolean(contentOverride)
+
+  useEffect(() => {
+    let active = true
+
+    async function loadCoachProfile() {
+      try {
+        const profile = await requestAdminCoachProfile()
+
+        if (!active || !profile) {
+          return
+        }
+
+        setAccountProfile({
+          ...accountSwitcher,
+          name: profile.name || accountSwitcher.name,
+          email: profile.email || accountSwitcher.email,
+          avatarUrl: profile.avatarUrl || '',
+        })
+      } catch (error) {
+        if (active) {
+          setAccountProfile(accountSwitcher)
+        }
+      }
+    }
+
+    loadCoachProfile()
+    window.addEventListener('pplus-admin-profile-updated', loadCoachProfile)
+
+    return () => {
+      active = false
+      window.removeEventListener('pplus-admin-profile-updated', loadCoachProfile)
+    }
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -690,6 +768,7 @@ export default function AdminShell({ currentPath = '', contentOverride = null })
       <AdminDashboardSidebar
         athletes={availableAthletes}
         athleteSearchQuery={athleteSearchQuery}
+        accountProfile={accountProfile}
         currentPath={currentPath}
         loadingState={athleteLoadState}
         onAthleteSearchQueryChange={setAthleteSearchQuery}
@@ -697,7 +776,7 @@ export default function AdminShell({ currentPath = '', contentOverride = null })
         selectedAthlete={selectedAthlete}
       />
       <SidebarInset className="admin-dashboard-shell-inset shadow-none md:m-0 md:rounded-none">
-        <DashboardShellHeader searchQuery={topbarSearchQuery} onSearchQueryChange={setTopbarSearchQuery} />
+        <DashboardShellHeader searchQuery={topbarSearchQuery} onSearchQueryChange={setTopbarSearchQuery} accountProfile={accountProfile} />
 
         <div className="flex-1">
           <main className={['admin-shell-workspace', isDashboardOverview ? 'admin-shell-workspace-dashboard' : ''].filter(Boolean).join(' ')}>

@@ -210,6 +210,9 @@ function AdminSettingsProfileView() {
         phone: payload.profile?.phone || '',
         avatarUpload: null,
       })
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('pplus-admin-profile-updated', { detail: payload.profile }))
+      }
       setNotice('Profile updated.')
     } catch (error) {
       setErrorMessage(error?.message || 'Unable to save profile.')
