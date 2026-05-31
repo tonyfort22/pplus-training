@@ -6,13 +6,16 @@ import { fileURLToPath } from 'node:url'
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const loginPagePath = resolve(repoRoot, 'apps/web/app/admin/login/page.jsx')
+const loginFormPath = resolve(repoRoot, 'apps/web/components/admin/admin-login-form.jsx')
 const copyPath = resolve(repoRoot, 'apps/web/lib/i18n/public-page-copy.js')
 
 test('admin login page renders localized copy from the public dictionary', () => {
   assert.ok(existsSync(loginPagePath), 'expected /admin/login page')
+  assert.ok(existsSync(loginFormPath), 'expected admin login client form')
   assert.ok(existsSync(copyPath), 'expected public page copy dictionary')
 
   const pageSource = readFileSync(loginPagePath, 'utf8')
+  const formSource = readFileSync(loginFormPath, 'utf8')
   const copySource = readFileSync(copyPath, 'utf8')
 
   assert.match(copySource, /login:[\s\S]*badge:[\s\S]*kicker:[\s\S]*headline:[\s\S]*form:/)
@@ -43,12 +46,17 @@ test('admin login page renders localized copy from the public dictionary', () =>
     'loginCopy.headline.lineTwo',
     'loginCopy.description',
     'loginCopy.form.title',
-    'loginCopy.form.email',
-    'loginCopy.form.password',
-    'loginCopy.form.submit',
-    'loginCopy.form.forgotPassword',
   ]) {
     assert.match(pageSource, new RegExp(copyReference.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `missing login copy reference: ${copyReference}`)
+  }
+
+  for (const formCopyReference of [
+    'loginCopy.email',
+    'loginCopy.password',
+    'loginCopy.submit',
+    'loginCopy.forgotPassword',
+  ]) {
+    assert.match(formSource, new RegExp(formCopyReference.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `missing login form copy reference: ${formCopyReference}`)
   }
 
   for (const hardcoded of [

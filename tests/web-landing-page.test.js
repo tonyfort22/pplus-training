@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const rootPagePath = resolve(repoRoot, 'apps/web/app/page.jsx')
 const loginPagePath = resolve(repoRoot, 'apps/web/app/admin/login/page.jsx')
+const loginFormPath = resolve(repoRoot, 'apps/web/components/admin/admin-login-form.jsx')
 const landingContentPath = resolve(repoRoot, 'apps/web/app/landing-content.js')
 const landingFeatureShowcasePath = resolve(repoRoot, 'apps/web/app/landing-feature-showcase.jsx')
 const landingSectionsPath = resolve(repoRoot, 'apps/web/app/landing-sections.jsx')
@@ -18,6 +19,7 @@ test('web root serves the marketing landing page and admin login lives at /admin
   for (const path of [
     rootPagePath,
     loginPagePath,
+    loginFormPath,
     landingContentPath,
     landingFeatureShowcasePath,
     landingSectionsPath,
@@ -29,6 +31,7 @@ test('web root serves the marketing landing page and admin login lives at /admin
 
   const rootPageSource = readFileSync(rootPagePath, 'utf8')
   const loginPageSource = readFileSync(loginPagePath, 'utf8')
+  const loginFormSource = readFileSync(loginFormPath, 'utf8')
   const landingContentSource = readFileSync(landingContentPath, 'utf8')
   const featureShowcaseSource = readFileSync(landingFeatureShowcasePath, 'utf8')
   const landingSectionsSource = readFileSync(landingSectionsPath, 'utf8')
@@ -67,7 +70,8 @@ test('web root serves the marketing landing page and admin login lives at /admin
   assert.match(loginPageSource, /className="admin-auth-frame"/)
   assert.match(loginPageSource, /const loginCopy = copy\.login/)
   assert.match(loginPageSource, /\{loginCopy\.form\.title\}/)
-  assert.match(loginPageSource, /\{loginCopy\.form\.submit\}/)
+  assert.match(loginPageSource, /<AdminLoginForm loginCopy=\{loginCopy\.form\} language=\{language\} nextPath=\{nextPath\} \/>/)
+  assert.match(loginFormSource, /\{submitting \? loginCopy\.submitting : loginCopy\.submit\}/)
   assert.match(loginPageSource, /from '\.\.\/\.\.\/\.\.\/components\/admin\/ui\/admin-page-shell'/)
 
   assert.match(landingContentSource, /export const hero =/)
