@@ -24,7 +24,7 @@ test('admin coach profile repository loads the authenticated coach profile from 
       },
       async getCoachProfileByUserId(userId) {
         assert.equal(userId, 'user-1')
-        return { id: 'coach-1', displayName: 'Coach One', phoneNumber: '555-1111', avatarUrl: 'https://cdn/avatar.jpg' }
+        return { id: 'coach-1', displayName: 'Coach One', firstName: 'Coach', lastName: 'One', phoneNumber: '555-1111', avatarUrl: 'https://cdn/avatar.jpg' }
       },
     },
   ])
@@ -41,6 +41,8 @@ test('admin coach profile repository loads the authenticated coach profile from 
   assert.deepEqual(profile, {
     id: 'coach-1',
     name: 'Coach One',
+    firstName: 'Coach',
+    lastName: 'One',
     phone: '555-1111',
     avatarUrl: 'https://cdn/avatar.jpg',
     email: 'coach@example.com',
@@ -56,7 +58,7 @@ test('admin coach profile repository saves approved coach fields and optional av
         return { id: 'user-1', email: 'coach@example.com' }
       },
       async getCoachProfileByUserId() {
-        return { id: 'coach-1', displayName: 'Coach One', phoneNumber: '555-1111', avatarUrl: 'old.jpg' }
+        return { id: 'coach-1', displayName: 'Coach One', firstName: 'Coach', lastName: 'One', phoneNumber: '555-1111', avatarUrl: 'old.jpg' }
       },
       async uploadCoachAvatar(payload) {
         uploadCalls.push(payload)
@@ -64,7 +66,7 @@ test('admin coach profile repository saves approved coach fields and optional av
       },
       async updateCoachProfile(payload) {
         updateCalls.push(payload)
-        return { id: 'coach-1', displayName: payload.updates.displayName, phoneNumber: payload.updates.phoneNumber, avatarUrl: payload.updates.avatarUrl }
+        return { id: 'coach-1', displayName: payload.updates.displayName, firstName: payload.updates.firstName, lastName: payload.updates.lastName, phoneNumber: payload.updates.phoneNumber, avatarUrl: payload.updates.avatarUrl }
       },
     },
   ])
@@ -76,7 +78,8 @@ test('admin coach profile repository saves approved coach fields and optional av
   })
 
   const profile = await repository.updateCurrentCoachProfile({
-    name: 'Anthony Fortugno',
+    firstName: 'Anthony',
+    lastName: 'Fortugno',
     phone: '555-2222',
     avatarUpload: {
       dataUrl: 'data:image/png;base64,aGVsbG8=',
@@ -95,6 +98,8 @@ test('admin coach profile repository saves approved coach fields and optional av
       coachId: 'coach-1',
       updates: {
         displayName: 'Anthony Fortugno',
+        firstName: 'Anthony',
+        lastName: 'Fortugno',
         phoneNumber: '555-2222',
         avatarUrl: 'https://cdn/new-avatar.jpg',
       },
@@ -103,6 +108,8 @@ test('admin coach profile repository saves approved coach fields and optional av
   assert.deepEqual(profile, {
     id: 'coach-1',
     name: 'Anthony Fortugno',
+    firstName: 'Anthony',
+    lastName: 'Fortugno',
     phone: '555-2222',
     avatarUrl: 'https://cdn/new-avatar.jpg',
     email: 'coach@example.com',

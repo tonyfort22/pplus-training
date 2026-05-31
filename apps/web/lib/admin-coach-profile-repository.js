@@ -24,10 +24,16 @@ function mapCoachProfile(profile, user = null) {
   return {
     id: profile.id,
     name: profile.displayName || [profile.firstName, profile.lastName].filter(Boolean).join(' ').trim() || '',
+    firstName: profile.firstName || '',
+    lastName: profile.lastName || '',
     phone: profile.phoneNumber || '',
     avatarUrl: profile.avatarUrl || '',
     email: user?.email || '',
   }
+}
+
+function resolveDisplayName({ firstName = '', lastName = '', name = '' } = {}) {
+  return [normalizeText(firstName), normalizeText(lastName)].filter(Boolean).join(' ').trim() || normalizeText(name)
 }
 
 function isSupabaseAuthSessionError(error) {
@@ -99,9 +105,12 @@ export function createAdminCoachProfileRepository(overrides = {}) {
       return mapCoachProfile(coachProfile, user)
     },
 
-    async updateCurrentCoachProfile({ name, phone, avatarUrl, avatarUpload = null } = {}) {
+    async updateCurrentCoachProfile({ firstName, lastName, name, phone, avatarUrl, avatarUpload = null } = {}) {
       const { repository, user, coachProfile } = await getCurrentProfileContext()
       let nextAvatarUrl = normalizeText(avatarUrl ?? coachProfile.avatarUrl ?? '')
+      const nextFirstName = normalizeText(firstName)
+      const nextLastName = normalizeText(lastName)
+      const nextDisplayName = resolveDisplayName({ firstName: nextFirstName, lastName: nextLastName, name })
 
       if (avatarUpload?.dataUrl) {
         const { fileBuffer, contentType } = parseDataUrlToUploadPayload(avatarUpload.dataUrl)
@@ -116,7 +125,9 @@ export function createAdminCoachProfileRepository(overrides = {}) {
       const updatedProfile = await repository.updateCoachProfile({
         coachId: coachProfile.id,
         updates: {
-          displayName: normalizeText(name),
+          displayName: nextDisplayName,
+          firstName: nextFirstName,
+          lastName: nextLastName,
           phoneNumber: normalizeText(phone),
           avatarUrl: nextAvatarUrl,
         },

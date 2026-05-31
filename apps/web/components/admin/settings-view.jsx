@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input'
 const ADMIN_PROFILE_SEED = {
   avatarUrl: '',
   name: '',
+  firstName: '',
+  lastName: '',
   phone: '',
   avatarUpload: null,
 }
@@ -128,6 +130,10 @@ function ProfilePhotoUploader({ previewSrc = '', profileName = '', onAvatarChang
   )
 }
 
+function getProfileDisplayName(profileDraft = ADMIN_PROFILE_SEED) {
+  return [profileDraft.firstName, profileDraft.lastName].filter(Boolean).join(' ').trim() || profileDraft.name || ''
+}
+
 function AdminSettingsProfileView() {
   const [profileDraft, setProfileDraft] = useState(ADMIN_PROFILE_SEED)
   const [isLoadingProfile, setIsLoadingProfile] = useState(true)
@@ -151,6 +157,8 @@ function AdminSettingsProfileView() {
         setProfileDraft({
           avatarUrl: payload.profile?.avatarUrl || '',
           name: payload.profile?.name || '',
+          firstName: payload.profile?.firstName || '',
+          lastName: payload.profile?.lastName || '',
           phone: payload.profile?.phone || '',
           avatarUpload: null,
         })
@@ -194,7 +202,8 @@ function AdminSettingsProfileView() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: profileDraft.name,
+          firstName: profileDraft.firstName,
+          lastName: profileDraft.lastName,
           phone: profileDraft.phone,
           avatarUrl: profileDraft.avatarUrl,
           avatarUpload: profileDraft.avatarUpload,
@@ -207,6 +216,8 @@ function AdminSettingsProfileView() {
       setProfileDraft({
         avatarUrl: payload.profile?.avatarUrl || '',
         name: payload.profile?.name || '',
+        firstName: payload.profile?.firstName || '',
+        lastName: payload.profile?.lastName || '',
         phone: payload.profile?.phone || '',
         avatarUpload: null,
       })
@@ -223,25 +234,34 @@ function AdminSettingsProfileView() {
 
   return (
     <form className="grid w-full gap-6" onSubmit={handleSaveProfile} aria-describedby="admin-profile-status-notice">
-      <ProfilePhotoUploader previewSrc={profileDraft.avatarUrl} profileName={profileDraft.name} onAvatarChange={handleAvatarChange} />
+      <ProfilePhotoUploader previewSrc={profileDraft.avatarUrl} profileName={getProfileDisplayName(profileDraft)} onAvatarChange={handleAvatarChange} />
 
       <div className="grid w-full gap-4 md:grid-cols-2">
-        <SettingsProfileField htmlFor="admin-profile-name" label="Name">
+        <SettingsProfileField htmlFor="admin-profile-first-name" label="First name">
           <Input
-            id="admin-profile-name"
+            id="admin-profile-first-name"
             className={settingsProfileFieldInputClassName}
-            value={profileDraft.name}
-            placeholder="Coach name"
-            onChange={(event) => handleDraftChange('name', event.target.value)}
+            value={profileDraft.firstName}
+            placeholder="First name"
+            onChange={(event) => handleDraftChange('firstName', event.target.value)}
           />
         </SettingsProfileField>
-        <SettingsProfileField htmlFor="admin-profile-phone" label="Phone">
+        <SettingsProfileField htmlFor="admin-profile-last-name" label="Last name">
+          <Input
+            id="admin-profile-last-name"
+            className={settingsProfileFieldInputClassName}
+            value={profileDraft.lastName}
+            placeholder="Last name"
+            onChange={(event) => handleDraftChange('lastName', event.target.value)}
+          />
+        </SettingsProfileField>
+        <SettingsProfileField htmlFor="admin-profile-phone" label="Phone number">
           <Input
             id="admin-profile-phone"
             type="tel"
             className={settingsProfileFieldInputClassName}
             value={profileDraft.phone}
-            placeholder="Coach phone"
+            placeholder="Phone number"
             onChange={(event) => handleDraftChange('phone', event.target.value)}
           />
         </SettingsProfileField>
