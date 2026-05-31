@@ -139,9 +139,52 @@ function ErrorOverviewState({ message }) {
   )
 }
 
+function buildOverviewLinePoints(values, width = 640, height = 260, maxValue = 1) {
+  const left = 48
+  const right = 18
+  const top = 20
+  const bottom = 38
+  const plotWidth = width - left - right
+  const plotHeight = height - top - bottom
+  const divisor = Math.max(1, values.length - 1)
+
+  return values.map((value, index) => ({
+    x: left + (plotWidth * index) / divisor,
+    y: top + plotHeight - ((value ?? 0) / maxValue) * plotHeight,
+  }))
+}
+
+function buildOverviewLinePath(points) {
+  if (!points.length) return ''
+  return points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(' ')
+}
+
+function buildOverviewAreaPath(points, baseline = 222) {
+  if (!points.length) return ''
+  const linePath = buildOverviewLinePath(points)
+  const first = points[0]
+  const last = points[points.length - 1]
+
+  return `${linePath} L ${last.x.toFixed(2)} ${baseline} L ${first.x.toFixed(2)} ${baseline} Z`
+}
+
 function SessionsPanel({ sessionsChart }) {
   const buckets = Array.isArray(sessionsChart?.buckets) ? sessionsChart.buckets : []
-  const maxValue = Math.max(1, ...buckets.flatMap((bucket) => [bucket.completed ?? 0, bucket.assigned ?? 0]))
+  const completedValues = buckets.map((bucket) => bucket.completed ?? 0)
+  const assignedValues = buckets.map((bucket) => bucket.assigned ?? 0)
+  const maxValue = Math.max(1, ...completedValues, ...assignedValues)
+  const chartWidth = 640
+  const chartHeight = 260
+  const baseline = 222
+  const completedPoints = buildOverviewLinePoints(completedValues, chartWidth, chartHeight, maxValue)
+  const assignedPoints = buildOverviewLinePoints(assignedValues, chartWidth, chartHeight, maxValue)
+  const completedLinePath = buildOverviewLinePath(completedPoints)
+  const assignedLinePath = buildOverviewLinePath(assignedPoints)
+  const completedAreaPath = buildOverviewAreaPath(completedPoints, baseline)
+  const assignedAreaPath = buildOverviewAreaPath(assignedPoints, baseline)
+  const activeIndex = Math.max(0, Math.min(buckets.length - 1, Math.floor((buckets.length - 1) / 2)))
+  const activeBucket = buckets[activeIndex]
+  const ticks = [maxValue, Math.round(maxValue / 2), 0]
 
   return (
     <Card className="admin-shell-overview-performance-panel">
@@ -172,24 +215,75 @@ function SessionsPanel({ sessionsChart }) {
             Assigned
           </span>
         </div>
-        <div className="admin-shell-overview-performance-chart" aria-label="Completed and assigned sessions by range bucket">
-          {buckets.map((bucket) => (
-            <div key={bucket.label} className="admin-shell-overview-mini-bar-group">
-              <div className="admin-shell-overview-mini-bars">
-                <span
-                  className="admin-shell-overview-mini-bar-completed"
-                  style={{ height: `${Math.max(4, ((bucket.completed ?? 0) / maxValue) * 100)}%` }}
-                  title={`${bucket.label} completed ${bucket.completed ?? 0}`}
+        <div className="admin-shell-overview-performance-chart" aria-label="Completed and assigned sessions area chart">
+          <svg className="admin-shell-overview-performance-chart-svg" viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img">
+            <defs>
+              <linearGradient id="adminSessionsCompletedFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="rgba(59, 224, 175, 0.28)" />
+                <stop offset="100%" stopColor="rgba(59, 224, 175, 0.02)" />
+              </linearGradient>
+              <linearGradient id="adminSessionsAssignedFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="rgba(88, 198, 255, 0.18)" />
+                <stop offset="100%" stopColor="rgba(88, 198, 255, 0.01)" />
+              </linearGradient>
+            </defs>
+            {ticks.map((tick, index) => (
+              <g key={tick}>
+                <line
+                  className="admin-shell-overview-chart-grid-line"
+                  x1="48"
+                  x2="622"
+                  y1={20 + index * 101}
+                  y2={20 + index * 101}
                 />
-                <span
-                  className="admin-shell-overview-mini-bar-assigned"
-                  style={{ height: `${Math.max(4, ((bucket.assigned ?? 0) / maxValue) * 100)}%` }}
-                  title={`${bucket.label} assigned ${bucket.assigned ?? 0}`}
-                />
+                <text className="admin-shell-overview-chart-axis-label" x="0" y={24 + index * 101}>
+                  {tick}
+                </text>
+              </g>
+            ))}
+            {assignedAreaPath ? <path className="admin-shell-overview-chart-area-assigned" d={assignedAreaPath} /> : null}
+            {completedAreaPath ? <path className="admin-shell-overview-chart-area-completed" d={completedAreaPath} /> : null}
+            {assignedLinePath ? <path className="admin-shell-overview-chart-line-assigned" d={assignedLinePath} /> : null}
+            {completedLinePath ? <path className="admin-shell-overview-chart-line-completed" d={completedLinePath} /> : null}
+            {assignedPoints.map((point, index) => (
+              <circle
+                key={`assigned-${buckets[index]?.label ?? index}`}
+                className="admin-shell-overview-chart-point admin-shell-overview-chart-point-assigned"
+                cx={point.x}
+                cy={point.y}
+                r="4"
+              />
+            ))}
+            {completedPoints.map((point, index) => (
+              <circle
+                key={`completed-${buckets[index]?.label ?? index}`}
+                className={index === activeIndex ? 'admin-shell-overview-chart-point admin-shell-overview-chart-point-active' : 'admin-shell-overview-chart-point'}
+                cx={point.x}
+                cy={point.y}
+                r={index === activeIndex ? '7' : '4'}
+              />
+            ))}
+            {buckets.map((bucket, index) => {
+              const point = completedPoints[index]
+              if (!point) return null
+              return (
+                <text key={bucket.label} className="admin-shell-overview-chart-axis-label" x={point.x} y="252" textAnchor="middle">
+                  {bucket.label}
+                </text>
+              )
+            })}
+          </svg>
+          {activeBucket ? (
+            <div className="admin-shell-overview-performance-tooltip">
+              <div className="admin-shell-overview-performance-tooltip-header">
+                <strong>{activeBucket.completed ?? 0}</strong>
+                <span>completed</span>
               </div>
-              <span>{bucket.label}</span>
+              <span className="admin-shell-overview-performance-tooltip-date">
+                {activeBucket.label} · {activeBucket.assigned ?? 0} assigned
+              </span>
             </div>
-          ))}
+          ) : null}
         </div>
       </CardContent>
     </Card>

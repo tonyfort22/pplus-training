@@ -1620,17 +1620,20 @@ html[data-theme='light'] [data-radix-popper-content-wrapper]:has(.admin-dashboar
 .admin-shell-overview-performance-chart {
   position: relative;
   min-height: 320px;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(42px, 1fr));
-  align-items: end;
-  gap: 10px;
+  display: block;
   padding-top: 8px;
 }
 
 .admin-shell-overview-performance-chart-svg {
   width: 100%;
+  min-height: 280px;
   height: auto;
   overflow: visible;
+}
+
+.admin-shell-overview-chart-grid-line {
+  stroke: var(--admin-dashboard-chart-grid);
+  stroke-width: 1;
 }
 
 .admin-shell-overview-chart-axis-label {
@@ -1640,10 +1643,38 @@ html[data-theme='light'] [data-radix-popper-content-wrapper]:has(.admin-dashboar
   font-weight: 500;
 }
 
+.admin-shell-overview-chart-area-completed {
+  fill: url(#adminSessionsCompletedFill);
+}
+
+.admin-shell-overview-chart-area-assigned {
+  fill: url(#adminSessionsAssignedFill);
+}
+
+.admin-shell-overview-chart-line-completed {
+  fill: none;
+  stroke: #3be0af;
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.admin-shell-overview-chart-line-assigned {
+  fill: none;
+  stroke: #58c6ff;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .admin-shell-overview-chart-point {
   fill: #3be0af;
   stroke: rgba(11, 18, 30, 0.92);
   stroke-width: 2;
+}
+
+.admin-shell-overview-chart-point-assigned {
+  fill: #58c6ff;
 }
 
 .admin-shell-overview-chart-point-active {
