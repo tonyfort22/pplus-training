@@ -67,7 +67,7 @@ export default function MultiCombobox({
       <button
         id={id}
         type="button"
-        className="flex min-h-[44px] w-full items-center justify-between gap-3 rounded-[12px] border border-[#24334A] bg-[#111D30] px-3 py-2 text-left text-sm text-[#EEF4FF] outline-none transition focus:border-[#3BE0AF] focus:ring-2 focus:ring-[#3BE0AF]/20"
+        className="flex min-h-[44px] w-full items-center justify-between gap-3 rounded-[12px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-3 py-2 text-left text-sm text-[var(--admin-dashboard-card-text)] outline-none transition focus:border-[var(--admin-shell-accent)] focus:ring-2 focus:ring-[var(--admin-input-focus)]"
         onClick={() => setIsOpen((current) => !current)}
       >
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
@@ -76,13 +76,13 @@ export default function MultiCombobox({
               {visibleSelectedOptions.map((option) => (
                 <span
                   key={option.value}
-                  className="inline-flex items-center gap-1 rounded-full bg-[#3BE0AF]/15 px-2.5 py-1 text-xs font-medium text-[#7BF0CB]"
+                  className="inline-flex items-center gap-1 rounded-full bg-[var(--admin-shell-nav-active-bg)] px-2.5 py-1 text-xs font-medium text-[var(--admin-shell-nav-active-text)]"
                 >
                   {option.label}
                   <span
                     role="button"
                     tabIndex={0}
-                    className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[#7BF0CB] hover:bg-[#3BE0AF]/15"
+                    className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[var(--admin-shell-nav-active-text)] hover:bg-[var(--admin-shell-control-hover-bg)]"
                     onClick={(event) => {
                       event.stopPropagation()
                       removeValue(option.value)
@@ -103,7 +103,7 @@ export default function MultiCombobox({
                 <span
                   role="button"
                   tabIndex={0}
-                  className="inline-flex items-center rounded-full border border-[#24334A] bg-[#0F1728] px-2.5 py-1 text-xs font-medium text-[#8EA0BC]"
+                  className="inline-flex items-center rounded-full border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-shell-surface-muted)] px-2.5 py-1 text-xs font-medium text-[var(--admin-dashboard-card-muted)]"
                   onClick={(event) => {
                     event.stopPropagation()
                     setIsExpanded(true)
@@ -123,7 +123,7 @@ export default function MultiCombobox({
                 <span
                   role="button"
                   tabIndex={0}
-                  className="inline-flex items-center rounded-full border border-[#24334A] bg-[#0F1728] px-2.5 py-1 text-xs font-medium text-[#8EA0BC]"
+                  className="inline-flex items-center rounded-full border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-shell-surface-muted)] px-2.5 py-1 text-xs font-medium text-[var(--admin-dashboard-card-muted)]"
                   onClick={(event) => {
                     event.stopPropagation()
                     setIsExpanded(false)
@@ -141,22 +141,22 @@ export default function MultiCombobox({
               ) : null}
             </>
           ) : (
-            <span className="text-[#8EA0BC]">{placeholder}</span>
+            <span className="text-[var(--admin-dashboard-card-muted)]">{placeholder}</span>
           )}
         </div>
-        <ChevronDownIcon className={cn("h-4 w-4 shrink-0 text-[#8EA0BC] transition-transform", isOpen && "rotate-180")} />
+        <ChevronDownIcon className={cn("h-4 w-4 shrink-0 text-[var(--admin-dashboard-card-muted)] transition-transform", isOpen && "rotate-180")} />
       </button>
 
       {isOpen ? (
-        <div className="absolute left-0 top-[calc(100%+8px)] z-50 w-full rounded-[16px] border border-[#24334A] bg-[#111D30] p-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)]">
-          <div className="mb-2 flex items-center gap-2 rounded-[10px] border border-[#24334A] bg-[#0F1728] px-3 py-2">
-            <SearchIcon className="h-4 w-4 text-[#8EA0BC]" />
+        <div className="absolute left-0 top-[calc(100%+8px)] z-50 w-full rounded-[16px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-2 shadow-[var(--admin-shell-shadow)]">
+          <div className="mb-2 flex items-center gap-2 rounded-[10px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-3 py-2">
+            <SearchIcon className="h-4 w-4 text-[var(--admin-dashboard-card-muted)]" />
             <input
               type="text"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={searchPlaceholder}
-              className="w-full bg-transparent text-sm text-[#EEF4FF] outline-none placeholder:text-[#70809E]"
+              className="w-full bg-transparent text-sm text-[var(--admin-dashboard-card-text)] outline-none placeholder:text-[var(--admin-dashboard-card-soft)]"
             />
           </div>
 
@@ -169,16 +169,16 @@ export default function MultiCombobox({
                   <button
                     key={option.value}
                     type="button"
-                    className="flex w-full items-center justify-between rounded-[10px] px-3 py-2 text-sm text-[#DCE6F8] transition hover:bg-[#15233A]"
+                    className="flex w-full items-center justify-between rounded-[10px] px-3 py-2 text-sm text-[var(--admin-dashboard-card-text)] transition hover:bg-[var(--admin-shell-nav-active-bg)] hover:text-[var(--admin-shell-nav-active-text)] focus:bg-[var(--admin-shell-nav-active-bg)] focus:text-[var(--admin-shell-nav-active-text)]"
                     onClick={() => toggleValue(option.value)}
                   >
                     <span>{option.label}</span>
-                    {isSelected ? <CheckIcon className="h-4 w-4 text-[#3BE0AF]" /> : null}
+                    {isSelected ? <CheckIcon className="h-4 w-4 text-[var(--admin-shell-accent)]" /> : null}
                   </button>
                 )
               })
             ) : (
-              <div className="px-3 py-2 text-sm text-[#8EA0BC]">{emptyLabel}</div>
+              <div className="px-3 py-2 text-sm text-[var(--admin-dashboard-card-muted)]">{emptyLabel}</div>
             )}
           </div>
         </div>

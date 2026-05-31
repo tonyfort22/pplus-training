@@ -1,0 +1,533 @@
+"use client";
+import { useCallback, useRef, useState } from "react";
+import { Fragment } from "react/jsx-runtime";
+import { mockAPI } from "@/data/mock/support-chat/mock-api";
+import {
+  CURRENT_USER,
+  OTHER_USER
+} from "@/data/mock/support-chat/users";
+import { useMessages } from "@/hooks/chat/use-messages";
+import { useMessageReactions } from "@/hooks/chat/use-message-reactions";
+import { useMessageSearch } from "@/hooks/chat/use-message-search";
+import { useMessageActions } from "@/hooks/chat/use-message-actions";
+import { useProfile } from "@/hooks/chat/use-profile";
+import { useChatSidebar } from "@/hooks/chat/use-chat-sidebar";
+import { useIsWider } from "@/hooks/use-is-wider";
+import {
+  BanIcon,
+  CheckIcon,
+  MoreHorizontalIcon,
+  MessageCircleIcon,
+  PhoneIcon,
+  PlusIcon,
+  SearchIcon,
+  SendIcon,
+  SmileIcon,
+  UserIcon,
+  VideoIcon,
+  XIcon
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput
+} from "@/components/ui/input-group";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Badge } from "@/components/ui/badge";
+import { Chat } from "@/components/chat/chat";
+import {
+  ChatHeader,
+  ChatHeaderAddon,
+  ChatHeaderAvatar,
+  ChatHeaderButton,
+  ChatHeaderMain
+} from "@/components/chat/chat-header";
+import {
+  ChatToolbar,
+  ChatToolbarAddon,
+  ChatToolbarAttachment,
+  ChatToolbarAttachmentButton,
+  ChatToolbarButton,
+  ChatToolbarTextarea
+} from "@/components/chat/chat-toolbar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from "@/components/ui/popover";
+import EmojiPicker, { Theme } from "emoji-picker-react";
+import { ChatMessages } from "@/components/chat/chat-messages";
+import { PrimaryMessage } from "@/components/chat/message-items/primary-message";
+import { DateItem } from "@/components/chat/message-items/date-item";
+import { AdditionalMessage } from "@/components/chat/message-items/additional-message";
+import { PrimaryMessageSkeleton } from "@/components/chat/message-items/primary-message-skeleton";
+import { DateItemSkeleton } from "@/components/chat/message-items/date-item-skeleton";
+import { SearchSidebarContent } from "@/components/chat/message-search/search-sidebar-content";
+import { DeleteDialog } from "@/components/chat/message-actions/delete-dialog";
+import { ProfileSidebarContent } from "@/components/chat/profile/profile-sidebar-content";
+import { BlockDialog } from "@/components/chat/profile/block-dialog";
+import { ChatSidebar } from "@/components/chat/chat-sidebar/chat-sidebar";
+function ChatExampleComponent() {
+  const chatContainerRef = useRef(null);
+  const chatMessagesRef = useRef(null);
+  const isChatWide = useIsWider(chatContainerRef, 672);
+  const { loading, messages, setMessages } = useMessages({
+    onFetch: mockAPI.getEvents
+  });
+  const { sidebarOpen, setSidebarOpen, sidebarView, setSidebarView } = useChatSidebar();
+  const { handleReaction } = useMessageReactions({
+    setMessages,
+    onReact: mockAPI.reactToEvent
+  });
+  const {
+    searchQuery,
+    setSearchQuery,
+    activeSearchQuery,
+    searchResults,
+    highlightedMessageId,
+    setHighlightedMessageId,
+    handleSearch,
+    handleClearSearch,
+    openSearch
+  } = useMessageSearch({
+    setSidebarOpen,
+    setSidebarView,
+    onSearch: mockAPI.searchEvents
+  });
+  const {
+    openBlockDialog,
+    setOpenBlockDialog,
+    isBlocked,
+    openProfile,
+    handleBlock,
+    handleUnblock
+  } = useProfile({
+    setSidebarOpen,
+    setSidebarView,
+    onBlock: mockAPI.blockUser,
+    onUnblock: mockAPI.unblockUser
+  });
+  const {
+    messageToDelete,
+    openDeleteDialog,
+    setOpenDeleteDialog,
+    messageToEdit,
+    handleOpenDeleteDialog,
+    handleDelete,
+    handleStartEdit,
+    handleSubmitEdit,
+    handleCancelEdit
+  } = useMessageActions({
+    setMessages,
+    onDelete: mockAPI.deleteEvent,
+    onUpdate: mockAPI.updateEvent
+  });
+  const handleSubmit = useCallback(
+    async (submitData) => {
+      const tempId = Date.now();
+      const newMessage = {
+        id: tempId,
+        status: "sending",
+        tempId,
+        sender: CURRENT_USER,
+        timestamp: Date.now(),
+        content: {
+          type: "message",
+          ...submitData.text && { text: submitData.text },
+          ...submitData.files.length > 0 && {
+            files: submitData.files.map((file) => ({
+              url: URL.createObjectURL(file),
+              fileName: file.name,
+              mimeType: file.type
+            }))
+          }
+        }
+      };
+      setMessages((prev) => [newMessage, ...prev]);
+      const postedMessage = await mockAPI.postEvent({
+        text: submitData.text,
+        files: submitData.files
+      });
+      setMessages(
+        (prev) => prev.map((msg) => msg.tempId === tempId ? postedMessage : msg)
+      );
+    },
+    [setMessages]
+  );
+  const scrollToBottom = useCallback(() => {
+    chatMessagesRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+  const scrollToMessage = useCallback(
+    (id) => {
+      const container = chatMessagesRef.current;
+      const element = document.getElementById(`message-${id}`);
+      if (!container || !element) return;
+      const containerRect = container.getBoundingClientRect();
+      const elementRect = element.getBoundingClientRect();
+      container.scrollTo({
+        top: container.scrollTop + elementRect.top - containerRect.top - containerRect.height / 2 + elementRect.height / 2,
+        behavior: "smooth"
+      });
+      setHighlightedMessageId(id);
+    },
+    [setHighlightedMessageId]
+  );
+  const handleSidebarClose = useCallback(() => {
+    if (isChatWide && sidebarView === "search") {
+      handleClearSearch();
+    }
+    setSidebarOpen(false);
+  }, [isChatWide, sidebarView, handleClearSearch, setSidebarOpen]);
+  return <>
+      <Chat ref={chatContainerRef} className="h-svh">
+        <ChatHeader className="border-b border-white/10">
+          <ChatHeaderAddon>
+            <ChatHeaderAvatar
+    src="https://cdn.jsdelivr.net/gh/alohe/avatars/png/upstream_20.png"
+    alt="@annsmith"
+    fallback="AS"
+  />
+          </ChatHeaderAddon>
+          <ChatHeaderMain>
+            <span className="font-medium">Ann Smith</span>
+            {isBlocked && <Badge variant="destructive">Blocked</Badge>}
+            <span className="text-sm font-semibold">AKA</span>
+            <span className="flex-1 grid">
+              <span className="text-sm font-medium truncate">
+                Front-end developer
+              </span>
+            </span>
+          </ChatHeaderMain>
+          <ChatHeaderAddon className="min-w-0 flex-1 justify-end">
+            <InputGroup className="@2xl/chat:flex hidden min-w-0 flex-1">
+              <InputGroupInput
+    placeholder="Search..."
+    value={searchQuery}
+    onChange={(e) => setSearchQuery(e.target.value)}
+    onKeyDown={(e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleSearch(searchQuery);
+      }
+    }}
+  />
+              <InputGroupAddon>
+                <SearchIcon />
+              </InputGroupAddon>
+            </InputGroup>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <ChatHeaderButton>
+                  <MoreHorizontalIcon />
+                </ChatHeaderButton>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {!isChatWide && <>
+                    <DropdownMenuItem onSelect={openSearch}>
+                      <SearchIcon className="size-3.5" />
+                      Search
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <PhoneIcon className="size-3.5" />
+                      Start call
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <VideoIcon className="size-3.5" />
+                      Start video
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>}
+                <DropdownMenuItem onSelect={openProfile}>
+                  <UserIcon className="size-3.5" />
+                  Show profile
+                </DropdownMenuItem>
+                {isBlocked ? <DropdownMenuItem
+    onSelect={() => handleUnblock(OTHER_USER.id)}
+  >
+                    <BanIcon className="size-3.5" />
+                    Unblock
+                  </DropdownMenuItem> : <DropdownMenuItem
+    variant="destructive"
+    onSelect={() => setOpenBlockDialog(true)}
+  >
+                    <BanIcon className="size-3.5" />
+                    Block
+                  </DropdownMenuItem>}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </ChatHeaderAddon>
+        </ChatHeader>
+
+        <SidebarProvider
+    open={sidebarOpen}
+    onOpenChange={(open) => {
+      if (!open) handleSidebarClose();
+    }}
+    className="flex-1 min-h-0 w-full min-w-0"
+  >
+          <SidebarInset className="min-h-0 w-full min-w-0 overflow-hidden">
+            <ChatMessages ref={chatMessagesRef} className="scrollbar-hidden">
+              {loading && Array.from({ length: 20 }).map((_, i) => {
+    if (i % 6 === 0) {
+      return <Fragment key={i}>
+                        <PrimaryMessageSkeleton className="w-full" />
+                        <DateItemSkeleton className="my-4" />
+                      </Fragment>;
+    }
+    return <PrimaryMessageSkeleton key={i} className="w-full mt-4" />;
+  })}
+
+              {!loading && messages.length === 0 && <ChatEmptyState />}
+
+              {!loading && messages.map((msg, i, msgs) => {
+    const isOwnMessage = msg.sender.id === CURRENT_USER.id;
+    if (new Date(msg.timestamp).toDateString() !== new Date(msgs[i + 1]?.timestamp).toDateString()) {
+      return <Fragment key={msg.id}>
+                        <PrimaryMessage
+        id={`message-${msg.id}`}
+        highlighted={highlightedMessageId === msg.id}
+        avatarSrc={msg.sender.avatarUrl}
+        avatarAlt={msg.sender.username}
+        avatarFallback={msg.sender.name.slice(0, 2)}
+        senderName={msg.sender.name}
+        content={msg.content}
+        timestamp={msg.timestamp}
+        status={msg.status}
+        reactions={msg.reactions}
+        isEdited={msg.isEdited}
+        onReaction={(emoji) => handleReaction(msg.id, emoji)}
+        onDelete={isOwnMessage ? () => handleOpenDeleteDialog(msg) : void 0}
+        onEdit={isOwnMessage ? () => handleStartEdit(msg) : void 0}
+      />
+                        <DateItem timestamp={msg.timestamp} className="my-4" />
+                      </Fragment>;
+    }
+    if (msg.sender.id === msgs[i + 1]?.sender.id) {
+      return <AdditionalMessage
+        id={`message-${msg.id}`}
+        className="pt-1"
+        highlighted={highlightedMessageId === msg.id}
+        key={msg.id}
+        content={msg.content}
+        timestamp={msg.timestamp}
+        status={msg.status}
+        reactions={msg.reactions}
+        isEdited={msg.isEdited}
+        onReaction={(emoji) => handleReaction(msg.id, emoji)}
+        onDelete={isOwnMessage ? () => handleOpenDeleteDialog(msg) : void 0}
+        onEdit={isOwnMessage ? () => handleStartEdit(msg) : void 0}
+      />;
+    } else {
+      return <PrimaryMessage
+        id={`message-${msg.id}`}
+        className="mt-4"
+        highlighted={highlightedMessageId === msg.id}
+        key={msg.id}
+        avatarSrc={msg.sender.avatarUrl}
+        avatarAlt={msg.sender.username}
+        avatarFallback={msg.sender.name.slice(0, 2)}
+        senderName={msg.sender.name}
+        content={msg.content}
+        timestamp={msg.timestamp}
+        status={msg.status}
+        reactions={msg.reactions}
+        isEdited={msg.isEdited}
+        onReaction={(emoji) => handleReaction(msg.id, emoji)}
+        onDelete={isOwnMessage ? () => handleOpenDeleteDialog(msg) : void 0}
+        onEdit={isOwnMessage ? () => handleStartEdit(msg) : void 0}
+      />;
+    }
+  })}
+            </ChatMessages>
+
+            <Toolbar
+    key={messageToEdit?.id ?? "new"}
+    onSubmit={handleSubmit}
+    onScrollToBottom={scrollToBottom}
+    messageToEdit={messageToEdit}
+    onSubmitEdit={handleSubmitEdit}
+    onCancelEdit={handleCancelEdit}
+  />
+          </SidebarInset>
+
+          <ChatSidebar
+    open={sidebarOpen}
+    onClose={handleSidebarClose}
+    title={sidebarView === "search" ? "Search" : "Profile"}
+    isMobile={!isChatWide}
+  >
+            {sidebarView === "search" && <SearchSidebarContent
+    query={activeSearchQuery}
+    results={searchResults}
+    searchQuery={searchQuery}
+    onSearchQueryChange={setSearchQuery}
+    onSearch={handleSearch}
+    onResultClick={scrollToMessage}
+    onClose={handleSidebarClose}
+    isMobile={!isChatWide}
+  />}
+            {sidebarView === "profile" && <ProfileSidebarContent />}
+          </ChatSidebar>
+        </SidebarProvider>
+      </Chat>
+      <DeleteDialog
+    open={openDeleteDialog}
+    onOpenChange={setOpenDeleteDialog}
+    message={messageToDelete}
+    onConfirm={handleDelete}
+  />
+      <BlockDialog
+    open={openBlockDialog}
+    onOpenChange={setOpenBlockDialog}
+    onConfirm={() => handleBlock(OTHER_USER.id)}
+  />
+    </>;
+}
+function ChatEmptyState() {
+  return <div className="flex min-h-full flex-1 items-center justify-center px-6 py-10">
+      <Empty className="w-full max-w-lg border-white/10 bg-[radial-gradient(circle_at_top,rgba(59,224,175,0.16),rgba(7,13,24,0)_44%),linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.02))] text-white shadow-[0_24px_80px_rgba(0,0,0,0.24)]">
+        <EmptyHeader>
+          <EmptyMedia variant="icon" className="border-white/10 bg-[#101826] text-[#3BE0AF] shadow-[0_12px_30px_rgba(59,224,175,0.12)]">
+            <MessageCircleIcon />
+          </EmptyMedia>
+          <EmptyTitle>No messages yet</EmptyTitle>
+          <EmptyDescription className="text-[#8EA0BC]">
+            Start the conversation by sending the first message.
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    </div>;
+}
+function Toolbar({
+  messageToEdit,
+  onSubmit,
+  onSubmitEdit,
+  onCancelEdit,
+  onScrollToBottom
+}) {
+  const [input, setInput] = useState(messageToEdit?.content.text ?? "");
+  const [files, setFiles] = useState([]);
+  const [filesToEdit, setFilesToEdit] = useState(
+    messageToEdit?.content.files ?? []
+  );
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const handleSubmit = useCallback(() => {
+    const trimmedContent = input.trim();
+    if (!trimmedContent && files.length === 0) return;
+    onSubmit?.({
+      text: trimmedContent,
+      files
+    });
+    setInput("");
+    setFiles([]);
+    setTimeout(() => {
+      onScrollToBottom?.();
+    });
+  }, [input, files, onSubmit, onScrollToBottom]);
+  const handleSubmitEdit = useCallback(() => {
+    const trimmedContent = input.trim();
+    if (!trimmedContent && files.length === 0 && filesToEdit.length === 0) {
+      return;
+    }
+    onSubmitEdit?.({
+      text: trimmedContent,
+      uploadFiles: files,
+      editedFiles: filesToEdit
+    });
+    setInput("");
+    setFiles([]);
+  }, [input, files, filesToEdit, onSubmitEdit]);
+  return <ChatToolbar>
+      {(files.length > 0 || filesToEdit.length > 0) && <ChatToolbarAddon
+    align="block-start"
+    className="mb-2 overflow-x-auto gap-2"
+  >
+          {files.map((file, i) => <ChatToolbarAttachment
+    key={file.name + i}
+    fileName={file.name}
+    onRemove={() => setFiles((prev) => prev.filter((_, idx) => idx !== i))}
+  />)}
+          {filesToEdit.map((file, i) => <ChatToolbarAttachment
+    key={file.fileName + i}
+    fileName={file.fileName}
+    onRemove={() => setFilesToEdit((prev) => prev.filter((_, idx) => idx !== i))}
+  />)}
+        </ChatToolbarAddon>}
+
+      <ChatToolbarAddon
+    align="inline-start"
+    className="order-2 flex-1 @2xl/chat:order-1 @2xl/chat:flex-none"
+  >
+        <ChatToolbarAttachmentButton
+    onFilesSelected={(files2) => {
+      setFiles((prev) => [...prev, ...files2]);
+    }}
+  >
+          <PlusIcon />
+        </ChatToolbarAttachmentButton>
+        <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
+          <PopoverTrigger asChild>
+            <ChatToolbarButton>
+              <SmileIcon />
+            </ChatToolbarButton>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start" side="top">
+            <EmojiPicker
+    theme={Theme.AUTO}
+    onEmojiClick={(emojiData) => {
+      setInput((prev) => prev + emojiData.emoji);
+      setEmojiOpen(false);
+    }}
+  />
+          </PopoverContent>
+        </Popover>
+      </ChatToolbarAddon>
+
+      <div className="w-full min-w-0 order-1 pb-1 @2xl/chat:pb-0 @2xl/chat:flex-1 @2xl/chat:w-auto @2xl/chat:order-2">
+        <ChatToolbarTextarea
+    value={input}
+    onChange={(e) => setInput(e.target.value)}
+    onSubmit={() => messageToEdit ? handleSubmitEdit() : handleSubmit()}
+  />
+      </div>
+
+      <ChatToolbarAddon align="inline-end">
+        {messageToEdit && <>
+            <ChatToolbarButton onClick={onCancelEdit}>
+              <XIcon />
+            </ChatToolbarButton>
+            <ChatToolbarButton
+    variant="default"
+    disabled={!input.trim() && files.length === 0 && filesToEdit.length === 0}
+    onClick={() => handleSubmitEdit()}
+  >
+              <CheckIcon />
+            </ChatToolbarButton>
+          </>}
+        {!messageToEdit && <ChatToolbarButton
+    variant="default"
+    disabled={!input.trim() && files.length === 0}
+    onClick={() => handleSubmit()}
+  >
+            <SendIcon />
+          </ChatToolbarButton>}
+      </ChatToolbarAddon>
+    </ChatToolbar>;
+}
+export {
+  ChatExampleComponent as default
+};

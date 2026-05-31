@@ -20,3 +20,8 @@ infra/supabase/supabase/
 !.env.example
 !apps/mobile/.env.example
 .DS_Store
+.hermes/
+apps/web/.agents/
+**/.agents/
+infra/supabase/.temp/
+infra/supabase/supabase/

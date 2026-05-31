@@ -86,6 +86,7 @@ export function buildAthleteInvitationLoopsPayload({
   coachLastName,
   appStoreUrl,
   expiresAt,
+  transactionalId = ATHLETE_INVITATION_LOOPS_TRANSACTIONAL_ID,
 }) {
   const normalizedEmail = normalizeAthleteInvitationEmail(inviteeEmail)
   if (!normalizedEmail) {
@@ -99,10 +100,15 @@ export function buildAthleteInvitationLoopsPayload({
 
   const normalizedCoachFirstName = String(coachFirstName || '').trim()
   const normalizedCoachLastName = String(coachLastName || '').trim()
+  const normalizedTransactionalId = String(transactionalId || '').trim()
   const coachDisplayName = [normalizedCoachFirstName, normalizedCoachLastName].filter(Boolean).join(' ').trim()
 
+  if (!normalizedTransactionalId) {
+    throw new Error('Loops transactional email ID is required')
+  }
+
   return {
-    transactionalId: ATHLETE_INVITATION_LOOPS_TRANSACTIONAL_ID,
+    transactionalId: normalizedTransactionalId,
     email: normalizedEmail,
     dataVariables: {
       inviteCode: normalizedCode,
@@ -359,6 +365,7 @@ export function createAthleteInvitationService({
   invitationRepository,
   loopsClient,
   createCode = createAthleteInvitationCode,
+  loopsTransactionalId,
 } = {}) {
   if (!invitationRepository || typeof invitationRepository.createAthleteInvitation !== 'function') {
     throw new Error('Athlete invitation service requires an invitationRepository.createAthleteInvitation function')
@@ -398,6 +405,7 @@ export function createAthleteInvitationService({
         coachLastName,
         appStoreUrl,
         expiresAt,
+        transactionalId: loopsTransactionalId,
       })
       const loopsResponse = await loopsClient.sendTransactionalEmail(loopsPayload)
 
