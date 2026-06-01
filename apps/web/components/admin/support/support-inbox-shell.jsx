@@ -17,7 +17,7 @@ const MAX_SIDEBAR_WIDTH = 430
 
 function SupportInboxShell() {
   return (
-    <SidebarProvider className="min-h-svh bg-[#050B15] text-white">
+    <SidebarProvider className="support-inbox-shell min-h-svh">
       <Suspense fallback={<SupportInboxLoadingFallback />}>
         <SupportInboxResizableLayout />
       </Suspense>
@@ -26,7 +26,7 @@ function SupportInboxShell() {
 }
 
 function SupportInboxLoadingFallback() {
-  return <div className="min-h-svh flex-1 bg-[#070D18]" />
+  return <div className="support-inbox-main min-h-svh flex-1" />
 }
 
 function SupportInboxResizableLayout() {
@@ -62,7 +62,7 @@ function SupportInboxResizableLayout() {
   return (
     <div className="flex min-h-svh w-full overflow-hidden">
       <aside
-        className="relative shrink-0 bg-[#0B1120]"
+        className="support-inbox-sidebar-frame relative shrink-0"
         style={{ width: activeSidebarWidth, "--sidebar-width": `${activeSidebarWidth}px` }}
       >
         <SupportConversationSidebar
@@ -74,12 +74,12 @@ function SupportInboxResizableLayout() {
           type="button"
           aria-label="Resize conversation sidebar"
           aria-orientation="vertical"
-          className="absolute inset-y-0 -right-1 z-30 hidden w-2 cursor-col-resize items-center justify-center bg-transparent after:h-8 after:w-1 after:rounded-full after:bg-white/15 hover:after:bg-[#3BE0AF]/70 md:flex disabled:cursor-default disabled:after:bg-transparent"
+          className="support-inbox-resize-handle absolute inset-y-0 -right-1 z-30 hidden w-2 cursor-col-resize items-center justify-center bg-transparent after:h-8 after:w-1 after:rounded-full md:flex disabled:cursor-default disabled:after:bg-transparent"
           disabled={isCollapsed}
           onPointerDown={handleSidebarResizeStart}
         />
       </aside>
-      <section className="min-w-0 flex-1 bg-[#070D18]">
+      <section className="support-inbox-main min-w-0 flex-1">
         <SupportConversationThread conversation={selectedConversation} />
       </section>
     </div>

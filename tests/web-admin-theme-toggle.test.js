@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const adminShellPath = resolve(repoRoot, 'apps/web/components/admin/admin-shell.jsx')
 const adminThemeTogglePath = resolve(repoRoot, 'apps/web/components/admin/admin-theme-toggle.jsx')
+const supportConversationThreadPath = resolve(repoRoot, 'apps/web/components/admin/support/support-conversation-thread.jsx')
 const cssPath = resolve(repoRoot, 'apps/web/app/globals.css')
 const lightToggleAssetPath = resolve(repoRoot, 'apps/web/public/admin/auth_theme_toggle_light.svg')
 
@@ -38,4 +39,15 @@ test('admin dashboard topbar places the dark-light switcher between search and a
   assert.match(cssSource, /\.admin-theme-toggle-image\s*\{[^}]*position:\s*absolute;[^}]*opacity:\s*0;/)
   assert.match(cssSource, /\.admin-theme-toggle-image-active\s*\{[^}]*opacity:\s*1;/)
   assert.match(lightToggleAssetSource, /stroke="#F8FAFC"/)
+})
+
+test('support conversation topbar places the same dark-light switcher to the right of the message status dropdown', () => {
+  const supportThreadSource = readFileSync(supportConversationThreadPath, 'utf8')
+
+  assert.match(supportThreadSource, /import AdminThemeToggle from "@\/components\/admin\/admin-theme-toggle"/)
+  assert.match(supportThreadSource, /<ChatHeader className="support-inbox-topbar min-h-\[70px\]">/)
+  assert.match(
+    supportThreadSource,
+    /<ChatHeaderAddon>\s*<Select value=\{status\}[\s\S]*<SelectTrigger aria-label="Conversation status"[\s\S]*<\/Select>\s*<\/ChatHeaderAddon>\s*<ChatHeaderAddon>\s*<AdminThemeToggle \/>\s*<\/ChatHeaderAddon>/,
+  )
 })

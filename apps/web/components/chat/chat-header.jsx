@@ -1,9 +1,5 @@
 import { cn } from "@/lib/utils";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage
-} from "@/components/ui/avatar";
+import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 function ChatHeader({ children, className, ...props }) {
   return <div
@@ -43,10 +39,13 @@ function ChatHeaderAvatar({
   fallbackProps,
   ...props
 }) {
-  return <Avatar className={cn("rounded-full", className)} {...props}>
-      <AvatarImage src={src} alt={alt} {...imageProps} />
-      {fallback && <AvatarFallback {...fallbackProps}>{fallback}</AvatarFallback>}
-    </Avatar>;
+  return <Avatar
+    alt={alt}
+    className={cn("rounded-full", className)}
+    initials={fallback}
+    src={src || undefined}
+    {...props}
+  />;
 }
 function ChatHeaderButton({
   children,

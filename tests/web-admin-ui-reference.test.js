@@ -691,7 +691,7 @@ test('admin navigation uses real nested routes driven by shared config', () => {
   assert.match(cssSource, /\.admin-dashboard-sidebar-nav-button\[data-active='true'\] \{[\s\S]*background:\s*var\(--admin-shell-nav-active-bg\);[\s\S]*color:\s*var\(--admin-shell-primary-button-bg\) !important;/)
   assert.match(cssSource, /\.admin-dashboard-sidebar-subnav-button:hover \{[\s\S]*background:\s*transparent !important;[\s\S]*color:\s*var\(--admin-shell-primary-button-bg\) !important;/)
   assert.match(cssSource, /\.admin-dashboard-sidebar-subnav-button\[data-active='true'\] \{[\s\S]*background:\s*transparent !important;[\s\S]*color:\s*var\(--admin-shell-primary-button-bg\) !important;/)
-  assert.doesNotMatch(cssSource, /\.admin-dashboard-sidebar-subnav-button(?:\:hover|\[data-active='true'\]) \{[\s\S]*background:\s*var\(--admin-shell-nav-active-bg\) !important;/)
+  assert.doesNotMatch(cssSource, /\.admin-dashboard-sidebar-subnav-button(?:\:hover|\[data-active='true'\]) \{[^}]*background:\s*var\(--admin-shell-nav-active-bg\) !important;/)
   assert.match(athletesDataTableSource, /className="admin-shell-athletes-invite-button self-start rounded-\[12px\] min-h-\[40px\] bg-\[var\(--admin-shell-primary-button-bg\)\] text-\[#0B1120\] hover:bg-\[var\(--admin-shell-primary-button-bg\)\] md:self-auto"/)
   assert.match(athletesDataTableSource, /<div className="flex w-full flex-wrap items-center justify-start gap-2">[\s\S]*<Filters/)
   assert.match(filtersComponentSource, /flex flex-wrap items-center justify-start gap-2/)

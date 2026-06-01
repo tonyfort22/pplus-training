@@ -14,6 +14,7 @@ import Textarea from '@/components/ui/textarea'
 
 const dashboardInputClassName = 'support-dashboard-input h-11 rounded-[12px] border-[#24334A] bg-[#111D30] px-4 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20'
 const dashboardTextareaClassName = 'support-dashboard-textarea min-h-[140px] rounded-[12px] border border-[#24334A] bg-[#111D30] px-4 py-3 text-sm text-[#DCE6F8] placeholder:text-[#70809E] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20'
+const supportSelectTriggerStyle = { borderColor: 'var(--support-dashboard-input-border)' }
 
 export function PphtSupportFac5db68F122({ copy }) {
   const [submitError, setSubmitError] = useState(null)
@@ -124,7 +125,7 @@ export function PphtSupportFac5db68F122({ copy }) {
             <Field data-invalid={fieldState.invalid} className="support-template-field support-template-full">
               <FieldLabel htmlFor="category">{copy.labels.category}</FieldLabel>
               <Select value={field.value} onValueChange={field.onChange}>
-                <SelectTrigger id="category" className={dashboardInputClassName}>
+                <SelectTrigger id="category" className={dashboardInputClassName} style={supportSelectTriggerStyle}>
                   <SelectValue placeholder={copy.placeholders.category} />
                 </SelectTrigger>
                 <SelectContent>

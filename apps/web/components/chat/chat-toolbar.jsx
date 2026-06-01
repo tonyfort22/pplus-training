@@ -14,8 +14,9 @@ function ChatToolbar({
     {...props}
   >
       <div
+    data-slot="chat-toolbar-inner"
     className={cn(
-      "border border-white/10 rounded-md p-2",
+    "border border-white/10 rounded-md p-2",
       "flex flex-wrap items-start gap-x-2"
     )}
   >

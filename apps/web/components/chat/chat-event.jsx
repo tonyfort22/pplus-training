@@ -1,9 +1,5 @@
 import { cn } from "@/lib/utils";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage
-} from "@/components/ui/avatar";
+import Avatar from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useMemo } from "react";
 const FORMAT_PRESETS = {
@@ -85,12 +81,12 @@ function ChatEventAvatar({
   ...props
 }) {
   return <Avatar
+    alt={alt}
     className={cn("rounded-full size-8 @md/chat:size-10", className)}
+    initials={fallback}
+    src={src || undefined}
     {...props}
-  >
-      <AvatarImage src={src} alt={alt} {...imageProps} />
-      {fallback && <AvatarFallback {...fallbackProps}>{fallback}</AvatarFallback>}
-    </Avatar>;
+  />;
 }
 function getRelativeTimeString(date, locale) {
   const now = /* @__PURE__ */ new Date();

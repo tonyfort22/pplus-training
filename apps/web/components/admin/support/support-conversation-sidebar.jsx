@@ -1,10 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Search } from "lucide-react"
-
 import { SupportEmptyState } from "@/components/admin/support/support-empty-state"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import Avatar from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import {
   Item,
@@ -207,21 +205,25 @@ function SupportConversationSidebar({ selectedConversationId, targetConversation
   }, [])
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-white/10 bg-[#0B1120]">
-      <SidebarHeader className="gap-3 border-b border-white/10 px-3 py-4 group-data-[collapsible=icon]:px-2">
-        <div className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
-          {!isCollapsed ? <img className="h-5 w-auto" src="/admin/logo_pplus_training.svg" alt="PPLUS Training" /> : null}
-          <SidebarTrigger className="ml-auto text-[#8EA0BC] hover:bg-white/10 hover:text-white group-data-[collapsible=icon]:ml-0" />
+    <Sidebar collapsible="icon" className="support-inbox-sidebar border-r">
+      <SidebarHeader className="support-inbox-sidebar-header gap-3 p-0 group-data-[collapsible=icon]:px-0">
+        <div className="support-inbox-sidebar-brand-row flex min-h-[70px] items-center gap-2 px-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
+          {!isCollapsed ? (
+            <>
+              <img className="support-inbox-sidebar-logo-dark h-5 w-auto" src="/admin/logo_pplus_training.svg" alt="PPLUS Training" />
+              <img className="support-inbox-sidebar-logo-light h-5 w-auto" src="/admin/logo_ppht_light_mode.svg" alt="PPLUS Training" />
+            </>
+          ) : null}
+          <SidebarTrigger className="support-inbox-sidebar-trigger ml-auto group-data-[collapsible=icon]:ml-0" />
         </div>
-        <div className="relative flex w-full items-center group-data-[collapsible=icon]:hidden">
+        <div className="flex w-full items-center px-3 pb-4 group-data-[collapsible=icon]:hidden">
           <SidebarInput
             aria-label="Search conversations"
             placeholder="Search support..."
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
-            className="h-9 w-full border-white/10 bg-white/[0.04] pl-8 pr-3 text-sm text-white placeholder:text-[#6F819D]"
+            className="support-inbox-sidebar-search-input h-[40px] min-h-[40px] w-full rounded-[12px] px-4 text-sm focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
           />
-          <Search className="pointer-events-none absolute left-3 h-4 w-4 text-[#6F819D]" />
         </div>
       </SidebarHeader>
 
@@ -263,8 +265,8 @@ function SupportConversationRow({ conversation, onSelectConversation }) {
       variant="default"
       className={
         conversation.active
-          ? "border-[#3BE0AF]/25 bg-[#3BE0AF]/8 px-3 py-2.5 text-white hover:bg-[#3BE0AF]/12 group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-full group-data-[collapsible=icon]:border-white/10 group-data-[collapsible=icon]:bg-white/[0.04] group-data-[collapsible=icon]:p-1"
-          : "border-white/0 bg-transparent px-3 py-2.5 text-white hover:border-white/10 hover:bg-white/[0.04] group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-full group-data-[collapsible=icon]:p-1"
+          ? "support-inbox-conversation-row support-inbox-conversation-row-active px-3 py-2.5 group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-full group-data-[collapsible=icon]:p-1"
+          : "support-inbox-conversation-row support-inbox-conversation-row-idle px-3 py-2.5 group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-full group-data-[collapsible=icon]:p-1"
       }
     >
       <button
@@ -274,20 +276,22 @@ function SupportConversationRow({ conversation, onSelectConversation }) {
         onClick={() => onSelectConversation?.(conversation)}
       >
         <ItemMedia className="pt-0.5 group-data-[collapsible=icon]:pt-0">
-          <Avatar className="h-8 w-8 border border-white/10 bg-[#172033] text-xs text-white group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8">
-            <AvatarImage src={conversation.avatar} alt={conversation.name} />
-            <AvatarFallback className="bg-[#172033] text-xs text-white">{conversation.initials}</AvatarFallback>
-          </Avatar>
+          <Avatar
+            alt={conversation.name}
+            className="support-inbox-conversation-avatar"
+            initials={conversation.initials}
+            src={conversation.avatar || undefined}
+          />
         </ItemMedia>
         <ItemContent className="min-w-0 flex-1 overflow-hidden group-data-[collapsible=icon]:hidden">
           <ItemHeader className="min-w-0 gap-2">
-            <span className="min-w-0 flex-1 truncate text-xs font-medium text-[#C9D5EA]">{conversation.name}</span>
-            <span className="shrink-0 text-[11px] text-[#6F819D]">{conversation.time}</span>
+            <span className="support-inbox-conversation-name min-w-0 flex-1 truncate text-xs font-medium">{conversation.name}</span>
+            <span className="support-inbox-conversation-time shrink-0 text-[11px]">{conversation.time}</span>
           </ItemHeader>
-          <ItemTitle className="min-w-0 w-full overflow-hidden text-[13px] text-white">
+          <ItemTitle className="support-inbox-conversation-subject min-w-0 w-full overflow-hidden text-[13px]">
             <span className="block min-w-0 overflow-hidden truncate whitespace-nowrap">{conversation.subject}</span>
           </ItemTitle>
-          <ItemDescription className="truncate text-xs text-[#8EA0BC]">{conversation.preview}</ItemDescription>
+          <ItemDescription className="support-inbox-conversation-preview truncate text-xs">{conversation.preview}</ItemDescription>
         </ItemContent>
         {conversation.unread ? (
           <ItemActions className="shrink-0 self-start group-data-[collapsible=icon]:hidden">

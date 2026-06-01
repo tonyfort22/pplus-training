@@ -1,9 +1,11 @@
 "use client"
 
 import { Fragment, useEffect, useMemo, useRef, useState } from "react"
-import { SearchIcon, SendIcon } from "lucide-react"
+import { PlusIcon, SendIcon, SmileIcon } from "lucide-react"
+import EmojiPicker, { Theme } from "emoji-picker-react"
 
 import { SupportEmptyState } from "@/components/admin/support/support-empty-state"
+import AdminThemeToggle from "@/components/admin/admin-theme-toggle"
 import { Chat } from "@/components/chat/chat"
 import {
   ChatHeader,
@@ -15,7 +17,8 @@ import { ChatMessages } from "@/components/chat/chat-messages"
 import { DateItem } from "@/components/chat/message-items/date-item"
 import { PrimaryMessage } from "@/components/chat/message-items/primary-message"
 import { PrimaryMessageSkeleton } from "@/components/chat/message-items/primary-message-skeleton"
-import { ChatToolbar, ChatToolbarAddon, ChatToolbarButton, ChatToolbarTextarea } from "@/components/chat/chat-toolbar"
+import { ChatToolbar, ChatToolbarAddon, ChatToolbarAttachment, ChatToolbarAttachmentButton, ChatToolbarButton, ChatToolbarTextarea } from "@/components/chat/chat-toolbar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 const ADMIN_USER = {
@@ -59,6 +62,8 @@ function SupportConversationThread({ conversation }) {
   const [loading, setLoading] = useState(false)
   const [messages, setMessages] = useState([])
   const [replyText, setReplyText] = useState("")
+  const [composerFiles, setComposerFiles] = useState([])
+  const [emojiOpen, setEmojiOpen] = useState(false)
   const [messageSearchQuery, setMessageSearchQuery] = useState("")
   const [isSendingReply, setIsSendingReply] = useState(false)
   const [status, setStatus] = useState(conversation?.status || "open")
@@ -164,6 +169,7 @@ function SupportConversationThread({ conversation }) {
         },
       }))
       setReplyText("")
+      setComposerFiles([])
       setTimeout(() => {
         chatMessagesRef.current?.scrollTo({ top: 0, behavior: "smooth" })
       })
@@ -172,6 +178,14 @@ function SupportConversationThread({ conversation }) {
     } finally {
       setIsSendingReply(false)
     }
+  }
+
+  function handleComposerFilesSelected(files) {
+    setComposerFiles((currentFiles) => [...currentFiles, ...files])
+  }
+
+  function handleRemoveComposerFile(indexToRemove) {
+    setComposerFiles((currentFiles) => currentFiles.filter((_, index) => index !== indexToRemove))
   }
 
   const headerInitials = useMemo(() => getInitials(conversation?.name || conversation?.requesterName || ""), [conversation])
@@ -190,44 +204,51 @@ function SupportConversationThread({ conversation }) {
 
   return (
     <Chat className="h-svh">
-      <ChatHeader className="border-b border-white/10">
+      <ChatHeader className="support-inbox-topbar min-h-[70px]">
         <ChatHeaderAddon>
-          <ChatHeaderAvatar src={conversation.avatar || conversation.requesterAvatarUrl || ""} alt={headerName} fallback={headerInitials} />
+          <ChatHeaderAvatar
+            className="support-inbox-conversation-avatar"
+            src={conversation.avatar || conversation.requesterAvatarUrl || ""}
+            alt={headerName}
+            fallback={headerInitials}
+          />
         </ChatHeaderAddon>
         <ChatHeaderMain>
-          <span className="font-medium">{headerName}</span>
+          <span className="support-inbox-topbar-title font-medium">{headerName}</span>
           <span className="flex-1 grid">
-            <span className="text-sm font-medium truncate text-[#8EA0BC]">{subtitle}</span>
+            <span className="support-inbox-topbar-subtitle text-sm font-medium truncate">{subtitle}</span>
           </span>
         </ChatHeaderMain>
         <ChatHeaderAddon>
-          <div className="relative hidden w-[240px] items-center md:flex">
+          <div className="hidden w-[240px] items-center md:flex">
             <input
               aria-label="Search messages"
               placeholder="Search messages..."
               value={messageSearchQuery}
               onChange={(event) => setMessageSearchQuery(event.target.value)}
-              className="h-8 w-full rounded-full border border-white/10 bg-white/[0.04] pl-8 pr-3 text-xs text-white outline-none placeholder:text-[#6F819D] focus:border-[#3BE0AF]/40 focus:ring-2 focus:ring-[#3BE0AF]/15"
+              className="support-inbox-topbar-search-input h-[40px] min-h-[40px] w-full rounded-[12px] px-4 text-sm outline-none focus:border-[#3BE0AF]/40 focus:ring-2 focus:ring-[#3BE0AF]/15"
             />
-            <SearchIcon className="pointer-events-none absolute left-3 h-3.5 w-3.5 text-[#6F819D]" />
           </div>
         </ChatHeaderAddon>
         <ChatHeaderAddon>
           <Select value={status} onValueChange={handleStatusChange} disabled={isUpdatingStatus}>
-            <SelectTrigger aria-label="Conversation status" className="h-8 w-[132px] rounded-full border-white/10 bg-white/[0.04] text-xs capitalize">
+            <SelectTrigger aria-label="Conversation status" className="support-inbox-status-trigger h-[40px] min-h-[40px] w-[132px] justify-between rounded-[12px] px-[14px] text-[0.8rem] font-medium capitalize">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="open">Open</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="closed">Closed</SelectItem>
-              <SelectItem value="archived">Archived</SelectItem>
+            <SelectContent className="support-inbox-status-content">
+              <SelectItem className="support-inbox-status-item" value="open">Open</SelectItem>
+              <SelectItem className="support-inbox-status-item" value="pending">Pending</SelectItem>
+              <SelectItem className="support-inbox-status-item" value="closed">Closed</SelectItem>
+              <SelectItem className="support-inbox-status-item" value="archived">Archived</SelectItem>
             </SelectContent>
           </Select>
         </ChatHeaderAddon>
+        <ChatHeaderAddon>
+          <AdminThemeToggle />
+        </ChatHeaderAddon>
       </ChatHeader>
 
-      <ChatMessages ref={chatMessagesRef} className="scrollbar-hidden">
+      <ChatMessages ref={chatMessagesRef} className="support-inbox-message-list scrollbar-hidden">
         {loading && Array.from({ length: 4 }).map((_, index) => <PrimaryMessageSkeleton key={index} className="mt-4 w-full" />)}
         {!loading && error ? <SupportConversationEmptyState title="Messages unavailable" description={error} /> : null}
         {!loading && !error && messages.length === 0 ? <SupportConversationEmptyState title="No messages yet" description="This support conversation has no saved messages." /> : null}
@@ -250,6 +271,7 @@ function SupportConversationThread({ conversation }) {
                 avatarSrc={msg.sender.avatarUrl}
                 avatarAlt={msg.sender.username}
                 avatarFallback={getInitials(msg.sender.name)}
+                avatarClassName="support-inbox-conversation-avatar"
                 senderName={msg.sender.name}
                 content={msg.content}
                 timestamp={msg.timestamp}
@@ -261,17 +283,59 @@ function SupportConversationThread({ conversation }) {
         })}
       </ChatMessages>
 
-      <ChatToolbar>
-        <div className="w-full min-w-0 pb-1">
-          <ChatToolbarTextarea
-            value={replyText}
-            onChange={(event) => setReplyText(event.target.value)}
-            onSubmit={handleSubmitReply}
-            placeholder="Type your message..."
-          />
+      {composerFiles.length > 0 ? (
+        <div className="support-inbox-composer-attachment-row">
+          {composerFiles.map((file, index) => (
+            <ChatToolbarAttachment
+              key={`${file.name}-${index}`}
+              fileName={file.name}
+              onRemove={() => handleRemoveComposerFile(index)}
+            />
+          ))}
         </div>
-        <ChatToolbarAddon align="inline-end">
-          <ChatToolbarButton variant="default" disabled={!replyText.trim() || isSendingReply} onClick={handleSubmitReply}>
+      ) : null}
+
+      <ChatToolbar className="support-inbox-composer">
+        <ChatToolbarAddon align="inline-start" className="support-inbox-composer-leading-actions">
+          <ChatToolbarAttachmentButton
+            aria-label="Add attachment"
+            className="support-inbox-composer-icon-button"
+            onFilesSelected={handleComposerFilesSelected}
+          >
+            <PlusIcon />
+          </ChatToolbarAttachmentButton>
+          <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
+            <PopoverTrigger asChild>
+              <ChatToolbarButton aria-label="Add emoji" className="support-inbox-composer-icon-button" type="button">
+                <SmileIcon />
+              </ChatToolbarButton>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start" side="top">
+              <EmojiPicker
+                theme={Theme.AUTO}
+                onEmojiClick={(emojiData) => {
+                  setReplyText((currentText) => currentText + emojiData.emoji)
+                  setEmojiOpen(false)
+                }}
+              />
+            </PopoverContent>
+          </Popover>
+        </ChatToolbarAddon>
+        <ChatToolbarTextarea
+          value={replyText}
+          onChange={(event) => setReplyText(event.target.value)}
+          onSubmit={handleSubmitReply}
+          className="support-inbox-composer-input"
+          placeholder="Type your message..."
+        />
+        <ChatToolbarAddon align="inline-end" className="support-inbox-composer-send-action">
+          <ChatToolbarButton
+            aria-label="Send message"
+            className="support-inbox-composer-send-button"
+            disabled={!replyText.trim() || isSendingReply}
+            onClick={handleSubmitReply}
+            type="button"
+          >
             <SendIcon />
           </ChatToolbarButton>
         </ChatToolbarAddon>

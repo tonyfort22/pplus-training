@@ -10,7 +10,12 @@ const routePath = resolve(repoRoot, 'apps/web/app/api/admin/support/conversation
 const messagesRoutePath = resolve(repoRoot, 'apps/web/app/api/admin/support/conversations/[conversationId]/messages/route.js')
 const publicRequesterMessagesRoutePath = resolve(repoRoot, 'apps/web/app/api/support/conversations/[conversationId]/messages/route.js')
 const shellPath = resolve(repoRoot, 'apps/web/components/admin/support/support-inbox-shell.jsx')
+const sidebarPath = resolve(repoRoot, 'apps/web/components/admin/support/support-conversation-sidebar.jsx')
 const threadPath = resolve(repoRoot, 'apps/web/components/admin/support/support-conversation-thread.jsx')
+const chatHeaderPath = resolve(repoRoot, 'apps/web/components/chat/chat-header.jsx')
+const primaryMessagePath = resolve(repoRoot, 'apps/web/components/chat/message-items/primary-message.jsx')
+const chatEventPath = resolve(repoRoot, 'apps/web/components/chat/chat-event.jsx')
+const cssPath = resolve(repoRoot, 'apps/web/app/globals.css')
 
 test('support inbox repository lists conversations from Supabase REST', async () => {
   assert.ok(existsSync(repositoryPath), 'support inbox repository should exist')
@@ -353,6 +358,129 @@ test('requester follow-up notification sender posts admin email through Loops', 
     repliedAt: 'May 29, 2026, 8:10 p.m.',
     adminUrl: 'http://127.0.0.1:3005/admin/support?conversationId=conversation-1',
   })
+})
+
+test('support inbox sidebar and top nav use admin light-mode tokens instead of hardcoded dark shell colors', () => {
+  const shellSource = readFileSync(shellPath, 'utf8')
+  const sidebarSource = readFileSync(sidebarPath, 'utf8')
+  const threadSource = readFileSync(threadPath, 'utf8')
+  const cssSource = readFileSync(cssPath, 'utf8')
+
+  assert.match(shellSource, /className="support-inbox-shell min-h-svh"/)
+  assert.match(shellSource, /className="support-inbox-sidebar-frame relative shrink-0"/)
+  assert.match(shellSource, /className="support-inbox-main min-w-0 flex-1"/)
+  assert.match(shellSource, /className="support-inbox-resize-handle/)
+  assert.doesNotMatch(shellSource, /bg-\[#050B15\]|bg-\[#0B1120\]|bg-\[#070D18\]|text-white/, 'support shell should not force dark colors outside theme tokens')
+
+  assert.match(sidebarSource, /className="support-inbox-sidebar border-r"/)
+  assert.match(sidebarSource, /<SidebarHeader className="support-inbox-sidebar-header gap-3 p-0 group-data-\[collapsible=icon\]:px-0">/)
+  assert.match(sidebarSource, /<div className="support-inbox-sidebar-brand-row flex min-h-\[70px\] items-center gap-2 px-3 group-data-\[collapsible=icon\]:justify-center group-data-\[collapsible=icon\]:px-2">/)
+  assert.match(sidebarSource, /support-inbox-sidebar-logo-dark/)
+  assert.match(sidebarSource, /support-inbox-sidebar-logo-light/)
+  assert.match(sidebarSource, /src="\/admin\/logo_ppht_light_mode\.svg"/)
+  assert.match(sidebarSource, /<div className="flex w-full items-center px-3 pb-4 group-data-\[collapsible=icon\]:hidden">/)
+  assert.match(sidebarSource, /support-inbox-sidebar-search-input/)
+  assert.match(sidebarSource, /support-inbox-conversation-row-active/)
+  assert.match(sidebarSource, /support-inbox-conversation-row-idle/)
+  assert.match(sidebarSource, /support-inbox-conversation-name/)
+  assert.match(sidebarSource, /support-inbox-conversation-subject/)
+  assert.match(sidebarSource, /support-inbox-conversation-preview/)
+
+  assert.match(threadSource, /support-inbox-topbar/)
+  assert.match(threadSource, /support-inbox-topbar-title/)
+  assert.match(threadSource, /support-inbox-topbar-subtitle/)
+  assert.match(threadSource, /support-inbox-topbar-search-input/)
+  assert.match(threadSource, /support-inbox-status-trigger/)
+
+  assert.match(cssSource, /\.support-inbox-shell\s*\{[^}]*background:\s*var\(--admin-shell-bg\);[^}]*color:\s*var\(--admin-shell-text\);/)
+  assert.match(cssSource, /\.support-inbox-sidebar \[data-slot='sidebar-inner'\]\s*\{[^}]*background:\s*var\(--admin-shell-sidebar-bg\);[^}]*color:\s*var\(--admin-shell-text\);/)
+  assert.match(cssSource, /\.support-inbox-topbar\s*\{[^}]*border-bottom:\s*1px solid var\(--admin-shell-border\);[^}]*background:\s*var\(--admin-shell-topbar-bg\);[^}]*color:\s*var\(--admin-shell-text\);/)
+  assert.match(cssSource, /html\[data-theme='light'\] \.support-inbox-sidebar-logo-dark\s*\{[^}]*display:\s*none;/)
+  assert.match(cssSource, /html\[data-theme='light'\] \.support-inbox-sidebar-logo-light\s*\{[^}]*display:\s*block;/)
+  assert.match(cssSource, /\.support-inbox-topbar-search-input,\s*\n\.support-inbox-sidebar-search-input,\s*\n\.support-inbox-status-trigger\s*\{[^}]*border-color:\s*var\(--admin-shell-control-border\);[^}]*background:\s*var\(--admin-shell-control-bg\);[^}]*color:\s*var\(--admin-shell-text\);/)
+})
+
+test('support inbox inputs and status dropdown follow admin dashboard search and columns-button styling models', () => {
+  const sidebarSource = readFileSync(sidebarPath, 'utf8')
+  const threadSource = readFileSync(threadPath, 'utf8')
+  const cssSource = readFileSync(cssPath, 'utf8')
+
+  assert.match(sidebarSource, /className="support-inbox-sidebar-search-input h-\[40px\] min-h-\[40px\] w-full rounded-\[12px\] px-4 text-sm focus-visible:border-\[#3BE0AF\] focus-visible:ring-\[#3BE0AF\]\/20"/)
+  assert.doesNotMatch(sidebarSource, /support-inbox-muted-icon pointer-events-none absolute left-3/, 'support sidebar search should follow the admin topbar input model without an embedded icon')
+
+  assert.match(threadSource, /className="support-inbox-topbar-search-input h-\[40px\] min-h-\[40px\] w-full rounded-\[12px\] px-4 text-sm outline-none focus:border-\[#3BE0AF\]\/40 focus:ring-2 focus:ring-\[#3BE0AF\]\/15"/)
+  assert.doesNotMatch(threadSource, /<SearchIcon className=/, 'support topbar search should be the admin topbar input model without the separate green button or embedded icon')
+
+  assert.match(threadSource, /<SelectTrigger aria-label="Conversation status" className="support-inbox-status-trigger h-\[40px\] min-h-\[40px\] w-\[132px\] justify-between rounded-\[12px\] px-\[14px\] text-\[0\.8rem\] font-medium capitalize">/)
+  assert.match(threadSource, /<SelectContent className="support-inbox-status-content">/)
+  assert.match(threadSource, /<SelectItem className="support-inbox-status-item" value="open">Open<\/SelectItem>/)
+
+  assert.match(cssSource, /\.support-inbox-status-trigger\s*\{[^}]*min-height:\s*40px;[^}]*display:\s*inline-flex;[^}]*justify-content:\s*space-between;[^}]*gap:\s*8px;[^}]*border-radius:\s*12px;[^}]*background:\s*var\(--admin-dashboard-control-bg\);[^}]*color:\s*var\(--admin-dashboard-card-text\);/)
+  assert.match(cssSource, /\.support-inbox-status-trigger:hover\s*\{[^}]*background:\s*var\(--admin-shell-nav-active-bg\);[^}]*color:\s*var\(--admin-shell-nav-active-text\);/)
+  assert.match(cssSource, /\.support-inbox-status-content\s*\{[^}]*border:\s*1px solid var\(--admin-dashboard-card-border\);[^}]*border-radius:\s*12px;[^}]*background:\s*var\(--admin-dashboard-control-bg\);[^}]*color:\s*var\(--admin-dashboard-card-text\);/)
+  assert.match(cssSource, /\.support-inbox-status-item\[data-highlighted\]\s*\{[^}]*background:\s*var\(--admin-shell-nav-active-bg\);[^}]*color:\s*var\(--admin-shell-nav-active-text\);/)
+})
+
+test('support inbox message list gives conversation rows more breathing room', () => {
+  const threadSource = readFileSync(threadPath, 'utf8')
+  const cssSource = readFileSync(cssPath, 'utf8')
+
+  assert.match(threadSource, /<ChatMessages ref=\{chatMessagesRef\} className="support-inbox-message-list scrollbar-hidden">/, 'support thread should own a semantic message list class for spacing')
+  assert.match(cssSource, /\.support-inbox-message-list\s*\{[^}]*gap:\s*18px;/, 'support messages should have a larger vertical gap between rows')
+})
+
+test('support inbox composer matches the shadcn chat bottom bar controls', () => {
+  const threadSource = readFileSync(threadPath, 'utf8')
+  const cssSource = readFileSync(cssPath, 'utf8')
+
+  assert.match(threadSource, /import \{ PlusIcon, SendIcon, SmileIcon \} from "lucide-react"/, 'composer should import the missing plus and emoji icons with the send icon')
+  assert.match(threadSource, /import EmojiPicker, \{ Theme \} from "emoji-picker-react"/, 'composer emoji button should restore the emoji picker action')
+  assert.match(threadSource, /import \{ Popover, PopoverContent, PopoverTrigger \} from "@\/components\/ui\/popover"/, 'composer emoji picker should use the popover action shell')
+  assert.match(threadSource, /ChatToolbarAttachment,[\s\S]*ChatToolbarAttachmentButton,[\s\S]*ChatToolbarButton,[\s\S]*ChatToolbarTextarea/, 'composer plus button should restore the attachment picker action')
+  assert.match(threadSource, /const \[composerFiles, setComposerFiles\] = useState\(\[\]\)/, 'composer should track selected attachment files from the plus action')
+  assert.match(threadSource, /const \[emojiOpen, setEmojiOpen\] = useState\(false\)/, 'composer should track emoji popover open state')
+  assert.match(threadSource, /setComposerFiles\(\[\]\)/, 'composer should clear selected attachments after sending a reply')
+  assert.match(threadSource, /<ChatToolbar className="support-inbox-composer">/, 'composer should use the support inbox composer shell')
+  assert.match(threadSource, /<ChatToolbarAttachmentButton[\s\S]*aria-label="Add attachment"[\s\S]*className="support-inbox-composer-icon-button"[\s\S]*onFilesSelected=\{handleComposerFilesSelected\}[\s\S]*<PlusIcon \/>[\s\S]*<\/ChatToolbarAttachmentButton>/, 'plus button should open the file picker and store selected attachments')
+  assert.match(threadSource, /<Popover open=\{emojiOpen\} onOpenChange=\{setEmojiOpen\}>[\s\S]*<PopoverTrigger asChild>[\s\S]*<ChatToolbarButton aria-label="Add emoji" className="support-inbox-composer-icon-button" type="button">[\s\S]*<SmileIcon \/>[\s\S]*<EmojiPicker[\s\S]*theme=\{Theme\.AUTO\}[\s\S]*setReplyText\(\(currentText\) => currentText \+ emojiData\.emoji\)[\s\S]*setEmojiOpen\(false\)/, 'emoji button should open a picker and append the selected emoji to the reply')
+  assert.match(threadSource, /composerFiles\.map\(\(file, index\) => \([\s\S]*<ChatToolbarAttachment[\s\S]*fileName=\{file\.name\}[\s\S]*onRemove=\{\(\) => handleRemoveComposerFile\(index\)\}/, 'selected attachments should be shown with remove actions')
+  assert.match(cssSource, /\.support-inbox-composer-attachment-row\s*\{[^}]*margin-bottom:\s*12px;/, 'uploaded file previews should have breathing room above the bottom composer bar')
+  assert.match(threadSource, /<ChatToolbarTextarea[\s\S]*className="support-inbox-composer-input"[\s\S]*placeholder="Type your message\.\.\."/, 'composer textarea should stay in the same inline bar as the buttons')
+  assert.match(threadSource, /<ChatToolbarAddon align="inline-end" className="support-inbox-composer-send-action">\s*<ChatToolbarButton\s+aria-label="Send message"\s+className="support-inbox-composer-send-button"[\s\S]*<SendIcon \/>[\s\S]*<\/ChatToolbarButton>\s*<\/ChatToolbarAddon>/, 'send button should be inside the same composer bar on the right')
+  assert.doesNotMatch(threadSource, /<div className="w-full min-w-0 pb-1">[\s\S]*<ChatToolbarTextarea/, 'textarea should not be wrapped in a full-width row that pushes send out of the composer')
+
+  assert.match(cssSource, /\.support-inbox-composer \[data-slot='chat-toolbar-inner'\]\s*\{[^}]*display:\s*flex;[^}]*flex-wrap:\s*nowrap;[^}]*align-items:\s*center;/, 'composer inner row should keep +, emoji, input, and send on one line')
+  assert.match(cssSource, /\.support-inbox-composer-input\s*\{[^}]*min-height:\s*40px !important;[^}]*height:\s*40px !important;[^}]*background:\s*transparent !important;[^}]*border:\s*0 !important;[^}]*box-shadow:\s*none !important;[^}]*color:\s*var\(--admin-dashboard-card-text\);/, 'composer textarea should be transparent so the outer composer container reads as the text box')
+  assert.match(cssSource, /\.support-inbox-composer-input\s*\{[^}]*scrollbar-width:\s*none;/, 'composer textarea should hide the Firefox scrollbar when long content overflows')
+  assert.match(cssSource, /\.support-inbox-composer-input::-webkit-scrollbar\s*\{[^}]*display:\s*none;/, 'composer textarea should hide the WebKit scrollbar when long content overflows')
+  assert.match(cssSource, /\.support-inbox-composer-send-button\s*\{[^}]*background:\s*var\(--admin-dashboard-control-bg\);[^}]*color:\s*var\(--admin-dashboard-card-muted\);/)
+})
+
+test('support inbox avatars use the All Athletes table avatar model for image and empty states', () => {
+  const sidebarSource = readFileSync(sidebarPath, 'utf8')
+  const threadSource = readFileSync(threadPath, 'utf8')
+  const chatHeaderSource = readFileSync(chatHeaderPath, 'utf8')
+  const primaryMessageSource = readFileSync(primaryMessagePath, 'utf8')
+  const chatEventSource = readFileSync(chatEventPath, 'utf8')
+  const cssSource = readFileSync(cssPath, 'utf8')
+
+  assert.match(sidebarSource, /import Avatar from "@\/components\/ui\/avatar"/, 'support sidebar should use the same conditional Avatar helper as All Athletes')
+  assert.match(sidebarSource, /<Avatar\s+alt=\{conversation\.name\}\s+className="support-inbox-conversation-avatar"\s+initials=\{conversation\.initials\}\s+src=\{conversation\.avatar \|\| undefined\}/, 'support sidebar avatar should render either the image or the initials fallback, not both')
+  assert.doesNotMatch(sidebarSource, /<AvatarImage src=\{conversation\.avatar\}/, 'support sidebar should not keep the old stacked image/fallback avatar markup')
+  assert.doesNotMatch(sidebarSource, /support-inbox-conversation-avatar-fallback/, 'support sidebar should not need a separate fallback class')
+
+  assert.match(chatHeaderSource, /import Avatar from "@\/components\/ui\/avatar"/, 'chat header should use the conditional Avatar helper for support topbar avatars')
+  assert.match(chatHeaderSource, /initials=\{fallback\}/, 'chat header avatar should pass empty-state initials through the shared Avatar helper')
+  assert.match(chatHeaderSource, /src=\{src \|\| undefined\}/, 'chat header avatar should pass image avatars through the shared Avatar helper')
+  assert.match(primaryMessageSource, /avatarClassName/, 'PrimaryMessage should allow support to apply the same avatar model to message avatars')
+  assert.match(chatEventSource, /import Avatar from "@\/components\/ui\/avatar"/, 'chat event avatars should use the conditional Avatar helper')
+  assert.match(chatEventSource, /initials=\{fallback\}/, 'chat event avatars should pass empty-state initials through the shared Avatar helper')
+
+  assert.match(threadSource, /<ChatHeaderAvatar[\s\S]*className="support-inbox-conversation-avatar"/, 'support topbar avatar should use the support avatar class')
+  assert.match(threadSource, /avatarClassName="support-inbox-conversation-avatar"/, 'support message avatars should use the support avatar class')
+
+  assert.match(cssSource, /\.support-inbox-conversation-avatar\s*\{[^}]*width:\s*28px;[^}]*height:\s*28px;[^}]*border-radius:\s*999px;[^}]*background:\s*linear-gradient\(180deg, #f4f7fb 0%, #cfd8e7 100%\);[^}]*color:\s*#0e1727;[^}]*font-size:\s*0\.62rem;[^}]*font-weight:\s*800;/, 'support avatars should mirror the All Athletes table avatar shell')
+  assert.doesNotMatch(cssSource, /\.support-inbox-conversation-avatar,\s*\.support-inbox-conversation-avatar-fallback/, 'support avatars should not keep the old fallback-specific shell')
 })
 
 test('support inbox shell passes selected real conversation into real message thread and honors email deep links', () => {

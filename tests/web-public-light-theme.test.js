@@ -80,7 +80,7 @@ test('Support light mode keeps the same public light system without changing adm
   const css = cssSource()
 
   assert.match(css, /html\[data-public-theme='light'\] \.support-template-heading-on-image h2\s*\{[^}]*color:\s*#07111f;/)
-  assert.match(css, /html\[data-public-theme='light'\] \.support-dashboard-input,\s*\nhtml\[data-public-theme='light'\] button\.support-dashboard-input\s*\{[^}]*background:\s*#ffffff;/)
+  assert.match(css, /html\[data-public-theme='light'\] \.support-dashboard-input,\s*\nhtml\[data-public-theme='light'\] button\.support-dashboard-input\s*\{[^}]*background:\s*#ffffff(?:\s*!important)?;/)
   assert.match(css, /html\[data-public-theme='light'\] \.support-dashboard-textarea\s*\{[^}]*background:\s*#ffffff;/)
   assert.doesNotMatch(css, /html\[data-public-theme='light'\] \.admin-shell/)
 })

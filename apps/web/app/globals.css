@@ -1314,6 +1314,283 @@ html[data-theme='light'] [data-radix-popper-content-wrapper]:has(.admin-dashboar
   color: var(--admin-shell-primary-button-bg) !important;
 }
 
+.support-inbox-shell {
+  background: var(--admin-shell-bg);
+  color: var(--admin-shell-text);
+}
+
+.support-inbox-main,
+.support-inbox-sidebar-frame {
+  background: var(--admin-shell-bg);
+}
+
+.support-inbox-sidebar [data-slot='sidebar-inner'] {
+  background: var(--admin-shell-sidebar-bg);
+  color: var(--admin-shell-text);
+}
+
+.support-inbox-sidebar,
+.support-inbox-sidebar-header {
+  border-color: var(--admin-shell-border);
+}
+
+.support-inbox-topbar {
+  border-bottom: 1px solid var(--admin-shell-border);
+  background: var(--admin-shell-topbar-bg);
+  color: var(--admin-shell-text);
+  backdrop-filter: blur(18px);
+}
+
+.support-inbox-sidebar-logo-light {
+  display: none;
+}
+
+html[data-theme='light'] .support-inbox-sidebar-logo-dark {
+  display: none;
+}
+
+html[data-theme='light'] .support-inbox-sidebar-logo-light {
+  display: block;
+}
+
+.support-inbox-sidebar-trigger {
+  border: 1px solid var(--admin-shell-control-border);
+  background: var(--admin-shell-control-bg);
+  color: var(--admin-shell-muted);
+}
+
+.support-inbox-sidebar-trigger:hover {
+  background: var(--admin-shell-control-hover-bg);
+  color: var(--admin-shell-text-strong);
+}
+
+.support-inbox-topbar-search-input,
+.support-inbox-sidebar-search-input,
+.support-inbox-status-trigger {
+  border-color: var(--admin-shell-control-border);
+  background: var(--admin-shell-control-bg);
+  color: var(--admin-shell-text);
+}
+
+.support-inbox-topbar-search-input,
+.support-inbox-sidebar-search-input {
+  border: 1px solid var(--admin-shell-control-border);
+  background: var(--admin-shell-control-bg);
+  color: var(--admin-shell-text);
+}
+
+.support-inbox-status-trigger {
+  min-height: 40px;
+  display: inline-flex;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid var(--admin-dashboard-card-border);
+  border-radius: 12px;
+  background: var(--admin-dashboard-control-bg);
+  color: var(--admin-dashboard-card-text);
+  font-size: 0.8rem;
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.support-inbox-status-content {
+  border: 1px solid var(--admin-dashboard-card-border);
+  border-radius: 12px;
+  background: var(--admin-dashboard-control-bg);
+  color: var(--admin-dashboard-card-text);
+  box-shadow: var(--admin-shell-shadow);
+}
+
+.support-inbox-status-item[data-highlighted] {
+  background: var(--admin-shell-nav-active-bg);
+  color: var(--admin-shell-nav-active-text);
+}
+
+.support-inbox-topbar-search-input::placeholder,
+.support-inbox-sidebar-search-input::placeholder {
+  color: var(--admin-shell-soft);
+}
+
+.support-inbox-muted-icon,
+.support-inbox-topbar-subtitle,
+.support-inbox-conversation-preview,
+.support-inbox-conversation-time {
+  color: var(--admin-shell-muted);
+}
+
+.support-inbox-topbar-title,
+.support-inbox-conversation-name,
+.support-inbox-conversation-subject {
+  color: var(--admin-shell-text-strong);
+}
+
+.support-inbox-conversation-row {
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--admin-shell-text);
+}
+
+.support-inbox-conversation-row-idle:hover {
+  border-color: var(--admin-shell-control-border);
+  background: var(--admin-shell-control-hover-bg);
+}
+
+.support-inbox-conversation-row-active {
+  border-color: color-mix(in srgb, var(--admin-shell-primary-button-bg) 28%, transparent);
+  background: var(--admin-shell-nav-active-bg);
+}
+
+.support-inbox-conversation-row-active:hover {
+  background: var(--admin-shell-nav-active-bg);
+}
+
+.support-inbox-conversation-avatar {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #f4f7fb 0%, #cfd8e7 100%);
+  color: #0e1727;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  object-fit: cover;
+}
+
+.support-inbox-resize-handle::after {
+  background: var(--admin-shell-border);
+}
+
+.support-inbox-resize-handle:hover::after {
+  background: var(--admin-shell-primary-button-bg);
+}
+
+.support-inbox-status-trigger:hover {
+  background: var(--admin-shell-nav-active-bg);
+  color: var(--admin-shell-nav-active-text);
+}
+
+.support-inbox-message-list {
+  gap: 18px;
+}
+
+.support-inbox-composer {
+  background: var(--admin-shell-bg);
+}
+
+.support-inbox-composer-attachment-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  border-top: 1px solid var(--admin-dashboard-card-border);
+  background: var(--admin-shell-bg);
+  padding: 8px 10px 0;
+  margin-bottom: 12px;
+}
+
+.support-inbox-composer-attachment-row > * {
+  width: 80px;
+  height: 80px;
+  flex: 0 0 auto;
+  background: var(--admin-dashboard-control-bg);
+  border-color: var(--admin-dashboard-card-border);
+  color: var(--admin-dashboard-card-muted);
+}
+
+.support-inbox-composer [data-slot='chat-toolbar-inner'] {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--admin-dashboard-card-border);
+  border-radius: 12px;
+  background: var(--admin-dashboard-control-bg);
+  padding: 8px;
+}
+
+.support-inbox-composer-leading-actions,
+.support-inbox-composer-send-action {
+  flex: 0 0 auto;
+}
+
+.support-inbox-composer-icon-button {
+  color: var(--admin-dashboard-card-muted);
+}
+
+.support-inbox-composer-icon-button:hover {
+  background: transparent;
+  color: var(--admin-shell-primary-button-bg);
+}
+
+.support-inbox-composer-input {
+  min-height: 40px !important;
+  height: 40px !important;
+  max-height: 40px !important;
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: var(--admin-dashboard-card-text);
+  scrollbar-width: none;
+}
+
+.support-inbox-composer-input::-webkit-scrollbar {
+  display: none;
+}
+
+.support-inbox-composer-input::placeholder {
+  color: var(--admin-dashboard-card-muted);
+}
+
+.support-inbox-composer-send-button {
+  background: var(--admin-dashboard-control-bg);
+  color: var(--admin-dashboard-card-muted);
+}
+
+.support-inbox-composer-send-button:hover:not(:disabled) {
+  background: var(--admin-shell-nav-active-bg);
+  color: var(--admin-shell-primary-button-bg);
+}
+
+.support-inbox-composer-send-button:disabled {
+  opacity: 0.5;
+}
+
+html[data-theme='light'] .support-inbox-topbar-search-input,
+html[data-theme='light'] .support-inbox-sidebar-search-input {
+  border-color: var(--admin-shell-control-border) !important;
+  background: var(--admin-shell-control-bg) !important;
+  color: var(--admin-shell-text) !important;
+}
+
+html[data-theme='light'] .support-inbox-status-trigger {
+  border-color: var(--admin-dashboard-card-border) !important;
+  background: var(--admin-dashboard-control-bg) !important;
+  color: var(--admin-dashboard-card-text) !important;
+}
+
+html[data-theme='light'] .support-inbox-conversation-row-active {
+  border-color: color-mix(in srgb, var(--admin-shell-primary-button-bg) 28%, transparent) !important;
+  background: var(--admin-shell-nav-active-bg) !important;
+  color: var(--admin-shell-text) !important;
+}
+
+html[data-theme='light'] .support-inbox-conversation-row-active:hover {
+  background: var(--admin-shell-nav-active-bg) !important;
+}
+
+html[data-theme='light'] .support-inbox-conversation-row-idle:hover {
+  background: var(--admin-shell-control-hover-bg) !important;
+}
+
+html[data-theme='light'] .support-inbox-status-trigger:hover {
+  background: var(--admin-shell-nav-active-bg) !important;
+  color: var(--admin-shell-nav-active-text) !important;
+}
+
 .admin-shell-workspace {
   min-height: calc(100vh - 16px);
   display: grid;
@@ -5603,11 +5880,15 @@ html[data-public-theme='light'] .support-template-heading-on-image > span {
   color: #667085;
 }
 
+html[data-public-theme='light'] .support-template-form {
+  --support-dashboard-input-border: rgba(15, 23, 42, 0.14);
+}
+
 html[data-public-theme='light'] .support-dashboard-input,
 html[data-public-theme='light'] button.support-dashboard-input {
-  border-color: rgba(15, 23, 42, 0.14);
-  background: #ffffff;
-  color: #111827;
+  border-color: var(--support-dashboard-input-border) !important;
+  background: #ffffff !important;
+  color: #111827 !important;
 }
 
 html[data-public-theme='light'] .support-dashboard-textarea {
@@ -5963,6 +6244,7 @@ html[data-public-theme='light'] .support-template-radio-group .ui-choice-field {
   display: grid;
   gap: 22px;
   padding: 0;
+  --support-dashboard-input-border: #24334a;
 }
 
 .support-template-grid {

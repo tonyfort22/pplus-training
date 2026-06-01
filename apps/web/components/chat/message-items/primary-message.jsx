@@ -18,6 +18,7 @@ function PrimaryMessage({
   avatarSrc,
   avatarAlt,
   avatarFallback,
+  avatarClassName,
   senderName,
   content,
   timestamp,
@@ -41,6 +42,7 @@ function PrimaryMessage({
   >
       <ChatEventAddon>
         <ChatEventAvatar
+    className={avatarClassName}
     src={avatarSrc}
     alt={avatarAlt}
     fallback={avatarFallback}
