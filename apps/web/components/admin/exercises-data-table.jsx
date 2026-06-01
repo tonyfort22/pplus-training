@@ -50,6 +50,7 @@ function RowActionsCell({
   isOpen = false,
   onOpenChange = () => {},
   onEditAction = () => {},
+  onDeleteAction = () => {},
 }) {
   return (
     <DropdownMenu open={isOpen} onOpenChange={onOpenChange}>
@@ -62,7 +63,7 @@ function RowActionsCell({
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
         <DropdownMenuItem onSelect={() => { onEditAction(); onOpenChange(false) }}>Edit</DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => onOpenChange(false)}>Delete</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => { onDeleteAction(rowId); onOpenChange(false) }}>Delete</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -384,6 +385,24 @@ export default function ExercisesDataTable({ searchQuery = '' }) {
     }
   }
 
+  async function handleDeleteExercise(exerciseId) {
+    if (!exerciseId) return
+    if (!window.confirm('Delete this exercise from the library?')) return
+
+    setExerciseEditorError('')
+    try {
+      await requestExercisesApi(`/api/admin/exercises/${exerciseId}`, {
+        method: 'DELETE',
+      })
+      await loadExercises()
+      if (exerciseFormValues.id === exerciseId) {
+        setIsExerciseEditorOpen(false)
+      }
+    } catch (deleteError) {
+      setExerciseEditorError(deleteError?.message || 'Failed to delete exercise.')
+    }
+  }
+
   async function handleExerciseEditorSubmit() {
     const payload = {
       ...exerciseFormValues,
@@ -493,7 +512,7 @@ export default function ExercisesDataTable({ searchQuery = '' }) {
       {
         id: 'actions',
         header: () => <span className="sr-only">Actions</span>,
-        cell: ({ row }) => <RowActionsCell rowId={row.original.id} isOpen={openRowActionMenuId === row.original.id} onOpenChange={(isOpen) => setOpenRowActionMenuId(isOpen ? row.original.id : null)} onEditAction={() => openEditExerciseDialog(row.original)} />,
+        cell: ({ row }) => <RowActionsCell rowId={row.original.id} isOpen={openRowActionMenuId === row.original.id} onOpenChange={(isOpen) => setOpenRowActionMenuId(isOpen ? row.original.id : null)} onEditAction={() => openEditExerciseDialog(row.original)} onDeleteAction={handleDeleteExercise} />,
         enableSorting: false,
         enableHiding: false,
       },
@@ -679,7 +698,7 @@ export default function ExercisesDataTable({ searchQuery = '' }) {
 
           <Button
             type="button"
-            className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d] md:self-auto"
+            className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] md:self-auto"
             onClick={openCreateExerciseDialog}
           >
             Create exercise

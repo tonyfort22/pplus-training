@@ -11,6 +11,7 @@ import {
 import { ChevronDown, MoreHorizontal, Plus } from 'lucide-react'
 import { parseAsJson, useQueryState } from 'nuqs'
 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import Badge from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import Checkbox from '@/components/ui/checkbox'
@@ -43,18 +44,52 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import Textarea from '@/components/ui/textarea'
 import { Filters } from '@/components/reui/filters'
 
-function formatAthletePreview(athleteNames = []) {
-  if (!Array.isArray(athleteNames) || athleteNames.length === 0) return 'No athlete memberships yet'
-  if (athleteNames.length <= 2) return athleteNames.join(', ')
-  return `${athleteNames.slice(0, 2).join(', ')} +${athleteNames.length - 2} more`
+function getAthleteInitials(name = '') {
+  const initials = String(name || '')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('')
+  return initials || 'PP'
 }
 
-function GroupCell({ name, athleteCountLabel, athleteNames = [], description = '' }) {
+function GroupAvatarStack({ athletes = [] }) {
+  const visibleAthletes = Array.isArray(athletes) ? athletes.slice(0, 4) : []
+  const overflowCount = Array.isArray(athletes) && athletes.length > visibleAthletes.length ? athletes.length - visibleAthletes.length : 0
+
+  if (!visibleAthletes.length) {
+    return (
+      <div className="flex -space-x-2" aria-label="No athlete memberships yet">
+        <Avatar className="size-8 border-2 border-[var(--admin-dashboard-card-bg)] bg-[var(--admin-dashboard-card-soft)] text-[10px] text-[var(--admin-dashboard-card-muted)]">
+          <AvatarFallback>--</AvatarFallback>
+        </Avatar>
+      </div>
+    )
+  }
+
   return (
-    <div className="admin-shell-athletes-name-copy gap-1">
+    <div className="flex -space-x-2" aria-label={`${athletes.length} group athlete${athletes.length === 1 ? '' : 's'}`}>
+      {visibleAthletes.map((athlete) => (
+        <Avatar key={athlete.id || athlete.name} className="size-8 border-2 border-[var(--admin-dashboard-card-bg)] bg-[var(--admin-dashboard-card-soft)] text-[10px] text-[var(--admin-dashboard-card-text)] hover:z-10">
+          <AvatarImage src={athlete.avatarUrl} alt={athlete.name} className="border-2 border-[var(--admin-dashboard-card-bg)] hover:z-10" />
+          <AvatarFallback>{getAthleteInitials(athlete.name)}</AvatarFallback>
+        </Avatar>
+      ))}
+      {overflowCount ? (
+        <span className="relative inline-flex size-8 items-center justify-center rounded-full border-2 border-[var(--admin-dashboard-card-bg)] bg-[var(--admin-dashboard-card-muted)] text-[10px] font-semibold text-[var(--admin-dashboard-card-bg)] hover:z-10">
+          +{overflowCount}
+        </span>
+      ) : null}
+    </div>
+  )
+}
+
+function GroupCell({ name, athletes = [], description = '' }) {
+  return (
+    <div className="admin-shell-athletes-name-copy gap-2">
       <span className="admin-shell-athletes-name-text">{name}</span>
-      <span className="admin-shell-athletes-name-meta">{athleteCountLabel}</span>
-      <span className="text-xs text-[var(--admin-dashboard-card-muted)]">{formatAthletePreview(athleteNames)}</span>
+      <GroupAvatarStack athletes={athletes} />
       {description ? <span className="line-clamp-2 text-xs text-[var(--admin-dashboard-card-soft)]">{description}</span> : null}
     </div>
   )
@@ -336,7 +371,7 @@ export default function GroupsDataTable({ searchQuery = '' }) {
       accessorKey: 'name',
       header: 'Group',
       meta: { label: 'Group' },
-      cell: ({ row }) => <GroupCell name={row.original.name} athleteCountLabel={row.original.athleteCountLabel} athleteNames={row.original.athleteNames} description={row.original.description} />,
+      cell: ({ row }) => <GroupCell name={row.original.name} athletes={row.original.athletes} description={row.original.description} />,
     },
     {
       accessorKey: 'athleteCountLabel',
@@ -588,7 +623,7 @@ export default function GroupsDataTable({ searchQuery = '' }) {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button type="button" onClick={openCreateGroupDialog} className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d] md:self-auto">Create group</Button>
+          <Button type="button" onClick={openCreateGroupDialog} className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] md:self-auto">Create group</Button>
         </div>
         <div className="flex w-full flex-wrap items-center justify-start gap-2">
           <Filters
@@ -653,7 +688,7 @@ export default function GroupsDataTable({ searchQuery = '' }) {
           </div>
           <DialogFooter className="border-t border-[color:var(--admin-dashboard-card-border)] px-6 py-5 sm:justify-end gap-3">
             <Button type="button" variant="outline" className="rounded-[12px] min-h-[40px] border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-shell-nav-active-bg)] hover:text-[var(--admin-shell-nav-active-text)]" onClick={() => setIsCreateEditGroupDialogOpen(false)}>Cancel</Button>
-            <Button type="button" disabled={isSavingGroup} className="rounded-[12px] min-h-[40px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]" onClick={handleGroupSubmit}>{isSavingGroup ? 'Saving...' : groupDialogMode === 'edit' ? 'Save group' : 'Create group'}</Button>
+            <Button type="button" disabled={isSavingGroup} className="rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]" onClick={handleGroupSubmit}>{isSavingGroup ? 'Saving...' : groupDialogMode === 'edit' ? 'Save group' : 'Create group'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -669,7 +704,10 @@ export default function GroupsDataTable({ searchQuery = '' }) {
           <div className="grid gap-5 px-6 py-6">
             <div className="rounded-[12px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 py-3 text-sm text-[var(--admin-dashboard-card-muted)]">
               <div className="font-medium text-[var(--admin-dashboard-card-text)]">{selectedGroup?.name ?? 'Selected group'}</div>
-              <div className="mt-1">{formatAthletePreview(selectedGroup?.athleteNames ?? [])}</div>
+              <div className="mt-3 flex items-center gap-3">
+                <GroupAvatarStack athletes={selectedGroup?.athletes ?? []} />
+                <span>{selectedGroup?.athleteCountLabel ?? '0 athletes'}</span>
+              </div>
             </div>
             <GroupDialogField htmlFor="assign-program-select" label="Program">
               <Select value={selectedProgramId} onValueChange={setSelectedProgramId}>
@@ -682,7 +720,7 @@ export default function GroupsDataTable({ searchQuery = '' }) {
           </div>
           <DialogFooter className="border-t border-[color:var(--admin-dashboard-card-border)] px-6 py-5 sm:justify-end gap-3">
             <Button type="button" variant="outline" className="rounded-[12px] min-h-[40px] border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-shell-nav-active-bg)] hover:text-[var(--admin-shell-nav-active-text)]" onClick={() => setIsAssignProgramDialogOpen(false)}>Cancel</Button>
-            <Button type="button" disabled={isAssigningProgram || !selectedProgramId} className="rounded-[12px] min-h-[40px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]" onClick={handleAssignProgram}>{isAssigningProgram ? 'Assigning...' : 'Assign program'}</Button>
+            <Button type="button" disabled={isAssigningProgram || !selectedProgramId} className="rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]" onClick={handleAssignProgram}>{isAssigningProgram ? 'Assigning...' : 'Assign program'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

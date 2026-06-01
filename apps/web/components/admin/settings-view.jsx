@@ -94,12 +94,12 @@ function ProfilePhotoUploader({ previewSrc = '', profileName = '', onAvatarChang
       {hasPreview ? (
         <Avatar
           alt={profileName || 'Coach avatar'}
-          className="h-36 w-36 rounded-full border border-[var(--admin-shell-control-border)] bg-[var(--admin-shell-avatar-bg)] text-lg font-semibold text-[var(--admin-shell-avatar-text)]"
+          className="admin-settings-profile-avatar h-48 w-48 rounded-full border border-[var(--admin-shell-control-border)] bg-[var(--admin-shell-avatar-bg)] text-xl font-semibold text-[var(--admin-shell-avatar-text)] object-cover"
           src={previewSrc}
         />
       ) : (
-        <div className="flex h-36 w-36 items-center justify-center rounded-full border border-dashed border-[var(--admin-shell-control-border)] bg-[var(--admin-shell-avatar-bg)] text-[var(--admin-shell-avatar-text)]">
-          <svg viewBox="0 0 24 24" aria-hidden="true" className="h-9 w-9">
+        <div className="flex h-48 w-48 items-center justify-center rounded-full border border-dashed border-[var(--admin-shell-control-border)] bg-[var(--admin-shell-avatar-bg)] text-[var(--admin-shell-avatar-text)]">
+          <svg viewBox="0 0 24 24" aria-hidden="true" className="h-12 w-12">
             <circle cx="12" cy="8" r="3.25" fill="none" stroke="currentColor" strokeWidth="1.6" />
             <path
               d="M6.5 18.25c1.35-2.45 3.35-3.75 5.5-3.75s4.15 1.3 5.5 3.75"
@@ -112,7 +112,6 @@ function ProfilePhotoUploader({ previewSrc = '', profileName = '', onAvatarChang
         </div>
       )}
       <div className="space-y-2">
-        <p className="text-[17px] font-medium text-[var(--admin-shell-text-strong)]">Coach avatar</p>
         <input
           ref={fileInputRef}
           type="file"
@@ -127,7 +126,6 @@ function ProfilePhotoUploader({ previewSrc = '', profileName = '', onAvatarChang
         >
           Change avatar
         </Button>
-        <p className="text-xs text-[var(--admin-shell-muted)]">PNG, JPG, or WEBP.</p>
       </div>
     </div>
   )
@@ -235,6 +233,8 @@ function AdminSettingsProfileView() {
     }
   }
 
+  const profileStatusMessage = errorMessage || notice || (isLoadingProfile ? 'Loading your connected coach profile.' : '')
+
   return (
     <form className="grid w-full gap-6" onSubmit={handleSaveProfile} aria-describedby="admin-profile-status-notice">
       <ProfilePhotoUploader previewSrc={profileDraft.avatarUrl} profileName={getProfileDisplayName(profileDraft)} onAvatarChange={handleAvatarChange} />
@@ -270,13 +270,15 @@ function AdminSettingsProfileView() {
         </SettingsProfileField>
       </div>
 
-      <div id="admin-profile-status-notice" className="flex w-full items-start gap-2 rounded-[14px] border border-[#3BE0AF]/30 bg-[#3BE0AF]/10 px-4 py-3 text-sm leading-6 text-[var(--admin-shell-text)]">
-        <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#06b486]" />
-        <span>{errorMessage || notice || (isLoadingProfile ? 'Loading your connected coach profile.' : 'Edit the connected coach profile fields and save changes to Supabase.')}</span>
-      </div>
+      {profileStatusMessage ? (
+        <div id="admin-profile-status-notice" className="flex w-full items-start gap-2 rounded-[14px] border border-[var(--admin-shell-accent)]/30 bg-[var(--admin-shell-accent)]/10 px-4 py-3 text-sm leading-6 text-[var(--admin-shell-text)]">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#06b486]" />
+          <span>{profileStatusMessage}</span>
+        </div>
+      ) : null}
 
       <div>
-        <Button type="submit" disabled={isLoadingProfile || isSavingProfile} className="admin-shell-athletes-create-submit min-h-[40px] rounded-[12px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#3BE0AF] disabled:cursor-not-allowed disabled:opacity-60">
+        <Button type="submit" disabled={isLoadingProfile || isSavingProfile} className="admin-shell-athletes-create-submit min-h-[40px] rounded-[12px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] disabled:cursor-not-allowed disabled:opacity-60">
           {isSavingProfile ? 'Saving...' : 'Save changes'}
         </Button>
       </div>
@@ -364,8 +366,10 @@ function AdminSettingsAccountView() {
     }
   }
 
+  const accountStatusMessage = errorMessage || notice || (isLoadingAccount ? 'Loading your authenticated account.' : '')
+
   return (
-    <form className="grid w-full gap-6" onSubmit={handleSaveAccount} aria-describedby="admin-account-status-notice">
+    <form className="grid w-full gap-6" onSubmit={handleSaveAccount} aria-describedby={accountStatusMessage ? 'admin-account-status-notice' : undefined}>
       <div className="grid w-full gap-4">
         <SettingsField htmlFor="admin-account-email" label="Email">
           <Input
@@ -412,13 +416,15 @@ function AdminSettingsAccountView() {
         </SettingsField>
       </div>
 
-      <div id="admin-account-status-notice" className="flex w-full items-start gap-2 rounded-[14px] border border-[#3BE0AF]/30 bg-[#3BE0AF]/10 px-4 py-3 text-sm leading-6 text-[var(--admin-shell-text)]">
-        <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#06b486]" />
-        <span>{errorMessage || notice || (isLoadingAccount ? 'Loading your authenticated account.' : 'Update your sign-in email or change your password. Current password is required only when setting a new password.')}</span>
-      </div>
+      {accountStatusMessage ? (
+        <div id="admin-account-status-notice" className="flex w-full items-start gap-2 rounded-[14px] border border-[var(--admin-shell-accent)]/30 bg-[var(--admin-shell-accent)]/10 px-4 py-3 text-sm leading-6 text-[var(--admin-shell-text)]">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#06b486]" />
+          <span>{accountStatusMessage}</span>
+        </div>
+      ) : null}
 
       <div>
-        <Button type="submit" disabled={isLoadingAccount || isSavingAccount} className="admin-shell-athletes-create-submit min-h-[40px] rounded-[12px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#3BE0AF] disabled:cursor-not-allowed disabled:opacity-60">
+        <Button type="submit" disabled={isLoadingAccount || isSavingAccount} className="admin-shell-athletes-create-submit min-h-[40px] rounded-[12px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] disabled:cursor-not-allowed disabled:opacity-60">
           {isSavingAccount ? 'Saving...' : 'Save changes'}
         </Button>
       </div>

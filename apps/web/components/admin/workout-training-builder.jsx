@@ -289,7 +289,7 @@ export default function WorkoutTrainingBuilder({
             <p className="text-sm text-[var(--admin-dashboard-card-muted)]">Add a section to this workout.</p>
           </div>
           <div className="flex justify-center">
-            <Button type="button" onClick={addSection} disabled={readOnly} className="min-h-[40px] rounded-[12px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]">
+            <Button type="button" onClick={addSection} disabled={readOnly} className="min-h-[40px] rounded-[12px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]">
               Add a section to this workout
             </Button>
           </div>
@@ -297,7 +297,7 @@ export default function WorkoutTrainingBuilder({
       ) : (
         <>
           <div className="flex justify-end">
-            <Button type="button" onClick={addSection} disabled={readOnly} className="min-h-[40px] rounded-[12px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]">
+            <Button type="button" onClick={addSection} disabled={readOnly} className="min-h-[40px] rounded-[12px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]">
               Add section
             </Button>
           </div>
@@ -354,7 +354,7 @@ export default function WorkoutTrainingBuilder({
                                 key={exerciseOption.id}
                                 type="button"
                                 onClick={() => addExercise(section.id, exerciseOption)}
-                                className="rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-3 py-3 text-left text-sm text-[var(--admin-dashboard-card-text)] hover:border-[#3BE0AF] hover:text-[var(--admin-dashboard-card-text)]"
+                                className="rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-3 py-3 text-left text-sm text-[var(--admin-dashboard-card-text)] hover:border-[var(--admin-shell-accent)] hover:text-[var(--admin-dashboard-card-text)]"
                               >
                                 {exerciseOption.title}
                               </button>
@@ -384,7 +384,7 @@ export default function WorkoutTrainingBuilder({
                           value={section.instruction}
                           onChange={(event) => updateSection(section.id, (currentSection) => ({ ...currentSection, instruction: event.target.value }))}
                           placeholder="Add a coaching cue for this section"
-                          className="min-h-[100px] rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 py-3 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
+                          className="min-h-[100px] rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 py-3 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:ring-[#3BE0AF]/20"
                         />
                       ) : null}
                     </div>
@@ -481,7 +481,7 @@ export default function WorkoutTrainingBuilder({
                                         value={exercise.instruction}
                                         onChange={(event) => updateExercise(section.id, exercise.id, (currentExercise) => ({ ...currentExercise, instruction: event.target.value }))}
                                         placeholder="Add a coaching cue for this exercise"
-                                        className="min-h-[100px] rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 py-3 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20"
+                                        className="min-h-[100px] rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 py-3 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:ring-[#3BE0AF]/20"
                                       />
                                     ) : null}
                                   </div>

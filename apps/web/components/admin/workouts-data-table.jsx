@@ -340,6 +340,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
   const [workoutTrainingSections, setWorkoutTrainingSections] = useState([])
   const [workoutFormValues, setWorkoutFormValues] = useState(() => createWorkoutFormValues())
   const [workoutEditorMessage, setWorkoutEditorMessage] = useState('')
+  const [isSavingWorkoutTemplate, setIsSavingWorkoutTemplate] = useState(false)
   const [openRowActionMenuId, setOpenRowActionMenuId] = useState(null)
   const [rowSelection, setRowSelection] = useState({})
   const [columnFilters, setColumnFilters] = useState([])
@@ -349,7 +350,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
     pageSize: 10,
   })
 
-  const saveDisclaimer = 'No workout template save endpoint is wired yet. This view displays real workout template data and opens the shared editor without pretending to persist unsupported create, edit, duplicate, or archive actions.'
+  const saveDisclaimer = ''
 
   const focusAreaOptions = useMemo(
     () => buildSelectFilterOptions(workoutsData.map((workout) => workout.focusArea).filter((value) => value && value !== '--')),
@@ -370,7 +371,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
     setSelectedWorkoutId(null)
     setWorkoutTrainingSections([])
     setWorkoutFormValues(createWorkoutFormValues())
-    setWorkoutEditorMessage('Create is not saved yet because the current workout template API only exposes listing.')
+    setWorkoutEditorMessage('')
     setIsCreateWorkoutDialogOpen(true)
   }
 
@@ -382,7 +383,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
     setSelectedWorkoutId(workout.id)
     setWorkoutTrainingSections([])
     setWorkoutFormValues(createWorkoutFormValues(workout))
-    setWorkoutEditorMessage('Edits are not saved yet because no workout template detail or save endpoint is wired in this app.')
+    setWorkoutEditorMessage('')
     setIsCreateWorkoutDialogOpen(true)
   }
 
@@ -394,7 +395,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
     setSelectedWorkoutId(workout.id)
     setWorkoutTrainingSections([])
     setWorkoutFormValues(createWorkoutFormValues(workout))
-    setWorkoutEditorMessage('Duplicate is not saved yet because no workout template creation endpoint is wired in this app.')
+    setWorkoutEditorMessage('')
     setIsCreateWorkoutDialogOpen(true)
   }
 
@@ -499,6 +500,75 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
     },
   })
 
+  async function reloadWorkoutTemplates() {
+    const response = await fetch('/api/admin/workout-templates', {
+      cache: 'no-store',
+    })
+    const payload = await response.json().catch(() => ({}))
+
+    if (!response.ok) {
+      throw new Error(payload?.error || 'Failed to load workouts.')
+    }
+
+    const nextWorkouts = Array.isArray(payload.workoutTemplates)
+      ? payload.workoutTemplates.map(mapWorkoutTemplateToWorkoutRow)
+      : []
+    setWorkoutsData(nextWorkouts)
+    return nextWorkouts
+  }
+
+  async function handleWorkoutTemplatePrimaryAction() {
+    setIsSavingWorkoutTemplate(true)
+    setWorkoutEditorMessage('')
+    try {
+      const isEdit = workoutDialogMode === 'edit'
+      const response = await fetch('/api/admin/workout-templates', {
+        method: isEdit ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: isEdit ? selectedWorkoutId : undefined,
+          ...workoutFormValues,
+          focusArea: workoutFormValues.focusArea === 'none' ? '' : workoutFormValues.focusArea,
+        }),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Failed to save workout template.')
+      }
+      await reloadWorkoutTemplates()
+      setIsCreateWorkoutDialogOpen(false)
+    } catch (saveError) {
+      setWorkoutEditorMessage(saveError?.message || 'Failed to save workout template.')
+    } finally {
+      setIsSavingWorkoutTemplate(false)
+    }
+  }
+
+  async function handleArchiveWorkoutTemplate() {
+    if (!selectedWorkoutId) return
+    if (!window.confirm('Archive this workout template?')) return
+
+    setIsSavingWorkoutTemplate(true)
+    setWorkoutEditorMessage('')
+    try {
+      const response = await fetch('/api/admin/workout-templates', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: selectedWorkoutId }),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Failed to archive workout template.')
+      }
+      await reloadWorkoutTemplates()
+      setIsCreateWorkoutDialogOpen(false)
+    } catch (deleteError) {
+      setWorkoutEditorMessage(deleteError?.message || 'Failed to archive workout template.')
+    } finally {
+      setIsSavingWorkoutTemplate(false)
+    }
+  }
+
   useEffect(() => {
     let isMounted = true
 
@@ -593,7 +663,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
           <Button
             type="button"
             onClick={openCreateWorkoutDialog}
-            className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d] md:self-auto"
+            className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] md:self-auto"
           >
             Create workout
           </Button>
@@ -644,8 +714,9 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
         trainingSections={workoutTrainingSections}
         onTrainingSectionsChange={setWorkoutTrainingSections}
         showTrainingTab={workoutDialogMode !== 'create'}
-        primaryActionLabel={workoutDialogMode === 'edit' ? 'Save changes' : workoutDialogMode === 'duplicate' ? 'Create copy' : 'Create'}
-        onPrimaryAction={null}
+        primaryActionLabel={isSavingWorkoutTemplate ? 'Saving...' : workoutDialogMode === 'edit' ? 'Save changes' : workoutDialogMode === 'duplicate' ? 'Create copy' : 'Create'}
+        onPrimaryAction={isSavingWorkoutTemplate ? null : handleWorkoutTemplatePrimaryAction}
+        onDelete={workoutDialogMode === 'edit' ? handleArchiveWorkoutTemplate : null}
         focusAreaOptions={focusAreaOptions}
         statusOptions={statusOptions}
         saveDisclaimer={saveDisclaimer}

@@ -255,6 +255,25 @@ function encodeInFilter(values = []) {
   return filtered.length ? `(${filtered.map((value) => encodeURIComponent(value)).join(',')})` : null
 }
 
+function normalizeWorkoutTemplateStatus(value) {
+  const normalized = String(value || '').trim().toLowerCase()
+  return ['draft', 'active', 'archived'].includes(normalized) ? normalized : 'active'
+}
+
+function normalizeWorkoutTemplatePayload(payload = {}) {
+  const name = normalizeOptionalString(payload.name)
+  if (!name) throw createRepositoryError('Workout name is required.', 400)
+
+  return {
+    name,
+    description: normalizeOptionalString(payload.description),
+    training_type: normalizeOptionalString(payload.training_type ?? payload.trainingType ?? payload.focusArea),
+    estimated_duration_minutes: parseIntegerLike(payload.estimated_duration_minutes ?? payload.estimatedDurationMinutes ?? payload.duration),
+    status: normalizeWorkoutTemplateStatus(payload.status),
+    updated_at: new Date().toISOString(),
+  }
+}
+
 export function createProgramWorkoutRepository(config = {}) {
   const request = createSupabaseRequest(config)
 
@@ -262,8 +281,7 @@ export function createProgramWorkoutRepository(config = {}) {
     const rows = await request({
       table: 'workout_templates',
       query: {
-        select: 'id,name,training_type,bg_color,text_color,estimated_duration_minutes,status',
-        status: 'eq.active',
+        select: 'id,name,description,training_type,bg_color,text_color,estimated_duration_minutes,thumbnail_url,status',
         order: 'name.asc',
       },
     })
@@ -338,6 +356,89 @@ export function createProgramWorkoutRepository(config = {}) {
         section_count: blockCount > 0 ? blockCount : (exerciseCount > 0 ? 1 : 0),
       }
     })
+  }
+
+  async function resolveWorkoutTemplateCoachId() {
+    const coachRows = await request({
+      table: 'coach_profiles',
+      query: {
+        select: 'id',
+        order: 'created_at.asc',
+        limit: '1',
+      },
+    })
+    const coachId = Array.isArray(coachRows) ? coachRows[0]?.id : coachRows?.id
+    if (!coachId) throw createRepositoryError('No coach profile exists yet for workout template ownership.', 400)
+    return coachId
+  }
+
+  async function getWorkoutTemplate(workoutTemplateId) {
+    const normalizedWorkoutTemplateId = normalizeId(workoutTemplateId, 'Workout template ID')
+    const rows = await request({
+      table: 'workout_templates',
+      query: {
+        select: 'id,name,description,training_type,bg_color,text_color,estimated_duration_minutes,thumbnail_url,status',
+        id: `eq.${normalizedWorkoutTemplateId}`,
+        limit: '1',
+      },
+    })
+    const template = Array.isArray(rows) ? rows[0] : rows
+    if (!template?.id) throw createRepositoryError('Workout template not found.', 404)
+    return template
+  }
+
+  async function createWorkoutTemplate(payload = {}) {
+    const coachId = await resolveWorkoutTemplateCoachId()
+    const templatePayload = normalizeWorkoutTemplatePayload(payload)
+    const rows = await request({
+      method: 'POST',
+      table: 'workout_templates',
+      query: {
+        select: 'id,name,description,training_type,bg_color,text_color,estimated_duration_minutes,thumbnail_url,status',
+      },
+      body: {
+        ...templatePayload,
+        coach_id: coachId,
+      },
+    })
+    const template = Array.isArray(rows) ? rows[0] : rows
+    if (!template?.id) throw createRepositoryError('Workout template create did not return an id.', 500)
+    return template
+  }
+
+  async function updateWorkoutTemplate(workoutTemplateId, payload = {}) {
+    const normalizedWorkoutTemplateId = normalizeId(workoutTemplateId, 'Workout template ID')
+    const rows = await request({
+      method: 'PATCH',
+      table: 'workout_templates',
+      query: {
+        id: `eq.${normalizedWorkoutTemplateId}`,
+        select: 'id,name,description,training_type,bg_color,text_color,estimated_duration_minutes,thumbnail_url,status',
+      },
+      body: normalizeWorkoutTemplatePayload(payload),
+    })
+    const template = Array.isArray(rows) ? rows[0] : rows
+    if (!template?.id) throw createRepositoryError('Workout template not found.', 404)
+    return template
+  }
+
+  async function archiveWorkoutTemplate(workoutTemplateId) {
+    const normalizedWorkoutTemplateId = normalizeId(workoutTemplateId, 'Workout template ID')
+    const rows = await request({
+      method: 'PATCH',
+      table: 'workout_templates',
+      query: {
+        id: `eq.${normalizedWorkoutTemplateId}`,
+        select: 'id,name,description,training_type,bg_color,text_color,estimated_duration_minutes,thumbnail_url,status',
+      },
+      body: {
+        status: 'archived',
+        updated_at: new Date().toISOString(),
+      },
+    })
+    const template = Array.isArray(rows) ? rows[0] : rows
+    if (!template?.id) throw createRepositoryError('Workout template not found.', 404)
+    return template
   }
 
   async function getProgramWorkoutTree(programWorkoutId) {
@@ -725,6 +826,10 @@ export function createProgramWorkoutRepository(config = {}) {
 
   return {
     listWorkoutTemplates,
+    getWorkoutTemplate,
+    createWorkoutTemplate,
+    updateWorkoutTemplate,
+    archiveWorkoutTemplate,
     getProgramWorkoutTree,
     updateProgramWorkoutDetails,
     replaceProgramWorkoutChildren,

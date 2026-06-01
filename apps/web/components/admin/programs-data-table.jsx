@@ -796,7 +796,7 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
           <Button
             type="button"
             onClick={openCreateProgramDialog}
-            className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d] md:self-auto"
+            className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] md:self-auto"
           >
             Create a program
           </Button>
@@ -1043,7 +1043,7 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
               onClick={() => {
                 void handleSaveProgram()
               }}
-              className="rounded-[12px] min-h-[40px] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d] disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {isSavingProgram ? (programDialogMode === 'edit' ? 'Saving...' : 'Creating...') : programDialogMode === 'edit' ? 'Save changes' : 'Create'}
             </Button>

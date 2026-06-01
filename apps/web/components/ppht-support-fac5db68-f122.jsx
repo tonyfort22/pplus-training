@@ -159,7 +159,7 @@ export function PphtSupportFac5db68F122({ copy }) {
             {submitError}
           </p>
         )}
-        <Button className="min-h-[40px] rounded-[12px] bg-[#3BE0AF] px-[18px] text-[#0B1120] hover:bg-[#35c89d] support-template-submit-button" disabled={isSubmitting}>{isSubmitting ? copy.submitSubmitting : copy.submitIdle}</Button>
+        <Button className="min-h-[40px] rounded-[12px] bg-[var(--admin-shell-primary-button-bg)] px-[18px] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] support-template-submit-button" disabled={isSubmitting}>{isSubmitting ? copy.submitSubmitting : copy.submitIdle}</Button>
       </div>
     </form>
   )

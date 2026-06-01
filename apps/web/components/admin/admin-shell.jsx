@@ -253,7 +253,7 @@ function AdminSidebarNavItem({ currentPath = '', group, isExpanded = false, onEx
           <SidebarMenuButton
             asChild
             isActive={isActive}
-            className="admin-dashboard-sidebar-nav-button min-h-10 rounded-2xl px-3 text-[13px] font-medium group-data-[collapsible=icon]:!size-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:px-0"
+            className="admin-dashboard-sidebar-nav-button min-h-10 rounded-2xl px-3 text-[13px] font-medium hover:!text-[var(--admin-shell-primary-button-bg)] data-[active=true]:!text-[var(--admin-shell-primary-button-bg)] [&_svg]:hover:!text-[var(--admin-shell-primary-button-bg)] data-[active=true]:[&_svg]:!text-[var(--admin-shell-primary-button-bg)] group-data-[collapsible=icon]:!size-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:px-0"
             tooltip={group.label}
           >
             <summary className="list-none [&::-webkit-details-marker]:hidden">
@@ -271,7 +271,7 @@ function AdminSidebarNavItem({ currentPath = '', group, isExpanded = false, onEx
                   <SidebarMenuSubButton
                     asChild
                     isActive={itemCurrent}
-                    className="admin-dashboard-sidebar-subnav-button h-8 rounded-xl px-3 text-[12px] bg-transparent data-[active=true]:bg-transparent data-[active=true]:font-medium hover:bg-transparent active:bg-transparent"
+                    className="admin-dashboard-sidebar-subnav-button h-8 rounded-xl px-3 text-[12px] bg-transparent hover:!bg-transparent active:!bg-transparent data-[active=true]:!bg-transparent hover:!text-[var(--admin-shell-primary-button-bg)] data-[active=true]:!text-[var(--admin-shell-primary-button-bg)] data-[active=true]:font-medium"
                   >
                     <Link href={item.href}>{item.label}</Link>
                   </SidebarMenuSubButton>
@@ -289,7 +289,7 @@ function AdminSidebarNavItem({ currentPath = '', group, isExpanded = false, onEx
       <SidebarMenuButton
         asChild
         isActive={isActive}
-        className="admin-dashboard-sidebar-nav-button min-h-10 rounded-2xl px-3 text-[13px] font-medium group-data-[collapsible=icon]:!size-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:px-0"
+        className="admin-dashboard-sidebar-nav-button min-h-10 rounded-2xl px-3 text-[13px] font-medium hover:!text-[var(--admin-shell-primary-button-bg)] data-[active=true]:!text-[var(--admin-shell-primary-button-bg)] [&_svg]:hover:!text-[var(--admin-shell-primary-button-bg)] data-[active=true]:[&_svg]:!text-[var(--admin-shell-primary-button-bg)] group-data-[collapsible=icon]:!size-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:px-0"
         tooltip={group.label}
       >
         <Link href={groupHref} target={group.external ? '_blank' : undefined} rel={group.external ? 'noreferrer' : undefined}>
