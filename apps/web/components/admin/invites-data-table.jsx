@@ -84,7 +84,7 @@ function RoleCell({ role }) {
   )
 }
 
-function RowActionsCell({ onResendInvite = () => {} }) {
+function RowActionsCell({ onResendInvite = () => {}, onCancelInvite = () => {}, canCancel = false }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -97,7 +97,7 @@ function RowActionsCell({ onResendInvite = () => {} }) {
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
         <DropdownMenuItem onSelect={onResendInvite}>Resend invite</DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem disabled>Cancel unavailable</DropdownMenuItem>
+        <DropdownMenuItem disabled={!canCancel} onSelect={onCancelInvite}>Cancel invite</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -115,6 +115,7 @@ export default function InvitesDataTable({ searchQuery = '' }) {
   const [inviteAthleteLastName, setInviteAthleteLastName] = useState('')
   const [inviteAthleteEmail, setInviteAthleteEmail] = useState('')
   const [isSubmittingInvite, setIsSubmittingInvite] = useState(false)
+  const [isCancelingInvite, setIsCancelingInvite] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [rowSelection, setRowSelection] = useState({})
   const [columnFilters, setColumnFilters] = useState([])
@@ -242,6 +243,39 @@ export default function InvitesDataTable({ searchQuery = '' }) {
       setRefreshKey((currentValue) => currentValue + 1)
     } finally {
       setIsSubmittingInvite(false)
+    }
+  }
+
+  async function handleCancelInvite(inviteId) {
+    if (!inviteId) return
+
+    setIsCancelingInvite(true)
+    const submitPromise = (async () => {
+      const response = await fetch('/api/admin/invites', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inviteId }),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Failed to cancel invite.')
+      }
+      return payload?.invite || null
+    })()
+
+    try {
+      await toastManager.promise(submitPromise, {
+        loading: { title: 'Canceling invite...', data: { close: true } },
+        success: { title: 'Invite canceled', description: 'This athlete invitation was revoked.', data: { close: true } },
+        error: (cancelError) => ({
+          title: 'Failed to cancel invite',
+          description: cancelError?.message || 'We could not cancel this invite right now.',
+          data: { close: true },
+        }),
+      })
+      setRefreshKey((currentValue) => currentValue + 1)
+    } finally {
+      setIsCancelingInvite(false)
     }
   }
 

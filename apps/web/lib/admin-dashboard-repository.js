@@ -251,47 +251,47 @@ function formatUtcDateKey(date) {
   return startOfUtcDay(date).toISOString().slice(0, 10)
 }
 
-function createWorkoutResults({ dueWorkoutRows, completedSessionRows, workoutTemplateRows }) {
+function createWorkoutResults({ dueWorkoutRows, allWorkoutRows, completedSessionRows, workoutTemplateRows }) {
   const templateById = new Map(
     workoutTemplateRows
       .filter((template) => template?.id)
       .map((template) => [template.id, template]),
   )
+  const workoutById = new Map(
+    allWorkoutRows
+      .filter((workout) => workout?.id)
+      .map((workout) => [workout.id, workout]),
+  )
   const bucketByKey = new Map()
 
-  function resolveWorkout(row) {
-    const template = templateById.get(row?.workout_template_id)
-    const workoutName = row?.name_snapshot || template?.name || 'Untitled workout'
+  function resolveWorkout(row, fallbackWorkout = null) {
+    const template = templateById.get(row?.workout_template_id) ?? templateById.get(fallbackWorkout?.workout_template_id)
+    const workoutName = row?.name_snapshot || fallbackWorkout?.name_snapshot || template?.name || 'Untitled workout'
     const category = template?.training_type || 'Uncategorized'
     return { workoutName, category }
   }
 
-  function getBucket(row) {
-    const { workoutName, category } = resolveWorkout(row)
+  function getBucket(row, fallbackWorkout = null) {
+    const { workoutName, category } = resolveWorkout(row, fallbackWorkout)
     const key = `${workoutName}::${category}`
     const bucket = bucketByKey.get(key) ?? { workoutName, category, assigned: 0, completed: 0, missed: 0 }
     bucketByKey.set(key, bucket)
     return bucket
   }
 
-  const dueById = new Map(dueWorkoutRows.map((row) => [row.id, row]))
-
   for (const workout of dueWorkoutRows) {
     const bucket = getBucket(workout)
     if (workout.status === 'missed') {
       bucket.missed += 1
-    } else if (workout.status === 'completed') {
-      // A completed scheduled workout is still one assigned workout on the chart.
-      bucket.assigned += 0
     } else {
       bucket.assigned += 1
     }
   }
 
   for (const session of completedSessionRows) {
-    const workout = dueById.get(session.program_workout_id)
-    if (!workout) continue
-    const bucket = getBucket(workout)
+    const workout = workoutById.get(session.program_workout_id)
+    if (!workout && !session.workout_template_id && !session.name_snapshot) continue
+    const bucket = getBucket(session, workout)
     bucket.completed += 1
   }
 
@@ -403,7 +403,7 @@ export function createAdminDashboardRepository(options = {}) {
         requestTable('workout_templates', '?select=id,name,training_type,status,created_at'),
         requestTable('exercises', '?select=id,created_at'),
         requestTable('program_workouts', '?select=id,athlete_id,workout_template_id,name_snapshot,status,scheduled_date,created_at'),
-        requestTable('workout_sessions', '?select=id,athlete_id,program_workout_id,status,completed_at,started_at,created_at'),
+        requestTable('workout_sessions', '?select=id,athlete_id,program_workout_id,workout_template_id,name_snapshot,status,completed_at,started_at,created_at'),
         requestTable('athlete_invitations', '?select=id,used_at,revoked_at,expires_at,created_at'),
       ])
 
@@ -468,7 +468,7 @@ export function createAdminDashboardRepository(options = {}) {
         generatedAt: new Date(now).toISOString(),
         summary,
         trainingExecution: createTrainingExecution({ window, dueWorkoutRows: dueWorkouts, completedSessionRows: currentCompletedSessions }),
-        workoutResults: createWorkoutResults({ dueWorkoutRows: dueWorkouts, completedSessionRows: currentCompletedSessions, workoutTemplateRows: activeWorkoutTemplates }),
+        workoutResults: createWorkoutResults({ dueWorkoutRows: dueWorkouts, allWorkoutRows: assignments, completedSessionRows: currentCompletedSessions, workoutTemplateRows: activeWorkoutTemplates }),
         trainingConsistency: createTrainingConsistency({ activeAthletes, window, completedSessionRows: completedSessions }),
       }
     },

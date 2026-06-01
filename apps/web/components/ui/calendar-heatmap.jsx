@@ -73,10 +73,10 @@ function CalendarHeatmap({
       navLayout="around"
       className={cn('p-0', className)}
       classNames={{
-        months: 'flex flex-col gap-4 min-[1180px]:flex-row min-[1180px]:flex-wrap',
-        month: 'relative space-y-3 rounded-[14px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-3',
-        month_caption: 'flex items-center justify-center px-7',
-        caption_label: 'text-xs font-semibold text-[var(--admin-dashboard-card-text)]',
+        months: 'flex w-full flex-col gap-4 min-[1180px]:flex-row min-[1180px]:flex-wrap',
+        month: 'relative w-full space-y-3 rounded-[14px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-3',
+        month_caption: 'flex items-center justify-center px-7 pb-4',
+        caption_label: 'text-base font-bold leading-none text-[var(--admin-dashboard-card-text)]',
         nav: 'hidden',
         button_previous: cn(
           buttonVariants({ variant: 'ghost' }),
@@ -87,13 +87,13 @@ function CalendarHeatmap({
           'absolute right-3 top-3 size-6 rounded-md bg-transparent p-0 text-[var(--admin-dashboard-card-muted)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]',
         ),
         month_grid: 'w-full border-collapse',
-        weekdays: 'flex',
-        weekday: 'w-7 rounded-md text-[0.68rem] font-medium text-[var(--admin-dashboard-card-muted)]',
-        week: 'mt-1 flex w-full',
-        day: 'relative size-7 p-0 text-center text-xs',
+        weekdays: 'grid grid-cols-7',
+        weekday: 'w-full rounded-md text-center text-sm font-bold leading-none text-[var(--admin-dashboard-card-muted)]',
+        week: 'mt-1 grid w-full grid-cols-7',
+        day: 'relative block aspect-square w-full overflow-hidden rounded-[7px] p-0 text-center text-sm leading-none',
         day_button: cn(
           buttonVariants({ variant: 'ghost' }),
-          'size-7 rounded-[7px] border border-transparent p-0 text-xs font-medium text-[var(--admin-dashboard-card-text)] hover:border-[color:var(--admin-dashboard-card-border)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]',
+          'absolute inset-0 flex h-full w-full items-center justify-center rounded-[7px] border border-transparent p-0 text-sm font-medium leading-none text-[var(--admin-dashboard-card-text)] hover:border-[color:var(--admin-dashboard-card-border)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]',
         ),
         today: '[&>button]:border-[color:var(--admin-shell-accent)] [&>button]:text-[var(--admin-dashboard-card-text)]',
         outside: 'opacity-25',

@@ -38,3 +38,14 @@ export async function PATCH(request, context) {
     return handleRouteError(error)
   }
 }
+
+export async function DELETE(request, context) {
+  try {
+    const repository = createAdminExerciseRepository()
+    const exerciseId = await getExerciseIdFromContext(context)
+    const result = await repository.deleteExercise(exerciseId)
+    return json({ result })
+  } catch (error) {
+    return handleRouteError(error)
+  }
+}

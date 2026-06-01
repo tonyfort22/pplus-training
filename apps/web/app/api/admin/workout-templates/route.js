@@ -20,3 +20,36 @@ export async function GET() {
     return handleRouteError(error)
   }
 }
+
+export async function POST(request) {
+  try {
+    const repository = createProgramWorkoutRepository()
+    const body = await request.json()
+    const workoutTemplate = await repository.createWorkoutTemplate(body ?? {})
+    return json({ workoutTemplate }, { status: 201 })
+  } catch (error) {
+    return handleRouteError(error)
+  }
+}
+
+export async function PATCH(request) {
+  try {
+    const repository = createProgramWorkoutRepository()
+    const body = await request.json()
+    const workoutTemplate = await repository.updateWorkoutTemplate(body?.id, body ?? {})
+    return json({ workoutTemplate })
+  } catch (error) {
+    return handleRouteError(error)
+  }
+}
+
+export async function DELETE(request) {
+  try {
+    const repository = createProgramWorkoutRepository()
+    const body = await request.json()
+    const workoutTemplate = await repository.archiveWorkoutTemplate(body?.id)
+    return json({ workoutTemplate })
+  } catch (error) {
+    return handleRouteError(error)
+  }
+}

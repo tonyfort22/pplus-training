@@ -1222,7 +1222,9 @@ html[data-theme='light'] .admin-dashboard-sidebar-dropdown-content {
 }
 
 html[data-theme='light'] .admin-dashboard-sidebar-switcher,
-html[data-theme='light'] .admin-dashboard-sidebar-account-button {
+html[data-theme='light'] .admin-dashboard-sidebar-account-button,
+html[data-theme='dark'] .admin-dashboard-sidebar-switcher,
+html[data-theme='dark'] .admin-dashboard-sidebar-account-button {
   box-shadow: none !important;
   filter: none !important;
 }
@@ -1280,7 +1282,9 @@ html[data-theme='light'] [data-radix-popper-content-wrapper]:has(.admin-dashboar
   color: var(--admin-shell-primary-button-bg) !important;
 }
 
+.admin-dashboard-sidebar-nav-button:hover span,
 .admin-dashboard-sidebar-nav-button:hover svg,
+.admin-dashboard-sidebar-nav-button[data-active='true'] span,
 .admin-dashboard-sidebar-nav-button[data-active='true'] svg {
   color: var(--admin-shell-primary-button-bg) !important;
 }
@@ -1303,7 +1307,9 @@ html[data-theme='light'] [data-radix-popper-content-wrapper]:has(.admin-dashboar
   color: var(--admin-shell-primary-button-bg) !important;
 }
 
+.admin-dashboard-sidebar-subnav-button:hover span,
 .admin-dashboard-sidebar-subnav-button:hover svg,
+.admin-dashboard-sidebar-subnav-button[data-active='true'] span,
 .admin-dashboard-sidebar-subnav-button[data-active='true'] svg {
   color: var(--admin-shell-primary-button-bg) !important;
 }
@@ -1539,39 +1545,20 @@ html[data-theme='light'] .admin-shell-overview-card-badge-negative {
 
 .admin-shell-overview-performance-title-block {
   display: grid;
-  gap: 12px;
+  gap: 8px;
 }
 
 .admin-shell-overview-performance-kicker {
-  color: var(--admin-dashboard-card-muted);
-  font-size: 0.88rem;
-  font-weight: 500;
+  color: var(--admin-dashboard-card-text);
+  font-size: 1.8rem;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .admin-shell-overview-performance-kicker-row {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-}
-
-.admin-shell-overview-performance-kicker-icon {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 auto;
-  color: var(--admin-dashboard-card-muted);
-}
-
-.admin-shell-overview-performance-value-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.admin-shell-overview-performance-value {
-  color: var(--admin-dashboard-card-text);
-  font-size: 2.6rem;
-  font-weight: 900;
-  line-height: 1;
 }
 
 .admin-shell-overview-performance-meta {
@@ -1865,6 +1852,11 @@ html[data-theme='light'] .admin-shell-overview-card-badge-negative {
   color: var(--admin-dashboard-card-muted);
   font-size: 0.75rem;
   line-height: 1.4;
+}
+
+.admin-shell-overview-workout-results-legend {
+  justify-content: flex-start;
+  padding-left: 24px;
 }
 
 .admin-shell-overview-link {
@@ -3382,8 +3374,8 @@ html[data-theme='light'] .admin-shell-overview-card-badge-negative {
 }
 
 .admin-shell-athletes-example-pagination-button-active {
-  border-color: var(--admin-shell-accent);
-  background: var(--admin-shell-accent);
+  border-color: var(--admin-shell-primary-button-bg);
+  background: var(--admin-shell-primary-button-bg);
   color: #0B1120;
 }
 
@@ -3699,8 +3691,8 @@ html[data-theme='light'] .admin-shell-overview-card-badge-negative {
 }
 
 .admin-shell-invites-example-pagination-button-active {
-  border-color: var(--admin-shell-accent);
-  background: var(--admin-shell-accent);
+  border-color: var(--admin-shell-primary-button-bg);
+  background: var(--admin-shell-primary-button-bg);
   color: #0B1120;
 }
 

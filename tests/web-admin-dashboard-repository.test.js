@@ -101,7 +101,7 @@ test('admin dashboard repository computes v2 coach overview metrics from Supabas
   assert.equal('statusOptions' in overview.workoutResults, false)
   assert.deepEqual(overview.workoutResults.buckets, [
     { workoutName: 'Stride Warmup', category: 'Warmup', assigned: 1, completed: 1, missed: 0 },
-    { workoutName: 'Acceleration Ladder', category: 'Speed Accelerator', assigned: 0, completed: 1, missed: 0 },
+    { workoutName: 'Acceleration Ladder', category: 'Speed Accelerator', assigned: 1, completed: 1, missed: 0 },
     { workoutName: 'Edge Control Circuit', category: 'Edge Work', assigned: 0, completed: 0, missed: 2 },
   ])
   assert.equal(overview.trainingConsistency.value, '1 / 3')
@@ -110,6 +110,32 @@ test('admin dashboard repository computes v2 coach overview metrics from Supabas
   assert.deepEqual(overview.trainingConsistency.dailyActivity, [
     { date: '2026-05-06', completedSessions: 1, activeAthletes: 1 },
     { date: '2026-05-23', completedSessions: 3, activeAthletes: 2 },
+  ])
+})
+
+test('admin dashboard workout results includes completed sessions linked to assignments created before the selected range', async () => {
+  const repository = createRepository({
+    athlete_profiles: [
+      { id: 'athlete-active-1', status: 'active', created_at: '2026-01-12T10:00:00.000Z' },
+    ],
+    programs: [],
+    workout_templates: [
+      { id: 'template-edge', name: 'Phase 3 Edge Work A', training_type: 'Edge Work', status: 'active', created_at: '2026-04-01T10:00:00.000Z' },
+    ],
+    exercises: [],
+    program_workouts: [
+      { id: 'old-edge-a', athlete_id: 'athlete-active-1', workout_template_id: 'template-edge', name_snapshot: 'Phase 3 Edge Work A', status: 'scheduled', scheduled_date: null, created_at: '2026-04-26T10:00:00.000Z' },
+    ],
+    workout_sessions: [
+      { id: 'completed-edge-a', athlete_id: 'athlete-active-1', program_workout_id: 'old-edge-a', workout_template_id: 'template-edge', name_snapshot: 'Phase 3 Edge Work A', status: 'completed', completed_at: '2026-05-06T07:24:05.948Z', started_at: '2026-05-06T07:20:00.000Z', created_at: '2026-05-06T07:20:00.000Z' },
+    ],
+    athlete_invitations: [],
+  })
+
+  const overview = await repository.getOverview({ range: 'last-month' })
+
+  assert.deepEqual(overview.workoutResults.buckets, [
+    { workoutName: 'Phase 3 Edge Work A', category: 'Edge Work', assigned: 0, completed: 1, missed: 0 },
   ])
 })
 

@@ -75,6 +75,6 @@ test('admin light mode skins the sidebar and top nav through theme-aware shell c
   assert.match(cssSource, /\.admin-dashboard-sidebar-workspace-item\s*\{[^}]*margin-bottom:\s*20px;/)
   assert.match(cssSource, /\.admin-dashboard-sidebar-dropdown-content\s*\{[^}]*box-shadow:\s*none;/)
   assert.match(cssSource, /html\[data-theme='light'\] \.admin-dashboard-sidebar-dropdown-content\s*\{[^}]*border-color:\s*var\(--admin-dashboard-chart-header-divider\);[^}]*box-shadow:\s*none !important;[^}]*filter:\s*none !important;/)
-  assert.match(cssSource, /html\[data-theme='light'\] \.admin-dashboard-sidebar-switcher,\s*html\[data-theme='light'\] \.admin-dashboard-sidebar-account-button\s*\{[^}]*box-shadow:\s*none !important;[^}]*filter:\s*none !important;/)
+  assert.match(cssSource, /html\[data-theme='light'\] \.admin-dashboard-sidebar-switcher,\s*html\[data-theme='light'\] \.admin-dashboard-sidebar-account-button,\s*html\[data-theme='dark'\] \.admin-dashboard-sidebar-switcher,\s*html\[data-theme='dark'\] \.admin-dashboard-sidebar-account-button\s*\{[^}]*box-shadow:\s*none !important;[^}]*filter:\s*none !important;/)
   assert.match(cssSource, /html\[data-theme='light'\] \[data-radix-popper-content-wrapper\]:has\(\.admin-dashboard-sidebar-dropdown-content\)\s*\{[^}]*background:\s*var\(--admin-shell-bg\);[^}]*box-shadow:\s*none !important;[^}]*filter:\s*none !important;/)
 })

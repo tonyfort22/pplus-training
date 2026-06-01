@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import {
   Activity,
@@ -31,6 +31,8 @@ import {
 } from '@/components/ui/chart'
 import { CalendarHeatmap } from '@/components/ui/calendar-heatmap'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+
+const defaultDashboardRange = 'last-month'
 
 const overviewRangeOptions = [
   { id: 'last-7-days', label: 'Last 7 days' },
@@ -78,7 +80,6 @@ function normalizeSummaryCard(card, fallbackId) {
     change: card?.change ?? '0%',
     changeDirection: card?.changeDirection ?? 'neutral',
     footerHeadline: card?.footerHeadline ?? 'No real data yet',
-    footerSubtext: card?.footerSubtext ?? 'This metric will update when real dashboard data exists.',
     icon: summaryIconById[id] ?? Activity,
   }
 }
@@ -109,11 +110,8 @@ function OverviewSummaryCard({ card }) {
       <CardFooter>
         <div className="flex w-full items-start gap-2 text-sm">
           <CardIcon className="admin-shell-overview-card-change-arrow-icon mt-0.5 text-[#3BE0AF]" aria-hidden="true" />
-          <div className="grid gap-2">
-            <div className="flex items-center gap-2 leading-none font-medium text-[var(--admin-dashboard-card-text)]">
-              {card.footerHeadline} <TrendArrowIcon direction={card.changeDirection} />
-            </div>
-            <div className="leading-none text-[var(--admin-dashboard-card-muted)]">{card.footerSubtext}</div>
+          <div className="flex items-center gap-2 leading-none font-medium text-[var(--admin-dashboard-card-text)]">
+            {card.footerHeadline} <TrendArrowIcon direction={card.changeDirection} />
           </div>
         </div>
       </CardFooter>
@@ -245,7 +243,7 @@ function buildTrainingConsistencyWeightedDates(dailyActivity) {
     .filter(Boolean)
 }
 
-function TrainingExecutionPanel({ trainingExecution, activeRange, onRangeChange }) {
+function TrainingExecutionPanel({ trainingExecution, trainingExecutionRange, onTrainingExecutionRangeChange }) {
   const buckets = Array.isArray(trainingExecution?.buckets) ? trainingExecution.buckets : []
   const chartData = buckets.map((bucket) => ({
     date: bucket.label,
@@ -259,17 +257,13 @@ function TrainingExecutionPanel({ trainingExecution, activeRange, onRangeChange 
       <CardHeader className="admin-shell-overview-performance-header border-b border-[var(--admin-dashboard-card-border)] py-5 sm:flex-row sm:items-center">
         <div className="admin-shell-overview-performance-title-block flex-1">
           <div className="admin-shell-overview-performance-kicker-row">
-            <Activity className="admin-shell-overview-performance-kicker-icon" aria-hidden="true" />
             <span className="admin-shell-overview-performance-kicker">Training execution</span>
-          </div>
-          <div className="admin-shell-overview-performance-value-row">
-            <CardTitle className="admin-shell-overview-performance-value">{trainingExecution?.value ?? '0 completed'}</CardTitle>
             <Badge tone="success">{trainingExecution?.trend ?? '0%'}</Badge>
           </div>
           <CardDescription>{trainingExecution?.footer ?? 'No due workouts in this range'}</CardDescription>
         </div>
         <CardAction>
-          <Select value={activeRange} onValueChange={onRangeChange}>
+          <Select value={trainingExecutionRange} onValueChange={onTrainingExecutionRangeChange}>
             <SelectTrigger className="hidden w-[160px] rounded-lg sm:ml-auto sm:flex" aria-label="Select a value">
               <SelectValue placeholder="Last month" />
             </SelectTrigger>
@@ -337,16 +331,15 @@ function WorkoutResultsPanel({ workoutResults }) {
       missed: bucket.missed ?? 0,
     }))
   const workoutResultsChartHeight = 320
+  const workoutResultsChartWidth = Math.max(720, chartData.length * 96)
 
   return (
     <Card className="admin-shell-overview-insight-card admin-shell-overview-workout-results-card">
       <CardHeader>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <CardDescription>Workout results</CardDescription>
-            <div className="admin-shell-overview-performance-value-row">
-              <CardTitle className="admin-shell-overview-insight-value">Assigned / Completed / Missed</CardTitle>
-              <Badge tone="neutral">{selectedCategory}</Badge>
+          <div className="admin-shell-overview-performance-title-block">
+            <div className="admin-shell-overview-performance-kicker-row">
+              <span className="admin-shell-overview-performance-kicker">Workout results</span>
             </div>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -365,11 +358,11 @@ function WorkoutResultsPanel({ workoutResults }) {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="admin-shell-overview-workout-results-content">
+      <CardContent className="admin-shell-overview-workout-results-content overflow-x-auto">
         <ChartContainer
           config={workoutResultsChartConfig}
           className="admin-shell-overview-workout-results-chart aspect-auto w-full"
-          style={{ height: workoutResultsChartHeight, minHeight: workoutResultsChartHeight }}
+          style={{ height: workoutResultsChartHeight, minHeight: workoutResultsChartHeight, width: workoutResultsChartWidth, minWidth: workoutResultsChartWidth }}
         >
           <BarChart
             accessibilityLayer
@@ -385,6 +378,7 @@ function WorkoutResultsPanel({ workoutResults }) {
               angle={-45}
               textAnchor="end"
               height={72}
+              interval={0}
               tick={{ fill: 'var(--admin-dashboard-chart-tick)', fontSize: 11, fontWeight: 500 }}
             />
             <YAxis tickLine={false} axisLine={false} tickMargin={8} tick={{ fill: 'var(--admin-dashboard-chart-tick)', fontSize: 11, fontWeight: 500 }} />
@@ -395,41 +389,39 @@ function WorkoutResultsPanel({ workoutResults }) {
             <Bar dataKey="assigned" fill="var(--color-assigned)" radius={4} />
             <Bar dataKey="completed" fill="var(--color-completed)" radius={4} />
             <Bar dataKey="missed" fill="var(--color-missed)" radius={4} />
-            <ChartLegend content={<ChartLegendContent />} />
+            <ChartLegend content={<ChartLegendContent className="admin-shell-overview-workout-results-legend" />} />
           </BarChart>
         </ChartContainer>
       </CardContent>
       <CardFooter>
-        <span className="admin-shell-overview-link">Filtered by training type</span>
+        <span className="admin-shell-overview-link">Showing all {selectedCategory} workout results</span>
       </CardFooter>
     </Card>
   )
 }
 
-function TrainingConsistencyPanel({ trainingConsistency, activeRange }) {
+function TrainingConsistencyPanel({ trainingConsistency }) {
   const heatmapDates = buildTrainingConsistencyWeightedDates(trainingConsistency?.dailyActivity)
   const hasHeatmapData = trainingConsistency?.heatmapReady && heatmapDates.length > 0
 
   return (
     <Card className="admin-shell-overview-insight-card">
       <CardHeader>
-        <CardDescription>Training consistency</CardDescription>
-        <p className="text-sm text-[var(--admin-dashboard-card-muted)]">Monthly activity heatmap. Use the arrows to review previous months.</p>
-        <div className="admin-shell-overview-performance-value-row">
-          <CardTitle className="admin-shell-overview-insight-value">{trainingConsistency?.value ?? '0 / 0'}</CardTitle>
-          <Badge tone={hasHeatmapData ? 'success' : 'neutral'}>{hasHeatmapData ? 'Active days' : 'No activity'}</Badge>
+        <div className="admin-shell-overview-performance-title-block">
+          <span className="admin-shell-overview-performance-kicker">Training consistency</span>
+          <p className="text-sm text-[var(--admin-dashboard-card-muted)]">Monthly activity heatmap. Use the arrows to review previous months.</p>
         </div>
       </CardHeader>
       <CardContent>
         {hasHeatmapData ? (
-          <div className="admin-shell-overview-session-chart overflow-x-auto rounded-xl border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-3">
+          <div className="admin-shell-overview-session-chart overflow-x-auto">
             <CalendarHeatmap
               mode="single"
               numberOfMonths={1}
               weightedDates={heatmapDates}
               variantClassnames={trainingConsistencyHeatmapVariants}
               disabled={false}
-              className="min-w-max"
+              className="w-full"
             />
           </div>
         ) : (
@@ -449,23 +441,24 @@ function TrainingConsistencyPanel({ trainingConsistency, activeRange }) {
   )
 }
 
-function DashboardAnalyticsPanels({ trainingExecution, workoutResults, trainingConsistency, activeRange, onRangeChange }) {
+function DashboardAnalyticsPanels({ trainingExecution, workoutResults, trainingConsistency, trainingExecutionRange, onTrainingExecutionRangeChange }) {
   return (
     <section className="admin-shell-overview-analytics-layout" aria-label="Dashboard analytics panels">
-      <TrainingExecutionPanel trainingExecution={trainingExecution} activeRange={activeRange} onRangeChange={onRangeChange} />
+      <TrainingExecutionPanel trainingExecution={trainingExecution} trainingExecutionRange={trainingExecutionRange} onTrainingExecutionRangeChange={onTrainingExecutionRangeChange} />
       <div className="admin-shell-overview-bottom-row admin-shell-overview-side-column">
         <WorkoutResultsPanel workoutResults={workoutResults} />
-        <TrainingConsistencyPanel trainingConsistency={trainingConsistency} activeRange={activeRange} />
+        <TrainingConsistencyPanel trainingConsistency={trainingConsistency} />
       </div>
     </section>
   )
 }
 
 export default function DashboardOverview() {
-  const [activeRange, setActiveRange] = useState('last-month')
+  const [trainingExecutionRange, setTrainingExecutionRange] = useState(defaultDashboardRange)
   const [overview, setOverview] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const hasLoadedInitialOverview = useRef(false)
 
   useEffect(() => {
     let cancelled = false
@@ -474,13 +467,14 @@ export default function DashboardOverview() {
       setLoading(true)
       setError('')
       try {
-        const response = await fetch(`/api/admin/dashboard/overview?range=${activeRange}`, { cache: 'no-store' })
+        const response = await fetch(`/api/admin/dashboard/overview?range=${defaultDashboardRange}`, { cache: 'no-store' })
         const payload = await response.json().catch(() => ({}))
         if (!response.ok) {
           throw new Error(payload.error || 'Could not load dashboard overview.')
         }
         if (!cancelled) {
           setOverview(payload.overview ?? null)
+          hasLoadedInitialOverview.current = true
         }
       } catch (nextError) {
         if (!cancelled) {
@@ -499,7 +493,42 @@ export default function DashboardOverview() {
     return () => {
       cancelled = true
     }
-  }, [activeRange])
+  }, [])
+
+  useEffect(() => {
+    if (!hasLoadedInitialOverview.current) return undefined
+
+    let cancelled = false
+
+    async function loadTrainingExecution() {
+      try {
+        const response = await fetch(`/api/admin/dashboard/overview?range=${trainingExecutionRange}`, { cache: 'no-store' })
+        const payload = await response.json().catch(() => ({}))
+        if (!response.ok) {
+          throw new Error(payload.error || 'Could not load dashboard overview.')
+        }
+        if (!cancelled) {
+          setOverview((previousOverview) => {
+            if (!previousOverview) return payload.overview ?? null
+            return {
+              ...previousOverview,
+              trainingExecution: payload.overview?.trainingExecution ?? previousOverview.trainingExecution,
+            }
+          })
+        }
+      } catch (nextError) {
+        if (!cancelled) {
+          console.error(nextError)
+        }
+      }
+    }
+
+    loadTrainingExecution()
+
+    return () => {
+      cancelled = true
+    }
+  }, [trainingExecutionRange])
 
   const cards = buildSummaryCards(overview?.summary)
   const summaryCardRows = [cards.slice(0, 3), cards.slice(3)]
@@ -536,8 +565,8 @@ export default function DashboardOverview() {
             trainingExecution={overview?.trainingExecution}
             workoutResults={overview?.workoutResults}
             trainingConsistency={overview?.trainingConsistency}
-            activeRange={activeRange}
-            onRangeChange={setActiveRange}
+            trainingExecutionRange={trainingExecutionRange}
+            onTrainingExecutionRangeChange={setTrainingExecutionRange}
           />
         </>
       ) : null}
