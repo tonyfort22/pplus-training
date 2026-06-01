@@ -90,7 +90,10 @@ function StatusCell({ status }) {
   )
 }
 
-function RowActionsCell() {
+function RowActionsCell({ athleteId = '' }) {
+  function navigateTo(path) {
+    window.location.href = path
+  }
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -101,10 +104,10 @@ function RowActionsCell() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-        <DropdownMenuItem>View athlete</DropdownMenuItem>
-        <DropdownMenuItem>Open program</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => navigateTo(`/admin/athletes?athlete=${encodeURIComponent(athleteId)}`)}>View athlete</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => navigateTo('/admin/programs')}>Open program</DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>Review workout progress</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => navigateTo('/admin/workouts/calendar')}>Review workout progress</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -229,7 +232,7 @@ export default function RankingsDataTable({ searchQuery = '' }) {
       {
         id: 'actions',
         header: () => <span className="sr-only">Actions</span>,
-        cell: () => <RowActionsCell />,
+        cell: ({ row }) => <RowActionsCell athleteId={row.original.id} />,
         enableSorting: false,
         enableHiding: false,
       },

@@ -50,7 +50,7 @@ const DEFAULT_OPERATORS = {
 
 const filterMenuContentClassName = "border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-1 text-[var(--admin-dashboard-card-text)] shadow-[var(--admin-shell-shadow)]"
 const filterMenuItemClassName = "rounded-xl focus:bg-[var(--admin-shell-nav-active-bg)] focus:text-[var(--admin-shell-nav-active-text)] data-[highlighted]:bg-[var(--admin-shell-nav-active-bg)] data-[highlighted]:text-[var(--admin-shell-nav-active-text)]"
-const filterControlButtonClassName = "bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] shadow-none hover:bg-[var(--admin-shell-nav-active-bg)] hover:text-[var(--admin-shell-nav-active-text)]"
+const filterControlButtonClassName = "bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] text-[0.8rem] font-medium shadow-none hover:bg-[var(--admin-shell-nav-active-bg)] hover:text-[var(--admin-shell-nav-active-text)]"
 const filterControlMutedButtonClassName = "bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-muted)] shadow-none hover:bg-[var(--admin-shell-nav-active-bg)] hover:text-[var(--admin-shell-nav-active-text)]"
 const filterChipClassName = "overflow-hidden rounded-[12px] border border-[color:var(--admin-dashboard-chart-header-divider)] bg-[var(--admin-dashboard-control-bg)] [&>*]:h-10 [&>*]:border-0 [&>*]:bg-[var(--admin-dashboard-control-bg)] [&>*]:text-[var(--admin-dashboard-card-text)] [&>*]:hover:bg-[var(--admin-shell-nav-active-bg)] [&>*]:hover:text-[var(--admin-shell-nav-active-text)]"
 const filterChipDividerClassName = "border-[color:var(--admin-dashboard-chart-header-divider)]"

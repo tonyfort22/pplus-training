@@ -580,8 +580,11 @@ export function AthletesDataTable({ searchQuery = '' }) {
   const [athleteDialogMode, setAthleteDialogMode] = useState('create')
   const [editingAthleteId, setEditingAthleteId] = useState(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [deletingAthleteId, setDeletingAthleteId] = useState(null)
+  const [isDeletingAthlete, setIsDeletingAthlete] = useState(false)
   const [openRowActionMenuId, setOpenRowActionMenuId] = useState(null)
   const [pendingRowAction, setPendingRowAction] = useState(null)
+
   const [createAthleteMeasurementUnit, setCreateAthleteMeasurementUnit] = useState('imperial')
   const [createAthleteProfileImage, setCreateAthleteProfileImage] = useState('')
   const [createAthleteFirstName, setCreateAthleteFirstName] = useState('')
@@ -788,6 +791,7 @@ export function AthletesDataTable({ searchQuery = '' }) {
         setIsInviteDialogOpen(true)
       }
     } else if (pendingRowAction.type === 'delete') {
+      setDeletingAthleteId(pendingRowAction.athleteId)
       setIsDeleteDialogOpen(true)
     }
 
@@ -854,8 +858,44 @@ export function AthletesDataTable({ searchQuery = '' }) {
   }
 
   const selectedAthlete = athletes.find((athlete) => athlete.id === editingAthleteId) ?? null
+  const deletingAthlete = athletes.find((athlete) => athlete.id === deletingAthleteId) ?? null
   const inviteDialogAthlete = athletes.find((athlete) => athlete.id === inviteDialogAthleteId) ?? null
   const createAthleteNamePreview = [createAthleteFirstName, createAthleteLastName].filter(Boolean).join(' ')
+
+  async function handleDeleteAthlete() {
+    if (!deletingAthleteId) return
+
+    setIsDeletingAthlete(true)
+    const submitPromise = (async () => {
+      const response = await fetch('/api/admin/athletes', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ athleteId: deletingAthleteId }),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Failed to delete athlete.')
+      }
+      return payload?.result || null
+    })()
+
+    try {
+      await toastManager.promise(submitPromise, {
+        loading: { title: 'Deleting athlete...', data: { close: true } },
+        success: { title: 'Athlete deleted', description: `${deletingAthlete?.name || 'This athlete'} was removed from the workspace.`, data: { close: true } },
+        error: (deleteError) => ({
+          title: 'Failed to delete athlete',
+          description: deleteError?.message || 'We could not delete this athlete right now.',
+          data: { close: true },
+        }),
+      })
+      setIsDeleteDialogOpen(false)
+      setDeletingAthleteId(null)
+      setRefreshKey((currentValue) => currentValue + 1)
+    } finally {
+      setIsDeletingAthlete(false)
+    }
+  }
 
   async function handleSendAthleteInvite(athleteId, inviteeEmail = '') {
     setIsSendingRowInvite(true)
@@ -1041,7 +1081,7 @@ export function AthletesDataTable({ searchQuery = '' }) {
               setSendAthleteInvite(true)
               setIsCreateEditAthleteDialogOpen(true)
             }}
-            className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[var(--admin-shell-accent)] text-[#0B1120] hover:bg-[var(--admin-shell-accent)] md:self-auto"
+            className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] md:self-auto"
           >
             Create athlete
           </Button>
@@ -1257,7 +1297,7 @@ export function AthletesDataTable({ searchQuery = '' }) {
             </Button>
             <Button
               type="button"
-              className="admin-shell-athletes-create-submit rounded-[12px] min-h-[40px] bg-[var(--admin-shell-accent)] text-[#0B1120] hover:bg-[var(--admin-shell-accent)]"
+              className="admin-shell-athletes-create-submit rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]"
               onClick={handleCreateEditAthleteSubmit}
               disabled={isSavingAthlete}
             >
@@ -1309,7 +1349,7 @@ export function AthletesDataTable({ searchQuery = '' }) {
             </Button>
             <Button
               type="button"
-              className="rounded-[12px] min-h-[40px] bg-[var(--admin-shell-accent)] text-[#0B1120] hover:bg-[var(--admin-shell-accent)]"
+              className="rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]"
               disabled={isSendingRowInvite}
               onClick={() => {
                 void handleSendAthleteInvite(inviteDialogAthleteId, inviteAthleteEmail)
@@ -1345,8 +1385,10 @@ export function AthletesDataTable({ searchQuery = '' }) {
             <Button
               type="button"
               className="rounded-[12px] min-h-[40px] bg-red-500/90 text-white hover:bg-red-500"
+              onClick={handleDeleteAthlete}
+              disabled={isDeletingAthlete}
             >
-              Delete
+              {isDeletingAthlete ? 'Deleting...' : 'Delete'}
             </Button>
           </DialogFooter>
         </DialogContent>

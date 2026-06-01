@@ -639,6 +639,14 @@ export function createAdminAthleteRepository(overrides = {}) {
       return athletes.find((athlete) => athlete.id === athleteId) ?? null
     },
 
+    async deleteAthlete({ athleteId }) {
+      if (!athleteId) throw createRepositoryError('Athlete ID is required.', 400)
+
+      const rows = await client.deleteTable('athlete_profiles', `?id=eq.${encodeURIComponent(athleteId)}`)
+      const deletedAthlete = Array.isArray(rows) ? rows[0] : rows
+      return { athleteId, deletedAthlete: deletedAthlete ?? null }
+    },
+
     async sendAthleteInvite({ athleteId, inviteeEmail = '' }) {
       if (!athleteId) throw createRepositoryError('Athlete ID is required.', 400)
 

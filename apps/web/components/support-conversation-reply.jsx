@@ -78,7 +78,7 @@ export function SupportConversationReply({ conversationId, copy }) {
           </p>
         ) : null}
         <Button
-          className="min-h-[40px] rounded-[12px] bg-[#3BE0AF] px-[18px] text-[#0B1120] hover:bg-[#35c89d] support-template-submit-button"
+          className="min-h-[40px] rounded-[12px] bg-[var(--admin-shell-primary-button-bg)] px-[18px] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] support-template-submit-button"
           disabled={!replyText.trim() || isSubmitting}
         >
           {isSubmitting ? copy.submitSubmitting : copy.submitIdle}

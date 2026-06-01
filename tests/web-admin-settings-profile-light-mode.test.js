@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const settingsViewPath = resolve(repoRoot, 'apps/web/components/admin/settings-view.jsx')
+const cssPath = resolve(repoRoot, 'apps/web/app/globals.css')
 
 function extractFunction(source, name) {
   const start = source.indexOf(`function ${name}`)
@@ -50,13 +51,16 @@ test('admin settings profile exposes editable approved coach profile fields with
 
 test('admin settings profile uses light-mode admin tokens instead of dark-coded field colors', () => {
   const settingsSource = readFileSync(settingsViewPath, 'utf8')
+  const cssSource = readFileSync(cssPath, 'utf8')
   const profileSource = extractFunction(settingsSource, 'AdminSettingsProfileView')
   const uploaderSource = extractFunction(settingsSource, 'ProfilePhotoUploader')
 
   assert.match(settingsSource, /settingsProfileFieldInputClassName = 'h-11 rounded-\[12px\] border-\[var\(--admin-shell-control-border\)\] bg-\[var\(--admin-shell-control-bg\)\]/)
   assert.match(settingsSource, /function SettingsProfileField/)
   assert.match(settingsSource, /text-\[var\(--admin-shell-text\)\]/)
-  assert.match(uploaderSource, /bg-\[var\(--admin-shell-avatar-bg\)\]/)
+  assert.match(uploaderSource, /admin-settings-profile-avatar h-48 w-48/)
+  assert.match(uploaderSource, /object-cover/)
+  assert.match(cssSource, /\.admin-settings-profile-avatar \{[\s\S]*width:\s*192px !important;[\s\S]*height:\s*192px !important;[\s\S]*object-fit:\s*cover;/)
   assert.match(profileSource, /text-\[var\(--admin-shell-text\)\]/)
   assert.doesNotMatch(profileSource, /border-\[#24334A\]|bg-\[#111D30\]|bg-\[#0F1728\]|bg-\[#0D1625\]|text-\[#DCE6F8\]|text-\[#EEF4FF\]|text-\[#8EA0BC\]|placeholder:text-\[#70809E\]/)
 })
@@ -74,6 +78,8 @@ test('admin settings profile and account layouts fill the content width without 
 
   assert.match(profileSource, /<div className="grid w-full gap-4 md:grid-cols-2">/)
   assert.match(profileSource, /id="admin-profile-status-notice" className="flex w-full items-start/)
+  assert.match(profileSource, /profileStatusMessage \? \(/)
+  assert.doesNotMatch(profileSource, /Edit the connected coach profile fields and save changes to Supabase\./)
   assert.match(accountSource, /<div className="grid w-full gap-4">[\s\S]*htmlFor="admin-account-email" label="Email"/)
   assert.match(accountSource, /id="admin-account-status-notice" className="flex w-full items-start/)
 

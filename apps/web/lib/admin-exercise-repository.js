@@ -544,6 +544,12 @@ export function createAdminExerciseRepository(overrides = {}) {
       return mergeExerciseResponseWithInput(formatExerciseRow(insertedRow, 0), input)
     },
 
+    async deleteExercise(exerciseId) {
+      const normalizedExerciseId = normalizeRequiredString(exerciseId, 'Exercise ID')
+      await client.deleteTable('exercises', `?id=eq.${encodeURIComponent(normalizedExerciseId)}`)
+      return { exerciseId: normalizedExerciseId }
+    },
+
     async updateExercise(exerciseId, input = {}) {
       const normalizedExerciseId = normalizeRequiredString(exerciseId, 'Exercise ID')
       const payload = buildExerciseWritePayload(input)

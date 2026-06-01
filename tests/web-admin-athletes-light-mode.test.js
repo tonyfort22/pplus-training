@@ -32,7 +32,7 @@ test('all athletes table surface uses admin light-mode tokens instead of dark-co
   assert.match(cssSource, /\.admin-shell-athletes-filter-trigger\s*\{[^}]*border:\s*1px solid var\(--admin-dashboard-card-border\);[^}]*background:\s*var\(--admin-dashboard-control-bg\);[^}]*color:\s*var\(--admin-dashboard-card-text\);/)
   assert.match(cssSource, /\.admin-shell-athletes-pagination-bar\s*\{[^}]*color:\s*var\(--admin-dashboard-card-muted\);/)
   assert.match(cssSource, /\.admin-shell-athletes-example-pagination-button\s*\{[^}]*border:\s*1px solid var\(--admin-dashboard-card-border\);[^}]*background:\s*var\(--admin-dashboard-control-bg\);[^}]*color:\s*var\(--admin-dashboard-card-text\);/)
-  assert.match(cssSource, /\.admin-shell-athletes-example-pagination-button-active\s*\{[^}]*background:\s*var\(--admin-shell-accent\);[^}]*color:\s*#0B1120;/)
+  assert.match(cssSource, /\.admin-shell-athletes-example-pagination-button-active\s*\{[^}]*background:\s*var\(--admin-shell-primary-button-bg\);[^}]*color:\s*#0B1120;/)
 
   assert.match(athletesSource, /admin-shell-athletes-filter-trigger/)
   assert.match(athletesSource, /admin-shell-athletes-pagination-bar/)
