@@ -132,6 +132,14 @@ const EXERCISE_LIST_SELECT = [
   'movement_pattern',
   'stimulus_type',
   'default_equipment',
+  'default_sets',
+  'default_reps',
+  'default_distance',
+  'default_weight',
+  'default_duration',
+  'default_rest',
+  'default_tempo',
+  'status',
   'created_at',
   'exercise_muscle_maps(muscle_id,role,sort_order,muscles(id,name))',
 ].join(',')
@@ -145,6 +153,14 @@ const EXERCISE_DETAIL_SELECT = [
   'movement_pattern',
   'stimulus_type',
   'default_equipment',
+  'default_sets',
+  'default_reps',
+  'default_distance',
+  'default_weight',
+  'default_duration',
+  'default_rest',
+  'default_tempo',
+  'status',
   'thumbnail_url',
   'video_url',
   'created_at',
@@ -310,11 +326,14 @@ function formatExerciseRow(row, totalSetCount = 0) {
     equipmentNeeded: defaultEquipment ? [normalizeExerciseFilterValue(defaultEquipment)] : [],
     movementTypeValues,
     totalSetCount,
-    sets: totalSetCount > 0 ? totalSetCount : '-',
-    reps: '-',
-    duration: '-',
-    distance: '-',
-    rest: '-',
+    sets: normalizeOptionalString(row?.default_sets) ?? (totalSetCount > 0 ? String(totalSetCount) : '-'),
+    reps: normalizeOptionalString(row?.default_reps) ?? '-',
+    duration: normalizeOptionalString(row?.default_duration) ?? '-',
+    distance: normalizeOptionalString(row?.default_distance) ?? '-',
+    weights: normalizeOptionalString(row?.default_weight) ?? '',
+    rest: normalizeOptionalString(row?.default_rest) ?? '-',
+    tempo: normalizeOptionalString(row?.default_tempo) ?? '',
+    status: normalizeOptionalString(row?.status) ?? 'draft',
     createdAt: row.created_at ?? null,
   }
 }
@@ -390,6 +409,14 @@ function buildExerciseWritePayload(input = {}, { includeSlug = false } = {}) {
 
   const equipmentValues = normalizeSelectedValues(input?.equipmentNeeded)
   payload.default_equipment = equipmentValues[0] ?? null
+  payload.default_sets = normalizeOptionalString(input?.sets)
+  payload.default_reps = normalizeOptionalString(input?.reps)
+  payload.default_distance = normalizeOptionalString(input?.distance)
+  payload.default_weight = normalizeOptionalString(input?.weights)
+  payload.default_duration = normalizeOptionalString(input?.duration)
+  payload.default_rest = normalizeOptionalString(input?.rest)
+  payload.default_tempo = normalizeOptionalString(input?.tempo)
+  payload.status = normalizeOptionalString(input?.status) ?? 'draft'
 
   if (includeSlug) {
     payload.slug = slugifyExerciseName(name) || `exercise-${Date.now()}`

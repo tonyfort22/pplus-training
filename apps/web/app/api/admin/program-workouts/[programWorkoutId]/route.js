@@ -11,10 +11,15 @@ function handleRouteError(error) {
   )
 }
 
+async function getProgramWorkoutId(context) {
+  const params = await context?.params
+  return params?.programWorkoutId
+}
+
 export async function GET(_request, context) {
   try {
     const repository = createProgramWorkoutRepository()
-    const programWorkoutTree = await repository.getProgramWorkoutTree(context?.params?.programWorkoutId)
+    const programWorkoutTree = await repository.getProgramWorkoutTree(await getProgramWorkoutId(context))
     return json({ programWorkoutTree })
   } catch (error) {
     return handleRouteError(error)
@@ -25,7 +30,7 @@ export async function PATCH(request, context) {
   try {
     const repository = createProgramWorkoutRepository()
     const payload = await request.json()
-    const programWorkoutId = context?.params?.programWorkoutId
+    const programWorkoutId = await getProgramWorkoutId(context)
     await repository.updateProgramWorkoutDetails(
       programWorkoutId,
       payload?.details ?? payload,
@@ -36,6 +41,17 @@ export async function PATCH(request, context) {
       : await repository.getProgramWorkoutTree(programWorkoutId)
 
     return json({ programWorkoutTree })
+  } catch (error) {
+    return handleRouteError(error)
+  }
+}
+
+export async function DELETE(_request, context) {
+  try {
+    const repository = createProgramWorkoutRepository()
+    const programWorkoutId = await getProgramWorkoutId(context)
+    const deletedWorkout = await repository.deleteProgramWorkout(programWorkoutId)
+    return json({ success: true, programWorkoutId: deletedWorkout.id })
   } catch (error) {
     return handleRouteError(error)
   }

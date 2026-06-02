@@ -60,3 +60,14 @@ export async function PATCH(request) {
     return handleRouteError(error)
   }
 }
+
+export async function DELETE(request) {
+  try {
+    const repository = createAdminProgramRepository()
+    const payload = await request.json()
+    const deletedProgram = await repository.deleteProgram(payload?.id)
+    return json({ program: deletedProgram })
+  } catch (error) {
+    return handleRouteError(error)
+  }
+}

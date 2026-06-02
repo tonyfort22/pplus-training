@@ -192,6 +192,17 @@ for (const sqlName of ['schema-v1.sql', '0001_initial_schema.sql']) {
     assert.match(normalized, /create policy exercise_media_select_public on storage\.objects for select to public using \(bucket_id = 'exercise-media'\)/)
   })
 
+  test(`${sqlName} persists editable exercise defaults from the admin Exercise Sheet`, () => {
+    expectColumn(sql, 'exercises', 'default_sets')
+    expectColumn(sql, 'exercises', 'default_reps')
+    expectColumn(sql, 'exercises', 'default_distance')
+    expectColumn(sql, 'exercises', 'default_weight')
+    expectColumn(sql, 'exercises', 'default_duration')
+    expectColumn(sql, 'exercises', 'default_rest')
+    expectColumn(sql, 'exercises', 'default_tempo')
+    expectColumn(sql, 'exercises', 'status')
+  })
+
   test(`${sqlName} preserves plan lineage in execution tables`, () => {
     expectColumn(sql, 'workout_session_exercises', 'program_workout_exercise_id')
     expectColumn(sql, 'workout_session_sets', 'program_workout_set_id')

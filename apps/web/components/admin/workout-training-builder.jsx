@@ -3,9 +3,10 @@
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { ChevronDown, ChevronUp, GripVertical, Search, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronUp, Dumbbell, GripVertical, Search, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { Input } from '@/components/ui/input'
 import { KanbanBoard, KanbanColumn, KanbanItem } from '@/components/ui/kanban'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -283,17 +284,23 @@ export default function WorkoutTrainingBuilder({
   return (
     <div className="grid gap-4">
       {sections.length === 0 ? (
-        <div className="grid gap-4 rounded-[18px] border border-dashed border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-6 py-8 text-center">
-          <div className="grid gap-2">
-            <p className="text-base font-semibold text-[var(--admin-dashboard-card-text)]">No sections yet</p>
-            <p className="text-sm text-[var(--admin-dashboard-card-muted)]">Add a section to this workout.</p>
-          </div>
-          <div className="flex justify-center">
+        <Empty className="border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)]">
+          <EmptyHeader>
+            <EmptyMedia variant="icon" className="border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] text-[var(--admin-shell-primary-button-bg)]">
+              <Dumbbell />
+            </EmptyMedia>
+            <EmptyTitle>No sections yet</EmptyTitle>
+            <EmptyDescription className="text-[var(--admin-dashboard-card-muted)]">Add a section to this workout.</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
             <Button type="button" onClick={addSection} disabled={readOnly} className="min-h-[40px] rounded-[12px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]">
-              Add a section to this workout
+              Add a section
             </Button>
-          </div>
-        </div>
+            <Button type="button" variant="outline" disabled={readOnly} className="min-h-[40px] rounded-[12px]">
+              Import PDF
+            </Button>
+          </EmptyContent>
+        </Empty>
       ) : (
         <>
           <div className="flex justify-end">

@@ -57,5 +57,5 @@ test('create and edit athlete dialog avatar uploader and tabs use theme-aware li
   assert.match(cssSource, /\.admin-shell-athletes-create-uploader-empty\s*\{[^}]*border:\s*1px dashed var\(--admin-dashboard-card-border\);[^}]*background:\s*var\(--admin-shell-avatar-bg\);[^}]*color:\s*var\(--admin-shell-avatar-text\);/)
   assert.match(cssSource, /\.admin-shell-athletes-create-tabs \[data-slot='tabs-list'\],[\s\S]*?\{[^}]*border:\s*1px solid var\(--admin-dashboard-card-border\);[^}]*background:\s*var\(--admin-dashboard-control-bg\);[^}]*color:\s*var\(--admin-dashboard-card-muted\);/)
   assert.match(cssSource, /\.admin-shell-athletes-create-tabs \[data-slot='tabs-trigger'\]\s*\{[^}]*color:\s*var\(--admin-dashboard-card-muted\);/)
-  assert.match(cssSource, /\.admin-shell-athletes-create-tabs \[data-slot='tabs-trigger'\]\[data-state='active'\]\s*\{[^}]*background:\s*var\(--admin-shell-accent\);[^}]*color:\s*#0B1120;/)
+  assert.match(cssSource, /\.admin-shell-athletes-create-tabs \[data-slot='tabs-trigger'\]\[data-state='active'\]\s*\{[^}]*background:\s*var\(--admin-shell-primary-button-bg\);[^}]*color:\s*var\(--admin-shell-primary-button-text\);/)
 })

@@ -15,7 +15,9 @@ export async function POST(request) {
   try {
     const repository = createProgramWorkoutRepository()
     const payload = await request.json()
-    const programWorkoutTree = await repository.createProgramWorkoutFromTemplate(payload)
+    const programWorkoutTree = payload?.workout_template_id || payload?.workoutTemplateId
+      ? await repository.createProgramWorkoutFromTemplate(payload)
+      : await repository.createProgramWorkoutFromSections(payload)
     return json({ programWorkoutTree }, { status: 201 })
   } catch (error) {
     return handleRouteError(error)

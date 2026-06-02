@@ -78,7 +78,7 @@ function SelectItem({ className, children, ...props }) {
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "relative flex w-full cursor-default select-none items-center gap-2 rounded-xl bg-[#F8FAFC]/0 py-2 pl-8 pr-3 text-sm outline-none transition-colors hover:bg-[var(--admin-shell-nav-active-bg)] hover:text-[var(--admin-shell-nav-active-text)] focus:bg-[var(--admin-shell-nav-active-bg)] focus:text-[var(--admin-shell-nav-active-text)] data-[highlighted]:bg-[var(--admin-shell-nav-active-bg)] data-[highlighted]:text-[var(--admin-shell-nav-active-text)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        "relative flex w-full cursor-default select-none items-center gap-2 rounded-xl bg-transparent py-2 pl-8 pr-3 text-sm outline-none transition-colors hover:bg-transparent hover:text-[var(--admin-shell-accent)] focus:bg-transparent focus:text-[var(--admin-shell-accent)] data-[highlighted]:bg-transparent data-[highlighted]:text-[var(--admin-shell-accent)] data-[state=checked]:bg-transparent data-[state=checked]:text-[var(--admin-shell-accent)] data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
         className,
       )}
       {...props}

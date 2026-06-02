@@ -67,18 +67,18 @@ export default function MultiCombobox({
       <button
         id={id}
         type="button"
-        className="flex min-h-[44px] w-full items-center justify-between gap-3 rounded-[12px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-3 py-2 text-left text-sm text-[var(--admin-dashboard-card-text)] outline-none transition focus:border-[var(--admin-shell-accent)] focus:ring-2 focus:ring-[var(--admin-input-focus)]"
+        className="multi-combobox-trigger admin-shell-athletes-example-columns-button admin-shell-athletes-create-select-trigger flex min-h-[44px] w-full items-center justify-between gap-3 text-left outline-none transition focus:border-[var(--admin-shell-accent)] focus:ring-2 focus:ring-[var(--admin-input-focus)]"
         onClick={() => setIsOpen((current) => !current)}
       >
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+        <div className="multi-combobox-selected-values flex min-w-0 flex-1 flex-wrap items-center gap-2">
           {selectedOptions.length ? (
             <>
               {visibleSelectedOptions.map((option) => (
                 <span
                   key={option.value}
-                  className="inline-flex items-center gap-1 rounded-full bg-[var(--admin-shell-nav-active-bg)] px-2.5 py-1 text-xs font-medium text-[var(--admin-shell-nav-active-text)]"
+                  className="multi-combobox-badge inline-flex min-w-0 items-center gap-1 rounded-full bg-[var(--admin-shell-nav-active-bg)] px-2.5 py-1 text-xs font-medium text-[var(--admin-shell-nav-active-text)]"
                 >
-                  {option.label}
+                  <span className="truncate">{option.label}</span>
                   <span
                     role="button"
                     tabIndex={0}
@@ -103,7 +103,7 @@ export default function MultiCombobox({
                 <span
                   role="button"
                   tabIndex={0}
-                  className="inline-flex items-center rounded-full border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-shell-surface-muted)] px-2.5 py-1 text-xs font-medium text-[var(--admin-dashboard-card-muted)]"
+                  className="multi-combobox-more-badge inline-flex items-center rounded-full border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-shell-surface-muted)] px-2.5 py-1 text-xs font-medium text-[var(--admin-dashboard-card-muted)]"
                   onClick={(event) => {
                     event.stopPropagation()
                     setIsExpanded(true)
@@ -123,7 +123,7 @@ export default function MultiCombobox({
                 <span
                   role="button"
                   tabIndex={0}
-                  className="inline-flex items-center rounded-full border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-shell-surface-muted)] px-2.5 py-1 text-xs font-medium text-[var(--admin-dashboard-card-muted)]"
+                  className="multi-combobox-more-badge inline-flex items-center rounded-full border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-shell-surface-muted)] px-2.5 py-1 text-xs font-medium text-[var(--admin-dashboard-card-muted)]"
                   onClick={(event) => {
                     event.stopPropagation()
                     setIsExpanded(false)
@@ -144,11 +144,11 @@ export default function MultiCombobox({
             <span className="text-[var(--admin-dashboard-card-muted)]">{placeholder}</span>
           )}
         </div>
-        <ChevronDownIcon className={cn("h-4 w-4 shrink-0 text-[var(--admin-dashboard-card-muted)] transition-transform", isOpen && "rotate-180")} />
+        <ChevronDownIcon className={cn("admin-shell-athletes-example-columns-icon shrink-0 transition-transform", isOpen && "rotate-180")} />
       </button>
 
       {isOpen ? (
-        <div className="absolute left-0 top-[calc(100%+8px)] z-50 w-full rounded-[16px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-2 shadow-[var(--admin-shell-shadow)]">
+        <div className="absolute left-0 top-[calc(100%+8px)] z-50 w-full min-w-[var(--radix-dropdown-menu-trigger-width)] rounded-2xl border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-1 text-[var(--admin-dashboard-card-text)] shadow-[var(--admin-shell-shadow)]">
           <div className="mb-2 flex items-center gap-2 rounded-[10px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-3 py-2">
             <SearchIcon className="h-4 w-4 text-[var(--admin-dashboard-card-muted)]" />
             <input
@@ -169,7 +169,10 @@ export default function MultiCombobox({
                   <button
                     key={option.value}
                     type="button"
-                    className="flex w-full items-center justify-between rounded-[10px] px-3 py-2 text-sm text-[var(--admin-dashboard-card-text)] transition hover:bg-[var(--admin-shell-nav-active-bg)] hover:text-[var(--admin-shell-nav-active-text)] focus:bg-[var(--admin-shell-nav-active-bg)] focus:text-[var(--admin-shell-nav-active-text)]"
+                    className={cn(
+                      "flex w-full items-center justify-between rounded-[10px] bg-transparent px-3 py-2 text-sm text-[var(--admin-dashboard-card-text)] transition hover:bg-transparent hover:text-[var(--admin-shell-accent)] focus:bg-transparent focus:text-[var(--admin-shell-accent)]",
+                      isSelected && "text-[var(--admin-shell-accent)]",
+                    )}
                     onClick={() => toggleValue(option.value)}
                   >
                     <span>{option.label}</span>

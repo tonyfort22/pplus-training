@@ -22,8 +22,8 @@ function SupportEmptyState({
   return (
     <Empty
       className={cn(
-        "w-full border-white/10 bg-[radial-gradient(circle_at_top,rgba(59,224,175,0.16),rgba(7,13,24,0)_44%),linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.02))] text-white shadow-[0_24px_80px_rgba(0,0,0,0.24)]",
-        compact ? "min-h-[190px] gap-4 rounded-2xl px-3 py-5" : "max-w-lg",
+        "support-inbox-empty-state w-full",
+        compact ? "support-inbox-empty-state-compact min-h-[190px] gap-4 rounded-2xl px-3 py-5" : "max-w-lg",
         className,
       )}
     >
@@ -31,14 +31,14 @@ function SupportEmptyState({
         <EmptyMedia
           variant="icon"
           className={cn(
-            "border-white/10 bg-[#101826] text-[#3BE0AF] shadow-[0_12px_30px_rgba(59,224,175,0.12)]",
+            "support-inbox-empty-media",
             compact && "size-10 [&_svg]:size-5",
           )}
         >
           <MessageCircleIcon />
         </EmptyMedia>
-        <EmptyTitle className={compact ? "text-sm" : undefined}>{title}</EmptyTitle>
-        <EmptyDescription className={cn("text-[#8EA0BC]", compact && "text-xs leading-5")}>{description}</EmptyDescription>
+        <EmptyTitle className={cn("support-inbox-empty-title", compact && "text-sm")}>{title}</EmptyTitle>
+        <EmptyDescription className={cn("support-inbox-empty-description", compact && "text-xs leading-5")}>{description}</EmptyDescription>
       </EmptyHeader>
       {actionLabel && onAction ? (
         <EmptyContent>
@@ -47,7 +47,7 @@ function SupportEmptyState({
             variant="outline"
             size="sm"
             onClick={onAction}
-            className="border-white/10 bg-white/[0.04] text-[#D7E2F4] hover:bg-white/[0.08] hover:text-white"
+            className="support-inbox-empty-action"
           >
             <RefreshCcwIcon />
             {actionLabel}

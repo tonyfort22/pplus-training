@@ -51,7 +51,7 @@ test('admin dashboard CRUD workflow matrix has no fake row actions for requested
   assert.match(groupRepository, /deleteGroup\(\{/)
   assert.match(groupRepository, /assignProgramToGroup\(\{/)
   assert.match(groupsTable, /action: 'delete'/)
-  assert.match(groupsTable, /action: 'assign-program'/)
+  assert.doesNotMatch(groupsTable, /<DropdownMenuItem>Assign<\/DropdownMenuItem>/)
 
   const rankingsTable = source('apps/web/components/admin/rankings-data-table.jsx')
   const rankingsRoute = source('apps/web/app/api/admin/rankings/route.js')
@@ -88,7 +88,8 @@ test('admin programs workouts exercises settings surfaces expose persisted creat
   assert.match(programWorkoutRepository, /async function updateWorkoutTemplate\(workoutTemplateId, payload = \{\}\)/)
   assert.match(programWorkoutRepository, /async function archiveWorkoutTemplate\(workoutTemplateId\)/)
   assert.match(workoutsTable, /onPrimaryAction=\{isSavingWorkoutTemplate \? null : handleWorkoutTemplatePrimaryAction\}/)
-  assert.match(workoutsTable, /onDelete=\{workoutDialogMode === 'edit' \? handleArchiveWorkoutTemplate : null\}/)
+  assert.match(workoutsTable, /openDeleteWorkoutDialog\(row\.original\)/)
+  assert.match(workoutsTable, /method: 'DELETE'/)
   assert.doesNotMatch(workoutsTable, /No workout template save endpoint is wired yet/)
   assert.doesNotMatch(workoutsTable, /not saved yet because/)
 

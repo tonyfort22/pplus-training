@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Select,
@@ -157,6 +158,18 @@ function parseImperialWeightToKg(value) {
   if (!normalizedValue) return null
   const pounds = Number(normalizedValue.replace(/[^0-9.\-]/g, ''))
   return Number.isFinite(pounds) ? Math.round((pounds / 2.20462) * 10) / 10 : null
+}
+
+function formatCreateAthleteGenderLabel(value) {
+  if (value === 'female') return 'Female'
+  if (value === 'other') return 'Other'
+  return 'Male'
+}
+
+function formatCreateAthletePositionLabel(value) {
+  if (value === 'defense') return 'Defense'
+  if (value === 'goalie') return 'Goalie'
+  return 'Forward'
 }
 
 function NameCell({ name, avatarUrl = '', dateOfBirth = null }) {
@@ -1105,30 +1118,26 @@ export function AthletesDataTable({ searchQuery = '' }) {
         </div>
       </div>
 
-      <Dialog open={isCreateEditAthleteDialogOpen} onOpenChange={(open) => {
+      <Sheet open={isCreateEditAthleteDialogOpen} onOpenChange={(open) => {
         setIsCreateEditAthleteDialogOpen(open)
         if (!open) {
           setAthleteDialogMode('create')
           setEditingAthleteId(null)
           setSendAthleteInvite(true)
         }
-      }} modal={false}>
-        <DialogContent
-          pageScrollable
-          className="admin-shell-athletes-invite-dialog border !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] sm:max-w-[720px]"
-        >
-          <div className="shrink-0 border-b !border-[color:var(--admin-dashboard-card-border)] px-6 py-5">
-            <DialogHeader>
-              <DialogTitle>{athleteDialogMode === 'edit' ? 'Edit athlete profile' : 'Create athlete profile'}</DialogTitle>
-              <DialogDescription>
-                {athleteDialogMode === 'edit'
-                  ? "Update the athlete's personal details, profile photo, and preferred measurements."
-                  : "Add the athlete's personal details, profile photo, and preferred measurements."}
-              </DialogDescription>
-            </DialogHeader>
-          </div>
+      }}>
+        <SheetContent side="right" className="admin-shell-athletes-create-sheet border-l !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] !max-w-[var(--container-lg)]">
+          <SheetHeader className="shrink-0 border-b !border-[color:var(--admin-dashboard-card-border)] px-6 py-5">
+            <SheetTitle className="text-[var(--admin-dashboard-card-text)]">{athleteDialogMode === 'edit' ? 'Edit athlete profile' : 'Create athlete profile'}</SheetTitle>
+            <SheetDescription className="text-[var(--admin-dashboard-card-muted)]">
+              {athleteDialogMode === 'edit'
+                ? 'Update the information below.'
+                : 'Fill out the information below.'}
+            </SheetDescription>
+          </SheetHeader>
 
-          <div className="admin-shell-athletes-create-form grid gap-5 px-6 py-6">
+          <div className="admin-shell-athletes-create-sheet-scroll min-h-0 flex-1 overflow-y-auto px-6 py-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <div className="admin-shell-athletes-create-form grid gap-5">
             <CreateAthletePhotoUploader
               athleteName={createAthleteNamePreview}
               previewSrc={createAthleteProfileImage}
@@ -1169,28 +1178,34 @@ export function AthletesDataTable({ searchQuery = '' }) {
 
             <div className="admin-shell-athletes-create-row admin-shell-athletes-create-row-two-up grid gap-4 md:grid-cols-2">
               <CreateAthleteDialogField htmlFor="create-athlete-gender" label="Gender">
-                <Select value={createAthleteGender} onValueChange={setCreateAthleteGender}>
-                  <SelectTrigger id="create-athlete-gender" className="h-11 rounded-[12px]">
-                    <SelectValue placeholder="Select gender" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="male">Male</SelectItem>
-                    <SelectItem value="female">Female</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
-                  </SelectContent>
-                </Select>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button id="create-athlete-gender" type="button" className="admin-shell-athletes-example-columns-button admin-shell-athletes-create-select-trigger w-full" aria-label="Gender">
+                      <span className="truncate">{formatCreateAthleteGenderLabel(createAthleteGender)}</span>
+                      <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="min-w-[var(--radix-dropdown-menu-trigger-width)]">
+                    <DropdownMenuItem onSelect={() => setCreateAthleteGender('male')}>Male</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setCreateAthleteGender('female')}>Female</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setCreateAthleteGender('other')}>Other</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </CreateAthleteDialogField>
               <CreateAthleteDialogField htmlFor="create-athlete-position" label="Position">
-                <Select value={createAthletePosition} onValueChange={setCreateAthletePosition}>
-                  <SelectTrigger id="create-athlete-position" className="h-11 rounded-[12px]">
-                    <SelectValue placeholder="Select position" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="forward">Forward</SelectItem>
-                    <SelectItem value="defense">Defense</SelectItem>
-                    <SelectItem value="goalie">Goalie</SelectItem>
-                  </SelectContent>
-                </Select>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button id="create-athlete-position" type="button" className="admin-shell-athletes-example-columns-button admin-shell-athletes-create-select-trigger w-full" aria-label="Position">
+                      <span className="truncate">{formatCreateAthletePositionLabel(createAthletePosition)}</span>
+                      <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="min-w-[var(--radix-dropdown-menu-trigger-width)]">
+                    <DropdownMenuItem onSelect={() => setCreateAthletePosition('forward')}>Forward</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setCreateAthletePosition('defense')}>Defense</DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setCreateAthletePosition('goalie')}>Goalie</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </CreateAthleteDialogField>
             </div>
 
@@ -1284,28 +1299,31 @@ export function AthletesDataTable({ searchQuery = '' }) {
               </CreateAthleteDialogField>
               ) : null
             ) : null}
+            </div>
           </div>
 
-          <DialogFooter className="border-t !border-[color:var(--admin-dashboard-card-border)] px-6 py-5 sm:justify-end gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-[12px] min-h-[40px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-shell-text-strong)]"
-              onClick={() => setIsCreateEditAthleteDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              className="admin-shell-athletes-create-submit rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]"
-              onClick={handleCreateEditAthleteSubmit}
-              disabled={isSavingAthlete}
-            >
-              {isSavingAthlete ? (athleteDialogMode === 'edit' ? 'Saving...' : 'Creating...') : athleteDialogMode === 'edit' ? 'Save' : 'Create'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <div className="admin-shell-athletes-create-sheet-footer shrink-0 border-t !border-[color:var(--admin-dashboard-card-border)] px-6 py-5">
+            <div className="flex justify-end gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-[12px] min-h-[40px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-shell-text-strong)]"
+                onClick={() => setIsCreateEditAthleteDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                className="admin-shell-athletes-create-submit rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]"
+                onClick={handleCreateEditAthleteSubmit}
+                disabled={isSavingAthlete}
+              >
+                {isSavingAthlete ? (athleteDialogMode === 'edit' ? 'Saving...' : 'Creating...') : athleteDialogMode === 'edit' ? 'Save changes' : 'Create athlete'}
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <Dialog open={isInviteDialogOpen} onOpenChange={(open) => {
         setIsInviteDialogOpen(open)
@@ -1365,20 +1383,18 @@ export function AthletesDataTable({ searchQuery = '' }) {
       </Dialog>
 
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="admin-shell-athletes-invite-dialog border !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] sm:max-w-[560px]">
-          <div className="px-6 py-5">
-            <DialogHeader>
-              <DialogTitle>Delete athlete</DialogTitle>
-              <DialogDescription>This athlete will be removed from the workspace.</DialogDescription>
-            </DialogHeader>
-          </div>
-
-          <DialogFooter className="border-t !border-[color:var(--admin-dashboard-card-border)] px-6 py-5 sm:justify-end gap-3">
+        <DialogContent className="admin-shell-athletes-invite-dialog border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] text-[var(--admin-dashboard-card-text)] sm:max-w-[440px]">
+          <DialogHeader>
+            <DialogTitle>Delete athlete</DialogTitle>
+            <DialogDescription>This athlete will be permanently deleted.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:flex-row sm:justify-end gap-3">
             <Button
               type="button"
               variant="outline"
-              className="rounded-[12px] min-h-[40px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-shell-text-strong)]"
+              className="rounded-[12px] min-h-[40px]"
               onClick={() => setIsDeleteDialogOpen(false)}
+              disabled={isDeletingAthlete}
             >
               Cancel
             </Button>
@@ -1388,7 +1404,7 @@ export function AthletesDataTable({ searchQuery = '' }) {
               onClick={handleDeleteAthlete}
               disabled={isDeletingAthlete}
             >
-              {isDeletingAthlete ? 'Deleting...' : 'Delete'}
+              {isDeletingAthlete ? 'Deleting...' : 'Delete athlete'}
             </Button>
           </DialogFooter>
         </DialogContent>

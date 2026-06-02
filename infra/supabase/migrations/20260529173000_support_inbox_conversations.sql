@@ -30,6 +30,11 @@ create table if not exists support_messages (
   updated_at timestamptz not null default now()
 );
 
+alter table support_messages
+  add column if not exists delivery_status text not null default 'pending' check (delivery_status in ('pending', 'sent', 'failed', 'skipped')),
+  add column if not exists delivery_error text,
+  add column if not exists delivered_at timestamptz;
+
 create index if not exists support_conversations_status_last_message_idx on support_conversations (status, last_message_at desc nulls last, created_at desc);
 create index if not exists support_conversations_requester_email_idx on support_conversations (lower(requester_email));
 create index if not exists support_messages_conversation_created_at_idx on support_messages (conversation_id, created_at asc);

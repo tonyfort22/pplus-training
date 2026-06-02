@@ -17,6 +17,14 @@ import Badge from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import Checkbox from '@/components/ui/checkbox'
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -78,8 +86,13 @@ function createWorkoutFormValues(selectedWorkout = null) {
 }
 
 function StatusCell({ status }) {
+  const normalizedStatus = String(status ?? '').trim().toLowerCase()
+  const statusClassName = normalizedStatus === 'inactive' || normalizedStatus === 'archived'
+    ? 'admin-shell-workouts-status-badge admin-shell-workouts-status-badge-inactive normal-case tracking-normal'
+    : 'admin-shell-workouts-status-badge admin-shell-workouts-status-badge-active normal-case tracking-normal'
+
   return (
-    <Badge tone="success" className="normal-case tracking-normal">
+    <Badge className={statusClassName}>
       {status}
     </Badge>
   )
@@ -107,6 +120,7 @@ function RowActionsCell({
   onOpenChange = () => {},
   onEditAction = () => {},
   onDuplicateAction = () => {},
+  onDeleteAction = () => {},
 }) {
   return (
     <DropdownMenu open={isOpen} onOpenChange={onOpenChange}>
@@ -117,9 +131,10 @@ function RowActionsCell({
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Workout actions</DropdownMenuLabel>
-        <DropdownMenuItem onSelect={() => { onEditAction(); onOpenChange(false) }}>Open workout</DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => { onDuplicateAction(); onOpenChange(false) }}>Duplicate workout</DropdownMenuItem>
+        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+        <DropdownMenuItem onSelect={() => { onEditAction(); onOpenChange(false) }}>Edit</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => { onDuplicateAction(); onOpenChange(false) }}>Duplicate</DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => { onDeleteAction(); onOpenChange(false) }}>Delete</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -341,6 +356,10 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
   const [workoutFormValues, setWorkoutFormValues] = useState(() => createWorkoutFormValues())
   const [workoutEditorMessage, setWorkoutEditorMessage] = useState('')
   const [isSavingWorkoutTemplate, setIsSavingWorkoutTemplate] = useState(false)
+  const [isDeleteWorkoutDialogOpen, setIsDeleteWorkoutDialogOpen] = useState(false)
+  const [selectedDeleteWorkoutId, setSelectedDeleteWorkoutId] = useState(null)
+  const [isDeletingWorkoutTemplate, setIsDeletingWorkoutTemplate] = useState(false)
+  const [deleteWorkoutMessage, setDeleteWorkoutMessage] = useState('')
   const [openRowActionMenuId, setOpenRowActionMenuId] = useState(null)
   const [rowSelection, setRowSelection] = useState({})
   const [columnFilters, setColumnFilters] = useState([])
@@ -397,6 +416,15 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
     setWorkoutFormValues(createWorkoutFormValues(workout))
     setWorkoutEditorMessage('')
     setIsCreateWorkoutDialogOpen(true)
+  }
+
+  function openDeleteWorkoutDialog(workout) {
+    if (!workout) return
+
+    setOpenRowActionMenuId(null)
+    setSelectedDeleteWorkoutId(workout.id)
+    setDeleteWorkoutMessage('')
+    setIsDeleteWorkoutDialogOpen(true)
   }
 
   const columns = useMemo(
@@ -468,6 +496,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
             onOpenChange={(isOpen) => setOpenRowActionMenuId(isOpen ? row.original.id : null)}
             onEditAction={() => openEditWorkoutDialog(row.original)}
             onDuplicateAction={() => openDuplicateWorkoutDialog(row.original)}
+            onDeleteAction={() => openDeleteWorkoutDialog(row.original)}
           />
         ),
         enableSorting: false,
@@ -544,28 +573,28 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
     }
   }
 
-  async function handleArchiveWorkoutTemplate() {
-    if (!selectedWorkoutId) return
-    if (!window.confirm('Archive this workout template?')) return
+  async function handleDeleteWorkoutTemplate() {
+    if (!selectedDeleteWorkoutId) return
 
-    setIsSavingWorkoutTemplate(true)
-    setWorkoutEditorMessage('')
+    setIsDeletingWorkoutTemplate(true)
+    setDeleteWorkoutMessage('')
     try {
       const response = await fetch('/api/admin/workout-templates', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: selectedWorkoutId }),
+        body: JSON.stringify({ id: selectedDeleteWorkoutId }),
       })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) {
-        throw new Error(payload?.error || 'Failed to archive workout template.')
+        throw new Error(payload?.error || 'Failed to delete workout template.')
       }
       await reloadWorkoutTemplates()
-      setIsCreateWorkoutDialogOpen(false)
+      setIsDeleteWorkoutDialogOpen(false)
+      setSelectedDeleteWorkoutId(null)
     } catch (deleteError) {
-      setWorkoutEditorMessage(deleteError?.message || 'Failed to archive workout template.')
+      setDeleteWorkoutMessage(deleteError?.message || 'Failed to delete workout template.')
     } finally {
-      setIsSavingWorkoutTemplate(false)
+      setIsDeletingWorkoutTemplate(false)
     }
   }
 
@@ -701,27 +730,59 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
           }
         }}
         mode={workoutDialogMode}
-        title={workoutDialogMode === 'edit' ? 'Open workout' : workoutDialogMode === 'duplicate' ? 'Duplicate workout' : 'Create workout'}
+        title={workoutDialogMode === 'edit' ? 'Edit workout' : workoutDialogMode === 'duplicate' ? 'Duplicate workout' : 'Create workout'}
         description={
           workoutDialogMode === 'edit'
-            ? `Review ${workoutFormValues.name || selectedWorkoutId || 'this workout'} below.`
+            ? 'Update the information below.'
             : workoutDialogMode === 'duplicate'
-              ? `Prepare a copy of ${workoutFormValues.name || selectedWorkoutId || 'this workout'} below.`
-              : 'Prepare a new workout template below.'
+              ? 'Update the information below.'
+              : 'Fill out the information below.'
         }
         detailsValues={workoutFormValues}
         onDetailsChange={setWorkoutFormValues}
         trainingSections={workoutTrainingSections}
         onTrainingSectionsChange={setWorkoutTrainingSections}
         showTrainingTab={workoutDialogMode !== 'create'}
-        primaryActionLabel={isSavingWorkoutTemplate ? 'Saving...' : workoutDialogMode === 'edit' ? 'Save changes' : workoutDialogMode === 'duplicate' ? 'Create copy' : 'Create'}
+        primaryActionLabel={isSavingWorkoutTemplate ? 'Saving...' : workoutDialogMode === 'edit' ? 'Save changes' : workoutDialogMode === 'duplicate' ? 'Duplicate workout' : 'Create workout'}
         onPrimaryAction={isSavingWorkoutTemplate ? null : handleWorkoutTemplatePrimaryAction}
-        onDelete={workoutDialogMode === 'edit' ? handleArchiveWorkoutTemplate : null}
         focusAreaOptions={focusAreaOptions}
         statusOptions={statusOptions}
         saveDisclaimer={saveDisclaimer}
         errorMessage={workoutEditorMessage}
       />
+
+      <Dialog open={isDeleteWorkoutDialogOpen} onOpenChange={setIsDeleteWorkoutDialogOpen}>
+        <DialogContent className="admin-shell-athletes-invite-dialog border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] text-[var(--admin-dashboard-card-text)] sm:max-w-[440px]">
+          <DialogHeader>
+            <DialogTitle>Delete workout</DialogTitle>
+            <DialogDescription>This workout will be permanently deleted.</DialogDescription>
+          </DialogHeader>
+          {deleteWorkoutMessage ? (
+            <p className="admin-shell-workout-editor-message rounded-[12px] px-4 py-3 text-sm">
+              {deleteWorkoutMessage}
+            </p>
+          ) : null}
+          <DialogFooter className="sm:flex-row sm:justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-[12px] min-h-[40px]"
+              onClick={() => setIsDeleteWorkoutDialogOpen(false)}
+              disabled={isDeletingWorkoutTemplate}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="rounded-[12px] min-h-[40px] bg-red-500/90 text-white hover:bg-red-500"
+              onClick={handleDeleteWorkoutTemplate}
+              disabled={isDeletingWorkoutTemplate}
+            >
+              {isDeletingWorkoutTemplate ? 'Deleting...' : 'Delete workout'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="admin-shell-athletes-table-shell">
         <Table className="admin-shell-athletes-table">

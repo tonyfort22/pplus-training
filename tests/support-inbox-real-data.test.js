@@ -12,6 +12,7 @@ const publicRequesterMessagesRoutePath = resolve(repoRoot, 'apps/web/app/api/sup
 const shellPath = resolve(repoRoot, 'apps/web/components/admin/support/support-inbox-shell.jsx')
 const sidebarPath = resolve(repoRoot, 'apps/web/components/admin/support/support-conversation-sidebar.jsx')
 const threadPath = resolve(repoRoot, 'apps/web/components/admin/support/support-conversation-thread.jsx')
+const emptyStatePath = resolve(repoRoot, 'apps/web/components/admin/support/support-empty-state.jsx')
 const chatHeaderPath = resolve(repoRoot, 'apps/web/components/chat/chat-header.jsx')
 const primaryMessagePath = resolve(repoRoot, 'apps/web/components/chat/message-items/primary-message.jsx')
 const chatEventPath = resolve(repoRoot, 'apps/web/components/chat/chat-event.jsx')
@@ -398,6 +399,30 @@ test('support inbox sidebar and top nav use admin light-mode tokens instead of h
   assert.match(cssSource, /html\[data-theme='light'\] \.support-inbox-sidebar-logo-dark\s*\{[^}]*display:\s*none;/)
   assert.match(cssSource, /html\[data-theme='light'\] \.support-inbox-sidebar-logo-light\s*\{[^}]*display:\s*block;/)
   assert.match(cssSource, /\.support-inbox-topbar-search-input,\s*\n\.support-inbox-sidebar-search-input,\s*\n\.support-inbox-status-trigger\s*\{[^}]*border-color:\s*var\(--admin-shell-control-border\);[^}]*background:\s*var\(--admin-shell-control-bg\);[^}]*color:\s*var\(--admin-shell-text\);/)
+})
+
+test('support inbox empty states use admin theme tokens in light mode', () => {
+  const emptyStateSource = readFileSync(emptyStatePath, 'utf8')
+  const sidebarSource = readFileSync(sidebarPath, 'utf8')
+  const threadSource = readFileSync(threadPath, 'utf8')
+  const cssSource = readFileSync(cssPath, 'utf8')
+
+  assert.match(sidebarSource, /<SupportEmptyState[\s\S]*compact[\s\S]*title="No conversations found"/, 'sidebar search empty state should use the shared support empty state')
+  assert.match(threadSource, /function SupportConversationEmptyState/, 'conversation pane empty states should use the shared support empty state wrapper')
+  assert.match(threadSource, /<SupportEmptyState title=\{title\} description=\{description\} actionLabel=\{actionLabel\} onAction=\{onAction\} \/>/, 'thread empty states should render the shared support empty state')
+
+  assert.match(emptyStateSource, /support-inbox-empty-state/, 'empty state shell should expose a support-specific class for light-mode tokens')
+  assert.match(emptyStateSource, /support-inbox-empty-media/, 'empty state icon media should expose a support-specific class for light-mode tokens')
+  assert.match(emptyStateSource, /support-inbox-empty-title/, 'empty state title should expose a support-specific class for light-mode tokens')
+  assert.match(emptyStateSource, /support-inbox-empty-description/, 'empty state description should expose a support-specific class for light-mode tokens')
+  assert.match(emptyStateSource, /support-inbox-empty-action/, 'empty state action should expose a support-specific class for light-mode tokens')
+  assert.doesNotMatch(emptyStateSource, /text-white|text-\[#8EA0BC\]|bg-\[#101826\]|border-white\/10|bg-white\/\[0\.04\]/, 'support empty state should not force dark-only colors in component classes')
+
+  assert.match(cssSource, /\.support-inbox-empty-state\s*\{[^}]*border:\s*1px solid var\(--admin-dashboard-card-border\);[^}]*background:\s*var\(--admin-dashboard-card-bg\);[^}]*color:\s*var\(--admin-dashboard-card-text\);/, 'empty state card should use light/dark admin card tokens')
+  assert.match(cssSource, /\.support-inbox-empty-media\s*\{[^}]*border:\s*1px solid color-mix\(in srgb, var\(--admin-shell-primary-button-bg\) 24%, var\(--admin-dashboard-card-border\)\);[^}]*background:\s*var\(--admin-shell-nav-active-bg\);[^}]*color:\s*var\(--admin-shell-primary-button-bg\);/, 'empty state icon should keep the primary green accent without dark shells')
+  assert.match(cssSource, /\.support-inbox-empty-title\s*\{[^}]*color:\s*var\(--admin-dashboard-card-text\);/)
+  assert.match(cssSource, /\.support-inbox-empty-description\s*\{[^}]*color:\s*var\(--admin-dashboard-card-muted\);/)
+  assert.match(cssSource, /\.support-inbox-empty-action\s*\{[^}]*border-color:\s*var\(--admin-dashboard-card-border\);[^}]*background:\s*var\(--admin-dashboard-control-bg\);[^}]*color:\s*var\(--admin-dashboard-card-text\);/)
 })
 
 test('support inbox inputs and status dropdown follow admin dashboard search and columns-button styling models', () => {

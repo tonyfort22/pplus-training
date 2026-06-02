@@ -43,7 +43,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 
 const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const WEEK_HOURS = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00']
+const WEEK_HOURS = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00']
 const REFERENCE_TODAY = new Date(2026, 4, 25)
 const REFERENCE_MONTH_RANGE_LABEL = 'May 1, 2026 - May 31, 2026'
 
@@ -2092,7 +2092,7 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
 
               <Button
                 type="button"
-                className="w-full sm:w-auto rounded-[10px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]"
+                className="w-full sm:w-auto min-h-[40px] rounded-[10px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]"
                 onClick={() => openAssignmentDialog(selectedDate, WEEK_HOURS[0])}
               >
                 <Plus className="size-4" />

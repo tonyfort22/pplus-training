@@ -104,6 +104,7 @@ html[data-theme='light'] {
   --admin-shell-nav-active-text: #078968;
   --admin-shell-accent: #06b486;
   --admin-shell-primary-button-bg: #3be0af;
+  --admin-shell-primary-button-text: #0f172a;
   --admin-shell-avatar-bg: #dcfff1;
   --admin-shell-avatar-text: #078968;
   --admin-shell-shadow: 0 14px 34px rgba(15, 23, 42, 0.12);
@@ -177,6 +178,7 @@ html[data-theme='dark'] {
   --admin-shell-nav-active-text: #3be0af;
   --admin-shell-accent: #3be0af;
   --admin-shell-primary-button-bg: #3be0af;
+  --admin-shell-primary-button-text: #081510;
   --admin-shell-avatar-bg: #e0fcf0;
   --admin-shell-avatar-text: #06d6a0;
   --admin-shell-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
@@ -446,14 +448,14 @@ button {
 }
 
 .ui-checkbox.admin-shell-athletes-checkbox-input:checked {
-  border-color: var(--admin-shell-accent);
-  background: var(--admin-shell-accent);
+  border-color: var(--admin-shell-primary-button-bg);
+  background: var(--admin-shell-primary-button-bg);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2.2 6.25 4.75 8.8 9.8 3.75' stroke='white' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   box-shadow: none;
 }
 
 .ui-checkbox.admin-shell-athletes-checkbox-input:focus-visible {
-  outline: 2px solid var(--admin-shell-accent);
+  outline: 2px solid var(--admin-shell-primary-button-bg);
   outline-offset: 2px;
 }
 
@@ -1273,20 +1275,71 @@ html[data-theme='light'] [data-radix-popper-content-wrapper]:has(.admin-dashboar
 }
 
 .admin-dashboard-sidebar-nav-button:hover {
-  background: var(--admin-shell-nav-active-bg);
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--admin-shell-primary-button-bg) !important;
+}
+
+.admin-dashboard-sidebar-nav-button:focus-visible {
+  background: transparent !important;
+  box-shadow: none !important;
   color: var(--admin-shell-primary-button-bg) !important;
 }
 
 .admin-dashboard-sidebar-nav-button[data-active='true'] {
-  background: var(--admin-shell-nav-active-bg);
+  background: transparent !important;
+  box-shadow: none !important;
   color: var(--admin-shell-primary-button-bg) !important;
 }
 
+.admin-dashboard-sidebar-nav-button:hover,
+.admin-dashboard-sidebar-nav-button:focus-visible {
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--admin-shell-primary-button-bg) !important;
+}
+
+.group\/admin-sidebar-item[open] > .admin-dashboard-sidebar-nav-button {
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--admin-shell-primary-button-bg) !important;
+}
+
+.admin-dashboard-sidebar-nav-button:hover,
+.admin-dashboard-sidebar-nav-button:hover > *,
+.admin-dashboard-sidebar-nav-button:hover a,
 .admin-dashboard-sidebar-nav-button:hover span,
 .admin-dashboard-sidebar-nav-button:hover svg,
+.admin-dashboard-sidebar-nav-button:focus-visible,
+.admin-dashboard-sidebar-nav-button:focus-visible > *,
+.admin-dashboard-sidebar-nav-button:focus-visible a,
+.admin-dashboard-sidebar-nav-button:focus-visible span,
+.admin-dashboard-sidebar-nav-button:focus-visible svg,
+.admin-dashboard-sidebar-nav-button[data-active='true'],
+.admin-dashboard-sidebar-nav-button[data-active='true'] > *,
+.admin-dashboard-sidebar-nav-button[data-active='true'] a,
 .admin-dashboard-sidebar-nav-button[data-active='true'] span,
 .admin-dashboard-sidebar-nav-button[data-active='true'] svg {
   color: var(--admin-shell-primary-button-bg) !important;
+}
+
+.group\/admin-sidebar-item[open] > .admin-dashboard-sidebar-nav-button,
+.group\/admin-sidebar-item[open] > .admin-dashboard-sidebar-nav-button > *,
+.group\/admin-sidebar-item[open] > .admin-dashboard-sidebar-nav-button span,
+.group\/admin-sidebar-item[open] > .admin-dashboard-sidebar-nav-button svg {
+  color: var(--admin-shell-primary-button-bg) !important;
+}
+
+.admin-dashboard-sidebar-nav-button:hover svg,
+.admin-dashboard-sidebar-nav-button:focus-visible svg,
+.admin-dashboard-sidebar-nav-button[data-active='true'] svg {
+  color: var(--admin-shell-primary-button-bg) !important;
+  stroke: var(--admin-shell-primary-button-bg) !important;
+}
+
+.group\/admin-sidebar-item[open] > .admin-dashboard-sidebar-nav-button svg {
+  color: var(--admin-shell-primary-button-bg) !important;
+  stroke: var(--admin-shell-primary-button-bg) !important;
 }
 
 .admin-dashboard-sidebar-subnav {
@@ -1294,24 +1347,140 @@ html[data-theme='light'] [data-radix-popper-content-wrapper]:has(.admin-dashboar
 }
 
 .admin-dashboard-sidebar-subnav-button {
+  background: transparent !important;
   color: var(--admin-shell-muted);
 }
 
 .admin-dashboard-sidebar-subnav-button:hover {
   background: transparent !important;
+  box-shadow: none !important;
+  color: var(--admin-shell-primary-button-bg) !important;
+}
+
+.admin-dashboard-sidebar-subnav-button:focus-visible {
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--admin-shell-primary-button-bg) !important;
+}
+
+.admin-dashboard-sidebar-subnav-button:active {
+  background: transparent !important;
+  box-shadow: none !important;
   color: var(--admin-shell-primary-button-bg) !important;
 }
 
 .admin-dashboard-sidebar-subnav-button[data-active='true'] {
   background: transparent !important;
+  box-shadow: none !important;
   color: var(--admin-shell-primary-button-bg) !important;
 }
 
+.admin-dashboard-sidebar-subnav-button:hover,
+.admin-dashboard-sidebar-subnav-button:focus-visible,
+.admin-dashboard-sidebar-subnav-button:active,
+.admin-dashboard-sidebar-subnav-button[data-active='true'] {
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--admin-shell-primary-button-bg) !important;
+}
+
+.admin-dashboard-sidebar-subnav-button[data-state='active'] {
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--admin-shell-primary-button-bg) !important;
+}
+
+.admin-dashboard-sidebar-subnav-button:hover a,
 .admin-dashboard-sidebar-subnav-button:hover span,
 .admin-dashboard-sidebar-subnav-button:hover svg,
+.admin-dashboard-sidebar-subnav-button:focus-visible a,
+.admin-dashboard-sidebar-subnav-button:focus-visible span,
+.admin-dashboard-sidebar-subnav-button:focus-visible svg,
+.admin-dashboard-sidebar-subnav-button:active a,
+.admin-dashboard-sidebar-subnav-button:active span,
+.admin-dashboard-sidebar-subnav-button:active svg,
+.admin-dashboard-sidebar-subnav-button[data-active='true'] a,
 .admin-dashboard-sidebar-subnav-button[data-active='true'] span,
 .admin-dashboard-sidebar-subnav-button[data-active='true'] svg {
   color: var(--admin-shell-primary-button-bg) !important;
+}
+
+.admin-dashboard-sidebar-subnav-button:hover,
+.admin-dashboard-sidebar-subnav-button:hover > *,
+.admin-dashboard-sidebar-subnav-button:focus-visible,
+.admin-dashboard-sidebar-subnav-button:focus-visible > *,
+.admin-dashboard-sidebar-subnav-button:active,
+.admin-dashboard-sidebar-subnav-button:active > *,
+.admin-dashboard-sidebar-subnav-button[data-active='true'],
+.admin-dashboard-sidebar-subnav-button[data-active='true'] > *,
+.admin-dashboard-sidebar-subnav-button[data-state='active'],
+.admin-dashboard-sidebar-subnav-button[data-state='active'] > *,
+.admin-dashboard-sidebar-subnav-button[data-state='active'] a,
+.admin-dashboard-sidebar-subnav-button[data-state='active'] span,
+.admin-dashboard-sidebar-subnav-button[data-state='active'] svg {
+  color: var(--admin-shell-primary-button-bg) !important;
+}
+
+.admin-dashboard-sidebar-subnav-button:hover svg,
+.admin-dashboard-sidebar-subnav-button:focus-visible svg,
+.admin-dashboard-sidebar-subnav-button:active svg,
+.admin-dashboard-sidebar-subnav-button[data-active='true'] svg,
+.admin-dashboard-sidebar-subnav-button[data-state='active'] svg {
+  color: var(--admin-shell-primary-button-bg) !important;
+  stroke: currentColor !important;
+}
+
+.admin-dashboard-sidebar [data-sidebar='menu-button'].admin-dashboard-sidebar-nav-button:hover,
+.admin-dashboard-sidebar [data-sidebar='menu-button'].admin-dashboard-sidebar-nav-button:focus-visible,
+.admin-dashboard-sidebar [data-sidebar='menu-button'].admin-dashboard-sidebar-nav-button[data-active='true'],
+.admin-dashboard-sidebar .group\/admin-sidebar-item[open] > [data-sidebar='menu-button'].admin-dashboard-sidebar-nav-button {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  color: var(--admin-shell-primary-button-bg) !important;
+}
+
+.admin-dashboard-sidebar [data-sidebar='menu-button'].admin-dashboard-sidebar-nav-button:hover *,
+.admin-dashboard-sidebar [data-sidebar='menu-button'].admin-dashboard-sidebar-nav-button:focus-visible *,
+.admin-dashboard-sidebar [data-sidebar='menu-button'].admin-dashboard-sidebar-nav-button[data-active='true'] *,
+.admin-dashboard-sidebar .group\/admin-sidebar-item[open] > [data-sidebar='menu-button'].admin-dashboard-sidebar-nav-button * {
+  color: var(--admin-shell-primary-button-bg) !important;
+}
+
+.admin-dashboard-sidebar [data-sidebar='menu-button'].admin-dashboard-sidebar-nav-button:hover svg,
+.admin-dashboard-sidebar [data-sidebar='menu-button'].admin-dashboard-sidebar-nav-button:focus-visible svg,
+.admin-dashboard-sidebar [data-sidebar='menu-button'].admin-dashboard-sidebar-nav-button[data-active='true'] svg,
+.admin-dashboard-sidebar .group\/admin-sidebar-item[open] > [data-sidebar='menu-button'].admin-dashboard-sidebar-nav-button svg {
+  color: var(--admin-shell-primary-button-bg) !important;
+  stroke: var(--admin-shell-primary-button-bg) !important;
+}
+
+.admin-dashboard-sidebar [data-sidebar='menu-sub-button'].admin-dashboard-sidebar-subnav-button:hover,
+.admin-dashboard-sidebar [data-sidebar='menu-sub-button'].admin-dashboard-sidebar-subnav-button:focus-visible,
+.admin-dashboard-sidebar [data-sidebar='menu-sub-button'].admin-dashboard-sidebar-subnav-button:active,
+.admin-dashboard-sidebar [data-sidebar='menu-sub-button'].admin-dashboard-sidebar-subnav-button[data-active='true'],
+.admin-dashboard-sidebar [data-sidebar='menu-sub-button'].admin-dashboard-sidebar-subnav-button[data-state='active'] {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  color: var(--admin-shell-primary-button-bg) !important;
+}
+
+.admin-dashboard-sidebar [data-sidebar='menu-sub-button'].admin-dashboard-sidebar-subnav-button:hover *,
+.admin-dashboard-sidebar [data-sidebar='menu-sub-button'].admin-dashboard-sidebar-subnav-button:focus-visible *,
+.admin-dashboard-sidebar [data-sidebar='menu-sub-button'].admin-dashboard-sidebar-subnav-button:active *,
+.admin-dashboard-sidebar [data-sidebar='menu-sub-button'].admin-dashboard-sidebar-subnav-button[data-active='true'] *,
+.admin-dashboard-sidebar [data-sidebar='menu-sub-button'].admin-dashboard-sidebar-subnav-button[data-state='active'] * {
+  color: var(--admin-shell-primary-button-bg) !important;
+}
+
+.admin-dashboard-sidebar [data-sidebar='menu-sub-button'].admin-dashboard-sidebar-subnav-button:hover svg,
+.admin-dashboard-sidebar [data-sidebar='menu-sub-button'].admin-dashboard-sidebar-subnav-button:focus-visible svg,
+.admin-dashboard-sidebar [data-sidebar='menu-sub-button'].admin-dashboard-sidebar-subnav-button:active svg,
+.admin-dashboard-sidebar [data-sidebar='menu-sub-button'].admin-dashboard-sidebar-subnav-button[data-active='true'] svg,
+.admin-dashboard-sidebar [data-sidebar='menu-sub-button'].admin-dashboard-sidebar-subnav-button[data-state='active'] svg {
+  color: var(--admin-shell-primary-button-bg) !important;
+  stroke: currentColor !important;
 }
 
 .support-inbox-shell {
@@ -1457,6 +1626,40 @@ html[data-theme='light'] .support-inbox-sidebar-logo-light {
   font-weight: 800;
   letter-spacing: 0.08em;
   object-fit: cover;
+}
+
+.support-inbox-empty-state {
+  border: 1px solid var(--admin-dashboard-card-border);
+  background: var(--admin-dashboard-card-bg);
+  color: var(--admin-dashboard-card-text);
+  box-shadow: var(--ui-shadow-xs);
+}
+
+.support-inbox-empty-media {
+  border: 1px solid color-mix(in srgb, var(--admin-shell-primary-button-bg) 24%, var(--admin-dashboard-card-border));
+  background: var(--admin-shell-nav-active-bg);
+  color: var(--admin-shell-primary-button-bg);
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--admin-shell-primary-button-bg) 14%, transparent);
+}
+
+.support-inbox-empty-title {
+  color: var(--admin-dashboard-card-text);
+}
+
+.support-inbox-empty-description {
+  color: var(--admin-dashboard-card-muted);
+}
+
+.support-inbox-empty-action {
+  border-color: var(--admin-dashboard-card-border);
+  background: var(--admin-dashboard-control-bg);
+  color: var(--admin-dashboard-card-text);
+}
+
+.support-inbox-empty-action:hover {
+  border-color: color-mix(in srgb, var(--admin-shell-primary-button-bg) 30%, var(--admin-dashboard-card-border));
+  background: var(--admin-shell-nav-active-bg);
+  color: var(--admin-shell-primary-button-bg);
 }
 
 .support-inbox-resize-handle::after {
@@ -3236,13 +3439,87 @@ html[data-theme='light'] .admin-shell-overview-card-badge-negative {
   box-shadow: none;
 }
 
+.admin-shell-exercise-select-trigger {
+  border-color: var(--admin-dashboard-card-border);
+  background: var(--admin-dashboard-control-bg);
+  color: var(--admin-dashboard-card-text);
+  min-height: 44px !important;
+  height: 44px !important;
+  padding-inline: 14px;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.admin-shell-exercise-select-trigger > span {
+  min-width: 0;
+  text-align: left;
+}
+
+.admin-shell-exercise-select-content {
+  border-color: var(--admin-dashboard-card-border);
+  background: var(--admin-dashboard-card-bg);
+  color: var(--admin-dashboard-card-text);
+}
+
+.admin-shell-exercise-select-item {
+  background: transparent !important;
+  color: var(--admin-dashboard-card-text);
+}
+
+.admin-shell-exercise-select-item:hover,
+.admin-shell-exercise-select-item:focus,
+.admin-shell-exercise-select-item[data-highlighted],
+.admin-shell-exercise-select-item[data-state='checked'] {
+  background: transparent !important;
+  color: var(--admin-shell-accent) !important;
+}
+
+.admin-shell-exercise-combobox .multi-combobox-trigger {
+  min-height: 44px;
+  padding-block: 8px;
+  padding-inline: 14px;
+  align-items: center;
+}
+
+.admin-shell-exercise-combobox .multi-combobox-selected-values {
+  flex-wrap: nowrap;
+  overflow: hidden;
+}
+
+.admin-shell-exercise-combobox .multi-combobox-badge {
+  max-width: calc(100% - 2rem);
+  flex: 0 1 auto;
+}
+
+.admin-shell-exercise-combobox .multi-combobox-more-badge {
+  flex-shrink: 0;
+}
+
+.admin-shell-exercise-combobox .multi-combobox-trigger:hover,
+.admin-shell-exercise-combobox .multi-combobox-trigger:focus,
+.admin-shell-exercise-combobox .multi-combobox-trigger:has(.text-\[var\(--admin-shell-accent\)\]) {
+  background: transparent !important;
+  color: var(--admin-shell-accent) !important;
+}
+
 .admin-shell-athletes-create-tabs [data-slot='tabs-trigger'] {
   color: var(--admin-dashboard-card-muted);
 }
 
 .admin-shell-athletes-create-tabs [data-slot='tabs-trigger'][data-state='active'] {
-  background: var(--admin-shell-accent);
-  color: #0B1120;
+  background: var(--admin-shell-primary-button-bg);
+  color: var(--admin-shell-primary-button-text);
+  box-shadow: none;
+}
+
+.program-planner-workout-tabs [data-slot='tabs-trigger']:hover {
+  color: var(--admin-shell-primary-button-bg);
+}
+
+.program-planner-workout-tabs [data-slot='tabs-trigger'][data-state='active'],
+.program-planner-workout-tabs [data-slot='tabs-trigger'][data-state='active']:hover {
+  background: var(--admin-shell-primary-button-bg);
+  color: var(--admin-shell-primary-button-text);
   box-shadow: none;
 }
 
@@ -3581,6 +3858,30 @@ html[data-theme='light'] .admin-shell-overview-card-badge-negative {
   font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
+}
+
+
+.admin-shell-workouts-status-badge {
+  border-radius: 999px;
+  letter-spacing: 0;
+}
+
+.admin-shell-workouts-status-badge-active {
+  background: color-mix(in srgb, var(--admin-shell-primary-button-bg) 16%, transparent);
+  color: var(--admin-shell-primary-button-bg) !important;
+}
+
+.admin-shell-workouts-status-badge-inactive {
+  background: rgba(239, 68, 68, 0.14);
+  color: #ef4444 !important;
+}
+
+.admin-shell-athletes-create-select-trigger {
+  justify-content: space-between;
+}
+
+.admin-shell-athletes-create-select-trigger .admin-shell-athletes-example-columns-icon {
+  flex-shrink: 0;
 }
 
 .admin-shell-athletes-example-columns-button:hover,
@@ -4958,6 +5259,47 @@ html[data-theme='light'] .admin-shell-overview-card-badge-negative {
   }
 }
 
+.program-planner-back-button,
+.program-planner-back-button svg {
+  color: #0f172a !important;
+  transition: color 150ms ease, stroke 150ms ease !important;
+}
+
+.program-planner-back-button svg {
+  stroke: currentColor !important;
+}
+
+html[data-theme='dark'] .program-planner-back-button,
+html[data-theme='dark'] .program-planner-back-button svg {
+  color: #dce6f8 !important;
+}
+
+.program-planner-back-button:hover,
+.program-planner-back-button:hover svg,
+.program-planner-back-button:focus-visible,
+.program-planner-back-button:focus-visible svg,
+html[data-theme='dark'] .program-planner-back-button:hover,
+html[data-theme='dark'] .program-planner-back-button:hover svg,
+html[data-theme='dark'] .program-planner-back-button:focus-visible,
+html[data-theme='dark'] .program-planner-back-button:focus-visible svg {
+  color: var(--admin-shell-primary-button-bg) !important;
+  stroke: currentColor !important;
+}
+
+.program-planner-week-row {
+  background-image: var(--admin-dashboard-card-gradient) !important;
+  border-style: solid !important;
+  box-shadow: var(--ui-shadow-xs) !important;
+}
+
+.program-planner-day-card {
+  background-image: none !important;
+}
+
+.program-planner-workout-card {
+  box-shadow: var(--ui-shadow-xs);
+}
+
 .program-planner-scroll-shell {
   position: relative;
 }
@@ -4971,7 +5313,7 @@ html[data-theme='light'] .admin-shell-overview-card-badge-negative {
   width: 88px;
   z-index: 2;
   pointer-events: none;
-  background: linear-gradient(270deg, rgba(11, 17, 32, 0.985) 0%, rgba(11, 17, 32, 0.82) 38%, rgba(11, 17, 32, 0) 100%);
+  background: linear-gradient(270deg, var(--admin-dashboard-card-bg) 0%, color-mix(in srgb, var(--admin-dashboard-card-bg) 82%, transparent) 38%, transparent 100%);
 }
 
 .program-planner-scroll-track {
@@ -4988,7 +5330,8 @@ html[data-theme='light'] .admin-shell-overview-card-badge-negative {
 .program-planner-scroll-button {
   position: relative;
   overflow: hidden;
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.24);
+  border-color: var(--admin-shell-control-border) !important;
+  box-shadow: var(--ui-shadow-xs);
   backdrop-filter: blur(10px);
 }
 
@@ -6431,4 +6774,16 @@ button.support-dashboard-input:focus-visible {
   border-color: #3be0af;
   outline: none;
   box-shadow: 0 0 0 3px rgba(59, 224, 175, 0.2);
+}
+
+.program-planner-create-workout-schedule {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  width: 100% !important;
+  gap: 16px !important;
+}
+
+.program-planner-create-workout-schedule > * {
+  min-width: 0 !important;
+  width: 100% !important;
 }

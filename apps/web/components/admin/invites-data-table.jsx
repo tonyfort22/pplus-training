@@ -24,15 +24,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import {
   Select,
   SelectContent,
@@ -424,69 +417,69 @@ export default function InvitesDataTable({ searchQuery = '' }) {
         </Button>
       </div>
 
-      <Dialog open={isInviteDialogOpen} onOpenChange={(open) => {
+      <Sheet open={isInviteDialogOpen} onOpenChange={(open) => {
         setIsInviteDialogOpen(open)
         if (!open) {
           resetInviteDialogState()
         }
       }}>
-        <DialogContent className="admin-shell-invites-invite-dialog border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] shadow-[var(--admin-shell-shadow)] sm:max-w-[560px]">
-          <div className="border-b border-[color:var(--admin-dashboard-card-border)] px-6 py-5">
-            <DialogHeader>
-              <DialogTitle>{inviteDialogMode === 'resend' ? 'Resend invite' : 'Invite an athlete'}</DialogTitle>
-              <DialogDescription>
-                {inviteDialogMode === 'resend'
-                  ? 'Send another invitation for this athlete.'
-                  : 'Bring a coach-managed athlete into the workspace.'}
-              </DialogDescription>
-            </DialogHeader>
-          </div>
+        <SheetContent side="right" className="admin-shell-invites-invite-sheet border-l border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] !max-w-[var(--container-lg)]">
+          <SheetHeader className="shrink-0 border-b border-[color:var(--admin-dashboard-card-border)] px-6 py-5">
+            <SheetTitle>{inviteDialogMode === 'resend' ? 'Resend invite' : 'Invite an athlete'}</SheetTitle>
+            <SheetDescription>
+              {inviteDialogMode === 'resend'
+                ? 'Send another invitation for this athlete.'
+                : 'Fill out the information below.'}
+            </SheetDescription>
+          </SheetHeader>
 
-          <div className="grid gap-5 px-6 py-6">
-            {inviteDialogMode === 'create' ? (
-              <>
-                <div className="grid gap-2">
-                  <label className="text-sm font-medium text-[var(--admin-dashboard-card-text)]" htmlFor="invite-athlete-first-name">
-                    First name
-                  </label>
-                  <Input
-                    id="invite-athlete-first-name"
-                    className="h-11 rounded-[12px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:ring-[#3BE0AF]/20"
-                    placeholder="First name"
-                    value={inviteAthleteFirstName}
-                    onChange={(event) => setInviteAthleteFirstName(event.target.value)}
-                  />
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <div className="grid gap-5">
+              {inviteDialogMode === 'create' ? (
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-2">
+                    <label className="text-sm font-medium text-[var(--admin-dashboard-card-text)]" htmlFor="invite-athlete-first-name">
+                      First name
+                    </label>
+                    <Input
+                      id="invite-athlete-first-name"
+                      className="h-11 rounded-[12px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:ring-[#3BE0AF]/20"
+                      placeholder="First name"
+                      value={inviteAthleteFirstName}
+                      onChange={(event) => setInviteAthleteFirstName(event.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <label className="text-sm font-medium text-[var(--admin-dashboard-card-text)]" htmlFor="invite-athlete-last-name">
+                      Last name
+                    </label>
+                    <Input
+                      id="invite-athlete-last-name"
+                      className="h-11 rounded-[12px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:ring-[#3BE0AF]/20"
+                      placeholder="Last name"
+                      value={inviteAthleteLastName}
+                      onChange={(event) => setInviteAthleteLastName(event.target.value)}
+                    />
+                  </div>
                 </div>
-                <div className="grid gap-2">
-                  <label className="text-sm font-medium text-[var(--admin-dashboard-card-text)]" htmlFor="invite-athlete-last-name">
-                    Last name
-                  </label>
-                  <Input
-                    id="invite-athlete-last-name"
-                    className="h-11 rounded-[12px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:ring-[#3BE0AF]/20"
-                    placeholder="Last name"
-                    value={inviteAthleteLastName}
-                    onChange={(event) => setInviteAthleteLastName(event.target.value)}
-                  />
-                </div>
-              </>
-            ) : null}
-            <div className="grid gap-2">
-              <label className="text-sm font-medium text-[var(--admin-dashboard-card-text)]" htmlFor="invite-athlete-email">
-                Email address
-              </label>
-              <Input
-                id="invite-athlete-email"
-                className="h-11 rounded-[12px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:ring-[#3BE0AF]/20"
-                placeholder="athlete@email.com"
-                type="email"
-                value={inviteAthleteEmail}
-                onChange={(event) => setInviteAthleteEmail(event.target.value)}
-              />
+              ) : null}
+              <div className="grid gap-2">
+                <label className="text-sm font-medium text-[var(--admin-dashboard-card-text)]" htmlFor="invite-athlete-email">
+                  Email
+                </label>
+                <Input
+                  id="invite-athlete-email"
+                  className="h-11 rounded-[12px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:ring-[#3BE0AF]/20"
+                  placeholder="athlete@email.com"
+                  type="email"
+                  value={inviteAthleteEmail}
+                  onChange={(event) => setInviteAthleteEmail(event.target.value)}
+                />
+              </div>
             </div>
           </div>
 
-          <DialogFooter className="border-t border-[color:var(--admin-dashboard-card-border)] px-6 py-5 sm:justify-end gap-3">
+          <SheetFooter className="shrink-0 border-t border-[color:var(--admin-dashboard-card-border)] px-6 py-5 sm:flex-row sm:justify-end gap-3">
             <Button
               type="button"
               variant="outline"
@@ -507,9 +500,9 @@ export default function InvitesDataTable({ searchQuery = '' }) {
             >
               {isSubmittingInvite ? 'Sending...' : 'Send invite'}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       <div className="admin-shell-invites-table-shell">
         <Table className="admin-shell-invites-table">

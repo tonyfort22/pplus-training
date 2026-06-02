@@ -43,16 +43,23 @@ test('shared admin overlay shells use admin theme tokens instead of dark-only sh
 })
 
 test('shared admin overlay controls keep green tokenized selected and focus states', () => {
-  const interactiveSources = [
-    ['dropdownMenu', read(paths.dropdownMenu)],
-    ['select', read(paths.select)],
-    ['multiCombobox', read(paths.multiCombobox)],
-  ]
+  const dropdownMenuSource = read(paths.dropdownMenu)
+  const selectSource = read(paths.select)
+  const multiComboboxSource = read(paths.multiCombobox)
 
-  for (const [name, source] of interactiveSources) {
-    assert.match(source, /var\(--admin-shell-nav-active-bg\)/, `${name} should use the admin selected background token`)
-    assert.match(source, /var\(--admin-shell-nav-active-text\)|var\(--admin-shell-accent\)/, `${name} should use admin green selected text/accent token`)
-  }
+  assert.match(dropdownMenuSource, /var\(--admin-shell-nav-active-bg\)/)
+  assert.match(dropdownMenuSource, /var\(--admin-shell-nav-active-text\)|var\(--admin-shell-accent\)/)
+
+  assert.match(selectSource, /hover:bg-transparent/)
+  assert.match(selectSource, /focus:bg-transparent/)
+  assert.match(selectSource, /data-\[highlighted\]:bg-transparent/)
+  assert.match(selectSource, /data-\[state=checked\]:text-\[var\(--admin-shell-accent\)\]/)
+  assert.doesNotMatch(selectSource, /hover:bg-\[var\(--admin-shell-nav-active-bg\)\]/)
+
+  assert.match(multiComboboxSource, /hover:bg-transparent/)
+  assert.match(multiComboboxSource, /focus:bg-transparent/)
+  assert.match(multiComboboxSource, /text-\[var\(--admin-shell-accent\)\]/)
+  assert.doesNotMatch(multiComboboxSource, /hover:bg-\[var\(--admin-shell-nav-active-bg\)\]/)
 })
 
 test('sheet primitive close control uses admin overlay tokens', () => {
@@ -64,26 +71,40 @@ test('sheet primitive close control uses admin overlay tokens', () => {
   assert.match(source, /SheetPrimitive\.Close[\s\S]*?focus:ring-\[var\(--admin-input-focus\)\]/)
 })
 
-test('compact file upload uses admin control tokens for dialog upload fields', () => {
+test('compact file upload uses admin control tokens and truncates long file links', () => {
   const source = read(paths.compactFileUpload)
 
   assert.match(source, /var\(--admin-dashboard-control-bg\)|var\(--admin-shell-control-bg\)/)
   assert.match(source, /var\(--admin-dashboard-card-border\)|var\(--admin-shell-control-border\)/)
   assert.match(source, /var\(--admin-dashboard-card-text\)|var\(--admin-shell-text\)/)
+  assert.match(source, /min-w-0/)
+  assert.match(source, /truncate/)
   assert.doesNotMatch(source, /border-\[#24334A\]|bg-\[#0F1728\]|bg-\[#111D30\]|text-\[#DCE6F8\]|text-\[#EEF4FF\]/)
 })
 
-test('exercise editor tabs and thumbnail uploader use light-mode admin tokens', () => {
+test('exercise editor sheet has no tabs and uses styled dropdowns plus truncating uploaders', () => {
   const dialogSource = read(paths.exerciseEditorDialog)
   const avatarUploadSource = read(paths.avatarFileUpload)
 
-  assert.match(dialogSource, /<TabsList className="admin-shell-exercise-dialog-tabs-list">/)
-  assert.match(dialogSource, /<TabsTrigger value="details" className="admin-shell-exercise-dialog-tabs-trigger">Details<\/TabsTrigger>/)
-  assert.match(dialogSource, /<TabsTrigger value="muscles" className="admin-shell-exercise-dialog-tabs-trigger">Muscles<\/TabsTrigger>/)
+  assert.doesNotMatch(dialogSource, /TabsList|TabsTrigger|TabsContent/)
+  assert.match(dialogSource, /admin-shell-exercise-select-trigger admin-shell-athletes-example-columns-button admin-shell-athletes-create-select-trigger w-full/)
+  assert.match(dialogSource, /admin-shell-athletes-example-columns-icon/)
+  assert.match(dialogSource, /className="admin-shell-exercise-combobox"/)
+  assert.match(read(paths.multiCombobox), /multi-combobox-trigger/)
+  assert.match(read(paths.multiCombobox), /multi-combobox-selected-values/)
+  assert.match(read(paths.multiCombobox), /multi-combobox-badge[\s\S]*truncate/)
+  assert.match(read(paths.globalsCss), /\.admin-shell-exercise-combobox \.multi-combobox-selected-values\s*\{[^}]*flex-wrap:\s*nowrap;[^}]*overflow:\s*hidden;/)
+  assert.match(read(paths.globalsCss), /\.admin-shell-exercise-combobox \.multi-combobox-badge\s*\{[^}]*max-width:\s*calc\(100% - 2rem\);/)
+  assert.doesNotMatch(dialogSource, /UnsupportedFieldNote/)
+  assert.doesNotMatch(dialogSource, /htmlFor="exercise-status"[\s\S]{0,700}<UnsupportedFieldNote \/>/)
+  assert.match(dialogSource, /DropdownMenuContent align="start" className="min-w-\[var\(--radix-dropdown-menu-trigger-width\)\]"/)
+  assert.match(dialogSource, /DropdownMenuItem[\s\S]*text-\[var\(--admin-shell-accent\)\]/)
   assert.match(avatarUploadSource, /var\(--admin-dashboard-control-bg\)|var\(--admin-shell-control-bg\)/)
   assert.match(avatarUploadSource, /var\(--admin-dashboard-card-border\)|var\(--admin-shell-control-border\)/)
   assert.match(avatarUploadSource, /var\(--admin-dashboard-card-text\)|var\(--admin-shell-text\)/)
   assert.match(avatarUploadSource, /var\(--admin-dashboard-card-muted\)|var\(--admin-shell-muted\)/)
+  assert.match(avatarUploadSource, /min-w-0/)
+  assert.match(avatarUploadSource, /truncate/)
   assert.doesNotMatch(avatarUploadSource, /border-\[#24334A\]|bg-\[#0F1728\]|bg-\[#111D30\]|text-\[#DCE6F8\]|text-\[#EEF4FF\]|text-\[#8EA0BC\]/)
 })
 

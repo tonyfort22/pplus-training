@@ -344,3 +344,60 @@ test('createProgramWorkoutRepository rejects cross-day create requests for v1 sc
     /End date must equal start date/,
   )
 })
+
+test('createProgramWorkoutRepository delete proves the parent program_workouts row was removed', async () => {
+  const calls = []
+  const repository = createProgramWorkoutRepository({
+    supabaseUrl: 'https://example.supabase.co',
+    serviceRoleKey: 'service-role-key',
+    fetchImpl: async (url, options = {}) => {
+      const parsedUrl = new URL(url)
+      const table = parsedUrl.pathname.split('/').pop()
+      calls.push({ table, method: options.method || 'GET', search: parsedUrl.search, prefer: options.headers?.Prefer })
+
+      if (table === 'program_workouts' && options.method === 'GET') {
+        return jsonResponse([{ id: 'pw-delete-1', name_snapshot: 'Delete me' }])
+      }
+      if (table === 'program_workout_blocks') return jsonResponse([])
+      if (table === 'program_workout_exercises') return jsonResponse([])
+      if (table === 'program_workout_sets') return jsonResponse([])
+      if (table === 'program_workouts' && options.method === 'DELETE') {
+        return jsonResponse([{ id: 'pw-delete-1' }])
+      }
+      return jsonResponse([])
+    },
+  })
+
+  await assert.deepEqual(
+    await repository.deleteProgramWorkout('pw-delete-1'),
+    { id: 'pw-delete-1' },
+  )
+
+  const parentDeleteCall = calls.find((call) => call.table === 'program_workouts' && call.method === 'DELETE')
+  assert.match(parentDeleteCall.search, /select=id/)
+  assert.equal(parentDeleteCall.prefer, 'return=representation')
+})
+
+test('createProgramWorkoutRepository delete throws when Supabase returns success but deletes zero parent rows', async () => {
+  const repository = createProgramWorkoutRepository({
+    supabaseUrl: 'https://example.supabase.co',
+    serviceRoleKey: 'service-role-key',
+    fetchImpl: async (url, options = {}) => {
+      const parsedUrl = new URL(url)
+      const table = parsedUrl.pathname.split('/').pop()
+      if (table === 'program_workouts' && options.method === 'GET') {
+        return jsonResponse([{ id: 'pw-delete-1', name_snapshot: 'Delete me' }])
+      }
+      if (table === 'program_workout_blocks') return jsonResponse([])
+      if (table === 'program_workout_exercises') return jsonResponse([])
+      if (table === 'program_workout_sets') return jsonResponse([])
+      if (table === 'program_workouts' && options.method === 'DELETE') return jsonResponse([])
+      return jsonResponse([])
+    },
+  })
+
+  await assert.rejects(
+    () => repository.deleteProgramWorkout('pw-delete-1'),
+    /Program workout delete did not remove a database row/,
+  )
+})

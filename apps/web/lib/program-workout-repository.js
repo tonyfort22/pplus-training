@@ -65,6 +65,8 @@ const PROGRAM_WORKOUT_SELECT = [
   'workout_template_id',
   'name_snapshot',
   'notes',
+  'bg_color',
+  'text_color',
   'status',
   'sort_order',
   'scheduled_date',
@@ -73,7 +75,7 @@ const PROGRAM_WORKOUT_SELECT = [
   'created_at',
   'updated_at',
   'program_days(date,name)',
-  'workout_templates(name,description,training_type,estimated_duration_minutes,thumbnail_url,status)',
+  'workout_templates(name,description,training_type,bg_color,text_color,estimated_duration_minutes,thumbnail_url,status)',
 ].join(',')
 
 const PROGRAM_WORKOUT_BLOCK_SELECT = [
@@ -576,9 +578,9 @@ export function createProgramWorkoutRepository(config = {}) {
       },
       body: normalizedSections.map((section, index) => ({
         program_workout_id: normalizedProgramWorkoutId,
-        block_code: normalizeOptionalString(section.label) ?? `A${index + 1}`,
-        title: normalizeOptionalString(section.label) ?? `A${index + 1}`,
-        instructions: normalizeOptionalString(section.instruction),
+        block_code: normalizeOptionalString(section.label ?? section.title) ?? `A${index + 1}`,
+        title: normalizeOptionalString(section.label ?? section.title) ?? `A${index + 1}`,
+        instructions: normalizeOptionalString(section.instruction ?? section.description),
         sort_order: index,
         updated_at: now,
       })),
@@ -726,6 +728,8 @@ export function createProgramWorkoutRepository(config = {}) {
         workout_template_id: template.id,
         name_snapshot: normalizeOptionalString(payload.name_snapshot ?? payload.nameSnapshot) || template.name,
         notes: normalizeOptionalString(payload.notes) ?? null,
+        bg_color: template.bg_color ?? null,
+        text_color: template.text_color ?? null,
         status: normalizeOptionalString(payload.status) || 'scheduled',
         sort_order: payload.sort_order ?? payload.sortOrder ?? null,
         scheduled_date: schedule.scheduled_date,
@@ -824,6 +828,111 @@ export function createProgramWorkoutRepository(config = {}) {
     return getProgramWorkoutTree(createdWorkout.id)
   }
 
+  async function createProgramWorkoutFromSections(payload = {}) {
+    const programId = normalizeId(payload.program_id ?? payload.programId, 'Program ID')
+    const programDayId = normalizeId(payload.program_day_id ?? payload.programDayId, 'Program day ID')
+    const now = new Date().toISOString()
+    const programRows = await request({
+      table: 'programs',
+      query: {
+        select: 'id,athlete_id,coach_id',
+        id: `eq.${programId}`,
+        limit: '1',
+      },
+    })
+    const program = Array.isArray(programRows) ? programRows[0] : programRows
+    if (!program?.id) throw createRepositoryError('Program not found.', 404)
+
+    const dayRows = await request({
+      table: 'program_days',
+      query: {
+        select: 'id,date',
+        id: `eq.${programDayId}`,
+        limit: '1',
+      },
+    })
+    const day = Array.isArray(dayRows) ? dayRows[0] : dayRows
+    if (!day?.id) throw createRepositoryError('Program day not found.', 404)
+
+    const createdWorkoutRows = await request({
+      method: 'POST',
+      table: 'program_workouts',
+      query: {
+        select: PROGRAM_WORKOUT_SELECT,
+      },
+      body: {
+        athlete_id: payload.athlete_id ?? payload.athleteId ?? program.athlete_id ?? null,
+        coach_id: payload.coach_id ?? payload.coachId ?? program.coach_id ?? null,
+        program_id: programId,
+        program_day_id: programDayId,
+        workout_template_id: null,
+        name_snapshot: normalizeOptionalString(payload.name_snapshot ?? payload.nameSnapshot) || 'Workout',
+        notes: normalizeOptionalString(payload.notes) ?? null,
+        status: normalizeOptionalString(payload.status) || 'scheduled',
+        sort_order: payload.sort_order ?? payload.sortOrder ?? null,
+        scheduled_date: payload.scheduled_date ?? payload.scheduledDate ?? day.date ?? null,
+        scheduled_start_time: payload.scheduled_start_time ?? payload.scheduledStartTime ?? null,
+        scheduled_end_time: payload.scheduled_end_time ?? payload.scheduledEndTime ?? null,
+        updated_at: now,
+      },
+    })
+    const createdWorkout = Array.isArray(createdWorkoutRows) ? createdWorkoutRows[0] : createdWorkoutRows
+    if (!createdWorkout?.id) throw createRepositoryError('Failed to create program workout.', 500)
+
+    return replaceProgramWorkoutChildren(createdWorkout.id, payload.trainingSections ?? [])
+  }
+
+  async function deleteProgramWorkout(programWorkoutId) {
+    const normalizedProgramWorkoutId = normalizeId(programWorkoutId, 'Program workout ID')
+    const existingTree = await getProgramWorkoutTree(normalizedProgramWorkoutId)
+    const exerciseIds = existingTree.exercises.map((exercise) => exercise.id).filter(Boolean)
+
+    if (exerciseIds.length > 0) {
+      await request({
+        method: 'DELETE',
+        table: 'program_workout_sets',
+        query: {
+          program_workout_exercise_id: `in.${encodeInFilter(exerciseIds)}`,
+        },
+        prefer: 'return=minimal',
+      })
+    }
+
+    await request({
+      method: 'DELETE',
+      table: 'program_workout_exercises',
+      query: {
+        program_workout_id: `eq.${normalizedProgramWorkoutId}`,
+      },
+      prefer: 'return=minimal',
+    })
+
+    await request({
+      method: 'DELETE',
+      table: 'program_workout_blocks',
+      query: {
+        program_workout_id: `eq.${normalizedProgramWorkoutId}`,
+      },
+      prefer: 'return=minimal',
+    })
+
+    const deletedWorkoutRows = await request({
+      method: 'DELETE',
+      table: 'program_workouts',
+      query: {
+        id: `eq.${normalizedProgramWorkoutId}`,
+        select: 'id',
+      },
+      prefer: 'return=representation',
+    })
+    const deletedWorkout = Array.isArray(deletedWorkoutRows) ? deletedWorkoutRows[0] : deletedWorkoutRows
+    if (!deletedWorkout?.id) {
+      throw createRepositoryError('Program workout delete did not remove a database row.', 404)
+    }
+
+    return { id: normalizedProgramWorkoutId }
+  }
+
   return {
     listWorkoutTemplates,
     getWorkoutTemplate,
@@ -833,6 +942,8 @@ export function createProgramWorkoutRepository(config = {}) {
     getProgramWorkoutTree,
     updateProgramWorkoutDetails,
     replaceProgramWorkoutChildren,
+    deleteProgramWorkout,
+    createProgramWorkoutFromSections,
     createProgramWorkoutFromTemplate,
   }
 }

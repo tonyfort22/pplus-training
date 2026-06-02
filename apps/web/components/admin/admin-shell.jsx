@@ -253,8 +253,8 @@ function AdminSidebarNavItem({ currentPath = '', group, isExpanded = false, onEx
           <SidebarMenuButton
             asChild
             isActive={isActive}
-            className="admin-dashboard-sidebar-nav-button min-h-10 rounded-2xl px-3 text-[13px] font-medium hover:!text-[var(--admin-shell-primary-button-bg)] data-[active=true]:!text-[var(--admin-shell-primary-button-bg)] [&_svg]:hover:!text-[var(--admin-shell-primary-button-bg)] data-[active=true]:[&_svg]:!text-[var(--admin-shell-primary-button-bg)] group-data-[collapsible=icon]:!size-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:px-0"
-            tooltip={group.label}
+            className="admin-dashboard-sidebar-nav-button min-h-10 rounded-2xl px-3 text-[13px] font-medium hover:!bg-transparent active:!bg-transparent data-[active=true]:!bg-transparent hover:!text-[var(--admin-shell-primary-button-bg)] data-[active=true]:!text-[var(--admin-shell-primary-button-bg)] hover:[&_svg]:!text-[var(--admin-shell-primary-button-bg)] data-[active=true]:[&_svg]:!text-[var(--admin-shell-primary-button-bg)] group-data-[collapsible=icon]:!size-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:px-0"
+            tooltip={isCollapsed ? group.label : undefined}
           >
             <summary className="list-none [&::-webkit-details-marker]:hidden">
               {Icon ? <Icon className="h-4 w-4 shrink-0" /> : null}
@@ -289,8 +289,8 @@ function AdminSidebarNavItem({ currentPath = '', group, isExpanded = false, onEx
       <SidebarMenuButton
         asChild
         isActive={isActive}
-        className="admin-dashboard-sidebar-nav-button min-h-10 rounded-2xl px-3 text-[13px] font-medium hover:!text-[var(--admin-shell-primary-button-bg)] data-[active=true]:!text-[var(--admin-shell-primary-button-bg)] [&_svg]:hover:!text-[var(--admin-shell-primary-button-bg)] data-[active=true]:[&_svg]:!text-[var(--admin-shell-primary-button-bg)] group-data-[collapsible=icon]:!size-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:px-0"
-        tooltip={group.label}
+        className="admin-dashboard-sidebar-nav-button min-h-10 rounded-2xl px-3 text-[13px] font-medium hover:!bg-transparent active:!bg-transparent data-[active=true]:!bg-transparent hover:!text-[var(--admin-shell-primary-button-bg)] data-[active=true]:!text-[var(--admin-shell-primary-button-bg)] hover:[&_svg]:!text-[var(--admin-shell-primary-button-bg)] data-[active=true]:[&_svg]:!text-[var(--admin-shell-primary-button-bg)] group-data-[collapsible=icon]:!size-10 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:px-0"
+        tooltip={isCollapsed ? group.label : undefined}
       >
         <Link href={groupHref} target={group.external ? '_blank' : undefined} rel={group.external ? 'noreferrer' : undefined}>
           {Icon ? <Icon className="h-4 w-4 shrink-0" /> : null}

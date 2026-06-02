@@ -51,6 +51,14 @@ test('createAdminExerciseRepository creates an exercise and role-based muscle ma
             difficulty: body.difficulty,
             stimulus_type: body.stimulus_type,
             default_equipment: body.default_equipment,
+            default_sets: body.default_sets,
+            default_reps: body.default_reps,
+            default_distance: body.default_distance,
+            default_weight: body.default_weight,
+            default_duration: body.default_duration,
+            default_rest: body.default_rest,
+            default_tempo: body.default_tempo,
+            status: body.status,
             thumbnail_url: body.thumbnail_url ?? null,
             video_url: body.video_url ?? null,
             created_at: '2026-05-26T18:00:00.000Z',
@@ -87,7 +95,11 @@ test('createAdminExerciseRepository creates an exercise and role-based muscle ma
     },
     sets: '4',
     reps: '8',
+    distance: '20 m',
+    weights: '40 lb',
+    duration: '30 sec',
     rest: '60 sec',
+    tempo: '3-1-1-0',
     status: 'draft',
   })
 
@@ -118,10 +130,14 @@ test('createAdminExerciseRepository creates an exercise and role-based muscle ma
   assert.equal(exerciseInsertCall.body.video_url.includes('/storage/v1/object/public/exercise-videos/'), true)
   assert.equal(typeof exerciseInsertCall.body.slug, 'string')
   assert.equal(typeof exerciseInsertCall.body.updated_at, 'string')
-  assert.equal('sets' in exerciseInsertCall.body, false)
-  assert.equal('reps' in exerciseInsertCall.body, false)
-  assert.equal('rest' in exerciseInsertCall.body, false)
-  assert.equal('status' in exerciseInsertCall.body, false)
+  assert.equal(exerciseInsertCall.body.default_sets, '4')
+  assert.equal(exerciseInsertCall.body.default_reps, '8')
+  assert.equal(exerciseInsertCall.body.default_distance, '20 m')
+  assert.equal(exerciseInsertCall.body.default_weight, '40 lb')
+  assert.equal(exerciseInsertCall.body.default_duration, '30 sec')
+  assert.equal(exerciseInsertCall.body.default_rest, '60 sec')
+  assert.equal(exerciseInsertCall.body.default_tempo, '3-1-1-0')
+  assert.equal(exerciseInsertCall.body.status, 'draft')
 
   const muscleMapInsertCall = calls.find((call) => call.table === 'exercise_muscle_maps' && call.method === 'POST')
   assert.ok(muscleMapInsertCall)
@@ -181,6 +197,14 @@ test('createAdminExerciseRepository patches an exercise and replaces muscle mapp
             difficulty: body.difficulty,
             stimulus_type: body.stimulus_type,
             default_equipment: body.default_equipment,
+            default_sets: body.default_sets,
+            default_reps: body.default_reps,
+            default_distance: body.default_distance,
+            default_weight: body.default_weight,
+            default_duration: body.default_duration,
+            default_rest: body.default_rest,
+            default_tempo: body.default_tempo,
+            status: body.status,
             thumbnail_url: body.thumbnail_url ?? null,
             video_url: body.video_url ?? null,
             created_at: '2026-05-26T18:00:00.000Z',
@@ -220,8 +244,14 @@ test('createAdminExerciseRepository patches an exercise and replaces muscle mapp
       contentType: 'video/mp4',
       fileName: 'demo-updated.mp4',
     },
+    sets: '5',
+    reps: '6',
+    distance: '10 m',
+    weights: '45 lb',
     duration: '30 sec',
+    rest: '90 sec',
     tempo: '3-1-1-0',
+    status: 'active',
   })
 
   assert.equal(exercise.id, 'exercise-1')
@@ -241,8 +271,14 @@ test('createAdminExerciseRepository patches an exercise and replaces muscle mapp
   assert.equal(patchCall.body.thumbnail_url, 'https://example.supabase.co/storage/v1/object/public/exercise-media/exercise-1/thumb-updated.png')
   assert.equal(patchCall.body.video_url, 'https://example.supabase.co/storage/v1/object/public/exercise-videos/exercise-1/demo-updated.mp4')
   assert.equal(typeof patchCall.body.updated_at, 'string')
-  assert.equal('duration' in patchCall.body, false)
-  assert.equal('tempo' in patchCall.body, false)
+  assert.equal(patchCall.body.default_sets, '5')
+  assert.equal(patchCall.body.default_reps, '6')
+  assert.equal(patchCall.body.default_distance, '10 m')
+  assert.equal(patchCall.body.default_weight, '45 lb')
+  assert.equal(patchCall.body.default_duration, '30 sec')
+  assert.equal(patchCall.body.default_rest, '90 sec')
+  assert.equal(patchCall.body.default_tempo, '3-1-1-0')
+  assert.equal(patchCall.body.status, 'active')
 
   const storageCall = calls.find((call) => call.url.includes('/storage/v1/object/exercise-media/'))
   assert.ok(storageCall)
@@ -350,6 +386,14 @@ test('createAdminExerciseRepository fetches one exercise detail with saved media
             movement_pattern: 'pull',
             stimulus_type: 'strength',
             default_equipment: 'dumbbell',
+            default_sets: '4',
+            default_reps: '8-10',
+            default_distance: '20 m',
+            default_weight: '40 lb',
+            default_duration: '30 sec',
+            default_rest: '60 sec',
+            default_tempo: '3-1-1-0',
+            status: 'active',
             thumbnail_url: 'https://example.supabase.co/storage/v1/object/public/exercise-media/exercise-1/row.png',
             video_url: 'https://example.supabase.co/storage/v1/object/public/exercise-videos/exercise-1/row.mp4',
             created_at: '2026-05-26T18:00:00.000Z',
@@ -369,6 +413,14 @@ test('createAdminExerciseRepository fetches one exercise detail with saved media
   assert.equal(exercise.id, 'exercise-1')
   assert.equal(exercise.thumbnailUrl, 'https://example.supabase.co/storage/v1/object/public/exercise-media/exercise-1/row.png')
   assert.equal(exercise.videoUrl, 'https://example.supabase.co/storage/v1/object/public/exercise-videos/exercise-1/row.mp4')
+  assert.equal(exercise.sets, '4')
+  assert.equal(exercise.reps, '8-10')
+  assert.equal(exercise.distance, '20 m')
+  assert.equal(exercise.weights, '40 lb')
+  assert.equal(exercise.duration, '30 sec')
+  assert.equal(exercise.rest, '60 sec')
+  assert.equal(exercise.tempo, '3-1-1-0')
+  assert.equal(exercise.status, 'active')
   assert.equal(exercise.primaryMuscleId, 'muscle-back')
 })
 

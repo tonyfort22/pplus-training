@@ -15,6 +15,7 @@ import { ChevronDown, CircleAlert, CircleCheckBig, LoaderCircle, MoreHorizontal,
 import { Filters } from '@/components/reui/filters'
 import { useToast } from '@/hooks/use-toast'
 import Badge from '@/components/ui/badge'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import Checkbox from '@/components/ui/checkbox'
 import {
@@ -51,6 +52,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -335,6 +337,7 @@ function RowActionsCell({
   isOpen = false,
   onOpenChange = () => {},
   onEditAction = () => {},
+  onDeleteAction = () => {},
 }) {
   return (
     <DropdownMenu open={isOpen} onOpenChange={onOpenChange}>
@@ -354,6 +357,14 @@ function RowActionsCell({
         >
           Edit
         </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={() => {
+            onDeleteAction()
+            onOpenChange(false)
+          }}
+        >
+          Delete
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -371,6 +382,9 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
     parseAsJson((value) => (Array.isArray(value) ? value : [])).withDefault([]),
   )
   const [isCreateProgramDialogOpen, setIsCreateProgramDialogOpen] = useState(false)
+  const [isDeleteProgramDialogOpen, setIsDeleteProgramDialogOpen] = useState(false)
+  const [selectedDeleteProgramId, setSelectedDeleteProgramId] = useState(null)
+  const [isDeletingProgram, setIsDeletingProgram] = useState(false)
   const [programToast, setProgramToast] = useState(null)
   const [programDialogMode, setProgramDialogMode] = useState('create')
   const [activeProgramDialogTab, setActiveProgramDialogTab] = useState('details')
@@ -559,23 +573,52 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
     }
   }
 
-  function handleSelectProgramAthlete(athleteId) {
+  function handleToggleProgramAthlete(athleteId) {
     const nextAthleteId = String(athleteId ?? '').trim()
     if (!nextAthleteId) return
 
     setError('')
-    setProgramFormValues((current) => ({
-      ...current,
-      athleteIds: [nextAthleteId],
-    }))
+    setProgramFormValues((current) => {
+      const currentAthleteIds = Array.isArray(current.athleteIds) ? current.athleteIds : []
+      const isSelected = currentAthleteIds.includes(nextAthleteId)
+      return {
+        ...current,
+        athleteIds: isSelected
+          ? currentAthleteIds.filter((id) => id !== nextAthleteId)
+          : [...currentAthleteIds, nextAthleteId],
+      }
+    })
   }
 
-  function handleClearProgramAthlete() {
+  async function handleDeleteProgram() {
+    if (!selectedDeleteProgramId) return
+
+    setIsDeletingProgram(true)
     setError('')
-    setProgramFormValues((current) => ({
-      ...current,
-      athleteIds: [],
-    }))
+
+    try {
+      const response = await fetch('/api/admin/programs', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: selectedDeleteProgramId }),
+      })
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result?.error || 'Failed to delete program.')
+      }
+
+      setPrograms((current) => current.filter((program) => program.id !== selectedDeleteProgramId))
+      setIsDeleteProgramDialogOpen(false)
+      setSelectedDeleteProgramId(null)
+      setRefreshKey((current) => current + 1)
+      toastManager.show({ title: 'Program deleted', description: 'The program was permanently deleted.', variant: 'success', data: { close: true } })
+    } catch (deleteError) {
+      setError(deleteError?.message || 'Failed to delete program.')
+      toastManager.show({ title: 'Failed to delete program', description: deleteError?.message || 'We could not delete this program right now.', variant: 'error', data: { close: true } })
+    } finally {
+      setIsDeletingProgram(false)
+    }
   }
 
   useEffect(() => {
@@ -688,6 +731,7 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
               setOpenRowActionMenuId(isOpen ? row.original.id : null)
             }}
             onEditAction={() => setPendingRowAction({ type: 'edit', programId: row.original.id })}
+            onDeleteAction={() => setPendingRowAction({ type: 'delete', programId: row.original.id })}
           />
         ),
         enableSorting: false,
@@ -753,6 +797,11 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
 
     if (pendingRowAction.type === 'edit') {
       openEditProgramDialog(pendingRowAction.programId)
+    }
+
+    if (pendingRowAction.type === 'delete') {
+      setSelectedDeleteProgramId(pendingRowAction.programId)
+      setIsDeleteProgramDialogOpen(true)
     }
 
     setPendingRowAction(null)
@@ -859,7 +908,7 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
         </div>
       ) : null}
 
-      <Dialog
+      <Sheet
         open={isCreateProgramDialogOpen}
         onOpenChange={(isOpen) => {
           setIsCreateProgramDialogOpen(isOpen)
@@ -873,22 +922,22 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
           }
         }}
       >
-        <DialogContent
-          pageScrollable
-          className="admin-shell-athletes-invite-dialog border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] shadow-[var(--admin-shell-shadow)] sm:max-w-[720px]"
+        <SheetContent
+          side="right"
+          className="admin-shell-programs-create-sheet flex h-full w-full !max-w-[var(--container-lg)] flex-col border-l border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] shadow-[var(--admin-shell-shadow)]"
         >
           <div className="shrink-0 border-b border-[var(--admin-dashboard-card-border)] px-6 py-5">
-            <DialogHeader>
-              <DialogTitle>{programDialogMode === 'edit' ? 'Edit program' : 'Create a program'}</DialogTitle>
-              <DialogDescription>
+            <SheetHeader>
+              <SheetTitle>{programDialogMode === 'edit' ? 'Edit program' : 'Create a program'}</SheetTitle>
+              <SheetDescription>
                 {programDialogMode === 'edit'
-                  ? `Update ${programFormValues.name || selectedProgramId || 'this program'} with the schedule details below.`
-                  : 'Set up a coach-managed program with the core schedule details below.'}
-              </DialogDescription>
-            </DialogHeader>
+                  ? 'Update the information below.'
+                  : 'Fill out the information below.'}
+              </SheetDescription>
+            </SheetHeader>
           </div>
 
-          <div className="grid gap-5 px-6 py-6">
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
             <Tabs
               value={activeProgramDialogTab}
               onValueChange={(nextTab) => {
@@ -979,9 +1028,8 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
 
               <TabsContent value="athletes" className="grid gap-3">
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-[var(--admin-dashboard-card-text)]">Athlete assignment</p>
-                  <p className="text-sm text-[var(--admin-dashboard-card-muted)]">Select one athlete from the real athlete list, or leave this program unassigned.</p>
-                  <p className="text-xs text-[var(--admin-dashboard-card-muted)]">{programFormValues.athleteIds.length === 1 ? '1 athlete assigned' : 'No athlete assigned'}</p>
+                  <p className="text-sm font-medium text-[var(--admin-dashboard-card-text)]">Athletes list</p>
+                  <p className="text-sm text-[var(--admin-dashboard-card-muted)]">Assign athletes to this program.</p>
                 </div>
 
                 <ItemGroup className="gap-0">
@@ -992,9 +1040,12 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
                       <div key={athlete.id}>
                         <Item className="rounded-none px-0 py-3 text-[var(--admin-dashboard-card-text)] shadow-none transition-colors hover:bg-transparent">
                           <ItemMedia>
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-shell-avatar-bg)] text-sm font-semibold text-[var(--admin-dashboard-card-text)]">
-                              {getInitials(athlete.name)}
-                            </div>
+                            <Avatar className="h-10 w-10 border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-shell-avatar-bg)]">
+                              <AvatarImage src={athlete.avatarUrl} alt={athlete.name} />
+                              <AvatarFallback className="bg-[var(--admin-shell-avatar-bg)] text-sm font-semibold text-[var(--admin-dashboard-card-text)]">
+                                {getInitials(athlete.name)}
+                              </AvatarFallback>
+                            </Avatar>
                           </ItemMedia>
                           <ItemContent className="gap-1">
                             <ItemTitle className="text-[var(--admin-dashboard-card-text)]">{athlete.name}</ItemTitle>
@@ -1006,16 +1057,12 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
                               variant="ghost"
                               size="icon"
                               onClick={() => {
-                                if (isSelectedAthlete) {
-                                  handleClearProgramAthlete()
-                                  return
-                                }
-                                handleSelectProgramAthlete(athlete.id)
+                                handleToggleProgramAthlete(athlete.id)
                               }}
                               className="h-9 w-9 rounded-full border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]"
                             >
                               {isSelectedAthlete ? <Trash2 className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-                              <span className="sr-only">{isSelectedAthlete ? 'Clear athlete assignment' : 'Assign athlete to program'}</span>
+                              <span className="sr-only">{isSelectedAthlete ? 'Remove athlete from program' : 'Assign athlete to program'}</span>
                             </Button>
                           </ItemActions>
                         </Item>
@@ -1028,7 +1075,7 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
             </Tabs>
           </div>
 
-          <DialogFooter className="border-t border-[var(--admin-dashboard-card-border)] px-6 py-5 sm:justify-end gap-3">
+          <SheetFooter className="shrink-0 border-t border-[color:var(--admin-dashboard-card-border)] px-6 py-5 sm:flex-row sm:justify-end gap-3">
             <Button
               type="button"
               variant="outline"
@@ -1043,10 +1090,23 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
               onClick={() => {
                 void handleSaveProgram()
               }}
-              className="rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] disabled:cursor-not-allowed disabled:opacity-60"
+              className="admin-shell-programs-create-submit rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSavingProgram ? (programDialogMode === 'edit' ? 'Saving...' : 'Creating...') : programDialogMode === 'edit' ? 'Save changes' : 'Create'}
+              {isSavingProgram ? (programDialogMode === 'edit' ? 'Saving...' : 'Creating...') : programDialogMode === 'edit' ? 'Save changes' : 'Create program'}
             </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      <Dialog open={isDeleteProgramDialogOpen} onOpenChange={setIsDeleteProgramDialogOpen}>
+        <DialogContent className="admin-shell-athletes-invite-dialog border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] text-[var(--admin-dashboard-card-text)] sm:max-w-[440px]">
+          <DialogHeader>
+            <DialogTitle>Delete program</DialogTitle>
+            <DialogDescription>This program will be permanently deleted.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="sm:flex-row sm:justify-end gap-3">
+            <Button type="button" variant="outline" className="rounded-[12px] min-h-[40px]" onClick={() => setIsDeleteProgramDialogOpen(false)} disabled={isDeletingProgram}>Cancel</Button>
+            <Button type="button" disabled={isDeletingProgram} className="rounded-[12px] min-h-[40px] bg-red-500/90 text-white hover:bg-red-500" onClick={handleDeleteProgram}>{isDeletingProgram ? 'Deleting...' : 'Delete program'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -11,6 +11,7 @@ import {
 import { ChevronDown, MoreHorizontal, Plus } from 'lucide-react'
 import { parseAsJson, useQueryState } from 'nuqs'
 
+import ExerciseDeleteDialog from '@/components/admin/exercise-delete-dialog'
 import ExerciseEditorDialog from '@/components/admin/exercise-editor-dialog'
 import { Filters } from '@/components/reui/filters'
 import Avatar from '@/components/ui/avatar'
@@ -161,16 +162,16 @@ function createExerciseFormValues(exercise = null) {
     thumbnailName: '',
     thumbnailUpload: null,
     thumbnailUrl: normalizedExercise.thumbnailUrl || '',
-    sets: normalizedExercise.totalSetCount ? String(normalizedExercise.totalSetCount) : '',
-    reps: '',
-    distance: '',
-    weights: '',
-    duration: '',
+    sets: normalizedExercise.sets && normalizedExercise.sets !== '-' ? String(normalizedExercise.sets) : '',
+    reps: normalizedExercise.reps && normalizedExercise.reps !== '-' ? String(normalizedExercise.reps) : '',
+    distance: normalizedExercise.distance && normalizedExercise.distance !== '-' ? String(normalizedExercise.distance) : '',
+    weights: normalizedExercise.weights || '',
+    duration: normalizedExercise.duration && normalizedExercise.duration !== '-' ? String(normalizedExercise.duration) : '',
     rest: normalizedExercise.rest && normalizedExercise.rest !== '-' ? String(normalizedExercise.rest) : '',
-    tempo: '',
+    tempo: normalizedExercise.tempo || '',
     category: normalizedExercise.category || '',
     difficulty: normalizedExercise.difficulty || '',
-    status: 'draft',
+    status: normalizedExercise.status || 'draft',
     equipmentNeeded: Array.isArray(normalizedExercise.equipmentNeeded) ? normalizedExercise.equipmentNeeded : [],
     primaryMuscleId: normalizedExercise.primaryMuscleId || '',
     secondaryMuscleIds: Array.isArray(normalizedExercise.secondaryMuscleIds) ? normalizedExercise.secondaryMuscleIds : [],
@@ -269,6 +270,10 @@ export default function ExercisesDataTable({ searchQuery = '' }) {
   const [exerciseFormValues, setExerciseFormValues] = useState(() => createExerciseFormValues())
   const [exerciseEditorError, setExerciseEditorError] = useState('')
   const [isSavingExercise, setIsSavingExercise] = useState(false)
+  const [isExerciseDeleteDialogOpen, setIsExerciseDeleteDialogOpen] = useState(false)
+  const [exercisePendingDelete, setExercisePendingDelete] = useState(null)
+  const [exerciseDeleteError, setExerciseDeleteError] = useState('')
+  const [isDeletingExercise, setIsDeletingExercise] = useState(false)
   const [exerciseThumbnailUrls, setExerciseThumbnailUrls] = useState({})
   const [openRowActionMenuId, setOpenRowActionMenuId] = useState(null)
   const [rowSelection, setRowSelection] = useState({})
@@ -278,8 +283,6 @@ export default function ExercisesDataTable({ searchQuery = '' }) {
     pageIndex: 0,
     pageSize: 10,
   })
-
-  const saveDisclaimer = 'V1 saves real exercise fields: name, description, difficulty, category as stimulus type, the first equipment value as default equipment, primary/secondary muscle roles, thumbnail upload, and video upload.'
 
   async function requestExercisesApi(path = '/api/admin/exercises', options = {}) {
     const response = await fetch(path, {
@@ -385,21 +388,36 @@ export default function ExercisesDataTable({ searchQuery = '' }) {
     }
   }
 
-  async function handleDeleteExercise(exerciseId) {
-    if (!exerciseId) return
-    if (!window.confirm('Delete this exercise from the library?')) return
+  function openDeleteExerciseDialog(exerciseId) {
+    const selectedExercise = exercises.find((exercise) => exercise.id === exerciseId) || null
+    if (!selectedExercise) return
 
-    setExerciseEditorError('')
+    setOpenRowActionMenuId(null)
+    setExerciseDeleteError('')
+    setExercisePendingDelete(selectedExercise)
+    setIsExerciseDeleteDialogOpen(true)
+  }
+
+  async function handleDeleteExercise() {
+    const exerciseId = exercisePendingDelete?.id
+    if (!exerciseId) return
+
+    setIsDeletingExercise(true)
+    setExerciseDeleteError('')
     try {
       await requestExercisesApi(`/api/admin/exercises/${exerciseId}`, {
         method: 'DELETE',
       })
       await loadExercises()
+      setIsExerciseDeleteDialogOpen(false)
+      setExercisePendingDelete(null)
       if (exerciseFormValues.id === exerciseId) {
         setIsExerciseEditorOpen(false)
       }
     } catch (deleteError) {
-      setExerciseEditorError(deleteError?.message || 'Failed to delete exercise.')
+      setExerciseDeleteError(deleteError?.message || 'Failed to delete exercise.')
+    } finally {
+      setIsDeletingExercise(false)
     }
   }
 
@@ -512,7 +530,7 @@ export default function ExercisesDataTable({ searchQuery = '' }) {
       {
         id: 'actions',
         header: () => <span className="sr-only">Actions</span>,
-        cell: ({ row }) => <RowActionsCell rowId={row.original.id} isOpen={openRowActionMenuId === row.original.id} onOpenChange={(isOpen) => setOpenRowActionMenuId(isOpen ? row.original.id : null)} onEditAction={() => openEditExerciseDialog(row.original)} onDeleteAction={handleDeleteExercise} />,
+        cell: ({ row }) => <RowActionsCell rowId={row.original.id} isOpen={openRowActionMenuId === row.original.id} onOpenChange={(isOpen) => setOpenRowActionMenuId(isOpen ? row.original.id : null)} onEditAction={() => openEditExerciseDialog(row.original)} onDeleteAction={openDeleteExerciseDialog} />,
         enableSorting: false,
         enableHiding: false,
       },
@@ -817,10 +835,24 @@ export default function ExercisesDataTable({ searchQuery = '' }) {
         statusOptions={statusOptions}
         errorMessage={exerciseEditorError}
         isSaving={isSavingExercise}
-        saveDisclaimer={saveDisclaimer}
         onThumbnailFileChange={handleThumbnailFileChange}
         onVideoFileChange={handleVideoFileChange}
         onPrimaryAction={handleExerciseEditorSubmit}
+      />
+
+      <ExerciseDeleteDialog
+        open={isExerciseDeleteDialogOpen}
+        onOpenChange={(isOpen) => {
+          setIsExerciseDeleteDialogOpen(isOpen)
+          if (!isOpen) {
+            setExercisePendingDelete(null)
+            setExerciseDeleteError('')
+          }
+        }}
+        exerciseName={exercisePendingDelete?.name || ''}
+        isDeleting={isDeletingExercise}
+        errorMessage={exerciseDeleteError}
+        onConfirmDelete={handleDeleteExercise}
       />
 
       <div className="admin-shell-athletes-pagination-bar flex flex-wrap items-center justify-end gap-3 py-4 text-sm">

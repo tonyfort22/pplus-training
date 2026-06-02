@@ -22,7 +22,7 @@ export function KanbanBoard({ className, onDragEnd, children }) {
   )
 }
 
-export function KanbanColumn({ className, itemIds = [], children, ...props }) {
+export function KanbanColumn({ className, columnId, itemIds = [], children, ...props }) {
   return (
     <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
       <div className={cn('grid gap-3', className)} {...props}>

@@ -23,8 +23,8 @@ function getCheckboxTags(source) {
 
 test('admin checkbox primitive class owns the All Athletes checkbox visual style', () => {
   assert.match(cssSource, /\.ui-checkbox\.admin-shell-athletes-checkbox-input\s*\{[^}]*width:\s*20px;[^}]*height:\s*20px;[^}]*appearance:\s*none;[^}]*-webkit-appearance:\s*none;[^}]*border:\s*1px solid var\(--admin-dashboard-card-border\);[^}]*border-radius:\s*3px;[^}]*background:\s*var\(--admin-dashboard-control-bg\);[^}]*background-size:\s*8px 8px;[^}]*cursor:\s*pointer;/)
-  assert.match(cssSource, /\.ui-checkbox\.admin-shell-athletes-checkbox-input:checked\s*\{[^}]*border-color:\s*var\(--admin-shell-accent\);[^}]*background:\s*var\(--admin-shell-accent\);[^}]*background-image:\s*url\(/)
-  assert.match(cssSource, /\.ui-checkbox\.admin-shell-athletes-checkbox-input:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--admin-shell-accent\);[^}]*outline-offset:\s*2px;/)
+  assert.match(cssSource, /\.ui-checkbox\.admin-shell-athletes-checkbox-input:checked\s*\{[^}]*border-color:\s*var\(--admin-shell-primary-button-bg\);[^}]*background:\s*var\(--admin-shell-primary-button-bg\);[^}]*background-image:\s*url\(/)
+  assert.match(cssSource, /\.ui-checkbox\.admin-shell-athletes-checkbox-input:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--admin-shell-primary-button-bg\);[^}]*outline-offset:\s*2px;/)
 })
 
 test('every admin table and dialog Checkbox uses the shared All Athletes checkbox class', () => {

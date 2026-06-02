@@ -39,9 +39,9 @@ test('exercise library uses admin light-mode controls and direct Supabase mp4 vi
 test('exercise editor dialog seam uses admin theme tokens instead of hard-coded dark colors', () => {
   const dialogSource = readFileSync(exerciseEditorDialogPath, 'utf8')
 
-  assert.match(dialogSource, /DialogContent[\s\S]*?var\(--admin-dashboard-card-bg\)/)
-  assert.match(dialogSource, /DialogContent[\s\S]*?var\(--admin-dashboard-card-border\)/)
-  assert.match(dialogSource, /DialogContent[\s\S]*?var\(--admin-dashboard-card-text\)/)
+  assert.match(dialogSource, /SheetContent[\s\S]*?var\(--admin-dashboard-card-bg\)/)
+  assert.match(dialogSource, /SheetContent[\s\S]*?var\(--admin-dashboard-card-border\)/)
+  assert.match(dialogSource, /SheetContent[\s\S]*?var\(--admin-dashboard-card-text\)/)
   assert.match(dialogSource, /FieldInput[\s\S]*?var\(--admin-dashboard-control-bg\)/)
   assert.match(dialogSource, /FieldInput[\s\S]*?var\(--admin-dashboard-card-muted\)/)
   assert.match(dialogSource, /Textarea[\s\S]*?var\(--admin-dashboard-control-bg\)/)
