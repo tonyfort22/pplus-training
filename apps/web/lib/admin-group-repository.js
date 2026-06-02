@@ -139,11 +139,15 @@ function formatAthleteCountLabel(count) {
   return `${count} athlete${count === 1 ? '' : 's'}`
 }
 
-function createAthleteNameMap(rows) {
+function createAthleteMap(rows) {
   return (Array.isArray(rows) ? rows : []).reduce((accumulator, row) => {
     if (!row?.id) return accumulator
     const fullName = [row.first_name, row.last_name].filter(Boolean).join(' ').trim()
-    accumulator.set(row.id, fullName || 'Unnamed athlete')
+    accumulator.set(row.id, {
+      id: row.id,
+      name: fullName || 'Unnamed athlete',
+      avatarUrl: row.avatar_url ?? '',
+    })
     return accumulator
   }, new Map())
 }
@@ -161,15 +165,16 @@ function createMembershipsByGroupId(rows) {
 
 function mapGroupRow(row, context) {
   const memberships = context.membershipsByGroupId.get(row.id) ?? []
-  const athleteNames = memberships.map((membership) => context.athleteNameById.get(membership.athlete_id)).filter(Boolean)
+  const athletes = memberships.map((membership) => context.athleteById.get(membership.athlete_id)).filter(Boolean)
+  const athleteNames = athletes.map((athlete) => athlete.name).filter(Boolean)
   return {
     id: row.id,
     name: row.name ?? 'Untitled group',
     athleteCount: memberships.length,
     athleteCountLabel: formatAthleteCountLabel(memberships.length),
-    athletes: formatAthleteCountLabel(memberships.length),
     athleteIds: memberships.map((membership) => membership.athlete_id).filter(Boolean),
     athleteNames,
+    athletes,
     access: formatAccessLevel(row.access_level),
     accessLevel: row.access_level ?? 'private',
     updated: formatUpdatedDate(row.updated_at ?? row.created_at),
@@ -182,7 +187,7 @@ function mapGroupRow(row, context) {
 
 function mapAthleteOption(row) {
   const name = [row.first_name, row.last_name].filter(Boolean).join(' ').trim() || 'Unnamed athlete'
-  return { id: row.id, name }
+  return { id: row.id, name, avatarUrl: row.avatar_url ?? '' }
 }
 
 function mapProgramOption(row) {
@@ -346,7 +351,7 @@ async function cloneProgramTreeForAthlete({ athleteId, sourceProgramId }) {
 export function createAdminGroupRepository() {
   return {
     async listAthleteOptions() {
-      const athleteRows = await requestTable('athlete_profiles', '?select=id,first_name,last_name&order=created_at.asc')
+      const athleteRows = await requestTable('athlete_profiles', '?select=id,first_name,last_name,avatar_url&order=created_at.asc')
       return Array.isArray(athleteRows) ? athleteRows.map(mapAthleteOption) : []
     },
 
@@ -359,11 +364,11 @@ export function createAdminGroupRepository() {
       const [groupRows, membershipRows, athleteRows] = await Promise.all([
         requestTable('athlete_groups', '?select=id,name,description,access_level,status,created_at,updated_at&order=created_at.asc'),
         requestTable('athlete_group_memberships', '?select=id,athlete_group_id,athlete_id,created_at'),
-        requestTable('athlete_profiles', '?select=id,first_name,last_name'),
+        requestTable('athlete_profiles', '?select=id,first_name,last_name,avatar_url'),
       ])
       const membershipsByGroupId = createMembershipsByGroupId(membershipRows)
-      const athleteNameById = createAthleteNameMap(athleteRows)
-      return Array.isArray(groupRows) ? groupRows.map((row) => mapGroupRow(row, { membershipsByGroupId, athleteNameById })) : []
+      const athleteById = createAthleteMap(athleteRows)
+      return Array.isArray(groupRows) ? groupRows.map((row) => mapGroupRow(row, { membershipsByGroupId, athleteById })) : []
     },
 
     async createGroup({ name, description = '', accessLevel = 'private', athleteIds = [] }) {

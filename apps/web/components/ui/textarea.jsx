@@ -3,3 +3,5 @@ export default function Textarea({ className = '', ...props }) {
 
   return <textarea className={classes} {...props} />
 }
+
+export { Textarea }

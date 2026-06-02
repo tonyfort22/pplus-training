@@ -213,6 +213,7 @@ export function createSupabaseRestIdentityRepository(config) {
   const uploadObject = createSupabaseStorageUploader(config)
 
   return {
+    uploadObject,
     async signInWithPassword({ email, password }) {
       const payload = await request({
         method: 'POST',

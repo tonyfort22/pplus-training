@@ -20,3 +20,36 @@ export async function GET() {
     return handleRouteError(error)
   }
 }
+
+export async function POST(request) {
+  try {
+    const repository = createAdminAthleteRepository()
+    const body = await request.json()
+    const athlete = await repository.createAthlete(body ?? {})
+    return json({ athlete }, { status: 201 })
+  } catch (error) {
+    return handleRouteError(error)
+  }
+}
+
+export async function PATCH(request) {
+  try {
+    const repository = createAdminAthleteRepository()
+    const body = await request.json()
+    const athlete = await repository.updateAthlete(body ?? {})
+    return json({ athlete })
+  } catch (error) {
+    return handleRouteError(error)
+  }
+}
+
+export async function DELETE(request) {
+  try {
+    const repository = createAdminAthleteRepository()
+    const body = await request.json()
+    const result = await repository.deleteAthlete(body ?? {})
+    return json({ result })
+  } catch (error) {
+    return handleRouteError(error)
+  }
+}

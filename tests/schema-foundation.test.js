@@ -28,6 +28,10 @@ function expectColumn(sql, tableName, columnName) {
 }
 
 const requiredTables = [
+  'support_conversations',
+  'support_messages',
+  'workout_template_blocks',
+  'program_workout_blocks',
   'program_workout_exercises',
   'program_workout_sets',
   'rest_timer_states',
@@ -117,8 +121,60 @@ for (const sqlName of ['schema-v1.sql', '0001_initial_schema.sql']) {
     expectColumn(sql, 'exercise_performance_snapshots', 'body_region')
   })
 
+  test(`${sqlName} stores workout block structure for both templates and scheduled program workouts`, () => {
+    expectColumn(sql, 'workout_template_blocks', 'block_code')
+    expectColumn(sql, 'workout_template_blocks', 'title')
+    expectColumn(sql, 'workout_template_blocks', 'instructions')
+    expectColumn(sql, 'workout_template_exercises', 'workout_template_block_id')
+    expectColumn(sql, 'program_workout_blocks', 'block_code')
+    expectColumn(sql, 'program_workout_blocks', 'title')
+    expectColumn(sql, 'program_workout_blocks', 'instructions')
+    expectColumn(sql, 'program_workout_exercises', 'program_workout_block_id')
+  })
+
   test(`${sqlName} preserves planned workout notes needed by workout edit save`, () => {
     expectColumn(sql, 'program_workouts', 'notes')
+  })
+
+  test(`${sqlName} stores workout card colors on both templates and scheduled program workouts`, () => {
+    expectColumn(sql, 'workout_templates', 'bg_color')
+    expectColumn(sql, 'workout_templates', 'text_color')
+    expectColumn(sql, 'program_workouts', 'bg_color')
+    expectColumn(sql, 'program_workouts', 'text_color')
+  })
+
+  test(`${sqlName} allows coach-authored programs to start unassigned`, () => {
+    const normalized = normalize(sql)
+    const tableStart = normalized.indexOf('create table if not exists programs (')
+    assert.notEqual(tableStart, -1, 'missing table programs')
+    const nextCreate = normalized.indexOf('create table if not exists ', tableStart + 1)
+    const tableBody = nextCreate === -1 ? normalized.slice(tableStart) : normalized.slice(tableStart, nextCreate)
+    assert.match(tableBody, / athlete_id uuid references athlete_profiles\(id\) on delete set null/)
+    assert.doesNotMatch(tableBody, / athlete_id uuid not null references athlete_profiles\(id\) on delete cascade/)
+  })
+
+  test(`${sqlName} provisions support inbox conversations and messages`, () => {
+    expectColumn(sql, 'support_conversations', 'support_request_id')
+    expectColumn(sql, 'support_conversations', 'subject')
+    expectColumn(sql, 'support_conversations', 'status')
+    expectColumn(sql, 'support_conversations', 'priority')
+    expectColumn(sql, 'support_conversations', 'requester_name')
+    expectColumn(sql, 'support_conversations', 'requester_email')
+    expectColumn(sql, 'support_conversations', 'requester_role')
+    expectColumn(sql, 'support_conversations', 'requester_avatar_url')
+    expectColumn(sql, 'support_conversations', 'last_message_preview')
+    expectColumn(sql, 'support_conversations', 'last_message_at')
+    expectColumn(sql, 'support_messages', 'conversation_id')
+    expectColumn(sql, 'support_messages', 'sender_type')
+    expectColumn(sql, 'support_messages', 'sender_name')
+    expectColumn(sql, 'support_messages', 'sender_avatar_url')
+    expectColumn(sql, 'support_messages', 'body')
+    expectColumn(sql, 'support_messages', 'attachments')
+    const normalized = normalize(sql)
+    assert.match(normalized, /alter table support_conversations enable row level security/)
+    assert.match(normalized, /alter table support_messages enable row level security/)
+    assert.match(normalized, /grant all on table support_conversations to service_role/)
+    assert.match(normalized, /grant all on table support_messages to service_role/)
   })
 
   test(`${sqlName} provisions public coach avatar storage with coach-owned write policies`, () => {
@@ -128,6 +184,23 @@ for (const sqlName of ['schema-v1.sql', '0001_initial_schema.sql']) {
     assert.match(normalized, /create policy coach_avatars_insert_own on storage\.objects for insert to authenticated with check \([\s\S]*coach_profiles\.user_id = auth\.uid\(\)[\s\S]*coach_profiles\.id::text = split_part\(name, '\/', 1\)[\s\S]*\)/)
     assert.match(normalized, /create policy coach_avatars_update_own on storage\.objects for update to authenticated using \([\s\S]*coach_profiles\.user_id = auth\.uid\(\)[\s\S]*\) with check \([\s\S]*coach_profiles\.id::text = split_part\(name, '\/', 1\)[\s\S]*\)/)
     assert.match(normalized, /create policy coach_avatars_delete_own on storage\.objects for delete to authenticated using \([\s\S]*coach_profiles\.user_id = auth\.uid\(\)[\s\S]*coach_profiles\.id::text = split_part\(name, '\/', 1\)[\s\S]*\)/)
+  })
+
+  test(`${sqlName} provisions public exercise media storage for thumbnail delivery`, () => {
+    const normalized = normalize(sql)
+    assert.match(normalized, /insert into storage\.buckets \(id, name, public, file_size_limit, allowed_mime_types\) values \('exercise-media', 'exercise-media', true, 5242880, array\['image\/jpeg', 'image\/png', 'image\/webp'\]\)/)
+    assert.match(normalized, /create policy exercise_media_select_public on storage\.objects for select to public using \(bucket_id = 'exercise-media'\)/)
+  })
+
+  test(`${sqlName} persists editable exercise defaults from the admin Exercise Sheet`, () => {
+    expectColumn(sql, 'exercises', 'default_sets')
+    expectColumn(sql, 'exercises', 'default_reps')
+    expectColumn(sql, 'exercises', 'default_distance')
+    expectColumn(sql, 'exercises', 'default_weight')
+    expectColumn(sql, 'exercises', 'default_duration')
+    expectColumn(sql, 'exercises', 'default_rest')
+    expectColumn(sql, 'exercises', 'default_tempo')
+    expectColumn(sql, 'exercises', 'status')
   })
 
   test(`${sqlName} preserves plan lineage in execution tables`, () => {

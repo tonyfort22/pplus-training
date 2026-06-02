@@ -1,0 +1,65 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const workoutsDataTablePath = resolve(repoRoot, 'apps/web/components/admin/workouts-data-table.jsx')
+const workoutsLibraryViewPath = resolve(repoRoot, 'apps/web/components/admin/workouts-library-view.jsx')
+const workoutEditorDialogPath = resolve(repoRoot, 'apps/web/components/admin/workout-editor-dialog.jsx')
+const workoutTrainingBuilderPath = resolve(repoRoot, 'apps/web/components/admin/workout-training-builder.jsx')
+const workoutTemplatesRoutePath = resolve(repoRoot, 'apps/web/app/api/admin/workout-templates/route.js')
+const programWorkoutRepositoryPath = resolve(repoRoot, 'apps/web/lib/program-workout-repository.js')
+
+test('workouts library uses real template data with admin light-mode controls and honest editor flows', () => {
+  const tableSource = readFileSync(workoutsDataTablePath, 'utf8')
+  const viewSource = readFileSync(workoutsLibraryViewPath, 'utf8')
+  const editorSource = readFileSync(workoutEditorDialogPath, 'utf8')
+  const trainingBuilderSource = readFileSync(workoutTrainingBuilderPath, 'utf8')
+  const routeSource = readFileSync(workoutTemplatesRoutePath, 'utf8')
+  const repositorySource = readFileSync(programWorkoutRepositoryPath, 'utf8')
+
+  assert.match(viewSource, /admin-shell-workouts-library-view/)
+  assert.match(viewSource, /admin-shell-athletes-page-title/)
+  assert.match(tableSource, /fetch\('\/api\/admin\/workout-templates'/)
+  assert.match(routeSource, /repository\.listWorkoutTemplates\(\)/)
+  assert.match(repositorySource, /table:\s*'workout_templates'/)
+  assert.match(repositorySource, /workout_template_blocks/)
+  assert.match(repositorySource, /workout_template_exercises/)
+  assert.match(repositorySource, /workout_template_sets/)
+
+  assert.match(tableSource, /admin-shell-athletes-filter-trigger/)
+  assert.match(tableSource, /admin-shell-athletes-pagination-bar/)
+  assert.match(tableSource, /admin-shell-athletes-page-size-select/)
+  assert.match(tableSource, /admin-shell-athletes-empty-state/)
+  assert.match(tableSource, /admin-shell-athletes-name-cell/)
+  assert.match(tableSource, /admin-shell-athletes-name-text/)
+  assert.match(tableSource, /admin-shell-athletes-name-meta/)
+  assert.match(tableSource, /admin-shell-athletes-example-pagination-button-active/)
+
+  assert.match(tableSource, /openCreateWorkoutDialog/)
+  assert.match(tableSource, /openEditWorkoutDialog/)
+  assert.match(tableSource, /openDuplicateWorkoutDialog/)
+  assert.match(tableSource, /saveDisclaimer=/)
+  assert.match(editorSource, /saveDisclaimer/)
+  assert.match(routeSource, /export async function POST/)
+  assert.match(routeSource, /repository\.createWorkoutTemplate/)
+  assert.match(routeSource, /export async function PATCH/)
+  assert.match(routeSource, /repository\.updateWorkoutTemplate/)
+  assert.match(routeSource, /export async function DELETE/)
+  assert.match(routeSource, /repository\.archiveWorkoutTemplate/)
+  assert.match(editorSource, /admin-shell-athletes-create-tabs/)
+  assert.match(editorSource, /admin-shell-workout-editor-message/)
+  assert.doesNotMatch(editorSource, /border-amber-300|bg-amber-50|text-amber-800/)
+  assert.doesNotMatch(tableSource, /workout-\$\{Date\.now\(\)\}/)
+  assert.doesNotMatch(tableSource, /Program 1|Program 2|Program 3|Thibault|Mason/)
+  assert.doesNotMatch(editorSource, /Program 1|Program 2|Program 3|Thibault|Mason/)
+
+  assert.doesNotMatch(tableSource, /className="rounded-\[12px\] min-h-\[40px\] !border !border-\[#24334A\] bg-transparent text-\[#DCE6F8\]/)
+  assert.doesNotMatch(tableSource, /className="h-9 w-\[76px\] rounded-\[10px\] !border-\[#24334A\] bg-\[#111D30\]/)
+  assert.doesNotMatch(tableSource, /className="h-24 text-center text-\[#8EA0BC\]"/)
+  assert.doesNotMatch(tableSource, /text-\[#EEF4FF\]|text-\[#8EA0BC\]|text-\[#6F84A6\]|bg-\[#0F1728\]|bg-\[#111D30\]|border-\[#24334A\]/)
+  assert.doesNotMatch(editorSource, /text-\[#DCE6F8\]|text-\[#EEF4FF\]|placeholder:text-\[#70809E\]|bg-\[#0F1728\]|bg-\[#111D30\]|border-\[#24334A\]/)
+  assert.doesNotMatch(trainingBuilderSource, /text-\[#DCE6F8\]|text-\[#EEF4FF\]|text-\[#8EA0BC\]|text-\[#6F84A6\]|text-\[#60708F\]|placeholder:text-\[#70809E\]|bg-\[#0F1728\]|bg-\[#111827\]|bg-\[#111D30\]|bg-\[#15233A\]|border-\[#24334A\]|border-\[#1C2940\]|shadow-\[0_18px_40px_rgba\(0,0,0,0\.26\)\]/)
+})

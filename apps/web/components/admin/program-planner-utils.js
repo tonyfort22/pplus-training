@@ -15,6 +15,10 @@ function cloneSection(section = {}) {
     id: section.id ?? '',
     title: section.title ?? '',
     description: section.description ?? '',
+    exercises: Array.isArray(section.exercises) ? section.exercises.map((exercise) => ({
+      ...exercise,
+      sets: Array.isArray(exercise.sets) ? exercise.sets.map((set) => ({ ...set })) : [],
+    })) : [],
   }
 }
 
@@ -35,6 +39,8 @@ export function createFixedDaySlots(daySlots = []) {
 
     return {
       id: definition.id,
+      programDayId: source.programDayId ?? null,
+      date: source.date ?? null,
       label: definition.label,
       summary: source.summary ?? 'No work assigned',
       focus: source.focus ?? 'Open day',
@@ -66,9 +72,80 @@ function cloneProgram(program = {}) {
   }
 }
 
+function buildFallbackPlanner(programId) {
+  const fallbackWeek = cloneWeek({ id: 'week-1', label: 'Week 1', focus: 'Training content', summary: 'Coach-managed weekly structure.' }, 0)
+
+  return {
+    id: programId || 'training-content',
+    title: 'Training content',
+    athleteLabel: '0 athletes',
+    duration: '1 week',
+    weekCount: 1,
+    goal: 'Training content',
+    description: 'Open this training content to start building the plan.',
+    weeks: [fallbackWeek],
+  }
+}
+
+export function createProgramPlannerFromAdminProgram(program = {}) {
+  if (Array.isArray(program.weeks) && program.weeks.length > 0) {
+    return cloneProgram({
+      id: program.id,
+      title: program.name || 'Untitled program',
+      athleteLabel: program.athletesLabel || 'Unassigned',
+      duration: program.duration || `${program.weeks.length} week${program.weeks.length === 1 ? '' : 's'}`,
+      weekCount: program.weeks.length,
+      goal: program.description || '',
+      description: program.description || '',
+      weeks: program.weeks,
+    })
+  }
+
+  const parsedWeekCount = Number(program.weekCount ?? String(program.duration ?? '').match(/\d+/)?.[0] ?? 0)
+  const weekCount = Math.max(1, Number.isFinite(parsedWeekCount) ? Math.floor(parsedWeekCount) : 0)
+
+  return cloneProgram({
+    id: program.id,
+    title: program.name || 'Untitled program',
+    athleteLabel: program.athletesLabel || 'Unassigned',
+    duration: program.duration || `${weekCount} week${weekCount === 1 ? '' : 's'}`,
+    weekCount,
+    goal: program.description || '',
+    description: program.description || '',
+    weeks: Array.from({ length: weekCount }, (_, index) => ({
+      id: `week-${index + 1}`,
+      label: `Week ${index + 1}`,
+      focus: program.name || 'Training content',
+      summary: 'Coach-managed weekly structure.',
+      daySlots: createFixedDaySlots(),
+    })),
+  })
+}
+
 export function getProgramPlannerById(programId) {
   const matchedProgram = programPlannerSeed.find((program) => program.id === programId)
-  return matchedProgram ? cloneProgram(matchedProgram) : null
+  return matchedProgram ? cloneProgram(matchedProgram) : buildFallbackPlanner(programId)
+}
+
+export function createEmptyProgramWeek(index = 0, programTitle = 'Training content') {
+  return cloneWeek(
+    {
+      id: `week-${index + 1}`,
+      label: `Week ${index + 1}`,
+      focus: programTitle || 'Training content',
+      summary: 'Coach-managed weekly structure.',
+      daySlots: createFixedDaySlots(),
+    },
+    index,
+  )
+}
+
+export function renumberProgramWeeks(weeks = []) {
+  return weeks.map((week, index) => ({
+    ...week,
+    id: `week-${index + 1}`,
+    label: `Week ${index + 1}`,
+  }))
 }
 
 export function swapDayLaneContent(daySlots, activeDayId, overDayId) {

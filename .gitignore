@@ -6,8 +6,22 @@ expo-env.d.ts
 dist
 build
 coverage
+
+# Local agent/workspace artifacts
+.hermes/
+apps/web/.agents/
+
+# Supabase CLI local state
+infra/supabase/.temp/
+infra/supabase/supabase/
+
 .env
 .env.*
 !.env.example
 !apps/mobile/.env.example
 .DS_Store
+.hermes/
+apps/web/.agents/
+**/.agents/
+infra/supabase/.temp/
+infra/supabase/supabase/

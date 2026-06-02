@@ -114,14 +114,14 @@ export function ChartTooltipContent({
     const value = !labelKey && typeof label === 'string' ? (config?.[label]?.label ?? label) : itemConfig?.label
 
     if (labelFormatter) {
-      return <div className={cn('font-medium text-[#eef4ff]', labelClassName)}>{labelFormatter(value, payload)}</div>
+      return <div className={cn('font-medium text-[var(--admin-dashboard-card-text)]', labelClassName)}>{labelFormatter(value, payload)}</div>
     }
 
     if (!value) {
       return null
     }
 
-    return <div className={cn('font-medium text-[#eef4ff]', labelClassName)}>{value}</div>
+    return <div className={cn('font-medium text-[var(--admin-dashboard-card-text)]', labelClassName)}>{value}</div>
   }, [label, labelFormatter, payload, hideLabel, labelClassName, config, labelKey])
 
   if (!active || !payload?.length) {
@@ -133,7 +133,7 @@ export function ChartTooltipContent({
   return (
     <div
       className={cn(
-        'grid min-w-32 items-start gap-1.5 rounded-[18px] border border-[#30405e] bg-[#0a101d] px-3 py-2 text-xs shadow-[0_18px_36px_rgba(2,8,18,0.42)]',
+        'grid min-w-32 items-start gap-1.5 rounded-[18px] border border-[var(--admin-dashboard-tooltip-border)] bg-[var(--admin-dashboard-tooltip-bg)] px-3 py-2 text-xs shadow-[0_18px_36px_rgba(2,8,18,0.22)]',
         className,
       )}
     >
@@ -153,7 +153,7 @@ export function ChartTooltipContent({
                 ) : (
                   <>
                     {itemConfig?.icon ? (
-                      <itemConfig.icon className="h-3 w-3 text-[#7f91af]" />
+                      <itemConfig.icon className="h-3 w-3 text-[var(--admin-dashboard-card-muted)]" />
                     ) : (
                       !hideIndicator && (
                         <div
@@ -169,10 +169,10 @@ export function ChartTooltipContent({
                     <div className={cn('flex flex-1 justify-between leading-none', nestLabel ? 'items-end' : 'items-center')}>
                       <div className="grid gap-1.5">
                         {nestLabel ? tooltipLabel : null}
-                        <span className="text-[#7f91af]">{itemConfig?.label ?? item.name}</span>
+                        <span className="text-[var(--admin-dashboard-card-muted)]">{itemConfig?.label ?? item.name}</span>
                       </div>
                       {item.value != null ? (
-                        <span className="font-mono font-medium tabular-nums text-[#eef4ff]">
+                        <span className="font-mono font-medium tabular-nums text-[var(--admin-dashboard-card-text)]">
                           {typeof item.value === 'number' ? item.value.toLocaleString() : String(item.value)}
                         </span>
                       ) : null}
@@ -201,7 +201,7 @@ export function ChartLegendContent({
   }
 
   return (
-    <div className={cn('flex items-center justify-center gap-4 text-[#9fb0cc]', verticalAlign === 'top' ? 'pb-3' : 'pt-3', className)}>
+    <div className={cn('flex items-center justify-center gap-4 text-[var(--admin-dashboard-card-muted)]', verticalAlign === 'top' ? 'pb-3' : 'pt-3', className)}>
       {payload
         .filter((item) => item.type !== 'none')
         .map((item, index) => {
@@ -211,7 +211,7 @@ export function ChartLegendContent({
           return (
             <div key={index} className="flex items-center gap-1.5">
               {itemConfig?.icon && !hideIcon ? (
-                <itemConfig.icon className="h-3 w-3 text-[#7f91af]" />
+                <itemConfig.icon className="h-3 w-3 text-[var(--admin-dashboard-card-muted)]" />
               ) : (
                 <div className="h-2 w-2 shrink-0 rounded-[2px]" style={{ backgroundColor: item.color }} />
               )}

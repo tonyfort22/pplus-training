@@ -39,6 +39,28 @@ async function requestTable(table, query = '') {
   return response.json()
 }
 
+async function patchTable(table, query = '', payload = {}) {
+  const { baseRestUrl, serviceRoleKey } = getRepositoryConfig()
+  const response = await fetch(`${baseRestUrl}/${table}${query}`, {
+    method: 'PATCH',
+    headers: {
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+    },
+    cache: 'no-store',
+    body: JSON.stringify(payload),
+  })
+
+  if (!response.ok) {
+    const text = await response.text()
+    throw createRepositoryError(`${table} patch failed: ${response.status} ${text}`, response.status)
+  }
+
+  return response.json()
+}
+
 function formatDateLabel(value) {
   if (!value) return '-'
 
@@ -111,6 +133,20 @@ export function createAdminInviteRepository() {
       )
 
       return Array.isArray(rows) ? rows.map(mapInviteRow) : []
+    },
+
+    async cancelInvite({ inviteId }) {
+      const normalizedInviteId = String(inviteId || '').trim()
+      if (!normalizedInviteId) throw createRepositoryError('Invite ID is required.', 400)
+
+      const rows = await patchTable(
+        'athlete_invitations',
+        `?id=eq.${encodeURIComponent(normalizedInviteId)}`,
+        { revoked_at: new Date().toISOString() },
+      )
+      const invite = Array.isArray(rows) ? rows[0] : rows
+      if (!invite?.id) throw createRepositoryError('Invite not found.', 404)
+      return mapInviteRow(invite)
     },
   }
 }
