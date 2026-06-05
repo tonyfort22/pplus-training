@@ -10,6 +10,7 @@ export default function CompactFileUpload({
   helperText = "Drop files here or click to browse (max 3 files)",
   fileName = "",
   id,
+  multiple = false,
   onFileChange = () => {},
   className,
   disabled = false,
@@ -37,8 +38,9 @@ export default function CompactFileUpload({
         id={id}
         type="file"
         accept={accept}
+        multiple={multiple}
         className="sr-only"
-        onChange={(event) => onFileChange(event.target.files?.[0] ?? null)}
+        onChange={(event) => onFileChange(multiple ? Array.from(event.target.files ?? []) : (event.target.files?.[0] ?? null))}
         disabled={disabled}
       />
     </label>

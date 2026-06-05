@@ -12,7 +12,7 @@ function getSetCookieHeaders(response) {
   return response.headers.getSetCookie ? response.headers.getSetCookie() : response.headers.get('set-cookie').split(', ')
 }
 
-test('admin auth cookie names are stable and admin-scoped', () => {
+test('admin auth cookie names are stable and available to admin API routes', () => {
   assert.equal(PPLUS_ADMIN_ACCESS_TOKEN_COOKIE, 'pplus_admin_access_token')
   assert.equal(PPLUS_ADMIN_REFRESH_TOKEN_COOKIE, 'pplus_admin_refresh_token')
 })
@@ -34,13 +34,15 @@ test('setAdminAuthCookies stores access and refresh tokens as secure http-only a
   assert.match(accessCookie, /HttpOnly/i)
   assert.match(accessCookie, /SameSite=Lax/i)
   assert.match(accessCookie, /Secure/i)
-  assert.match(accessCookie, /Path=\/admin/i)
+  assert.match(accessCookie, /Path=\//i)
+  assert.doesNotMatch(accessCookie, /Path=\/admin/i)
   assert.match(accessCookie, /Max-Age=3600/i)
 
   assert.match(refreshCookie, /HttpOnly/i)
   assert.match(refreshCookie, /SameSite=Lax/i)
   assert.match(refreshCookie, /Secure/i)
-  assert.match(refreshCookie, /Path=\/admin/i)
+  assert.match(refreshCookie, /Path=\//i)
+  assert.doesNotMatch(refreshCookie, /Path=\/admin/i)
   assert.match(refreshCookie, /Max-Age=2592000/i)
 })
 
@@ -68,12 +70,14 @@ test('clearAdminAuthCookies expires access and refresh token cookies', () => {
   const refreshCookie = cookies.find((cookie) => cookie.startsWith(`${PPLUS_ADMIN_REFRESH_TOKEN_COOKIE}=`))
 
   assert.match(accessCookie, /Max-Age=0/i)
-  assert.match(accessCookie, /Path=\/admin/i)
+  assert.match(accessCookie, /Path=\//i)
+  assert.doesNotMatch(accessCookie, /Path=\/admin/i)
   assert.match(accessCookie, /HttpOnly/i)
   assert.match(accessCookie, /Secure/i)
 
   assert.match(refreshCookie, /Max-Age=0/i)
-  assert.match(refreshCookie, /Path=\/admin/i)
+  assert.match(refreshCookie, /Path=\//i)
+  assert.doesNotMatch(refreshCookie, /Path=\/admin/i)
   assert.match(refreshCookie, /HttpOnly/i)
   assert.match(refreshCookie, /Secure/i)
 })

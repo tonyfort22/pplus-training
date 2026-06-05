@@ -2996,6 +2996,35 @@ html[data-theme='light'] .admin-shell-overview-card-badge-negative {
   border-color: var(--admin-input-focus);
 }
 
+.ai-draft-primary-select-trigger {
+  width: 100% !important;
+  border: 1px solid var(--admin-dashboard-card-border) !important;
+  background: var(--admin-dashboard-control-bg) !important;
+  color: var(--admin-dashboard-card-text) !important;
+  box-shadow: none !important;
+}
+
+.ai-draft-primary-select-trigger:hover {
+  background: var(--admin-dashboard-control-hover-bg) !important;
+}
+
+.ai-draft-primary-select-trigger:focus-visible {
+  border-color: var(--admin-shell-accent) !important;
+  box-shadow: 0 0 0 2px var(--admin-input-focus) !important;
+}
+
+.ai-draft-primary-select-trigger svg {
+  color: var(--admin-dashboard-card-muted) !important;
+  opacity: 1 !important;
+}
+
+.ai-draft-primary-select-content {
+  border: 1px solid var(--admin-dashboard-card-border) !important;
+  background: var(--admin-dashboard-card-bg) !important;
+  color: var(--admin-dashboard-card-text) !important;
+  box-shadow: var(--admin-shell-shadow) !important;
+}
+
 .admin-badge {
   display: inline-flex;
   align-items: center;

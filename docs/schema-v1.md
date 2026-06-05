@@ -455,14 +455,15 @@ Coach-authored program plans. A program may start unassigned and later be attach
 - updated_at
 
 ## program_phases
-Optional but useful because the imported sources are phase-heavy.
+A program-owned grouping layer for workouts that belong together inside a training phase.
+This is the structured home for imported labels like `Phase 1`, while the workouts/blocks/exercises/sets remain underneath it.
 - id
 - program_id
-- content_collection_id nullable
 - name
-- phase_index nullable
-- start_date nullable
-- end_date nullable
+- description nullable
+- training_type nullable
+- start_week nullable
+- end_week nullable
 - sort_order
 - created_at
 - updated_at
@@ -504,6 +505,7 @@ The assigned athlete-specific workout snapshot shown before execution starts.
 These rows should usually come from a `workout_template`, with optional `content_item_id` kept for provenance only.
 - id
 - program_day_id
+- program_phase_id nullable
 - workout_template_id nullable
 - content_item_id nullable
 - name_snapshot

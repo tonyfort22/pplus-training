@@ -5,8 +5,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, horizontalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { ArrowLeft, ArrowRight, ChevronDown, GripVertical, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ChevronDown, GripVertical, LoaderCircle, MoreHorizontal, Plus, Sparkles, Trash2, Upload } from 'lucide-react'
 
+import AiWorkoutDraftSheet, { createSampleAiWorkoutDrafts } from '@/components/admin/ai-workout-draft-sheet'
 import WorkoutTrainingBuilder from '@/components/admin/workout-training-builder'
 import Badge from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -72,6 +73,46 @@ function createPlannerWorkoutTrainingSections(workout = {}) {
   }))
 }
 
+function createDraftWorkoutSetRows(weeks = [], sectionIndex, exerciseIndex) {
+  if (!Array.isArray(weeks) || weeks.length === 0) {
+    return [{ id: `planner-draft-set-${sectionIndex}-${exerciseIndex}-1`, tempo: '', effort: '', side: '', duration: '', distance: '', rest: '', reps: '' }]
+  }
+
+  return weeks.flatMap((week, weekIndex) => {
+    const setCount = Math.max(1, Number(week?.sets ?? 1))
+    return Array.from({ length: setCount }, (_, setIndex) => ({
+      id: `planner-draft-set-${sectionIndex}-${exerciseIndex}-${weekIndex}-${setIndex}`,
+      tempo: week?.tempo ?? '',
+      effort: week?.week ? `Week ${week.week}` : '',
+      side: String(week?.reps ?? week?.duration ?? '').toLowerCase().includes('/side') ? 'L/R' : '',
+      duration: week?.duration ?? '',
+      distance: week?.distance ?? '',
+      rest: week?.restSeconds ? `${week.restSeconds}s` : '',
+      reps: week?.reps ?? '',
+    }))
+  })
+}
+
+function createDraftWorkoutTrainingSections(draftSections = []) {
+  return draftSections.map((section, sectionIndex) => ({
+    id: `planner-draft-section-${sectionIndex}`,
+    label: section?.label ?? `Section ${sectionIndex + 1}`,
+    isExpanded: true,
+    showInstruction: Boolean(section?.instructions ?? section?.blockLabel),
+    instruction: section?.instructions ?? (section?.blockLabel ? `Block ${section.blockLabel}` : ''),
+    draftExerciseQuery: '',
+    exercises: (section?.exercises ?? []).map((exercise, exerciseIndex) => ({
+      id: `planner-draft-exercise-${sectionIndex}-${exerciseIndex}`,
+      title: exercise?.exerciseMatch?.exerciseName || exercise?.name || 'Exercise',
+      exerciseId: exercise?.exerciseMatch?.exerciseId || '',
+      isExpanded: exerciseIndex === 0,
+      showInstruction: Boolean(exercise?.notes),
+      instruction: exercise?.notes ?? '',
+      sets: createDraftWorkoutSetRows(exercise?.weeks, sectionIndex, exerciseIndex),
+    })),
+  }))
+}
+
 function createWorkoutSectionsFromTrainingSections(trainingSections = []) {
   return trainingSections.map((section, sectionIndex) => ({
     id: section.id ?? `planner-section-${sectionIndex + 1}`,
@@ -98,12 +139,14 @@ function summarizeTrainingSection(section = {}) {
   return 'Add the first exercise block.'
 }
 
-function createPlannerWorkoutFromTrainingSections({ id, title, trainingSections }) {
+function createPlannerWorkoutFromTrainingSections({ id, title, trainingSections, source = 'manual', sourceFileName = '' }) {
   const sections = createWorkoutSectionsFromTrainingSections(trainingSections)
 
   return {
     id,
     title,
+    source,
+    sourceFileName,
     blockLabel: 'Main Work',
     duration: '30 min',
     status: 'active',
@@ -111,6 +154,105 @@ function createPlannerWorkoutFromTrainingSections({ id, title, trainingSections 
     coachNote: 'Coach-built workout with editable training blocks, exercises, and sets.',
     programBlocks: createProgramBlocksFromWorkoutSections(sections),
     sections,
+  }
+}
+
+function decorateAiImportPlannerWorkout(workout, acceptedDraft) {
+  return {
+    ...workout,
+    source: 'ai-import',
+    sourceFileName: acceptedDraft?.workout?.sourceFileName ?? '',
+  }
+}
+
+function appendAiWorkoutDraftToPlanner(plannerSnapshot, resolvedTarget, persistedDraftWorkout) {
+  return {
+    ...plannerSnapshot,
+    weeks: plannerSnapshot.weeks.map((week) => week.id === resolvedTarget.weekId ? {
+      ...week,
+      daySlots: week.daySlots.map((day) => day.id === resolvedTarget.dayId ? { ...day, workouts: [...day.workouts, persistedDraftWorkout] } : day),
+    } : week),
+  }
+}
+
+function removeAcceptedAiWorkoutDraft(drafts = [], acceptedDraft) {
+  const acceptedSourceFileName = acceptedDraft?.workout?.sourceFileName
+  const acceptedWorkoutName = acceptedDraft?.workout?.name
+  let removedDraft = false
+
+  return drafts.filter((draftItem) => {
+    if (removedDraft) return true
+    const isAcceptedDraft = acceptedSourceFileName
+      ? draftItem?.workout?.sourceFileName === acceptedSourceFileName
+      : draftItem?.workout?.name === acceptedWorkoutName
+
+    if (!isAcceptedDraft) return true
+    removedDraft = true
+    return false
+  })
+}
+
+function normalizePhaseLabel(value = '') {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/^p(\d+)$/, 'phase $1')
+    .replace(/\s+/g, ' ')
+}
+
+function resolveProgramPhaseIdForDraft(planner = {}, acceptedDraft = {}) {
+  const draftPhaseLabel = normalizePhaseLabel(acceptedDraft?.workout?.phase)
+  if (!draftPhaseLabel) return null
+
+  const matchedPhase = planner.phases?.find((phase) => normalizePhaseLabel(phase.name ?? phase.label) === draftPhaseLabel)
+  return matchedPhase?.id || null
+}
+
+function resolveClickedAiWorkoutDraftTarget(planner = {}, clickedTarget = {}) {
+  const clickedWeek = planner.weeks?.find((week) => week.id === clickedTarget?.weekId || week.label === clickedTarget?.weekLabel)
+  const clickedDay = clickedWeek?.daySlots?.find((day) => day.id === clickedTarget?.dayId || day.label === clickedTarget?.dayLabel)
+
+  return { week: clickedWeek, day: clickedDay, weekId: clickedWeek?.id ?? clickedTarget?.weekId, dayId: clickedDay?.id ?? clickedTarget?.dayId, usedDraftRouting: false }
+}
+
+function resolveAiWorkoutDraftTarget(planner = {}, clickedTarget = {}, acceptedDraft = {}) {
+  const clickedResolvedTarget = resolveClickedAiWorkoutDraftTarget(planner, clickedTarget)
+  const draftWeekNumber = Number(acceptedDraft?.workout?.weekNumber)
+  const draftDayNumber = Number(acceptedDraft?.workout?.dayNumber)
+
+  if (!Number.isInteger(draftWeekNumber) || draftWeekNumber < 1 || !Number.isInteger(draftDayNumber) || draftDayNumber < 1) {
+    return clickedResolvedTarget
+  }
+
+  const draftWeek = planner.weeks?.[draftWeekNumber - 1]
+  const draftDay = draftWeek?.daySlots?.find((day) => day.label === `Day ${draftDayNumber}` || day.id === `day-${draftDayNumber}`)
+  if (!draftWeek || !draftDay) return clickedResolvedTarget
+
+  return { week: draftWeek, day: draftDay, weekId: draftWeek.id, dayId: draftDay.id, usedDraftRouting: true }
+}
+
+function formatAiWorkoutDraftTargetLabel(target = {}) {
+  const weekLabel = target.week?.label ?? target.weekLabel ?? 'Selected week'
+  const dayLabel = target.day?.label ?? target.dayLabel ?? 'selected day'
+  return `${weekLabel} · ${dayLabel}`
+}
+
+function createAiWorkoutDraftDestinationPreview(planner = {}, clickedTarget = {}, draft = {}) {
+  const clickedResolvedTarget = resolveClickedAiWorkoutDraftTarget(planner, clickedTarget)
+  const resolvedTarget = resolveAiWorkoutDraftTarget(planner, clickedTarget, draft)
+  const clickedTargetLabel = formatAiWorkoutDraftTargetLabel(clickedResolvedTarget)
+  const resolvedTargetLabel = formatAiWorkoutDraftTargetLabel(resolvedTarget)
+  const hasDraftRoutingMetadata = Boolean(draft?.workout?.weekNumber || draft?.workout?.dayNumber)
+  const usedClickedFallback = hasDraftRoutingMetadata && !resolvedTarget.usedDraftRouting
+  const existingWorkoutCount = resolvedTarget.day?.workouts?.length ?? 0
+
+  return {
+    isFallback: usedClickedFallback,
+    shortLabel: resolvedTargetLabel,
+    fallbackLabel: clickedTargetLabel,
+    existingWorkoutCount,
+    appendWarning: existingWorkoutCount > 0 ? `Target day already has ${existingWorkoutCount} workout${existingWorkoutCount === 1 ? '' : 's'}. This import will append below existing workouts.` : '',
+    message: usedClickedFallback ? `PDF says Week ${draft?.workout?.weekNumber ?? 'unknown'} · Day ${draft?.workout?.dayNumber ?? 'unknown'}, using clicked lane: ${clickedTargetLabel}` : `Will place into: ${resolvedTargetLabel}`,
   }
 }
 
@@ -183,6 +325,8 @@ function mapProgramWorkoutTreeToPlannerWorkout(tree = {}) {
     programWorkoutId: workout.id,
     programDayId: workout.program_day_id ?? null,
     title: workout.name_snapshot || workout.workout_templates?.name || 'Workout',
+    source: workout.import_source ?? 'manual',
+    sourceFileName: workout.import_source_file_name ?? '',
     blockLabel: workout.workout_templates?.training_type || blocks[0]?.title || 'Main Work',
     blockBgColor: workout.bg_color || workout.workout_templates?.bg_color || null,
     blockTextColor: workout.text_color || workout.workout_templates?.text_color || null,
@@ -240,6 +384,25 @@ function createProgramWorkoutTemplatePayload({ planner, day, template, values, s
   }
 }
 
+function createProgramWorkoutDraftPayload({ planner, day, acceptedDraft, trainingSections, sortOrder }) {
+  return {
+    createProgramPlanFromDraft: true,
+    programId: planner.id,
+    programDayId: day?.programDayId,
+    programWeekId: day?.programWeekId,
+    programPhaseId: resolveProgramPhaseIdForDraft(planner, acceptedDraft),
+    workout: acceptedDraft?.workout,
+    importSource: 'ai-import',
+    importSourceFileName: acceptedDraft?.workout?.sourceFileName ?? '',
+    name_snapshot: acceptedDraft?.workout?.name,
+    notes: acceptedDraft?.workout?.description ?? acceptedDraft?.workout?.notes ?? '',
+    status: 'scheduled',
+    scheduledDate: day?.date ?? acceptedDraft?.workout?.startDate ?? null,
+    sortOrder,
+    trainingSections,
+  }
+}
+
 function createWorkoutTemplateCreateValues(day = {}) {
   return {
     workoutTemplateId: '',
@@ -264,7 +427,8 @@ async function requestProgramWorkoutCreate(payload) {
   })
   const body = await response.json().catch(() => ({}))
   if (!response.ok) throw new Error(body?.error || 'Failed to create program workout.')
-  return mapProgramWorkoutTreeToPlannerWorkout(body.programWorkoutTree)
+  const responseTree = body.programWorkoutTree?.programWorkoutTree ?? body.programWorkoutTree
+  return mapProgramWorkoutTreeToPlannerWorkout(responseTree)
 }
 
 async function requestProgramWorkoutPatch(programWorkoutId, payload) {
@@ -290,6 +454,10 @@ async function requestProgramWorkoutDelete(programWorkoutId) {
 
 function getPersistedProgramWorkoutDeleteId(workout = {}) {
   return workout.programWorkoutId || workout.id || null
+}
+
+function isLocalAiImportWorkout(workout = {}) {
+  return workout.source === 'ai-import' && !workout.programWorkoutId
 }
 
 function replacePlannerWorkout(currentPlanner, selectedWorkout, nextWorkout) {
@@ -361,7 +529,7 @@ function FieldInput({ id, value, onChange, placeholder, type = 'text' }) {
   )
 }
 
-function DayLane({ day, weekId, weekLabel, onAddWorkout, onOpenWorkoutEditor, onOpenWorkoutDeleteDialog, onReorderWorkouts, sortable }) {
+function DayLane({ day, weekId, weekLabel, onAddWorkout, onImportAiWorkout, onOpenWorkoutEditor, onOpenWorkoutDeleteDialog, onReorderWorkouts, sortable }) {
   const dayId = day.id
   const [expandedWorkoutBlockIds, setExpandedWorkoutBlockIds] = useState(() => new Set())
 
@@ -419,6 +587,16 @@ function DayLane({ day, weekId, weekLabel, onAddWorkout, onOpenWorkoutEditor, on
                 <Plus className="h-4 w-4" />
                 <span className="sr-only">Add workout to {day.label}</span>
               </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="program-planner-icon-button rounded-full border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-muted)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-shell-primary-button-bg)]"
+                onClick={() => onImportAiWorkout(day.id)}
+              >
+                <Sparkles className="h-4 w-4" />
+                <span className="sr-only">Import AI Workout into {day.label}</span>
+              </Button>
             </div>
           </div>
           <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--admin-dashboard-card-muted)]">{day.focus}</p>
@@ -452,6 +630,11 @@ function DayLane({ day, weekId, weekLabel, onAddWorkout, onOpenWorkoutEditor, on
                           <Badge className="program-planner-workout-training-type-badge border border-transparent" style={getWorkoutBlockBadgeStyle(workout)}>{workout.blockLabel}</Badge>
                           <div className="space-y-1">
                             <p className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{workout.title}</p>
+                            {workout.source === 'ai-import' ? (
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--admin-shell-primary-button-bg)]">
+                                AI import{workout.sourceFileName ? ` · ${workout.sourceFileName}` : ''}
+                              </p>
+                            ) : null}
                             <p className="text-xs text-[var(--admin-dashboard-card-muted)]">{workout.duration}</p>
                           </div>
                         </div>
@@ -514,7 +697,7 @@ function DayLane({ day, weekId, weekLabel, onAddWorkout, onOpenWorkoutEditor, on
   )
 }
 
-function ProgramWeekRow({ week, onAddWorkoutToDay, onDeleteWeek, onOpenWorkoutEditor, onOpenWorkoutDeleteDialog, onReorderDayWorkouts, onSwapDayContent }) {
+function ProgramWeekRow({ week, onAddWorkoutToDay, onImportAiWorkoutToDay, onDeleteWeek, onOpenWorkoutEditor, onOpenWorkoutDeleteDialog, onReorderDayWorkouts, onSwapDayContent }) {
   const weekSliderRef = useRef(null)
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -597,6 +780,7 @@ function ProgramWeekRow({ week, onAddWorkoutToDay, onDeleteWeek, onOpenWorkoutEd
                     weekLabel={week.label}
                     day={day}
                     onAddWorkout={onAddWorkoutToDay}
+                    onImportAiWorkout={onImportAiWorkoutToDay}
                     onOpenWorkoutEditor={onOpenWorkoutEditor}
                     onOpenWorkoutDeleteDialog={onOpenWorkoutDeleteDialog}
                     onReorderWorkouts={onReorderDayWorkouts}
@@ -636,7 +820,7 @@ function SortableDayLane(props) {
   )
 }
 
-export default function ProgramPlannerView({ program }) {
+export default function ProgramPlannerView({ program, enableLocalAiImportQa = false }) {
   const [planner, setPlanner] = useState(() => clonePlanner(program))
   const [selectedWorkout, setSelectedWorkout] = useState(null)
   const [selectedWorkoutMode, setSelectedWorkoutMode] = useState('edit')
@@ -650,6 +834,13 @@ export default function ProgramPlannerView({ program }) {
   const [isLoadingWorkoutTemplates, setIsLoadingWorkoutTemplates] = useState(false)
   const [createWorkoutValues, setCreateWorkoutValues] = useState(() => createWorkoutTemplateCreateValues())
   const [createWorkoutError, setCreateWorkoutError] = useState('')
+  const [aiWorkoutImportTarget, setAiWorkoutImportTarget] = useState(null)
+  const [aiWorkoutImportFiles, setAiWorkoutImportFiles] = useState([])
+  const [aiWorkoutDrafts, setAiWorkoutDrafts] = useState([])
+  const [isAiWorkoutDraftSheetOpen, setIsAiWorkoutDraftSheetOpen] = useState(false)
+  const [aiWorkoutImportError, setAiWorkoutImportError] = useState('')
+  const [isCreatingAiWorkoutDraft, setIsCreatingAiWorkoutDraft] = useState(false)
+  const [isAcceptingAiWorkoutDraft, setIsAcceptingAiWorkoutDraft] = useState(false)
 
   const workoutTemplateCategories = useMemo(() => {
     return Array.from(new Set(workoutTemplateOptions.map((template) => template.training_type).filter(Boolean))).sort((firstCategory, secondCategory) => firstCategory.localeCompare(secondCategory))
@@ -765,6 +956,151 @@ export default function ProgramPlannerView({ program }) {
     setCreateWorkoutError('')
   }
 
+  function handleImportAiWorkout(weekId, dayId) {
+    const targetWeek = planner.weeks.find((week) => week.id === weekId)
+    const targetDay = targetWeek?.daySlots.find((day) => day.id === dayId)
+    setAiWorkoutImportTarget({ weekId, dayId, weekLabel: targetWeek?.label, dayLabel: targetDay?.label, day: targetDay })
+    setAiWorkoutImportFiles([])
+    setAiWorkoutDrafts([])
+    setAiWorkoutImportError('')
+  }
+
+  function closeAiWorkoutImport() {
+    setAiWorkoutImportTarget(null)
+    setAiWorkoutImportFiles([])
+    setAiWorkoutDrafts([])
+    setAiWorkoutImportError('')
+    setIsAiWorkoutDraftSheetOpen(false)
+  }
+
+  function handleAiWorkoutImportFilesChange(files) {
+    setAiWorkoutImportFiles(Array.isArray(files) ? files : files ? [files] : [])
+  }
+
+  async function handleCreateAiWorkoutDrafts() {
+    setAiWorkoutImportError('')
+    setIsCreatingAiWorkoutDraft(true)
+    try {
+      if (enableLocalAiImportQa) {
+        setAiWorkoutDrafts(createSampleAiWorkoutDrafts(aiWorkoutImportFiles))
+        setIsAiWorkoutDraftSheetOpen(true)
+        return
+      }
+
+      if (!aiWorkoutImportFiles[0]) {
+        throw new Error('Upload a workout PDF first.')
+      }
+
+      const formData = new FormData()
+      aiWorkoutImportFiles.forEach((file) => formData.append('files', file))
+      formData.append('programId', planner.id)
+      formData.append('programDayId', aiWorkoutImportTarget?.day?.programDayId ?? '')
+      formData.append('programWeekId', aiWorkoutImportTarget?.day?.programWeekId ?? '')
+
+      const response = await fetch('/api/admin/ai-workout-drafts', {
+        method: 'POST',
+        body: formData,
+      })
+      const body = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(body?.error || 'Failed to create AI workout drafts.')
+      }
+
+      setAiWorkoutDrafts(body.drafts ?? [])
+      setIsAiWorkoutDraftSheetOpen(true)
+    } catch (error) {
+      console.error('Failed to create AI workout drafts.', error)
+      setAiWorkoutImportError(error.message || 'Failed to create AI workout drafts.')
+    } finally {
+      setIsCreatingAiWorkoutDraft(false)
+    }
+  }
+
+  async function createPersistedAiWorkoutDraftForTarget({ nextPlanner, acceptedDraft, resolvedTarget, batchIndex = 0 }) {
+    const targetDay = resolvedTarget.day
+    const nextWorkoutIndex = (targetDay?.workouts?.length ?? 0) + 1
+    const trainingSections = createDraftWorkoutTrainingSections(acceptedDraft?.sections ?? [])
+
+    if (!targetDay?.programDayId && !enableLocalAiImportQa) {
+      throw new Error('This program day is not persisted yet, so an AI workout cannot be created.')
+    }
+
+    if (enableLocalAiImportQa) {
+      return createPlannerWorkoutFromTrainingSections({
+        id: `qa-ai-import-${Date.now()}-${batchIndex}`,
+        title: acceptedDraft?.workout?.name ?? 'AI imported workout',
+        trainingSections,
+        source: 'ai-import',
+        sourceFileName: acceptedDraft?.workout?.sourceFileName ?? '',
+      })
+    }
+
+    const createdPlannerWorkout = await requestProgramWorkoutCreate(createProgramWorkoutDraftPayload({
+      planner: nextPlanner,
+      day: targetDay,
+      acceptedDraft,
+      trainingSections,
+      sortOrder: nextWorkoutIndex,
+    }))
+    return decorateAiImportPlannerWorkout(createdPlannerWorkout, acceptedDraft)
+  }
+
+  async function handleAcceptAiWorkoutDraft(acceptedDraft) {
+    if (!aiWorkoutImportTarget) return
+
+    try {
+      setIsAcceptingAiWorkoutDraft(true)
+      const resolvedTarget = resolveAiWorkoutDraftTarget(planner, aiWorkoutImportTarget, acceptedDraft)
+      const persistedDraftWorkout = await createPersistedAiWorkoutDraftForTarget({
+        nextPlanner: planner,
+        acceptedDraft,
+        resolvedTarget,
+      })
+      setPlanner((currentPlanner) => appendAiWorkoutDraftToPlanner(currentPlanner, resolvedTarget, persistedDraftWorkout))
+      const remainingDrafts = removeAcceptedAiWorkoutDraft(aiWorkoutDrafts, acceptedDraft)
+      setAiWorkoutDrafts(remainingDrafts)
+      if (remainingDrafts.length > 0) {
+        setIsAiWorkoutDraftSheetOpen(true)
+        return
+      }
+      closeAiWorkoutImport()
+    } catch (error) {
+      console.error('Failed to create planner workout from AI draft.', error)
+      setAiWorkoutImportError(error.message || 'Failed to create AI workout from draft.')
+    } finally {
+      setIsAcceptingAiWorkoutDraft(false)
+    }
+  }
+
+  async function handleAcceptAllRemainingAiWorkoutDrafts(acceptedDrafts = []) {
+    if (!aiWorkoutImportTarget) return
+
+    try {
+      setIsAcceptingAiWorkoutDraft(true)
+      let nextPlanner = planner
+      for (const acceptedDraft of acceptedDrafts) {
+        const resolvedTarget = resolveAiWorkoutDraftTarget(nextPlanner, aiWorkoutImportTarget, acceptedDraft)
+        const persistedDraftWorkout = await createPersistedAiWorkoutDraftForTarget({
+          nextPlanner,
+          acceptedDraft,
+          resolvedTarget,
+          batchIndex: acceptedDrafts.indexOf(acceptedDraft),
+        })
+        nextPlanner = appendAiWorkoutDraftToPlanner(nextPlanner, resolvedTarget, persistedDraftWorkout)
+      }
+
+      setPlanner(nextPlanner)
+      setAiWorkoutDrafts([])
+      closeAiWorkoutImport()
+    } catch (error) {
+      console.error('Failed to create planner workouts from AI drafts.', error)
+      setAiWorkoutImportError(error.message || 'Failed to create AI workouts from drafts.')
+    } finally {
+      setIsAcceptingAiWorkoutDraft(false)
+    }
+  }
+
   async function handleCreateWorkoutFromTemplate() {
     if (!createWorkoutTarget) return
 
@@ -841,9 +1177,12 @@ export default function ProgramPlannerView({ program }) {
     if (!workoutPendingDelete) return
 
     try {
-      const persistedProgramWorkoutId = getPersistedProgramWorkoutDeleteId(workoutPendingDelete.workout)
-      if (persistedProgramWorkoutId) {
-        await requestProgramWorkoutDelete(persistedProgramWorkoutId)
+      const shouldDeleteLocalAiImportWorkout = enableLocalAiImportQa && isLocalAiImportWorkout(workoutPendingDelete.workout)
+      if (!shouldDeleteLocalAiImportWorkout) {
+        const persistedProgramWorkoutId = getPersistedProgramWorkoutDeleteId(workoutPendingDelete.workout)
+        if (persistedProgramWorkoutId) {
+          await requestProgramWorkoutDelete(persistedProgramWorkoutId)
+        }
       }
       setPlanner((currentPlanner) => removePlannerWorkout(currentPlanner, workoutPendingDelete))
       setWorkoutPendingDelete(null)
@@ -858,6 +1197,8 @@ export default function ProgramPlannerView({ program }) {
     const nextSections = createWorkoutSectionsFromTrainingSections(selectedWorkoutTrainingSections)
     const nextWorkout = {
       ...selectedWorkout.workout,
+      source: selectedWorkout.workout.source,
+      sourceFileName: selectedWorkout.workout.sourceFileName,
       title: selectedWorkoutDetailsValues.name,
       duration: selectedWorkoutDetailsValues.duration,
       status: selectedWorkoutDetailsValues.status,
@@ -872,10 +1213,17 @@ export default function ProgramPlannerView({ program }) {
     const selectedDay = planner.weeks
       .find((week) => week.id === selectedWorkout.weekId || week.label === selectedWorkout.weekLabel)
       ?.daySlots.find((day) => day.id === selectedWorkout.dayId || day.label === selectedWorkout.dayLabel)
+    const shouldSaveLocalAiImportWorkout = enableLocalAiImportQa && selectedWorkout.workout.source === 'ai-import'
+
+    if (shouldSaveLocalAiImportWorkout && selectedWorkoutMode !== 'duplicate') {
+      setPlanner((currentPlanner) => replacePlannerWorkout(currentPlanner, selectedWorkout, nextWorkout))
+      setSelectedWorkout(null)
+      return
+    }
 
     try {
       if (selectedWorkoutMode === 'duplicate') {
-        if (!selectedDay?.programDayId) {
+        if (shouldSaveLocalAiImportWorkout || !selectedDay?.programDayId) {
           const localDuplicateWorkout = {
             ...nextWorkout,
             id: `${selectedWorkout.workout.id}-copy-${Date.now()}`,
@@ -969,6 +1317,7 @@ export default function ProgramPlannerView({ program }) {
               key={week.id}
               week={week}
               onAddWorkoutToDay={(dayId) => handleAddWorkout(week.id, dayId)}
+              onImportAiWorkoutToDay={(dayId) => handleImportAiWorkout(week.id, dayId)}
               onDeleteWeek={handleDeleteWeek}
               onOpenWorkoutEditor={handleOpenWorkoutEditor}
               onOpenWorkoutDeleteDialog={handleOpenWorkoutDeleteDialog}
@@ -1084,6 +1433,68 @@ export default function ProgramPlannerView({ program }) {
         </Sheet>
       ) : null}
 
+      {aiWorkoutImportTarget ? (
+        <Sheet open={Boolean(aiWorkoutImportTarget)} onOpenChange={(isOpen) => !isOpen && closeAiWorkoutImport()}>
+          <SheetContent side="right" className="program-planner-ai-import-sheet border-l border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] !max-w-[var(--container-lg)]">
+            <SheetHeader className="shrink-0 border-b border-[var(--admin-dashboard-card-border)] px-6 py-5">
+              <SheetTitle className="text-[var(--admin-dashboard-card-text)]">Import AI Workout</SheetTitle>
+              <SheetDescription className="text-[var(--admin-dashboard-card-muted)]">
+                {aiWorkoutImportTarget.weekLabel} · {aiWorkoutImportTarget.dayLabel}. Upload a PDF or generate a reviewed draft for this exact day lane.
+              </SheetDescription>
+            </SheetHeader>
+            <div className="program-planner-sheet-scroll-content min-h-0 flex-1 overflow-y-auto px-6 py-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+              <div className="grid gap-5">
+                <div className="rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-4">
+                  <div className="mb-3 flex items-start gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--admin-shell-primary-button-bg)_14%,transparent)] text-[var(--admin-shell-primary-button-bg)]">
+                      <Sparkles className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">AI draft review</p>
+                      <p className="text-xs text-[var(--admin-dashboard-card-muted)]">The reviewed draft will save back into {aiWorkoutImportTarget.dayLabel}, not the template library.</p>
+                    </div>
+                  </div>
+                  <CompactFileUpload
+                    id="planner-ai-workout-import-file"
+                    accept="application/pdf,.pdf"
+                    multiple
+                    buttonLabel="Choose PDFs"
+                    helperText="Upload one or more AI workout PDFs, then review each parsed workout draft. No live rows are written until you accept."
+                    fileName={aiWorkoutImportFiles.map((file) => file.name).join(', ')}
+                    onFileChange={handleAiWorkoutImportFilesChange}
+                  />
+                </div>
+
+                {aiWorkoutImportError ? (
+                  <div className="rounded-[12px] border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-500">{aiWorkoutImportError}</div>
+                ) : null}
+              </div>
+            </div>
+            <div className="shrink-0 flex items-center justify-end gap-3 border-t border-[var(--admin-dashboard-card-border)] px-6 py-5">
+              <Button type="button" variant="outline" className="min-h-[40px] rounded-[12px]" onClick={closeAiWorkoutImport}>
+                Cancel
+              </Button>
+              <Button type="button" className="min-h-[40px] rounded-[12px] bg-[var(--admin-shell-primary-button-bg)] text-[var(--admin-shell-primary-button-text)] hover:bg-[var(--admin-shell-primary-button-bg)]" onClick={handleCreateAiWorkoutDrafts} disabled={isCreatingAiWorkoutDraft}>
+                {isCreatingAiWorkoutDraft ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                Review AI draft
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
+      ) : null}
+
+      <AiWorkoutDraftSheet
+        open={isAiWorkoutDraftSheetOpen}
+        onOpenChange={(isOpen) => setIsAiWorkoutDraftSheetOpen(isOpen)}
+        title="Review AI workout draft"
+        drafts={aiWorkoutDrafts}
+        isAccepting={isAcceptingAiWorkoutDraft}
+        destinationPreview={(draft) => createAiWorkoutDraftDestinationPreview(planner, aiWorkoutImportTarget, draft)}
+        onCancel={() => setIsAiWorkoutDraftSheetOpen(false)}
+        onAccept={handleAcceptAiWorkoutDraft}
+        onAcceptAllRemaining={handleAcceptAllRemainingAiWorkoutDrafts}
+      />
+
       {selectedWorkout ? (
         <Sheet open={Boolean(selectedWorkout)} onOpenChange={(isOpen) => !isOpen && setSelectedWorkout(null)}>
         <SheetContent side="right" className="program-planner-sheet border-l border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] !max-w-[var(--container-lg)]">
@@ -1092,6 +1503,12 @@ export default function ProgramPlannerView({ program }) {
             <SheetDescription className="text-[var(--admin-dashboard-card-muted)]">
               {selectedWorkout ? `${selectedWorkout.weekLabel} · ${selectedWorkout.dayLabel}` : 'Select a workout card.'}
             </SheetDescription>
+            {selectedWorkout?.workout?.source === 'ai-import' ? (
+              <div className="mt-3 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[color-mix(in_srgb,var(--admin-shell-primary-button-bg)_10%,transparent)] px-4 py-3 text-xs text-[var(--admin-dashboard-card-muted)]">
+                <span className="font-semibold text-[var(--admin-shell-primary-button-bg)]">Imported from AI draft</span>
+                {selectedWorkout.workout.sourceFileName ? ` · ${selectedWorkout.workout.sourceFileName}` : ''}
+              </div>
+            ) : null}
           </SheetHeader>
           <div className="program-planner-sheet-scroll-content min-h-0 flex-1 overflow-y-auto px-6 py-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             <Tabs value={selectedWorkoutEditorTab} onValueChange={setSelectedWorkoutEditorTab} className="program-planner-workout-tabs grid gap-5 admin-shell-athletes-create-tabs">

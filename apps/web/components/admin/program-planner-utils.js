@@ -33,6 +33,17 @@ function cloneWorkout(workout = {}) {
   }
 }
 
+function cloneProgramPhase(phase = {}) {
+  return {
+    id: phase.id ?? phase.programPhaseId ?? phase.program_phase_id ?? '',
+    name: phase.name ?? phase.label ?? '',
+    label: phase.label ?? phase.name ?? '',
+    trainingType: phase.trainingType ?? phase.training_type ?? '',
+    startWeek: phase.startWeek ?? phase.start_week ?? null,
+    endWeek: phase.endWeek ?? phase.end_week ?? null,
+  }
+}
+
 export function createFixedDaySlots(daySlots = []) {
   return fixedDayDefinitions.map((definition) => {
     const source = daySlots.find((slot) => slot.id === definition.id) ?? {}
@@ -40,6 +51,7 @@ export function createFixedDaySlots(daySlots = []) {
     return {
       id: definition.id,
       programDayId: source.programDayId ?? null,
+      programWeekId: source.programWeekId ?? null,
       date: source.date ?? null,
       label: definition.label,
       summary: source.summary ?? 'No work assigned',
@@ -68,6 +80,7 @@ function cloneProgram(program = {}) {
     weekCount: program.weekCount ?? program.weeks?.length ?? 0,
     goal: program.goal ?? '',
     description: program.description ?? '',
+    phases: Array.isArray(program.phases ?? program.programPhases) ? (program.phases ?? program.programPhases).map(cloneProgramPhase) : [],
     weeks: Array.isArray(program.weeks) ? program.weeks.map(cloneWeek) : [],
   }
 }
@@ -97,6 +110,7 @@ export function createProgramPlannerFromAdminProgram(program = {}) {
       weekCount: program.weeks.length,
       goal: program.description || '',
       description: program.description || '',
+      phases: program.phases ?? program.programPhases ?? [],
       weeks: program.weeks,
     })
   }
@@ -112,6 +126,7 @@ export function createProgramPlannerFromAdminProgram(program = {}) {
     weekCount,
     goal: program.description || '',
     description: program.description || '',
+    phases: program.phases ?? program.programPhases ?? [],
     weeks: Array.from({ length: weekCount }, (_, index) => ({
       id: `week-${index + 1}`,
       label: `Week ${index + 1}`,

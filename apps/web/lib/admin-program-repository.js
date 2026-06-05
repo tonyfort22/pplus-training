@@ -342,6 +342,7 @@ function createProgramPlannerWeeks({ weekRows = [], dayRows = [], workoutRows = 
       daySlots: days.map((day) => ({
         id: normalizeDaySlotId(day.day_index),
         programDayId: day.id,
+        programWeekId: day.program_week_id ?? null,
         date: day.date ?? null,
         label: `Day ${day.day_index ?? 1}`,
         summary: day.date || day.name || 'Training day',

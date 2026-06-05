@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   flexRender,
   getCoreRowModel,
@@ -8,14 +8,16 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { ChevronDown, MoreHorizontal, Plus } from 'lucide-react'
+import { Bot, ChevronDown, FileText, LoaderCircle, MoreHorizontal, Plus, Trash2, Upload } from 'lucide-react'
 import { parseAsJson, useQueryState } from 'nuqs'
 
+import AiWorkoutDraftSheet, { createSampleAiWorkoutDrafts } from '@/components/admin/ai-workout-draft-sheet'
 import WorkoutEditorDialog from '@/components/admin/workout-editor-dialog'
 import { Filters } from '@/components/reui/filters'
 import Badge from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import Checkbox from '@/components/ui/checkbox'
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import {
   Dialog,
   DialogContent,
@@ -55,6 +57,16 @@ function formatWorkoutStatus(status) {
 function formatWorkoutFocusArea(focusArea) {
   const normalizedFocusArea = String(focusArea ?? '').trim()
   return normalizedFocusArea || '--'
+}
+
+function formatFileSize(sizeInBytes) {
+  const parsedSize = Number(sizeInBytes ?? 0)
+  if (!Number.isFinite(parsedSize) || parsedSize <= 0) return '0Bytes'
+
+  if (parsedSize < 1024) return `${parsedSize}Bytes`
+  if (parsedSize < 1024 * 1024) return `${(parsedSize / 1024).toFixed(2)}KB`
+
+  return `${(parsedSize / (1024 * 1024)).toFixed(2)}MB`
 }
 
 function mapWorkoutTemplateToWorkoutRow(template = {}) {
@@ -146,6 +158,69 @@ function normalizeWorkoutFilterValue(value) {
 
 function normalizeWorkoutFocusArea(focusArea) {
   return normalizeWorkoutFilterValue(focusArea).replace(/\s+/g, '-')
+}
+
+function createDraftWorkoutSetRows(weeks = [], sectionIndex, exerciseIndex) {
+  if (!Array.isArray(weeks) || weeks.length === 0) {
+    return [
+      {
+        id: `draft-set-${sectionIndex}-${exerciseIndex}-1`,
+        tempo: '',
+        effort: '',
+        side: '',
+        duration: '',
+        distance: '',
+        rest: '',
+        reps: '',
+      },
+    ]
+  }
+
+  return weeks.flatMap((week, weekIndex) => {
+    const setCount = Math.max(1, Number(week?.sets ?? 1))
+    return Array.from({ length: setCount }, (_, setIndex) => ({
+      id: `draft-set-${sectionIndex}-${exerciseIndex}-${weekIndex}-${setIndex}`,
+      tempo: week?.tempo ?? '',
+      effort: week?.week ? `Week ${week.week}` : '',
+      side: String(week?.reps ?? week?.duration ?? '').toLowerCase().includes('/side') ? 'L/R' : '',
+      duration: week?.duration ?? '',
+      distance: week?.distance ?? '',
+      rest: week?.restSeconds ? `${week.restSeconds}s` : '',
+      reps: week?.reps ?? '',
+    }))
+  })
+}
+
+function createDraftWorkoutTrainingSections(draftSections = []) {
+  return draftSections.map((section, sectionIndex) => ({
+    id: `draft-section-${sectionIndex}-${normalizeWorkoutFocusArea(section?.label ?? 'section')}`,
+    label: section?.label ?? `Section ${sectionIndex + 1}`,
+    isExpanded: true,
+    showInstruction: Boolean(section?.blockLabel),
+    instruction: section?.blockLabel ? `Block ${section.blockLabel}` : '',
+    draftExerciseQuery: '',
+    exercises: (section?.exercises ?? []).map((exercise, exerciseIndex) => ({
+      id: `draft-exercise-${sectionIndex}-${exerciseIndex}`,
+      title: exercise?.exerciseMatch?.exerciseName || exercise?.name || 'Exercise',
+      exerciseId: exercise?.exerciseMatch?.exerciseId || '',
+      isExpanded: exerciseIndex === 0,
+      showInstruction: Boolean(exercise?.notes),
+      instruction: exercise?.notes ?? '',
+      sets: createDraftWorkoutSetRows(exercise?.weeks, sectionIndex, exerciseIndex),
+    })),
+  }))
+}
+
+function createDraftWorkoutFormValues(acceptedDraft) {
+  return {
+    id: null,
+    name: acceptedDraft?.workout?.name ?? '',
+    duration: '',
+    thumbnailName: '',
+    status: 'active',
+    focusArea: normalizeWorkoutFocusArea(acceptedDraft?.workout?.trainingType ?? ''),
+    description: acceptedDraft?.workout?.description ?? acceptedDraft?.workout?.notes ?? '',
+  }
 }
 
 function parseWorkoutDurationValue(value) {
@@ -354,6 +429,12 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
   const [selectedWorkoutId, setSelectedWorkoutId] = useState(null)
   const [workoutTrainingSections, setWorkoutTrainingSections] = useState([])
   const [workoutFormValues, setWorkoutFormValues] = useState(() => createWorkoutFormValues())
+  const [isAiWorkoutImportDialogOpen, setIsAiWorkoutImportDialogOpen] = useState(false)
+  const [isWorkoutAiProcessing, setIsWorkoutAiProcessing] = useState(false)
+  const [isAiWorkoutDraftSheetOpen, setIsAiWorkoutDraftSheetOpen] = useState(false)
+  const [aiWorkoutDrafts, setAiWorkoutDrafts] = useState([])
+  const [acceptedAiWorkoutDraft, setAcceptedAiWorkoutDraft] = useState(null)
+  const [workoutImportFiles, setWorkoutImportFiles] = useState([])
   const [workoutEditorMessage, setWorkoutEditorMessage] = useState('')
   const [isSavingWorkoutTemplate, setIsSavingWorkoutTemplate] = useState(false)
   const [isDeleteWorkoutDialogOpen, setIsDeleteWorkoutDialogOpen] = useState(false)
@@ -370,6 +451,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
   })
 
   const saveDisclaimer = ''
+  const workoutAiProcessingTimerRef = useRef(null)
 
   const focusAreaOptions = useMemo(
     () => buildSelectFilterOptions(workoutsData.map((workout) => workout.focusArea).filter((value) => value && value !== '--')),
@@ -383,6 +465,26 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
     () => createWorkoutFilterFields(focusAreaOptions),
     [focusAreaOptions],
   )
+  const workoutImportPreviewFiles = useMemo(() => workoutImportFiles.map((file) => ({
+    file,
+    previewUrl: URL.createObjectURL(file),
+  })), [workoutImportFiles])
+
+  useEffect(() => {
+    return () => {
+      workoutImportPreviewFiles.forEach((previewFile) => {
+        URL.revokeObjectURL(previewFile.previewUrl)
+      })
+    }
+  }, [workoutImportPreviewFiles])
+
+  useEffect(() => {
+    return () => {
+      if (workoutAiProcessingTimerRef.current) {
+        window.clearTimeout(workoutAiProcessingTimerRef.current)
+      }
+    }
+  }, [])
 
   function openCreateWorkoutDialog() {
     setOpenRowActionMenuId(null)
@@ -390,6 +492,80 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
     setSelectedWorkoutId(null)
     setWorkoutTrainingSections([])
     setWorkoutFormValues(createWorkoutFormValues())
+    setWorkoutEditorMessage('')
+    setIsCreateWorkoutDialogOpen(true)
+  }
+
+  function handleWorkoutImportPdfUpload(event) {
+    const selectedFiles = Array.from(event.target.files ?? [])
+    const pdfFiles = selectedFiles.filter((file) => file.type === 'application/pdf' || file.name?.toLowerCase?.().endsWith('.pdf'))
+
+    if (pdfFiles.length === 0) return
+
+    setWorkoutImportFiles((currentFiles) => {
+      const currentFileKeys = new Set(currentFiles.map((file) => `${file.name}-${file.size}-${file.lastModified}`))
+      const newPdfFiles = pdfFiles.filter((file) => !currentFileKeys.has(`${file.name}-${file.size}-${file.lastModified}`))
+
+      return [...currentFiles, ...newPdfFiles]
+    })
+    setIsAiWorkoutImportDialogOpen(true)
+    event.target.value = ''
+  }
+
+  function removeWorkoutImportFile(fileName) {
+    setWorkoutImportFiles((currentFiles) => currentFiles.filter((file) => file.name !== fileName))
+  }
+
+  function handleWorkoutImportPdfButtonClick() {
+    if (workoutImportFiles.length > 0) {
+      setIsAiWorkoutImportDialogOpen(true)
+      return
+    }
+
+    document.getElementById('workout-import-pdf-upload')?.click()
+  }
+
+  function completeWorkoutAiDraftGeneration() {
+    setAiWorkoutDrafts(createSampleAiWorkoutDrafts(workoutImportFiles))
+    setIsWorkoutAiProcessing(false)
+    workoutAiProcessingTimerRef.current = null
+    setIsAiWorkoutImportDialogOpen(false)
+    setIsAiWorkoutDraftSheetOpen(true)
+  }
+
+  function handleGenerateWorkoutImportDraft() {
+    if (workoutImportFiles.length === 0 || isWorkoutAiProcessing) return
+
+    if (workoutAiProcessingTimerRef.current) {
+      window.clearTimeout(workoutAiProcessingTimerRef.current)
+    }
+
+    setIsWorkoutAiProcessing(true)
+    workoutAiProcessingTimerRef.current = window.setTimeout(completeWorkoutAiDraftGeneration, 3000)
+  }
+
+  function handleCancelWorkoutAiProcessing() {
+    if (workoutAiProcessingTimerRef.current) {
+      window.clearTimeout(workoutAiProcessingTimerRef.current)
+      workoutAiProcessingTimerRef.current = null
+    }
+
+    setIsWorkoutAiProcessing(false)
+  }
+
+  function handleAcceptAiWorkoutDraft(acceptedDraft) {
+    setAcceptedAiWorkoutDraft(acceptedDraft)
+    setIsAiWorkoutDraftSheetOpen(false)
+  }
+
+  function openCreateWorkoutFromAcceptedDraft() {
+    if (!acceptedAiWorkoutDraft) return
+
+    setOpenRowActionMenuId(null)
+    setWorkoutDialogMode('draft')
+    setSelectedWorkoutId(null)
+    setWorkoutFormValues(createDraftWorkoutFormValues(acceptedAiWorkoutDraft))
+    setWorkoutTrainingSections(createDraftWorkoutTrainingSections(acceptedAiWorkoutDraft.sections))
     setWorkoutEditorMessage('')
     setIsCreateWorkoutDialogOpen(true)
   }
@@ -551,20 +727,31 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
     setWorkoutEditorMessage('')
     try {
       const isEdit = workoutDialogMode === 'edit'
-      const response = await fetch('/api/admin/workout-templates', {
+      const isDraftPlanCreate = workoutDialogMode === 'draft'
+      const response = await fetch(isDraftPlanCreate ? '/api/admin/program-workouts' : '/api/admin/workout-templates', {
         method: isEdit ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: JSON.stringify(isDraftPlanCreate ? {
+          createProgramPlanFromDraft: true,
+          workout: acceptedAiWorkoutDraft?.workout,
+          trainingSections: workoutTrainingSections,
+        } : {
           id: isEdit ? selectedWorkoutId : undefined,
           ...workoutFormValues,
           focusArea: workoutFormValues.focusArea === 'none' ? '' : workoutFormValues.focusArea,
+          trainingSections: undefined,
         }),
       })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) {
         throw new Error(payload?.error || 'Failed to save workout template.')
       }
-      await reloadWorkoutTemplates()
+      if (isDraftPlanCreate) {
+        setAcceptedAiWorkoutDraft(null)
+        setWorkoutEditorMessage('Program plan created from draft.')
+      } else {
+        await reloadWorkoutTemplates()
+      }
       setIsCreateWorkoutDialogOpen(false)
     } catch (saveError) {
       setWorkoutEditorMessage(saveError?.message || 'Failed to save workout template.')
@@ -689,13 +876,33 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
                 ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button
-            type="button"
-            onClick={openCreateWorkoutDialog}
-            className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] md:self-auto"
-          >
-            Create workout
-          </Button>
+          <div className="flex flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+            <div aria-label="Workout import PDF upload">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleWorkoutImportPdfButtonClick}
+                className="cursor-pointer rounded-[12px] min-h-[40px] border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-shell-text-strong)]"
+              >
+                <Upload className="size-4" aria-hidden="true" />
+                Upload PDF
+              </Button>
+              <input
+                id="workout-import-pdf-upload"
+                type="file"
+                accept="application/pdf"
+                className="sr-only"
+                onChange={handleWorkoutImportPdfUpload}
+              />
+            </div>
+            <Button
+              type="button"
+              onClick={openCreateWorkoutDialog}
+              className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] md:self-auto"
+            >
+              Create workout
+            </Button>
+          </div>
         </div>
         <div className="flex w-full flex-wrap items-center justify-start gap-2">
           <Filters
@@ -716,6 +923,38 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
         </div>
       </div>
 
+      {acceptedAiWorkoutDraft ? (
+        <div className="rounded-[18px] border border-[#3BE0AF]/30 bg-[#3BE0AF]/10 p-4 text-[var(--admin-dashboard-card-text)]">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-[#06B686]">Draft accepted</p>
+              <p className="text-base font-semibold text-[var(--admin-dashboard-card-text)]">{acceptedAiWorkoutDraft.workout.name}</p>
+              <p className="text-sm text-[var(--admin-dashboard-card-muted)]">Reviewed draft is ready for workout creation.</p>
+              <p className="text-xs text-[var(--admin-dashboard-card-muted)]">
+                {acceptedAiWorkoutDraft.sections?.length ?? 0} sections · {acceptedAiWorkoutDraft.workout.trainingType}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                className="rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]"
+                onClick={openCreateWorkoutFromAcceptedDraft}
+              >
+                Create program plan from draft
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-[12px] min-h-[40px] border-[#3BE0AF]/40 bg-[#3BE0AF]/10 text-[#06B686] hover:bg-[#3BE0AF]/15 hover:text-[#06B686]"
+                onClick={() => setIsAiWorkoutDraftSheetOpen(true)}
+              >
+                Edit reviewed draft
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <WorkoutEditorDialog
         open={isCreateWorkoutDialogOpen}
         onOpenChange={(isOpen) => {
@@ -730,25 +969,189 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
           }
         }}
         mode={workoutDialogMode}
-        title={workoutDialogMode === 'edit' ? 'Edit workout' : workoutDialogMode === 'duplicate' ? 'Duplicate workout' : 'Create workout'}
+        title={workoutDialogMode === 'edit' ? 'Edit workout' : workoutDialogMode === 'duplicate' ? 'Duplicate workout' : workoutDialogMode === 'draft' ? 'Create program plan from draft' : 'Create workout'}
         description={
           workoutDialogMode === 'edit'
             ? 'Update the information below.'
             : workoutDialogMode === 'duplicate'
               ? 'Update the information below.'
-              : 'Fill out the information below.'
+              : workoutDialogMode === 'draft'
+                ? 'Review the accepted draft before creating the program plan.'
+                : 'Fill out the information below.'
         }
         detailsValues={workoutFormValues}
         onDetailsChange={setWorkoutFormValues}
         trainingSections={workoutTrainingSections}
         onTrainingSectionsChange={setWorkoutTrainingSections}
         showTrainingTab={workoutDialogMode !== 'create'}
-        primaryActionLabel={isSavingWorkoutTemplate ? 'Saving...' : workoutDialogMode === 'edit' ? 'Save changes' : workoutDialogMode === 'duplicate' ? 'Duplicate workout' : 'Create workout'}
+        primaryActionLabel={isSavingWorkoutTemplate ? 'Saving...' : workoutDialogMode === 'edit' ? 'Save changes' : workoutDialogMode === 'duplicate' ? 'Duplicate workout' : workoutDialogMode === 'draft' ? 'Create program plan' : 'Create workout'}
         onPrimaryAction={isSavingWorkoutTemplate ? null : handleWorkoutTemplatePrimaryAction}
         focusAreaOptions={focusAreaOptions}
         statusOptions={statusOptions}
         saveDisclaimer={saveDisclaimer}
         errorMessage={workoutEditorMessage}
+      />
+
+      <Dialog open={isAiWorkoutImportDialogOpen} onOpenChange={setIsAiWorkoutImportDialogOpen}>
+        <DialogContent className="admin-shell-athletes-invite-dialog border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] text-[var(--admin-dashboard-card-text)] sm:max-w-[760px]">
+          {isWorkoutAiProcessing ? (
+            <Empty className="min-h-[420px] border-0 bg-transparent p-0">
+              <EmptyHeader>
+                <EmptyMedia
+                  variant="icon"
+                  className="size-14 rounded-[16px] border border-[#3BE0AF]/20 bg-[#3BE0AF]/10 text-[#3BE0AF]"
+                >
+                  <LoaderCircle className="size-6 animate-spin text-[#3BE0AF]" aria-hidden="true" />
+                </EmptyMedia>
+                <EmptyTitle className="text-xl font-semibold text-[var(--admin-dashboard-card-text)]">Processing your request</EmptyTitle>
+                <EmptyDescription className="max-w-[280px] text-center text-sm leading-6 text-[var(--admin-dashboard-card-muted)]">
+                  Please wait while we process your<br />request. Do not refresh the page.
+                </EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-[12px] min-h-[40px] border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-shell-text-strong)]"
+                  onClick={handleCancelWorkoutAiProcessing}
+                >
+                  Cancel
+                </Button>
+              </EmptyContent>
+            </Empty>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle>Generate workout with AI</DialogTitle>
+                <DialogDescription>Upload some workouts PDF, review the files and then generate the first AI draft.</DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-5">
+                <input
+                  id="workout-import-dialog-pdf-upload"
+                  type="file"
+                  accept="application/pdf"
+                  multiple
+                  className="sr-only"
+                  onChange={handleWorkoutImportPdfUpload}
+                />
+
+                <div className="flex items-center justify-between gap-3">
+                  <h4 className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">Files ({workoutImportFiles.length})</h4>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      asChild
+                      className="rounded-[12px] min-h-[40px] border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-shell-text-strong)]"
+                    >
+                      <label htmlFor="workout-import-dialog-pdf-upload" className="cursor-pointer">
+                        <Upload className="size-4" aria-hidden="true" />
+                        Add files
+                      </label>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="rounded-[12px] min-h-[40px] border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-shell-text-strong)]"
+                      onClick={() => setWorkoutImportFiles([])}
+                      disabled={workoutImportFiles.length === 0}
+                    >
+                      <Trash2 className="size-4" aria-hidden="true" />
+                      Remove all
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="overflow-hidden rounded-[16px] border border-[var(--admin-dashboard-card-border)]">
+                  <Table>
+                    <TableHeader className="[&_tr]:border-[color:var(--admin-dashboard-card-border)]">
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Size</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody className="[&_tr]:border-[color:var(--admin-dashboard-card-border)]">
+                      {workoutImportFiles.length > 0 ? (
+                        workoutImportPreviewFiles.map((previewFile) => (
+                          <TableRow key={`${previewFile.file.name}-${previewFile.file.size}`}>
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-muted)]">
+                                  <FileText className="size-4" aria-hidden="true" />
+                                </span>
+                                <a
+                                  href={previewFile.previewUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="font-medium text-[var(--admin-dashboard-card-text)] transition hover:text-[#3BE0AF]"
+                                >
+                                  {previewFile.file.name}
+                                </a>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className="rounded-full border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-2 py-1 text-xs font-medium text-[var(--admin-dashboard-card-text)] normal-case tracking-normal">
+                                PDF
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-[var(--admin-dashboard-card-muted)]">{formatFileSize(previewFile.file.size)}</TableCell>
+                            <TableCell className="text-right">
+                              <button
+                                type="button"
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-[10px] text-[var(--admin-dashboard-card-muted)] transition hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]"
+                                aria-label={`Remove ${previewFile.file.name}`}
+                                onClick={() => removeWorkoutImportFile(previewFile.file.name)}
+                              >
+                                <Trash2 className="size-4" aria-hidden="true" />
+                              </button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={4} className="py-8 text-center text-sm text-[var(--admin-dashboard-card-muted)]">
+                            No PDF files selected.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+
+              <DialogFooter className="sm:flex-row sm:justify-end gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-[12px] min-h-[40px] border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-shell-text-strong)]"
+                  onClick={() => setIsAiWorkoutImportDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  className="rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]"
+                  disabled={workoutImportFiles.length === 0}
+                  onClick={handleGenerateWorkoutImportDraft}
+                >
+                  <Bot className="size-4" aria-hidden="true" />
+                  Generate with AI
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <AiWorkoutDraftSheet
+        open={isAiWorkoutDraftSheetOpen}
+        onOpenChange={setIsAiWorkoutDraftSheetOpen}
+        drafts={aiWorkoutDrafts}
+        onCancel={() => setIsAiWorkoutDraftSheetOpen(false)}
+        onAccept={handleAcceptAiWorkoutDraft}
       />
 
       <Dialog open={isDeleteWorkoutDialogOpen} onOpenChange={setIsDeleteWorkoutDialogOpen}>
