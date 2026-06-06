@@ -65,6 +65,8 @@ const PROGRAM_WORKOUT_SELECT = [
   'workout_template_id',
   'name_snapshot',
   'notes',
+  'import_source',
+  'import_source_file_name',
   'bg_color',
   'text_color',
   'status',
@@ -184,6 +186,12 @@ function normalizeOptionalString(value) {
   return normalized.trim() ? normalized : null
 }
 
+function normalizeOptionalUuid(value) {
+  const normalized = normalizeOptionalString(value)
+  if (!normalized) return null
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(normalized) ? normalized : null
+}
+
 function parseIntegerLike(value) {
   if (value == null) return null
   const match = String(value).match(/-?\d+/)
@@ -228,11 +236,107 @@ function parseEffortToRpe(value) {
   return numericValue == null ? null : numericValue
 }
 
+function formatSecondsValue(value) {
+  const parsed = parseIntegerLike(value)
+  return parsed == null ? '' : `${parsed} sec`
+}
+
+function formatDistanceForBuilder(value, unit) {
+  const parsed = parseNumericLike(value)
+  if (parsed == null) return ''
+  return unit ? `${parsed} ${unit}` : String(parsed)
+}
+
+function formatRestForBuilder(value) {
+  const parsed = parseIntegerLike(value)
+  return parsed == null ? '' : `${parsed} sec`
+}
+
+function buildWorkoutTemplateTrainingSections({ blocks = [], exercises = [], sets = [] } = {}) {
+  const setsByExerciseId = new Map()
+  sets.forEach((setRow) => {
+    const exerciseId = setRow.workout_template_exercise_id
+    if (!exerciseId) return
+    const currentSets = setsByExerciseId.get(exerciseId) ?? []
+    currentSets.push(setRow)
+    setsByExerciseId.set(exerciseId, currentSets)
+  })
+
+  if (blocks.length === 0 && exercises.length > 0) {
+    return [{
+      id: 'template-section-0',
+      label: 'Section 1',
+      isExpanded: true,
+      showInstruction: false,
+      instruction: '',
+      draftExerciseQuery: '',
+      exercises: exercises.map((exercise, exerciseIndex) => ({
+        id: exercise.id ?? `template-exercise-0-${exerciseIndex}`,
+        title: exercise.name_snapshot ?? 'Exercise',
+        exerciseId: exercise.exercise_id ?? '',
+        isExpanded: exerciseIndex === 0,
+        showInstruction: Boolean(exercise.notes),
+        instruction: exercise.notes ?? '',
+        sets: (setsByExerciseId.get(exercise.id) ?? []).map((setRow, setIndex) => ({
+          id: setRow.id ?? `template-set-0-${exerciseIndex}-${setIndex}`,
+          tempo: setRow.notes ?? '',
+          effort: setRow.target_rpe == null ? '' : String(setRow.target_rpe),
+          side: '',
+          duration: formatSecondsValue(setRow.target_duration_seconds),
+          distance: formatDistanceForBuilder(setRow.target_distance, setRow.target_distance_unit),
+          rest: formatRestForBuilder(setRow.target_rest_seconds),
+          reps: setRow.target_reps == null ? '' : String(setRow.target_reps),
+        })),
+      })),
+    }]
+  }
+
+  return blocks.map((block, blockIndex) => {
+    const blockExercises = exercises.filter((exercise) => {
+      if (exercise.workout_template_block_id === block.id) return true
+      if (exercise.workout_template_block_id) return false
+      return Number(exercise.sort_order ?? -1) === blockIndex
+    })
+    return {
+      id: block.id ?? `template-section-${blockIndex}`,
+      label: block.block_code ?? block.title ?? `Section ${blockIndex + 1}`,
+      isExpanded: true,
+      showInstruction: Boolean(block.instructions),
+      instruction: block.instructions ?? '',
+      draftExerciseQuery: '',
+      exercises: blockExercises.map((exercise, exerciseIndex) => ({
+        id: exercise.id ?? `template-exercise-${blockIndex}-${exerciseIndex}`,
+        title: exercise.name_snapshot ?? 'Exercise',
+        exerciseId: exercise.exercise_id ?? '',
+        isExpanded: exerciseIndex === 0,
+        showInstruction: Boolean(exercise.notes),
+        instruction: exercise.notes ?? '',
+        sets: (setsByExerciseId.get(exercise.id) ?? []).map((setRow, setIndex) => ({
+          id: setRow.id ?? `template-set-${blockIndex}-${exerciseIndex}-${setIndex}`,
+          tempo: setRow.notes ?? '',
+          effort: setRow.target_rpe == null ? '' : String(setRow.target_rpe),
+          side: '',
+          duration: formatSecondsValue(setRow.target_duration_seconds),
+          distance: formatDistanceForBuilder(setRow.target_distance, setRow.target_distance_unit),
+          rest: formatRestForBuilder(setRow.target_rest_seconds),
+          reps: setRow.target_reps == null ? '' : String(setRow.target_reps),
+        })),
+      })),
+    }
+  }).filter((section) => section.exercises.length > 0 || section.instruction)
+}
+
+function normalizeOptionalDateTimeValue(value) {
+  if (value == null) return null
+  const normalized = String(value).trim()
+  return normalized || null
+}
+
 function normalizeScheduleInput(payload = {}, { requireComplete } = { requireComplete: false }) {
-  const scheduledDate = payload.scheduled_date ?? payload.start_date ?? payload.startDate ?? null
-  const scheduledStartTime = payload.scheduled_start_time ?? payload.start_time ?? payload.startTime ?? null
-  const scheduledEndTime = payload.scheduled_end_time ?? payload.end_time ?? payload.endTime ?? null
-  const endDate = payload.end_date ?? payload.endDate ?? scheduledDate ?? null
+  const scheduledDate = normalizeOptionalDateTimeValue(payload.scheduled_date ?? payload.start_date ?? payload.startDate ?? null)
+  const scheduledStartTime = normalizeOptionalDateTimeValue(payload.scheduled_start_time ?? payload.start_time ?? payload.startTime ?? null)
+  const scheduledEndTime = normalizeOptionalDateTimeValue(payload.scheduled_end_time ?? payload.end_time ?? payload.endTime ?? null)
+  const endDate = normalizeOptionalDateTimeValue(payload.end_date ?? payload.endDate ?? scheduledDate ?? null)
 
   if (requireComplete) {
     if (!scheduledDate) throw createRepositoryError('Start date is required.', 400)
@@ -276,6 +380,69 @@ function normalizeWorkoutTemplatePayload(payload = {}) {
   }
 }
 
+function getTemplateSetNotes(setValues = {}) {
+  const noteParts = [
+    normalizeOptionalString(setValues.tempo),
+    normalizeOptionalString(setValues.side),
+  ].filter(Boolean)
+
+  return noteParts.length > 0 ? noteParts.join(' · ') : null
+}
+
+function normalizeWorkoutTemplateTrainingSections(trainingSections = []) {
+  if (!Array.isArray(trainingSections)) return []
+
+  return trainingSections.map((section, sectionIndex) => ({
+    id: section?.id ?? `section-${sectionIndex}`,
+    label: normalizeOptionalString(section?.label) ?? `Section ${sectionIndex + 1}`,
+    instruction: normalizeOptionalString(section?.instruction),
+    exercises: Array.isArray(section?.exercises) ? section.exercises : [],
+  }))
+}
+
+function normalizeDraftWorkoutMetadata(payload = {}) {
+  const workout = payload.workout ?? payload.acceptedDraft?.workout ?? {}
+  const programName = normalizeOptionalString(workout.program ?? payload.programName) ?? 'Imported program draft'
+  const workoutName = normalizeOptionalString(workout.name ?? payload.name_snapshot ?? payload.nameSnapshot) ?? 'Imported workout draft'
+  const phaseName = normalizeOptionalString(workout.phase ?? payload.phaseName) ?? 'Phase 1'
+  const trainingType = normalizeOptionalString(workout.trainingType ?? workout.training_type ?? payload.trainingType ?? payload.training_type)
+  const startDate = normalizeOptionalString(workout.startDate ?? workout.start_date ?? payload.startDate ?? payload.start_date)
+  const endDate = normalizeOptionalString(workout.endDate ?? workout.end_date ?? payload.endDate ?? payload.end_date)
+  const numberOfWeeks = parseIntegerLike(workout.numberOfWeeks ?? workout.number_of_weeks ?? payload.numberOfWeeks ?? payload.number_of_weeks) ?? 4
+
+  return {
+    programName,
+    workoutName,
+    phaseName,
+    phaseGoal: normalizeOptionalString(workout.phaseGoal ?? workout.phase_goal ?? payload.phaseGoal ?? payload.phase_goal),
+    trainingType,
+    startDate,
+    endDate,
+    numberOfWeeks,
+    notes: normalizeOptionalString(workout.notes ?? payload.notes),
+  }
+}
+
+function normalizeProgramWorkoutImportProvenance(payload = {}) {
+  const workout = payload.workout ?? payload.acceptedDraft?.workout ?? {}
+  const importSourceFileName = normalizeOptionalString(
+    payload.import_source_file_name
+      ?? payload.importSourceFileName
+      ?? workout.sourceFileName
+      ?? workout.source_file_name,
+  )
+  const importSource = normalizeOptionalString(
+    payload.import_source
+      ?? payload.importSource
+      ?? (importSourceFileName ? 'ai-import' : null),
+  )
+
+  return {
+    import_source: importSource,
+    import_source_file_name: importSourceFileName,
+  }
+}
+
 export function createProgramWorkoutRepository(config = {}) {
   const request = createSupabaseRequest(config)
 
@@ -299,8 +466,9 @@ export function createProgramWorkoutRepository(config = {}) {
     const templateExercises = await request({
       table: 'workout_template_exercises',
       query: {
-        select: 'id,workout_template_id',
+        select: WORKOUT_TEMPLATE_EXERCISE_SELECT,
         workout_template_id: `in.${templateFilter}`,
+        order: 'sort_order.asc',
       },
     })
     const exercises = Array.isArray(templateExercises) ? templateExercises : []
@@ -310,8 +478,9 @@ export function createProgramWorkoutRepository(config = {}) {
     const templateSets = exerciseFilter ? await request({
       table: 'workout_template_sets',
       query: {
-        select: 'id,workout_template_exercise_id',
+        select: WORKOUT_TEMPLATE_SET_SELECT,
         workout_template_exercise_id: `in.${exerciseFilter}`,
+        order: 'sort_order.asc',
       },
     }) : []
     const sets = Array.isArray(templateSets) ? templateSets : []
@@ -319,8 +488,9 @@ export function createProgramWorkoutRepository(config = {}) {
     const templateBlocks = await request({
       table: 'workout_template_blocks',
       query: {
-        select: 'id,workout_template_id',
+        select: WORKOUT_TEMPLATE_BLOCK_SELECT,
         workout_template_id: `in.${templateFilter}`,
+        order: 'sort_order.asc',
       },
     })
     const blocks = Array.isArray(templateBlocks) ? templateBlocks : []
@@ -348,6 +518,33 @@ export function createProgramWorkoutRepository(config = {}) {
       blockCountByTemplateId.set(templateId, (blockCountByTemplateId.get(templateId) ?? 0) + 1)
     }
 
+    const blocksByTemplateId = new Map()
+    for (const block of blocks) {
+      const templateId = block.workout_template_id
+      if (!templateId) continue
+      const currentBlocks = blocksByTemplateId.get(templateId) ?? []
+      currentBlocks.push(block)
+      blocksByTemplateId.set(templateId, currentBlocks)
+    }
+
+    const exercisesByTemplateId = new Map()
+    for (const exercise of exercises) {
+      const templateId = exercise.workout_template_id
+      if (!templateId) continue
+      const currentExercises = exercisesByTemplateId.get(templateId) ?? []
+      currentExercises.push(exercise)
+      exercisesByTemplateId.set(templateId, currentExercises)
+    }
+
+    const setsByTemplateId = new Map()
+    for (const setRow of sets) {
+      const templateId = templateIdByExerciseId.get(setRow.workout_template_exercise_id)
+      if (!templateId) continue
+      const currentSets = setsByTemplateId.get(templateId) ?? []
+      currentSets.push(setRow)
+      setsByTemplateId.set(templateId, currentSets)
+    }
+
     return templates.map((template) => {
       const exerciseCount = exerciseCountByTemplateId.get(template.id) ?? 0
       const blockCount = blockCountByTemplateId.get(template.id) ?? 0
@@ -356,6 +553,11 @@ export function createProgramWorkoutRepository(config = {}) {
         exercise_count: exerciseCount,
         set_count: setCountByTemplateId.get(template.id) ?? 0,
         section_count: blockCount > 0 ? blockCount : (exerciseCount > 0 ? 1 : 0),
+        trainingSections: buildWorkoutTemplateTrainingSections({
+          blocks: blocksByTemplateId.get(template.id) ?? [],
+          exercises: exercisesByTemplateId.get(template.id) ?? [],
+          sets: setsByTemplateId.get(template.id) ?? [],
+        }),
       }
     })
   }
@@ -405,7 +607,104 @@ export function createProgramWorkoutRepository(config = {}) {
     })
     const template = Array.isArray(rows) ? rows[0] : rows
     if (!template?.id) throw createRepositoryError('Workout template create did not return an id.', 500)
+
+    await replaceWorkoutTemplateChildren(template.id, payload.trainingSections ?? [])
+
     return template
+  }
+
+  async function replaceWorkoutTemplateChildren(workoutTemplateId, trainingSections = []) {
+    const normalizedWorkoutTemplateId = normalizeId(workoutTemplateId, 'Workout template ID')
+    const sections = normalizeWorkoutTemplateTrainingSections(trainingSections)
+    const now = new Date().toISOString()
+
+    if (sections.length === 0) return
+
+    const createdBlockRows = await request({
+      method: 'POST',
+      table: 'workout_template_blocks',
+      query: {
+        select: WORKOUT_TEMPLATE_BLOCK_SELECT,
+      },
+      body: sections.map((section, sectionIndex) => ({
+        workout_template_id: normalizedWorkoutTemplateId,
+        block_code: section.label,
+        title: section.label,
+        instructions: section.instruction,
+        sort_order: sectionIndex,
+        updated_at: now,
+      })),
+    })
+    const createdBlocks = Array.isArray(createdBlockRows) ? createdBlockRows : [createdBlockRows]
+
+    const exerciseRows = []
+    sections.forEach((section, sectionIndex) => {
+      section.exercises.forEach((exercise) => {
+        exerciseRows.push({
+          workout_template_id: normalizedWorkoutTemplateId,
+          workout_template_block_id: createdBlocks[sectionIndex]?.id ?? null,
+          exercise_id: normalizeOptionalUuid(exercise?.exerciseId ?? exercise?.exercise_id ?? exercise?.exerciseMatch?.exerciseId),
+          name_snapshot: normalizeOptionalString(exercise?.title ?? exercise?.name ?? exercise?.exerciseMatch?.exerciseName) ?? 'Exercise',
+          sort_order: exerciseRows.length,
+          notes: normalizeOptionalString(exercise?.instruction ?? exercise?.notes),
+          default_rest_seconds: parseIntegerLike(exercise?.defaultRestSeconds ?? exercise?.default_rest_seconds),
+          updated_at: now,
+        })
+      })
+    })
+
+    if (exerciseRows.length === 0) return
+
+    const createdExerciseRows = await request({
+      method: 'POST',
+      table: 'workout_template_exercises',
+      query: {
+        select: WORKOUT_TEMPLATE_EXERCISE_SELECT,
+      },
+      body: exerciseRows,
+    })
+    const createdExercises = Array.isArray(createdExerciseRows) ? createdExerciseRows : [createdExerciseRows]
+
+    const setRows = []
+    let exerciseIndex = 0
+    sections.forEach((section) => {
+      section.exercises.forEach((exercise) => {
+        const templateExerciseId = createdExercises[exerciseIndex]?.id
+        exerciseIndex += 1
+        if (!templateExerciseId) return
+
+        const sets = Array.isArray(exercise?.sets) ? exercise.sets : []
+        sets.forEach((setValues, setIndex) => {
+          setRows.push({
+            workout_template_exercise_id: templateExerciseId,
+            sort_order: setIndex,
+            set_type: 'straight',
+            target_reps: parseIntegerLike(setValues?.reps),
+            target_load: null,
+            target_load_unit: null,
+            target_duration_seconds: parseDurationSeconds(setValues?.duration),
+            target_distance: parseDistanceValue(setValues?.distance),
+            target_distance_unit: parseDistanceUnit(setValues?.distance),
+            target_rpe: parseEffortToRpe(setValues?.effort),
+            target_rir: null,
+            target_rest_seconds: parseIntegerLike(setValues?.rest),
+            notes: getTemplateSetNotes(setValues),
+            updated_at: now,
+          })
+        })
+      })
+    })
+
+    if (setRows.length > 0) {
+      await request({
+        method: 'POST',
+        table: 'workout_template_sets',
+        query: {
+          select: WORKOUT_TEMPLATE_SET_SELECT,
+        },
+        body: setRows,
+      })
+    }
   }
 
   async function updateWorkoutTemplate(workoutTemplateId, payload = {}) {
@@ -596,7 +895,7 @@ export function createProgramWorkoutRepository(config = {}) {
           sourceExerciseId: exercise.id,
           program_workout_id: normalizedProgramWorkoutId,
           program_workout_block_id: createdBlockId,
-          exercise_id: null,
+          exercise_id: normalizeOptionalUuid(exercise.exerciseId ?? exercise.exercise_id ?? exercise.exerciseMatch?.exerciseId),
           name_snapshot: normalizeOptionalString(exercise.title) ?? 'Exercise',
           sort_order: exerciseSeedRows.length,
           notes: normalizeOptionalString(exercise.instruction),
@@ -854,6 +1153,12 @@ export function createProgramWorkoutRepository(config = {}) {
     const day = Array.isArray(dayRows) ? dayRows[0] : dayRows
     if (!day?.id) throw createRepositoryError('Program day not found.', 404)
 
+    const schedule = normalizeScheduleInput({
+      scheduled_date: payload.scheduled_date ?? payload.scheduledDate ?? day.date ?? null,
+      scheduled_start_time: payload.scheduled_start_time ?? payload.scheduledStartTime ?? null,
+      scheduled_end_time: payload.scheduled_end_time ?? payload.scheduledEndTime ?? null,
+    })
+
     const createdWorkoutRows = await request({
       method: 'POST',
       table: 'program_workouts',
@@ -864,15 +1169,17 @@ export function createProgramWorkoutRepository(config = {}) {
         athlete_id: payload.athlete_id ?? payload.athleteId ?? program.athlete_id ?? null,
         coach_id: payload.coach_id ?? payload.coachId ?? program.coach_id ?? null,
         program_id: programId,
+        program_phase_id: payload.program_phase_id ?? payload.programPhaseId ?? null,
         program_day_id: programDayId,
         workout_template_id: null,
         name_snapshot: normalizeOptionalString(payload.name_snapshot ?? payload.nameSnapshot) || 'Workout',
         notes: normalizeOptionalString(payload.notes) ?? null,
+        ...normalizeProgramWorkoutImportProvenance(payload),
         status: normalizeOptionalString(payload.status) || 'scheduled',
         sort_order: payload.sort_order ?? payload.sortOrder ?? null,
-        scheduled_date: payload.scheduled_date ?? payload.scheduledDate ?? day.date ?? null,
-        scheduled_start_time: payload.scheduled_start_time ?? payload.scheduledStartTime ?? null,
-        scheduled_end_time: payload.scheduled_end_time ?? payload.scheduledEndTime ?? null,
+        scheduled_date: schedule.scheduled_date,
+        scheduled_start_time: schedule.scheduled_start_time,
+        scheduled_end_time: schedule.scheduled_end_time,
         updated_at: now,
       },
     })
@@ -880,6 +1187,257 @@ export function createProgramWorkoutRepository(config = {}) {
     if (!createdWorkout?.id) throw createRepositoryError('Failed to create program workout.', 500)
 
     return replaceProgramWorkoutChildren(createdWorkout.id, payload.trainingSections ?? [])
+  }
+
+  async function createProgramPlanFromDraft(payload = {}) {
+    const existingProgramId = payload.program_id ?? payload.programId
+    const existingProgramDayId = payload.program_day_id ?? payload.programDayId
+
+    if (existingProgramId && existingProgramDayId) {
+      const draftForExistingDay = normalizeDraftWorkoutMetadata(payload)
+      const programWorkoutTree = await createProgramWorkoutFromSections({
+        ...payload,
+        programId: existingProgramId,
+        programDayId: existingProgramDayId,
+        nameSnapshot: payload.name_snapshot ?? payload.nameSnapshot ?? draftForExistingDay.workoutName,
+        notes: payload.notes ?? draftForExistingDay.notes,
+        status: payload.status ?? 'scheduled',
+        scheduledDate: payload.scheduled_date ?? payload.scheduledDate ?? draftForExistingDay.startDate,
+        trainingSections: payload.trainingSections ?? payload.sections ?? [],
+      })
+
+      return { programWorkoutTree }
+    }
+
+    if (existingProgramId) {
+      const now = new Date().toISOString()
+      const draftForExistingProgram = normalizeDraftWorkoutMetadata(payload)
+      const programRows = await request({
+        table: 'programs',
+        query: {
+          select: 'id,athlete_id,coach_id,name',
+          id: `eq.${existingProgramId}`,
+          limit: '1',
+        },
+      })
+      const program = Array.isArray(programRows) ? programRows[0] : programRows
+      if (!program?.id) throw createRepositoryError('Program not found.', 404)
+
+      const weekRows = await request({
+        table: 'program_weeks',
+        query: {
+          select: 'id,program_id,week_index,name,start_date,end_date',
+          program_id: `eq.${existingProgramId}`,
+          order: 'week_index.asc',
+          limit: '1',
+        },
+      })
+      let week = Array.isArray(weekRows) ? weekRows[0] : weekRows
+      if (!week?.id) {
+        const createdWeekRows = await request({
+          method: 'POST',
+          table: 'program_weeks',
+          query: { select: 'id,program_id,week_index,name,start_date,end_date' },
+          body: {
+            program_id: existingProgramId,
+            week_index: 1,
+            name: 'Week 1',
+            start_date: draftForExistingProgram.startDate,
+            end_date: null,
+            updated_at: now,
+          },
+        })
+        week = Array.isArray(createdWeekRows) ? createdWeekRows[0] : createdWeekRows
+        if (!week?.id) throw createRepositoryError('Failed to create program week.', 500)
+      }
+
+      const dayRows = await request({
+        table: 'program_days',
+        query: {
+          select: 'id,program_week_id,day_index,date,name,notes,status',
+          program_week_id: `eq.${week.id}`,
+          order: 'day_index.asc',
+          limit: '1',
+        },
+      })
+      let day = Array.isArray(dayRows) ? dayRows[0] : dayRows
+      if (!day?.id) {
+        const createdDayRows = await request({
+          method: 'POST',
+          table: 'program_days',
+          query: { select: 'id,program_week_id,day_index,date,name,notes,status' },
+          body: {
+            program_week_id: week.id,
+            day_index: 1,
+            date: draftForExistingProgram.startDate,
+            name: 'Day 1',
+            notes: null,
+            status: 'planned',
+            updated_at: now,
+          },
+        })
+        day = Array.isArray(createdDayRows) ? createdDayRows[0] : createdDayRows
+        if (!day?.id) throw createRepositoryError('Failed to create program day.', 500)
+      }
+
+      const programWorkoutTree = await createProgramWorkoutFromSections({
+        ...payload,
+        programId: existingProgramId,
+        programDayId: day.id,
+        athleteId: payload.athlete_id ?? payload.athleteId ?? program.athlete_id ?? null,
+        coachId: payload.coach_id ?? payload.coachId ?? program.coach_id ?? null,
+        nameSnapshot: payload.name_snapshot ?? payload.nameSnapshot ?? draftForExistingProgram.workoutName,
+        notes: payload.notes ?? draftForExistingProgram.notes,
+        status: payload.status ?? 'scheduled',
+        scheduledDate: payload.scheduled_date ?? payload.scheduledDate ?? draftForExistingProgram.startDate,
+        trainingSections: payload.trainingSections ?? payload.sections ?? [],
+      })
+
+      return { program, week, day, programWorkoutTree }
+    }
+
+    const now = new Date().toISOString()
+    const coachId = payload.coach_id ?? payload.coachId ?? await resolveWorkoutTemplateCoachId()
+    const draft = normalizeDraftWorkoutMetadata(payload)
+
+    const createdProgramRows = await request({
+      method: 'POST',
+      table: 'programs',
+      query: {
+        select: 'id,athlete_id,coach_id,name,description,start_date,end_date,status',
+      },
+      body: {
+        athlete_id: payload.athlete_id ?? payload.athleteId ?? null,
+        coach_id: coachId,
+        name: draft.programName,
+        description: draft.notes,
+        start_date: draft.startDate,
+        end_date: draft.endDate,
+        status: 'draft',
+        updated_at: now,
+      },
+    })
+    const program = Array.isArray(createdProgramRows) ? createdProgramRows[0] : createdProgramRows
+    if (!program?.id) throw createRepositoryError('Failed to create draft program.', 500)
+
+    const createdPhaseRows = await request({
+      method: 'POST',
+      table: 'program_phases',
+      query: {
+        select: 'id,program_id,name,description,training_type,start_week,end_week,sort_order',
+      },
+      body: {
+        program_id: program.id,
+        name: draft.phaseName,
+        description: draft.phaseGoal,
+        training_type: draft.trainingType,
+        start_week: 1,
+        end_week: draft.numberOfWeeks,
+        sort_order: 0,
+        updated_at: now,
+      },
+    })
+    const phase = Array.isArray(createdPhaseRows) ? createdPhaseRows[0] : createdPhaseRows
+    if (!phase?.id) throw createRepositoryError('Failed to create draft program phase.', 500)
+
+    const createdWeekRows = await request({
+      method: 'POST',
+      table: 'program_weeks',
+      query: {
+        select: 'id,program_id,week_index,name,start_date,end_date',
+      },
+      body: {
+        program_id: program.id,
+        week_index: 1,
+        name: 'Week 1',
+        start_date: draft.startDate,
+        end_date: null,
+        updated_at: now,
+      },
+    })
+    const week = Array.isArray(createdWeekRows) ? createdWeekRows[0] : createdWeekRows
+    if (!week?.id) throw createRepositoryError('Failed to create draft program week.', 500)
+
+    const createdDayRows = await request({
+      method: 'POST',
+      table: 'program_days',
+      query: {
+        select: 'id,program_week_id,day_index,date,name,notes,status',
+      },
+      body: {
+        program_week_id: week.id,
+        day_index: 1,
+        date: draft.startDate,
+        name: 'Day 1',
+        notes: null,
+        status: 'planned',
+        updated_at: now,
+      },
+    })
+    const day = Array.isArray(createdDayRows) ? createdDayRows[0] : createdDayRows
+    if (!day?.id) throw createRepositoryError('Failed to create draft program day.', 500)
+
+    const programWorkoutTree = await createProgramWorkoutFromSections({
+      programId: program.id,
+      programPhaseId: phase.id,
+      programDayId: day.id,
+      athleteId: payload.athlete_id ?? payload.athleteId ?? program.athlete_id ?? null,
+      coachId,
+      nameSnapshot: draft.workoutName,
+      notes: draft.notes,
+      status: 'scheduled',
+      scheduledDate: draft.startDate,
+      trainingSections: payload.trainingSections ?? payload.sections ?? [],
+    })
+
+    return {
+      program,
+      phase,
+      week,
+      day,
+      programWorkoutTree,
+    }
+  }
+
+  async function createProgramDay(payload = {}) {
+    const programWeekId = normalizeId(payload.program_week_id ?? payload.programWeekId, 'Program week ID')
+    const dayIndex = Number(payload.day_index ?? payload.dayIndex)
+    if (!Number.isInteger(dayIndex) || dayIndex < 1) {
+      throw createRepositoryError('Program day index is required.', 400)
+    }
+
+    const existingRows = await request({
+      table: 'program_days',
+      query: {
+        select: 'id,program_week_id,day_index,date,name,notes,status',
+        program_week_id: `eq.${programWeekId}`,
+        day_index: `eq.${dayIndex}`,
+        limit: '1',
+      },
+    })
+    const existingDay = Array.isArray(existingRows) ? existingRows[0] : existingRows
+    if (existingDay?.id) return existingDay
+
+    const now = new Date().toISOString()
+    const createdRows = await request({
+      method: 'POST',
+      table: 'program_days',
+      query: {
+        select: 'id,program_week_id,day_index,date,name,notes,status',
+      },
+      body: {
+        program_week_id: programWeekId,
+        day_index: dayIndex,
+        date: normalizeOptionalString(payload.date) || null,
+        name: normalizeOptionalString(payload.name) || null,
+        notes: normalizeOptionalString(payload.notes) || null,
+        status: normalizeOptionalString(payload.status) || 'training',
+        updated_at: now,
+      },
+    })
+    const createdDay = Array.isArray(createdRows) ? createdRows[0] : createdRows
+    if (!createdDay?.id) throw createRepositoryError('Failed to create program day.', 500)
+    return createdDay
   }
 
   async function deleteProgramWorkout(programWorkoutId) {
@@ -943,7 +1501,9 @@ export function createProgramWorkoutRepository(config = {}) {
     updateProgramWorkoutDetails,
     replaceProgramWorkoutChildren,
     deleteProgramWorkout,
+    createProgramDay,
     createProgramWorkoutFromSections,
     createProgramWorkoutFromTemplate,
+    createProgramPlanFromDraft,
   }
 }

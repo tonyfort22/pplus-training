@@ -31,6 +31,7 @@ const requiredTables = [
   'support_conversations',
   'support_messages',
   'workout_template_blocks',
+  'program_phases',
   'program_workout_blocks',
   'program_workout_exercises',
   'program_workout_sets',
@@ -151,6 +152,24 @@ for (const sqlName of ['schema-v1.sql', '0001_initial_schema.sql']) {
     const tableBody = nextCreate === -1 ? normalized.slice(tableStart) : normalized.slice(tableStart, nextCreate)
     assert.match(tableBody, / athlete_id uuid references athlete_profiles\(id\) on delete set null/)
     assert.doesNotMatch(tableBody, / athlete_id uuid not null references athlete_profiles\(id\) on delete cascade/)
+  })
+
+  test(`${sqlName} models program phases as the grouping layer between programs and workouts`, () => {
+    expectColumn(sql, 'program_phases', 'program_id')
+    expectColumn(sql, 'program_phases', 'name')
+    expectColumn(sql, 'program_phases', 'sort_order')
+    expectColumn(sql, 'program_phases', 'description')
+    expectColumn(sql, 'program_phases', 'training_type')
+    expectColumn(sql, 'program_phases', 'start_week')
+    expectColumn(sql, 'program_phases', 'end_week')
+    expectColumn(sql, 'program_workouts', 'program_phase_id')
+
+    const normalized = normalize(sql)
+    assert.match(normalized, /program_id uuid not null references programs\(id\) on delete cascade/)
+    assert.match(normalized, /program_phase_id uuid references program_phases\(id\) on delete set null/)
+    assert.match(normalized, /unique \(program_id, sort_order\)/)
+    assert.match(normalized, /create index if not exists idx_program_phases_program on program_phases\(program_id\)/)
+    assert.match(normalized, /create index if not exists idx_program_workouts_phase on program_workouts\(program_phase_id\)/)
   })
 
   test(`${sqlName} provisions support inbox conversations and messages`, () => {

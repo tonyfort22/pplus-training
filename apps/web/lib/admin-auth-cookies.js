@@ -11,7 +11,7 @@ function isProduction(options = {}) {
 function serializeCookie(name, value, options = {}) {
   const parts = [
     `${name}=${encodeURIComponent(value ?? '')}`,
-    `Path=${options.path ?? '/admin'}`,
+    `Path=${options.path ?? '/'}`,
     'HttpOnly',
     'SameSite=Lax',
   ]
@@ -29,7 +29,7 @@ function serializeCookie(name, value, options = {}) {
 
 function appendAdminCookie(response, name, value, options = {}) {
   response.headers.append('Set-Cookie', serializeCookie(name, value, {
-    path: '/admin',
+    path: '/',
     secure: isProduction(options),
     maxAge: options.maxAge,
   }))
@@ -59,4 +59,15 @@ export function clearAdminAuthCookies(response, options = {}) {
   })
 
   return response
+}
+
+export async function assertAdminApiRequest(cookieStoreLoader) {
+  const cookieStore = typeof cookieStoreLoader === 'function' ? await cookieStoreLoader() : cookieStoreLoader
+  const accessToken = cookieStore?.get?.(PPLUS_ADMIN_ACCESS_TOKEN_COOKIE)?.value
+  if (!accessToken) {
+    const error = new Error('Unauthorized admin request.')
+    error.status = 401
+    throw error
+  }
+  return accessToken
 }

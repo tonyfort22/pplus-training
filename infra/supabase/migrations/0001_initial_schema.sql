@@ -327,6 +327,20 @@ create table if not exists programs (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists program_phases (
+  id uuid primary key default gen_random_uuid(),
+  program_id uuid not null references programs(id) on delete cascade,
+  name text not null,
+  description text,
+  training_type text,
+  start_week integer,
+  end_week integer,
+  sort_order integer not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (program_id, sort_order)
+);
+
 create table if not exists program_weeks (
   id uuid primary key default gen_random_uuid(),
   program_id uuid not null references programs(id) on delete cascade,
@@ -357,10 +371,13 @@ create table if not exists program_workouts (
   athlete_id uuid references athlete_profiles(id) on delete set null,
   coach_id uuid references coach_profiles(id) on delete set null,
   program_id uuid references programs(id) on delete cascade,
+  program_phase_id uuid references program_phases(id) on delete set null,
   program_day_id uuid references program_days(id) on delete cascade,
   workout_template_id uuid references workout_templates(id) on delete set null,
   name_snapshot text not null,
   notes text,
+  import_source text,
+  import_source_file_name text,
   bg_color text,
   text_color text,
   status text not null check (status in ('scheduled', 'available', 'in_progress', 'completed', 'missed', 'skipped')),
@@ -644,10 +661,12 @@ create index if not exists idx_workout_template_blocks_template on workout_templ
 create index if not exists idx_workout_template_exercises_template on workout_template_exercises(workout_template_id);
 create index if not exists idx_workout_template_exercises_block on workout_template_exercises(workout_template_block_id);
 create index if not exists idx_workout_template_sets_exercise on workout_template_sets(workout_template_exercise_id);
+create index if not exists idx_program_phases_program on program_phases(program_id);
 create index if not exists idx_program_weeks_program on program_weeks(program_id);
 create index if not exists idx_program_days_week on program_days(program_week_id);
 create index if not exists idx_program_workout_blocks_workout on program_workout_blocks(program_workout_id);
 create index if not exists idx_program_workouts_program on program_workouts(program_id);
+create index if not exists idx_program_workouts_phase on program_workouts(program_phase_id);
 create index if not exists idx_program_workouts_day on program_workouts(program_day_id);
 create index if not exists idx_program_workout_exercises_workout on program_workout_exercises(program_workout_id);
 create index if not exists idx_program_workout_exercises_block on program_workout_exercises(program_workout_block_id);

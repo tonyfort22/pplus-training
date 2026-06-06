@@ -26,6 +26,8 @@ function cloneWorkout(workout = {}) {
   return {
     id: workout.id ?? '',
     title: workout.title ?? '',
+    source: workout.source ?? 'manual',
+    sourceFileName: workout.sourceFileName ?? '',
     blockLabel: workout.blockLabel ?? 'Main Work',
     duration: workout.duration ?? '0 min',
     coachNote: workout.coachNote ?? '',
@@ -33,13 +35,25 @@ function cloneWorkout(workout = {}) {
   }
 }
 
-export function createFixedDaySlots(daySlots = []) {
+function cloneProgramPhase(phase = {}) {
+  return {
+    id: phase.id ?? phase.programPhaseId ?? phase.program_phase_id ?? '',
+    name: phase.name ?? phase.label ?? '',
+    label: phase.label ?? phase.name ?? '',
+    trainingType: phase.trainingType ?? phase.training_type ?? '',
+    startWeek: phase.startWeek ?? phase.start_week ?? null,
+    endWeek: phase.endWeek ?? phase.end_week ?? null,
+  }
+}
+
+export function createFixedDaySlots(daySlots = [], fallbackProgramWeekId = null) {
   return fixedDayDefinitions.map((definition) => {
     const source = daySlots.find((slot) => slot.id === definition.id) ?? {}
 
     return {
       id: definition.id,
       programDayId: source.programDayId ?? null,
+      programWeekId: source.programWeekId ?? fallbackProgramWeekId ?? null,
       date: source.date ?? null,
       label: definition.label,
       summary: source.summary ?? 'No work assigned',
@@ -50,12 +64,14 @@ export function createFixedDaySlots(daySlots = []) {
 }
 
 function cloneWeek(week = {}, index = 0) {
+  const programWeekId = week.programWeekId ?? week.program_week_id ?? null
   return {
     id: week.id ?? `week-${index + 1}`,
+    programWeekId,
     label: week.label ?? `Week ${index + 1}`,
     focus: week.focus ?? 'Weekly focus',
     summary: week.summary ?? 'Coach-managed weekly structure.',
-    daySlots: createFixedDaySlots(week.daySlots),
+    daySlots: createFixedDaySlots(week.daySlots, programWeekId),
   }
 }
 
@@ -68,6 +84,7 @@ function cloneProgram(program = {}) {
     weekCount: program.weekCount ?? program.weeks?.length ?? 0,
     goal: program.goal ?? '',
     description: program.description ?? '',
+    phases: Array.isArray(program.phases ?? program.programPhases) ? (program.phases ?? program.programPhases).map(cloneProgramPhase) : [],
     weeks: Array.isArray(program.weeks) ? program.weeks.map(cloneWeek) : [],
   }
 }
@@ -97,6 +114,7 @@ export function createProgramPlannerFromAdminProgram(program = {}) {
       weekCount: program.weeks.length,
       goal: program.description || '',
       description: program.description || '',
+      phases: program.phases ?? program.programPhases ?? [],
       weeks: program.weeks,
     })
   }
@@ -112,6 +130,7 @@ export function createProgramPlannerFromAdminProgram(program = {}) {
     weekCount,
     goal: program.description || '',
     description: program.description || '',
+    phases: program.phases ?? program.programPhases ?? [],
     weeks: Array.from({ length: weekCount }, (_, index) => ({
       id: `week-${index + 1}`,
       label: `Week ${index + 1}`,

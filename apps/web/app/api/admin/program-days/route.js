@@ -9,7 +9,7 @@ function json(payload, init = {}) {
 
 function handleRouteError(error) {
   return json(
-    { error: error?.message || 'Unknown admin program workouts route error' },
+    { error: error?.message || 'Unknown admin program days route error' },
     { status: error?.status || 500 },
   )
 }
@@ -30,12 +30,8 @@ export async function POST(request) {
     await requireAdminAccessToken()
     const repository = createProgramWorkoutRepository()
     const payload = await request.json()
-    const programWorkoutTree = payload?.createProgramPlanFromDraft
-      ? await repository.createProgramPlanFromDraft(payload)
-      : payload?.workout_template_id || payload?.workoutTemplateId
-        ? await repository.createProgramWorkoutFromTemplate(payload)
-        : await repository.createProgramWorkoutFromSections(payload)
-    return json({ programWorkoutTree }, { status: 201 })
+    const programDay = await repository.createProgramDay(payload)
+    return json({ programDay }, { status: 201 })
   } catch (error) {
     return handleRouteError(error)
   }
