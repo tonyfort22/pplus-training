@@ -279,6 +279,8 @@ function mapProgramWorkoutToPlannerWorkout(row = {}, children = {}) {
     programWorkoutId: row.id,
     programDayId: row.program_day_id ?? null,
     title: row.name_snapshot || row.workout_templates?.name || 'Workout',
+    source: row.import_source ?? 'manual',
+    sourceFileName: row.import_source_file_name ?? '',
     blockLabel: row.workout_templates?.training_type || 'Main Work',
     blockBgColor: row.bg_color || row.workout_templates?.bg_color || null,
     blockTextColor: row.text_color || row.workout_templates?.text_color || null,
@@ -363,7 +365,7 @@ async function getProgramById(programId) {
     ),
     requestTable('program_weeks', `?select=id,program_id,week_index,name,start_date,end_date&program_id=eq.${encodeURIComponent(programId)}&order=week_index.asc`),
     requestTable('program_days', '?select=id,program_week_id,day_index,date,name,notes,status&order=day_index.asc'),
-    requestTable('program_workouts', `?select=id,athlete_id,coach_id,program_id,program_day_id,workout_template_id,name_snapshot,notes,bg_color,text_color,status,sort_order,scheduled_date,scheduled_start_time,scheduled_end_time,created_at,updated_at,workout_templates(name,description,training_type,bg_color,text_color,estimated_duration_minutes,thumbnail_url,status)&program_id=eq.${encodeURIComponent(programId)}&order=sort_order.asc`),
+    requestTable('program_workouts', `?select=id,athlete_id,coach_id,program_id,program_day_id,workout_template_id,name_snapshot,notes,bg_color,text_color,status,sort_order,scheduled_date,scheduled_start_time,scheduled_end_time,created_at,updated_at,import_source,import_source_file_name,workout_templates(name,description,training_type,bg_color,text_color,estimated_duration_minutes,thumbnail_url,status)&program_id=eq.${encodeURIComponent(programId)}&order=sort_order.asc`),
     requestTable('program_workout_blocks', '?select=id,program_workout_id,block_code,title,instructions,sort_order&order=sort_order.asc'),
     requestTable('program_workout_exercises', '?select=id,program_workout_id,program_workout_block_id,exercise_id,name_snapshot,sort_order,notes,default_rest_seconds&order=sort_order.asc'),
   ])

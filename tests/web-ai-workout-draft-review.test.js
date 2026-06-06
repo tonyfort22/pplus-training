@@ -6,6 +6,11 @@ import { fileURLToPath } from 'node:url'
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const workoutsDataTablePath = resolve(repoRoot, 'apps/web/components/admin/workouts-data-table.jsx')
+const programPlannerViewPath = resolve(repoRoot, 'apps/web/components/admin/program-planner-view.jsx')
+const programPlannerUtilsPath = resolve(repoRoot, 'apps/web/components/admin/program-planner-utils.js')
+const programDaysRoutePath = resolve(repoRoot, 'apps/web/app/api/admin/program-days/route.js')
+const programWorkoutRepositoryPath = resolve(repoRoot, 'apps/web/lib/program-workout-repository.js')
+const aiWorkoutDraftPdfPath = resolve(repoRoot, 'apps/web/lib/ai-workout-draft-pdf.js')
 const draftSheetPath = resolve(repoRoot, 'apps/web/components/admin/ai-workout-draft-sheet.jsx')
 const accordionPath = resolve(repoRoot, 'apps/web/components/ui/accordion.jsx')
 const globalsCssPath = resolve(repoRoot, 'apps/web/app/globals.css')
@@ -13,14 +18,19 @@ const globalsCssPath = resolve(repoRoot, 'apps/web/app/globals.css')
 test('generate with ai processing opens a wide draft review sheet after the loader finishes', () => {
   const source = readFileSync(workoutsDataTablePath, 'utf8')
 
-  assert.match(source, /import AiWorkoutDraftSheet, \{ createSampleAiWorkoutDrafts \} from '@\/components\/admin\/ai-workout-draft-sheet'/)
+  assert.match(source, /import AiWorkoutDraftSheet from '@\/components\/admin\/ai-workout-draft-sheet'/)
+  assert.doesNotMatch(source, /import AiWorkoutDraftSheet, \{ createSampleAiWorkoutDrafts \} from '@\/components\/admin\/ai-workout-draft-sheet'/)
   assert.match(source, /const \[isAiWorkoutDraftSheetOpen, setIsAiWorkoutDraftSheetOpen\] = useState\(false\)/)
   assert.match(source, /const \[aiWorkoutDrafts, setAiWorkoutDrafts\] = useState\(\[\]\)/)
-  assert.match(source, /function completeWorkoutAiDraftGeneration\(\)/)
-  assert.match(source, /setAiWorkoutDrafts\(createSampleAiWorkoutDrafts\(workoutImportFiles\)\)/)
+  assert.match(source, /async function handleGenerateWorkoutImportDraft\(\)/)
+  assert.match(source, /const formData = new FormData\(\)/)
+  assert.match(source, /workoutImportFiles\.forEach\(\(file\) => formData\.append\('files', file\)\)/)
+  assert.match(source, /fetch\('\/api\/admin\/ai-workout-drafts'/)
+  assert.match(source, /setAiWorkoutDrafts\(body\.drafts \?\? \[\]\)/)
   assert.match(source, /setIsAiWorkoutImportDialogOpen\(false\)/)
   assert.match(source, /setIsAiWorkoutDraftSheetOpen\(true\)/)
-  assert.match(source, /window\.setTimeout\(completeWorkoutAiDraftGeneration, 3000\)/)
+  assert.doesNotMatch(source, /window\.setTimeout\(completeWorkoutAiDraftGeneration, 3000\)/)
+  assert.doesNotMatch(source, /createSampleAiWorkoutDrafts\(workoutImportFiles\)/)
   assert.match(source, /<AiWorkoutDraftSheet[\s\S]*open=\{isAiWorkoutDraftSheetOpen\}[\s\S]*drafts=\{aiWorkoutDrafts\}/)
 })
 
@@ -74,6 +84,8 @@ test('ai workout draft sheet maps the temporary json into option a review UI', (
   assert.match(source, /type="date"/)
   assert.match(source, /placeholder="Only needed if no existing program matches this import"/)
   assert.match(source, /Accordion[\s\S]*type="multiple"/)
+  assert.match(source, /<Accordion type="multiple" defaultValue=\{\[\]\}/)
+  assert.doesNotMatch(source, /defaultValue=\{sections\.map\(\(section\) => section\.label\)\}/)
   assert.match(source, /AccordionItem[\s\S]*section\.label/)
   assert.match(source, /function getSectionBlockMetadata\(sections = \[\], sectionIndex\)/)
   assert.match(source, /const supersetLabels = blockSections\.map\(\(blockSection\) => blockSection\.label\)\.join\('\/'\)/)
@@ -102,19 +114,23 @@ test('ai workout draft sheet maps the temporary json into option a review UI', (
   assert.match(source, /setDraftListOverride\(\(currentDrafts\) => currentDrafts\.map\(/)
   assert.match(source, /setRevisionPrompt\(''\)/)
   assert.match(source, /revisionError/)
-  assert.match(source, /<SelectTrigger className=\{exerciseMatchSelectTriggerClassName\}>/)
-  assert.match(source, /<SelectContent className=\{exerciseMatchSelectContentClassName\}>/)
-  assert.match(source, /SelectValue placeholder="Choose existing exercise"/)
+  assert.match(source, /function ExerciseMatchCombobox\(\{ value, options = \[\], onValueChange, onCreateExercise = \(\) => \{\}, placeholder = 'Choose existing exercise' \}\)/)
+  assert.match(source, /const rootRef = useRef\(null\)/)
+  assert.match(source, /window\.addEventListener\('pointerdown', handlePointerDown\)/)
+  assert.match(source, /onClick=\{\(\) => setIsOpen\(\(current\) => !current\)\}/)
+  assert.match(source, /placeholder="Search exercises\.\.\."/)
+  assert.match(source, /filteredOptions\.map\(\(option\) => \{/)
+  assert.match(source, /onClick=\{\(\) => handleSelect\(option\.name\)\}/)
   assert.match(source, /onClick=\{handleReviseDraft\}/)
   assert.match(source, /Accept Draft/)
   assert.match(source, /Revise with AI/)
   assert.match(source, /function getTotalSetCount\(sections = \[\]\)/)
   assert.match(source, /\(exercise\.weeks \?\? \[\]\)\.reduce\(\(weekTotal, week\) => weekTotal \+ Number\(week\.sets \?\? 0\), 0\)/)
   assert.match(source, /const totalSetCount = useMemo\(\(\) => getTotalSetCount\(sections\), \[sections\]\)/)
-  assert.match(source, /function SummaryCard\(\{ label, value, helper, featured = false \}\)/)
+  assert.match(source, /function SummaryCard\(\{ label, value, helper, featured = false, valueTone = 'default' \}\)/)
   assert.match(source, /featured \? 'flex min-h-\[108px\] flex-col justify-center p-4' : 'p-4'/)
   assert.match(source, /featured \? 'text-5xl font-semibold tracking-\[-0\.05em\]' : 'text-lg'/)
-  assert.match(source, /<SummaryCard label="Program" value=\{workout\.program\} helper=\{workout\.phase\} \/>/)
+  assert.match(source, /<SummaryCard label="Program" value=\{summaryProgramName\} helper=\{summaryProgramHelper\} \/>/)
   assert.doesNotMatch(source, /<SummaryCard label="Program"[^\n]*featured/)
   assert.doesNotMatch(source, /label="Sections" value=\{sections\.length\} helper=/)
   assert.doesNotMatch(source, /label="Exercises" value=\{exerciseCount\} helper=/)
@@ -152,6 +168,28 @@ test('ai workout draft sheet maps the temporary json into option a review UI', (
   assert.match(source, /Fan Bike or Run/)
 })
 
+test('revise with AI applies explicit phase changes to the returned draft', async () => {
+  const { reviseAiWorkoutDraft } = await import(aiWorkoutDraftPdfPath)
+
+  const revisedDraft = reviseAiWorkoutDraft({
+    draft: {
+      workout: {
+        name: 'Speed Accelerator A',
+        phase: 'Phase 1',
+        notes: '',
+        description: '',
+      },
+      sections: [],
+      warnings: [],
+    },
+    prompt: 'Change Phase 1 to Phase 2',
+    exerciseCandidates: [],
+  })
+
+  assert.equal(revisedDraft.workout.phase, 'Phase 2')
+  assert.match(revisedDraft.warnings.at(-1)?.message ?? '', /Applied revision: Change Phase 1 to Phase 2/)
+})
+
 test('slice 16 draft review exposes clearer match status, editable exercise names, and unmatched warnings', () => {
   const source = readFileSync(draftSheetPath, 'utf8')
 
@@ -176,15 +214,104 @@ test('slice 16 draft review exposes clearer match status, editable exercise name
   assert.match(source, /\$\{blockingUnmatchedCount\} exercise\$\{blockingUnmatchedCount === 1 \? '' : 's'\} still \$\{blockingUnmatchedCount === 1 \? 'needs' : 'need'\}/)
 })
 
+test('slice 35 draft review uses real exercise library options for searchable match picker', () => {
+  const source = readFileSync(draftSheetPath, 'utf8')
+
+  assert.match(source, /function getExerciseMatchOptionsForDraft\(draftItem = \{\}\)/)
+  assert.match(source, /draftItem\?\.exerciseCandidates/)
+  assert.match(source, /const activeExerciseMatchOptions = useMemo\(\(\) => \{[\s\S]*createdExerciseMatchOptions\.reduce\([\s\S]*getExerciseMatchOptionsForDraft\(activeDraft\)/)
+  assert.match(source, /\}, \[activeDraft, createdExerciseMatchOptions\]\)/)
+  assert.match(source, /function ExerciseCard\([\s\S]*exerciseMatchOptions = \[\]/)
+  assert.match(source, /exerciseMatchOptions=\{activeExerciseMatchOptions\}/)
+  assert.match(source, /<ExerciseMatchCombobox[\s\S]*options=\{exerciseMatchOptions\}[\s\S]*onValueChange=\{onMatchChange\}/)
+  assert.match(source, /<TabsContent value="matches"[\s\S]*<ExerciseMatchCombobox[\s\S]*options=\{activeExerciseMatchOptions\}[\s\S]*handleMatchChange\(section\.label, exercise\.name, nextMatch\)/)
+  assert.doesNotMatch(source, /<TabsContent value="matches"[\s\S]*<Select value=\{selectedMatch\}/)
+  assert.match(source, /return options\.filter\(\(option\) => option\.name\.toLowerCase\(\)\.includes\(normalizedQuery\)\)/)
+})
+
+test('slice 35 draft review can create a missing exercise from the active match picker and select it', () => {
+  const source = readFileSync(draftSheetPath, 'utf8')
+
+  assert.match(source, /import ExerciseEditorDialog from '@\/components\/admin\/exercise-editor-dialog'/)
+  assert.match(source, /onCreateExercise=\{\(\) => openCreateExerciseForMatch\(section\.label, exercise\)\}/)
+  assert.match(source, /import \{ Bot, Check, CheckCircle2, ChevronDown, Plus, Search, Sparkles \} from 'lucide-react'/)
+  assert.match(source, /<button[\s\S]*bg-transparent[\s\S]*text-\[var\(--admin-shell-primary-button-bg\)\][\s\S]*Create exercise[\s\S]*<\/button>/)
+  assert.match(source, /<Plus className="h-4 w-4 text-\[var\(--admin-shell-primary-button-bg\)\]" \/>/)
+  assert.match(source, /const \[exerciseCreateContext, setExerciseCreateContext\] = useState\(null\)/)
+  assert.match(source, /function createAiExerciseFormValues\(exercise = \{\}, draft = \{\}, muscleOptions = \[\]\)/)
+  assert.match(source, /inferAiExerciseCategory\(exercise, draft\)/)
+  assert.match(source, /inferAiExerciseEquipment\(exercise, exerciseCreateEquipmentOptions\)/)
+  assert.match(source, /inferAiExerciseMuscles\(exercise, muscleOptions\)/)
+  assert.match(source, /getOptionValueByLabel\(exerciseCreateDifficultyOptions, \['Intermediate'\]\)/)
+  assert.match(source, /weights: firstWeek\?\.weights \|\| firstWeek\?\.weight \|\| firstWeek\?\.load \? String\(firstWeek\.weights \|\| firstWeek\.weight \|\| firstWeek\.load\) : ''/)
+  assert.match(source, /description: buildAiExerciseDescription\(exercise\)/)
+  assert.match(source, /setExerciseCreateFormValues\(createAiExerciseFormValues\(exercise, activeDraft, exerciseCreateMuscleOptions\)\)/)
+  assert.match(source, /knee tuck\|crunch\|anti-rotation\|pallof\|plank\|dead bug/)
+  assert.match(source, /primaryLabels = \['Core', 'Abs', 'Abdominals'\]/)
+  assert.match(source, /AI import prescription: \$\{prescriptionParts\.join\(' · '\)\}\./)
+  assert.match(source, /<ExerciseEditorDialog[\s\S]*open=\{isExerciseCreateSheetOpen\}[\s\S]*mode="create"[\s\S]*onPrimaryAction=\{handleCreateExerciseFromDraft\}/)
+  assert.match(source, /requestAdminExerciseApi\('\/api\/admin\/exercises'[\s\S]*method: 'POST'[\s\S]*body: JSON\.stringify\(exerciseCreateFormValues\)/)
+  assert.match(source, /setCreatedExerciseMatchOptions\(\(currentOptions\) => appendExerciseMatchOption\(currentOptions, createdExerciseOption\)\)/)
+  assert.match(source, /handleMatchChange\(exerciseCreateContext\.sectionLabel, exerciseCreateContext\.exerciseName, createdExerciseOption\.name\)/)
+})
+
 test('slice 17 draft review blocks accept until unmatched exercises are resolved', () => {
   const source = readFileSync(draftSheetPath, 'utf8')
 
   assert.match(source, /const hasBlockingUnmatchedExercises = blockingUnmatchedCount > 0/)
-  assert.match(source, /if \(hasBlockingUnmatchedExercises\) return/)
-  assert.match(source, /disabled=\{isAccepting \|\| isAcceptingDraft \|\| hasBlockingUnmatchedExercises\}/)
-  assert.match(source, /title=\{hasBlockingUnmatchedExercises \? 'Match all exercises before accepting this draft\.' : undefined\}/)
-  assert.match(source, /\{hasBlockingUnmatchedExercises \? 'Resolve matches to accept' : isAccepting \|\| isAcceptingDraft \? 'Accepting…' : 'Accept Draft'\}/)
+  assert.match(source, /const hasBlockingAcceptIssue = hasBlockingUnmatchedExercises/)
+  assert.match(source, /if \(hasBlockingAcceptIssue\) return/)
+  assert.match(source, /disabled=\{isAccepting \|\| isAcceptingDraft \|\| hasBlockingAcceptIssue\}/)
+  assert.match(source, /title=\{acceptBlockedTitle\}/)
+  assert.match(source, /\{hasBlockingScanWarning \? 'Fix PDF scan to accept' : hasBlockingUnmatchedExercises \? 'Resolve matches to accept' : isAccepting \|\| isAcceptingDraft \? 'Accepting…' : 'Accept Draft'\}/)
   assert.match(source, /Review the Exercise Matches tab before accepting\./)
+})
+
+test('planner AI import saves an unpersisted day before reviewing the draft', () => {
+  const source = readFileSync(programPlannerViewPath, 'utf8')
+  const utilsSource = readFileSync(programPlannerUtilsPath, 'utf8')
+  const routeSource = readFileSync(programDaysRoutePath, 'utf8')
+
+  assert.match(source, /const aiWorkoutImportNeedsPersistedDay = Boolean\(aiWorkoutImportTarget\?\.day && !aiWorkoutImportTarget\.day\.programDayId && !enableLocalAiImportPersistence\)/)
+  assert.match(source, /This day will be saved before reviewing the AI workout\./)
+  assert.match(source, /\? 'Save day \+ review'/)
+  assert.match(source, /async function resolvePersistedAiWorkoutImportTarget\(\)/)
+  assert.match(source, /const programWeekId = currentDay\?\.programWeekId \?\? currentWeek\?\.programWeekId \?\? null/)
+  assert.match(source, /await requestProgramDayCreate\(\{[\s\S]*programWeekId,[\s\S]*dayIndex: resolvePlannerDayIndex\(currentDay\)/)
+  assert.match(utilsSource, /function cloneWeek\(week = \{\}, index = 0\) \{[\s\S]*const programWeekId = week\.programWeekId \?\? week\.program_week_id \?\? null[\s\S]*daySlots: createFixedDaySlots\(week\.daySlots, programWeekId\)/)
+  assert.match(source, /formData\.append\('programDayId', resolvedImportTarget\?\.day\?\.programDayId \?\? ''\)/)
+  assert.match(source, /disabled=\{!canReviewAiWorkoutDraft\}/)
+  assert.match(routeSource, /export async function POST\(request\)/)
+  assert.match(routeSource, /repository\.createProgramDay\(payload\)/)
+})
+
+test('program workout repository normalizes empty schedule strings before Supabase writes', () => {
+  const source = readFileSync(programWorkoutRepositoryPath, 'utf8')
+
+  assert.match(source, /function normalizeOptionalDateTimeValue\(value\) \{[\s\S]*const normalized = String\(value\)\.trim\(\)[\s\S]*return normalized \|\| null[\s\S]*\}/)
+  assert.match(source, /const scheduledDate = normalizeOptionalDateTimeValue\(payload\.scheduled_date \?\? payload\.start_date \?\? payload\.startDate \?\? null\)/)
+  assert.match(source, /const scheduledStartTime = normalizeOptionalDateTimeValue\(payload\.scheduled_start_time \?\? payload\.start_time \?\? payload\.startTime \?\? null\)/)
+  assert.match(source, /const scheduledEndTime = normalizeOptionalDateTimeValue\(payload\.scheduled_end_time \?\? payload\.end_time \?\? payload\.endTime \?\? null\)/)
+  assert.match(source, /const schedule = normalizeScheduleInput\(\{[\s\S]*scheduled_date: payload\.scheduled_date \?\? payload\.scheduledDate \?\? day\.date \?\? null[\s\S]*scheduled_end_time: payload\.scheduled_end_time \?\? payload\.scheduledEndTime \?\? null[\s\S]*\}\)/)
+  assert.match(source, /scheduled_date: schedule\.scheduled_date/)
+})
+
+test('duplicate source file warns without dead-ending accept', () => {
+  const source = readFileSync(draftSheetPath, 'utf8')
+
+  assert.match(source, /const hasBlockingAcceptIssue = hasBlockingUnmatchedExercises \|\| hasBlockingScanWarning/)
+  assert.doesNotMatch(source, /const hasBlockingAcceptIssue = hasBlockingUnmatchedExercises \|\| hasDuplicateSourceFile/)
+  assert.match(source, /if \(hasBlockingAcceptIssue\) return/)
+  assert.match(source, /disabled=\{isAccepting \|\| isAcceptingDraft \|\| hasBlockingAcceptIssue\}/)
+  assert.doesNotMatch(source, /disabled=\{isAccepting \|\| isAcceptingDraft \|\| hasDuplicateSourceFile\}/)
+})
+
+test('blocking PDF scan warnings disable accept instead of allowing fake scanned drafts', () => {
+  const source = readFileSync(draftSheetPath, 'utf8')
+
+  assert.match(source, /const hasBlockingScanWarning = warnings\.some\(\(warning\) => warning\?\.blocking \|\| warning\?\.severity === 'error'\)/)
+  assert.match(source, /Fix the PDF scan before accepting\./)
+  assert.match(source, /Fix PDF scan to accept/)
 })
 
 test('slice 17 local QA fixture can force an unmatched draft for browser proof', () => {
@@ -276,14 +403,17 @@ test('slice 27 draft review edits section instructions and exercise notes before
 test('accept draft carries reviewed overview fields section edits and exercise matches forward', () => {
   const source = readFileSync(draftSheetPath, 'utf8')
 
-  assert.match(source, /function buildAcceptedAiWorkoutDraft\(\{ activeDraft, overviewDraft, sections, sectionDrafts, exerciseDrafts, getSelectedMatch \}\)/)
-  assert.match(source, /workout:\s*\{[\s\S]*\.\.\.activeDraft\.workout,[\s\S]*name: overviewDraft\.workoutName,[\s\S]*program: overviewDraft\.programName,[\s\S]*phase: overviewDraft\.phase,[\s\S]*phaseGoal: overviewDraft\.phaseGoal,[\s\S]*trainingType: overviewDraft\.trainingType,[\s\S]*workoutDayType: overviewDraft\.workoutDayType,[\s\S]*stressLevel: overviewDraft\.stressLevel,[\s\S]*trainingEmphasis: overviewDraft\.trainingEmphasis,[\s\S]*numberOfWeeks: Number\(overviewDraft\.numberOfWeeks\),[\s\S]*startDate: overviewDraft\.startDate,[\s\S]*endDate: overviewDraft\.endDate,[\s\S]*description: overviewDraft\.description,[\s\S]*notes: overviewDraft\.description,[\s\S]*\}/)
+  assert.match(source, /function buildAcceptedAiWorkoutDraft\(\{ activeDraft, overviewDraft, sections, sectionDrafts, exerciseDrafts, getSelectedMatch, getSelectedMatchOption, programContext = null, programAssignment = null \}\)/)
+  assert.match(source, /programAssignment: programContext \? \{ mode: 'locked', programId: programContext\.id \?\? null, programName: lockedProgramName \} : programAssignment/)
+  assert.match(source, /workout:\s*\{[\s\S]*\.\.\.activeDraft\.workout,[\s\S]*name: overviewDraft\.workoutName,[\s\S]*program: lockedProgramName \|\| assignedProgramName,[\s\S]*phase: overviewDraft\.phase,[\s\S]*phaseGoal: overviewDraft\.phaseGoal,[\s\S]*trainingType: overviewDraft\.trainingType,[\s\S]*workoutDayType: overviewDraft\.workoutDayType,[\s\S]*stressLevel: overviewDraft\.stressLevel,[\s\S]*trainingEmphasis: overviewDraft\.trainingEmphasis,[\s\S]*numberOfWeeks: Number\(overviewDraft\.numberOfWeeks\),[\s\S]*startDate: overviewDraft\.startDate,[\s\S]*endDate: overviewDraft\.endDate,[\s\S]*description: overviewDraft\.description,[\s\S]*notes: overviewDraft\.description,[\s\S]*\}/)
   assert.match(source, /const reviewedSectionLabel = sectionDrafts\[sectionIndex\]\?\.label \?\? section\.label/)
   assert.match(source, /const reviewedBlockLabel = sectionDrafts\[sectionIndex\]\?\.blockLabel \?\? getSectionBlockMetadata\(sections, sectionIndex\)\.blockLabel/)
   assert.match(source, /const selectedExerciseMatch = getSelectedMatch\(section\.label, exercise\)/)
+  assert.match(source, /const selectedExerciseMatchOption = getSelectedMatchOption\?\.\(section\.label, exercise\)/)
   assert.match(source, /const selectedExistingMatch = selectedExerciseMatch && selectedExerciseMatch === exercise\.exerciseMatch\?\.exerciseName/)
+  assert.match(source, /const selectedExerciseId = selectedExerciseMatchOption\?\.id[\s\S]*\|\| \(selectedExistingMatch \? exercise\.exerciseMatch\?\.exerciseId : ''\)[\s\S]*\|\| exercise\.exerciseMatch\?\.exerciseId[\s\S]*\|\| selectedExerciseMatch[\s\S]*\|\| ''/)
   assert.match(source, /status: selectedExerciseMatch \? 'matched' : \(exercise\.exerciseMatch\?\.status \?\? 'suggested'\)/)
-  assert.match(source, /exerciseId: selectedExistingMatch \? exercise\.exerciseMatch\?\.exerciseId : selectedExerciseMatch \|\| exercise\.exerciseMatch\?\.exerciseId \|\| ''/)
+  assert.match(source, /exerciseId: selectedExerciseId/)
   assert.match(source, /exerciseName: selectedExerciseMatch \|\| exercise\.exerciseMatch\?\.exerciseName \|\| ''/)
   assert.match(source, /function buildAcceptedAiWorkoutDraftForItem\(draftItem, draftIndex\)/)
   assert.match(source, /return buildAcceptedAiWorkoutDraft\(\{[\s\S]*activeDraft: draftItem,[\s\S]*overviewDraft: isActiveItem \? overviewDraft : createOverviewDraftState\(draftItem\),[\s\S]*sections: draftSections,[\s\S]*sectionDrafts: isActiveItem \? sectionDrafts : createSectionDraftState\(draftSections\),[\s\S]*exerciseDrafts: isActiveItem \? exerciseDrafts : createExerciseDraftState\(draftSections\),[\s\S]*getSelectedMatch: isActiveItem \? getSelectedMatch : \(_sectionLabel, exercise\) => exercise\?\.exerciseMatch\?\.exerciseName \?\? '',[\s\S]*\}\)/)
@@ -300,8 +430,8 @@ test('draft sheet awaits async accept so planner persistence cannot double-submi
   assert.match(source, /setIsAcceptingDraft\(true\)/)
   assert.match(source, /await onAccept\(acceptedDraft\)/)
   assert.match(source, /setIsAcceptingDraft\(false\)/)
-  assert.match(source, /disabled=\{isAccepting \|\| isAcceptingDraft \|\| hasBlockingUnmatchedExercises\}/)
-  assert.match(source, /\{hasBlockingUnmatchedExercises \? 'Resolve matches to accept' : isAccepting \|\| isAcceptingDraft \? 'Accepting…' : 'Accept Draft'\}/)
+  assert.match(source, /disabled=\{isAccepting \|\| isAcceptingDraft \|\| hasBlockingAcceptIssue\}/)
+  assert.match(source, /\{hasBlockingScanWarning \? 'Fix PDF scan to accept' : hasBlockingUnmatchedExercises \? 'Resolve matches to accept' : isAccepting \|\| isAcceptingDraft \? 'Accepting…' : 'Accept Draft'\}/)
 })
 
 test('accept draft closes the sheet and shows a reviewed draft handoff card', () => {
@@ -333,15 +463,49 @@ test('accepted draft can open the workout editor prefilled from reviewed draft d
   assert.match(source, /if \(!acceptedAiWorkoutDraft\) return/)
   assert.match(source, /setWorkoutDialogMode\('draft'\)/)
   assert.match(source, /setWorkoutFormValues\(createDraftWorkoutFormValues\(acceptedAiWorkoutDraft\)\)/)
-  assert.match(source, /setWorkoutTrainingSections\(createDraftWorkoutTrainingSections\(acceptedAiWorkoutDraft\.sections\)\)/)
+  assert.match(source, /setWorkoutTrainingSections\(collapseTrainingSectionsOnLoad\(createDraftWorkoutTrainingSections\(acceptedAiWorkoutDraft\.sections\)\)\)/)
   assert.match(source, /setIsCreateWorkoutDialogOpen\(true\)/)
   assert.match(source, /Create program plan from draft/)
   assert.match(source, /onClick=\{openCreateWorkoutFromAcceptedDraft\}/)
   assert.match(source, /showTrainingTab=\{workoutDialogMode !== 'create'\}/)
   assert.match(source, /workoutDialogMode === 'draft' \? 'Create program plan from draft'/)
   assert.match(source, /const isDraftPlanCreate = workoutDialogMode === 'draft'/)
-  assert.match(source, /isDraftPlanCreate \? '\/api\/admin\/program-workouts' : '\/api\/admin\/workout-templates'/)
+  assert.match(source, /const saveUrl = isDraftPlanCreate && draftProgramAssignment\.mode === 'unassigned'[\s\S]*\? '\/api\/admin\/workout-templates'[\s\S]*: isDraftPlanCreate[\s\S]*\? '\/api\/admin\/program-workouts'[\s\S]*: '\/api\/admin\/workout-templates'/)
+  assert.match(source, /fetch\(saveUrl/)
   assert.match(source, /createProgramPlanFromDraft: true/)
   assert.match(source, /workout: acceptedAiWorkoutDraft\?\.workout/)
   assert.match(source, /trainingSections: workoutTrainingSections/)
+  assert.match(source, /trainingSections: Array\.isArray\(template\.trainingSections\) \? template\.trainingSections : \[\]/)
+  assert.match(source, /setWorkoutTrainingSections\(collapseTrainingSectionsOnLoad\(workout\.trainingSections\)\)/)
+})
+
+test('AI draft review uses polished destination, revise helper, match issue, and match badge styling', () => {
+  const source = readFileSync(draftSheetPath, 'utf8')
+
+  assert.match(source, /const activeDestinationLabel = activeDestinationPreview\?\.shortLabel \?\? activeDestinationPreview\?\.message\?\.replace/)
+  assert.match(source, /replace\(\/\^Will place into:\\s\*\//)
+  assert.match(source, /\{activeDestinationLabel\}/)
+  assert.doesNotMatch(source, /\{activeDestinationPreview\?\.message\}/)
+  assert.match(source, /Tell the AI what to change and click on the \"Revise with AI\" button to apply those changes\./)
+  assert.match(source, /function SummaryCard\(\{ label, value, helper, featured = false, valueTone = 'default' \}\)/)
+  assert.match(source, /valueTone === 'danger' \? 'text-\[var\(--ui-color-danger\)\]' : 'text-\[var\(--admin-dashboard-card-text\)\]'/)
+  assert.match(source, /<SummaryCard label="Match Issues"[\s\S]*valueTone=\{blockingUnmatchedCount > 0 \? 'danger' : 'default'\}/)
+  assert.match(source, /if \(status === 'matched'\) return '!border-\[#3BE0AF\]\/30 !bg-\[var\(--admin-shell-avatar-bg\)\] !text-\[var\(--admin-shell-nav-active-text\)\]'/)
+  assert.match(source, /if \(status === 'unmatched' \|\| status === 'missing'\) return '!border-\[var\(--ui-color-danger\)\]\/30 !bg-\[var\(--ui-danger-surface\)\] !text-\[var\(--ui-color-danger\)\]'/)
+})
+
+test('program planner AI draft locks selected program instead of showing editable program fields', () => {
+  const plannerSource = readFileSync(programPlannerViewPath, 'utf8')
+  const draftSheetSource = readFileSync(draftSheetPath, 'utf8')
+
+  assert.match(plannerSource, /<AiWorkoutDraftSheet[\s\S]*programContext=\{\{[\s\S]*name: planner\.title[\s\S]*weekCount: planner\.weekCount[\s\S]*duration: planner\.duration[\s\S]*description: planner\.description[\s\S]*\}\}/)
+  assert.match(draftSheetSource, /programContext = null/)
+  assert.match(draftSheetSource, /const lockedProgramContext = programContext \? \{/)
+  assert.match(draftSheetSource, /<CardTitle className="text-lg">Selected program<\/CardTitle>/)
+  assert.match(draftSheetSource, /This workout will be added to the program you are already editing\./)
+  assert.match(draftSheetSource, /lockedProgramContext \? \([\s\S]*Selected program[\s\S]*\) : \([\s\S]*Program details/)
+  assert.match(draftSheetSource, /program: lockedProgramName \|\| assignedProgramName/)
+  assert.match(draftSheetSource, /const summaryProgramName = lockedProgramContext\?\.name[\s\S]*programAssignmentMode === 'existing'[\s\S]*selectedExistingProgram\?\.name \|\| 'Select existing program'[\s\S]*programAssignmentMode === 'unassigned'[\s\S]*'Unassigned'[\s\S]*overviewDraft\.programName \|\| 'Create new program'/)
+  assert.match(draftSheetSource, /const summaryProgramHelper = lockedProgramContext[\s\S]*\? 'Selected program'[\s\S]*programAssignmentMode === 'existing'[\s\S]*\? 'Existing program'[\s\S]*programAssignmentMode === 'unassigned'[\s\S]*\? 'Unassigned'[\s\S]*: 'Create new program'/)
+  assert.match(draftSheetSource, /<SummaryCard label="Program" value=\{summaryProgramName\} helper=\{summaryProgramHelper\} \/>/)
 })

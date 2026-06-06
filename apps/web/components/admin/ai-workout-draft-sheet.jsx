@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { Bot, CheckCircle2, Search, Sparkles } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Bot, Check, CheckCircle2, ChevronDown, Plus, Search, Sparkles } from 'lucide-react'
 
+import ExerciseEditorDialog from '@/components/admin/exercise-editor-dialog'
 import Alert from '@/components/ui/alert'
 import Badge from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -42,12 +43,47 @@ const workoutDayTypeOptions = ['Speed Accelerator A', 'Speed Accelerator B', 'Sp
 const stressLevelOptions = ['High', 'Moderate', 'Low', 'Recovery']
 const phaseGoalOptions = ['Tissue remodeling', 'Max strength', 'Strength-speed', 'Speed-strength', 'Work capacity', 'Lactic conditioning', 'Other']
 const phaseOptions = ['Phase 1', 'Phase 2', 'Phase 3', 'Phase 4']
+const programAssignmentOptions = [
+  { value: 'existing', label: 'Existing program' },
+  { value: 'new', label: 'Create new program' },
+  { value: 'unassigned', label: 'Unassigned' },
+]
+
+const exerciseCreateCategoryOptions = [
+  { value: 'strength', label: 'Strength' },
+  { value: 'power', label: 'Power' },
+  { value: 'mobility', label: 'Mobility' },
+  { value: 'speed', label: 'Speed' },
+  { value: 'activation', label: 'Activation' },
+  { value: 'core', label: 'Core' },
+]
+
+const exerciseCreateDifficultyOptions = [
+  { value: 'beginner', label: 'Beginner' },
+  { value: 'intermediate', label: 'Intermediate' },
+  { value: 'advanced', label: 'Advanced' },
+]
+
+const exerciseCreateStatusOptions = [
+  { value: 'draft', label: 'Draft' },
+  { value: 'active', label: 'Active' },
+  { value: 'archived', label: 'Archived' },
+]
+
+const exerciseCreateEquipmentOptions = [
+  { value: 'bodyweight', label: 'Bodyweight' },
+  { value: 'dumbbell', label: 'Dumbbell' },
+  { value: 'kettlebell', label: 'Kettlebell' },
+  { value: 'barbell', label: 'Barbell' },
+  { value: 'cable', label: 'Cable' },
+  { value: 'band', label: 'Band' },
+  { value: 'bike', label: 'Bike' },
+]
 
 const overviewInputClassName = 'h-11 rounded-[12px] border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20'
 const overviewSelectTriggerClassName = 'ai-draft-primary-select-trigger h-11 rounded-[12px] px-4 text-sm font-medium'
 const overviewSelectContentClassName = 'ai-draft-primary-select-content rounded-2xl'
 const exerciseMatchSelectTriggerClassName = 'ai-draft-primary-select-trigger h-10 rounded-[12px] px-4 text-sm font-medium'
-const exerciseMatchSelectContentClassName = 'ai-draft-primary-select-content rounded-2xl'
 const overviewTextareaClassName = 'min-h-[118px] rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-3 text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[#3BE0AF] focus-visible:ring-[#3BE0AF]/20'
 
 const trainingTypeRules = [
@@ -265,6 +301,213 @@ function inferTrainingTypeFromDraft(draft) {
   return matchedRule?.type ?? 'Speed'
 }
 
+function getExerciseMatchOptionsForDraft(draftItem = {}) {
+  const candidates = Array.isArray(draftItem?.exerciseCandidates) && draftItem.exerciseCandidates.length
+    ? draftItem.exerciseCandidates
+    : exerciseMatchOptions.map((name) => ({ id: name, name }))
+  const seen = new Set()
+
+  return candidates
+    .map((candidate) => ({
+      id: candidate?.id ?? candidate?.value ?? candidate?.name ?? '',
+      name: candidate?.name ?? candidate?.label ?? candidate?.exerciseName ?? '',
+    }))
+    .filter((candidate) => candidate.id && candidate.name)
+    .filter((candidate) => {
+      const key = candidate.name.toLowerCase().trim()
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+}
+
+function appendExerciseMatchOption(options = [], option = {}) {
+  const normalizedOption = {
+    id: option?.id ?? option?.value ?? option?.name ?? '',
+    name: option?.name ?? option?.label ?? option?.exerciseName ?? '',
+  }
+  if (!normalizedOption.id || !normalizedOption.name) return options
+  const existingIndex = options.findIndex((currentOption) => currentOption.name.toLowerCase().trim() === normalizedOption.name.toLowerCase().trim())
+  if (existingIndex >= 0) {
+    return options.map((currentOption, index) => index === existingIndex ? normalizedOption : currentOption)
+  }
+  return [...options, normalizedOption].sort((left, right) => left.name.localeCompare(right.name))
+}
+
+function getFirstExerciseWeek(exercise = {}) {
+  return Array.isArray(exercise.weeks) ? exercise.weeks.find(Boolean) || {} : {}
+}
+
+function getOptionValueByLabel(options = [], labelCandidates = []) {
+  const normalizedLabels = labelCandidates.map((label) => String(label).toLowerCase().trim()).filter(Boolean)
+  const exactMatch = options.find((option) => normalizedLabels.includes(String(option?.label || '').toLowerCase().trim()))
+  if (exactMatch?.value) return exactMatch.value
+  const partialMatch = options.find((option) => {
+    const optionLabel = String(option?.label || '').toLowerCase().trim()
+    return normalizedLabels.some((label) => optionLabel.includes(label) || label.includes(optionLabel))
+  })
+  return partialMatch?.value || ''
+}
+
+function getAvailableOptionValues(options = [], labelCandidates = []) {
+  const selectedValues = labelCandidates
+    .map((label) => getOptionValueByLabel(options, [label]))
+    .filter(Boolean)
+  return [...new Set(selectedValues)]
+}
+
+function buildAiExerciseSearchText(exercise = {}) {
+  const firstWeek = getFirstExerciseWeek(exercise)
+  return [exercise?.name, exercise?.notes, firstWeek?.reps, firstWeek?.duration, firstWeek?.distance, firstWeek?.weights, firstWeek?.weight, firstWeek?.load]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+}
+
+function inferAiExerciseCategory(exercise = {}, draft = {}) {
+  const text = `${buildAiExerciseSearchText(exercise)} ${draft?.workout?.trainingType || ''} ${draft?.workout?.name || ''}`.toLowerCase()
+  if (text.includes('speed') || text.includes('sprint') || text.includes('acceleration') || text.includes('deceleration')) return 'speed'
+  if (text.includes('core') || text.includes('anti-rotation') || text.includes('knee tuck') || text.includes('crunch') || text.includes('plank')) return 'core'
+  if (text.includes('mobility') || text.includes('stretch') || text.includes('edge')) return 'mobility'
+  if (text.includes('activation') || text.includes('warmup') || text.includes('warm up')) return 'activation'
+  if (text.includes('jump') || text.includes('plyo') || text.includes('power')) return 'power'
+  if (text.includes('conditioning') || text.includes('bike') || text.includes('run')) return 'speed'
+  if (text.includes('squat') || text.includes('row') || text.includes('bench') || text.includes('deadlift') || text.includes('hold')) return 'strength'
+  return ''
+}
+
+function inferAiExerciseEquipment(exercise = {}, equipmentOptions = []) {
+  const text = buildAiExerciseSearchText(exercise)
+  const labels = []
+  if (/\bdb\b|dumbbell/.test(text)) labels.push('Dumbbell')
+  if (/\bkb\b|kettlebell|goblet/.test(text)) labels.push('Kettlebell')
+  if (/barbell|trap bar/.test(text)) labels.push('Barbell')
+  if (/cable/.test(text)) labels.push('Cable')
+  if (/band/.test(text)) labels.push('Band')
+  if (/bike|fan bike|assault bike/.test(text)) labels.push('Bike')
+  if (!labels.length || /bodyweight|push-up|push up|plank|knee tuck|crunch|pogo|jump|split squat|hip lift/.test(text)) labels.push('Bodyweight')
+  return getAvailableOptionValues(equipmentOptions, labels)
+}
+
+function inferAiExerciseMuscles(exercise = {}, muscleOptions = []) {
+  const text = buildAiExerciseSearchText(exercise)
+  let primaryLabels = []
+  let secondaryLabels = []
+
+  if (/knee tuck|crunch|anti-rotation|pallof|plank|dead bug/.test(text)) {
+    primaryLabels = ['Core', 'Abs', 'Abdominals']
+    secondaryLabels = ['Hip Flexors', 'Obliques']
+  } else if (/split squat|lunge|squat|rear foot|goblet/.test(text)) {
+    primaryLabels = ['Quads', 'Quadriceps']
+    secondaryLabels = ['Glutes', 'Hamstrings']
+  } else if (/hip lift|bridge|rdl|deadlift|hamstring/.test(text)) {
+    primaryLabels = ['Glutes', 'Hamstrings']
+    secondaryLabels = ['Core']
+  } else if (/row|pull/.test(text)) {
+    primaryLabels = ['Back', 'Lats']
+    secondaryLabels = ['Biceps', 'Rear Delts']
+  } else if (/bench|push-up|push up|press/.test(text)) {
+    primaryLabels = ['Chest', 'Pecs']
+    secondaryLabels = ['Shoulders', 'Triceps']
+  } else if (/jump|pogo|bound|depth drop/.test(text)) {
+    primaryLabels = ['Calves', 'Quads']
+    secondaryLabels = ['Glutes', 'Hamstrings']
+  }
+
+  const primaryMuscleId = getOptionValueByLabel(muscleOptions, primaryLabels)
+  const secondaryMuscleIds = getAvailableOptionValues(muscleOptions, secondaryLabels).filter((value) => value !== primaryMuscleId)
+  return { primaryMuscleId, secondaryMuscleIds }
+}
+
+function buildAiExerciseDescription(exercise = {}) {
+  const firstWeek = getFirstExerciseWeek(exercise)
+  const prescriptionParts = []
+  if (firstWeek?.sets) prescriptionParts.push(`${firstWeek.sets} sets`)
+  if (firstWeek?.reps) prescriptionParts.push(`${firstWeek.reps} reps`)
+  if (firstWeek?.duration) prescriptionParts.push(`${firstWeek.duration}`)
+  if (firstWeek?.distance) prescriptionParts.push(`${firstWeek.distance}`)
+  if (firstWeek?.restSeconds) prescriptionParts.push(`${firstWeek.restSeconds}s rest`)
+  if (firstWeek?.tempo && firstWeek.tempo !== 'N/A') prescriptionParts.push(`tempo ${firstWeek.tempo}`)
+
+  return [exercise?.notes, prescriptionParts.length ? `AI import prescription: ${prescriptionParts.join(' · ')}.` : '']
+    .filter(Boolean)
+    .join('\n\n')
+}
+
+function createAiExerciseFormValues(exercise = {}, draft = {}, muscleOptions = []) {
+  const firstWeek = getFirstExerciseWeek(exercise)
+  const inferredCategory = inferAiExerciseCategory(exercise, draft)
+  const category = getOptionValueByLabel(exerciseCreateCategoryOptions, [inferredCategory])
+  const difficulty = getOptionValueByLabel(exerciseCreateDifficultyOptions, ['Intermediate'])
+  const { primaryMuscleId, secondaryMuscleIds } = inferAiExerciseMuscles(exercise, muscleOptions)
+
+  return {
+    id: null,
+    name: exercise?.name || '',
+    videoName: '',
+    videoUpload: null,
+    videoUrl: '',
+    thumbnailName: '',
+    thumbnailUpload: null,
+    thumbnailUrl: '',
+    sets: firstWeek?.sets ? String(firstWeek.sets) : '',
+    reps: firstWeek?.reps ? String(firstWeek.reps) : '',
+    distance: firstWeek?.distance ? String(firstWeek.distance) : '',
+    weights: firstWeek?.weights || firstWeek?.weight || firstWeek?.load ? String(firstWeek.weights || firstWeek.weight || firstWeek.load) : '',
+    duration: firstWeek?.duration ? String(firstWeek.duration) : '',
+    rest: firstWeek?.restSeconds ? String(firstWeek.restSeconds) : '',
+    tempo: firstWeek?.tempo && firstWeek.tempo !== 'N/A' ? String(firstWeek.tempo) : '',
+    category,
+    difficulty,
+    status: 'draft',
+    equipmentNeeded: inferAiExerciseEquipment(exercise, exerciseCreateEquipmentOptions),
+    primaryMuscleId,
+    secondaryMuscleIds,
+    description: buildAiExerciseDescription(exercise),
+  }
+}
+
+async function requestAdminExerciseApi(path, options = {}) {
+  const response = await fetch(path, {
+    cache: 'no-store',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+    ...options,
+  })
+  const payload = await response.json()
+
+  if (!response.ok) {
+    throw new Error(payload?.error || 'Failed to save exercise.')
+  }
+
+  return payload
+}
+
+async function uploadAiExerciseMediaFile({ kind, file, exerciseId = '' }) {
+  if (!file) return null
+
+  const formData = new FormData()
+  formData.append('kind', kind)
+  formData.append('file', file)
+  if (exerciseId) {
+    formData.append('exerciseId', exerciseId)
+  }
+
+  const response = await fetch('/api/admin/exercise-media', {
+    method: 'POST',
+    body: formData,
+  })
+  const payload = await response.json()
+
+  if (!response.ok) {
+    throw new Error(payload?.error || `Failed to upload exercise ${kind}.`)
+  }
+
+  return payload?.publicUrl || null
+}
+
 function getWorkoutDayTypeDefaults(workoutDayType) {
   if (workoutDayType === 'Speed Accelerator A') {
     return { trainingType: 'Speed', stressLevel: 'High', trainingEmphasis: 'Lower-body acceleration' }
@@ -420,13 +663,21 @@ function getExerciseKey(sectionLabel, exerciseName) {
   return `${sectionLabel}:${exerciseName}`
 }
 
-function buildAcceptedAiWorkoutDraft({ activeDraft, overviewDraft, sections, sectionDrafts, exerciseDrafts, getSelectedMatch }) {
+function buildAcceptedAiWorkoutDraft({ activeDraft, overviewDraft, sections, sectionDrafts, exerciseDrafts, getSelectedMatch, getSelectedMatchOption, programContext = null, programAssignment = null }) {
+  const lockedProgramName = programContext?.name || programContext?.title || ''
+  const assignedProgramName = programAssignment?.mode === 'existing'
+    ? programAssignment.programName
+    : programAssignment?.mode === 'unassigned'
+      ? ''
+      : overviewDraft.programName
+
   return {
     ...activeDraft,
+    programAssignment: programContext ? { mode: 'locked', programId: programContext.id ?? null, programName: lockedProgramName } : programAssignment,
     workout: {
       ...activeDraft.workout,
       name: overviewDraft.workoutName,
-      program: overviewDraft.programName,
+      program: lockedProgramName || assignedProgramName,
       phase: overviewDraft.phase,
       phaseGoal: overviewDraft.phaseGoal,
       trainingType: overviewDraft.trainingType,
@@ -453,7 +704,13 @@ function buildAcceptedAiWorkoutDraft({ activeDraft, overviewDraft, sections, sec
           const reviewedExerciseName = exerciseDrafts[sectionIndex]?.exercises?.[exerciseIndex]?.name ?? exercise.name
           const reviewedExerciseNotes = exerciseDrafts[sectionIndex]?.exercises?.[exerciseIndex]?.notes ?? exercise.notes ?? ''
           const selectedExerciseMatch = getSelectedMatch(section.label, exercise)
+          const selectedExerciseMatchOption = getSelectedMatchOption?.(section.label, exercise)
           const selectedExistingMatch = selectedExerciseMatch && selectedExerciseMatch === exercise.exerciseMatch?.exerciseName
+          const selectedExerciseId = selectedExerciseMatchOption?.id
+            || (selectedExistingMatch ? exercise.exerciseMatch?.exerciseId : '')
+            || exercise.exerciseMatch?.exerciseId
+            || selectedExerciseMatch
+            || ''
 
           return {
             ...exercise,
@@ -462,7 +719,7 @@ function buildAcceptedAiWorkoutDraft({ activeDraft, overviewDraft, sections, sec
             exerciseMatch: {
               ...exercise.exerciseMatch,
               status: selectedExerciseMatch ? 'matched' : (exercise.exerciseMatch?.status ?? 'suggested'),
-              exerciseId: selectedExistingMatch ? exercise.exerciseMatch?.exerciseId : selectedExerciseMatch || exercise.exerciseMatch?.exerciseId || '',
+              exerciseId: selectedExerciseId,
               exerciseName: selectedExerciseMatch || exercise.exerciseMatch?.exerciseName || '',
             },
           }
@@ -482,8 +739,8 @@ function formatRest(restSeconds) {
 }
 
 function getMatchBadgeClass(status) {
-  if (status === 'matched') return 'border-[#3BE0AF]/30 bg-[#3BE0AF]/10 text-[#06B686]'
-  if (status === 'unmatched' || status === 'missing') return 'border-red-500/30 bg-red-500/10 text-red-500'
+  if (status === 'matched') return '!border-[#3BE0AF]/30 !bg-[var(--admin-shell-avatar-bg)] !text-[var(--admin-shell-nav-active-text)]'
+  if (status === 'unmatched' || status === 'missing') return '!border-[var(--ui-color-danger)]/30 !bg-[var(--ui-danger-surface)] !text-[var(--ui-color-danger)]'
   return 'border-amber-500/30 bg-amber-500/10 text-amber-500'
 }
 
@@ -498,12 +755,14 @@ function getMatchHelperText(matchStatus) {
   return 'Review suggested match before accepting'
 }
 
-function SummaryCard({ label, value, helper, featured = false }) {
+function SummaryCard({ label, value, helper, featured = false, valueTone = 'default' }) {
+  const valueColorClass = valueTone === 'danger' ? 'text-[var(--ui-color-danger)]' : 'text-[var(--admin-dashboard-card-text)]'
+
   return (
     <Card className="rounded-[18px]">
       <CardHeader className={featured ? 'flex min-h-[108px] flex-col justify-center p-4' : 'p-4'}>
         <CardDescription className="text-xs font-medium uppercase tracking-[0.14em]">{label}</CardDescription>
-        <CardTitle className={`${featured ? 'text-5xl font-semibold tracking-[-0.05em]' : 'text-lg'} text-[var(--admin-dashboard-card-text)]`}>
+        <CardTitle className={`${featured ? 'text-5xl font-semibold tracking-[-0.05em]' : 'text-lg'} ${valueColorClass}`}>
           {value}
         </CardTitle>
       </CardHeader>
@@ -541,7 +800,102 @@ function WeekTable({ weeks = [] }) {
   )
 }
 
-function ExerciseCard({ sectionIndex, exerciseIndex, sectionLabel, exercise, exerciseDraft, selectedMatch, onMatchChange, onExerciseNameChange, onExerciseNotesChange }) {
+function ExerciseMatchCombobox({ value, options = [], onValueChange, onCreateExercise = () => {}, placeholder = 'Choose existing exercise' }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const rootRef = useRef(null)
+  const selectedOption = options.find((option) => option.name === value)
+  const filteredOptions = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase()
+    if (!normalizedQuery) return options
+
+    return options.filter((option) => option.name.toLowerCase().includes(normalizedQuery))
+  }, [options, query])
+
+  useEffect(() => {
+    function handlePointerDown(event) {
+      if (!rootRef.current?.contains(event.target)) {
+        setIsOpen(false)
+      }
+    }
+
+    window.addEventListener('pointerdown', handlePointerDown)
+    return () => window.removeEventListener('pointerdown', handlePointerDown)
+  }, [])
+
+  function handleSelect(nextValue) {
+    onValueChange(nextValue)
+    setQuery('')
+    setIsOpen(false)
+  }
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        className={`${exerciseMatchSelectTriggerClassName} flex w-full items-center justify-between gap-3 text-left`}
+        aria-expanded={isOpen}
+        aria-label="Choose existing exercise match"
+        onClick={() => setIsOpen((current) => !current)}
+      >
+        <span className={selectedOption ? 'truncate text-[var(--admin-dashboard-card-text)]' : 'truncate text-[var(--admin-dashboard-card-muted)]'}>
+          {selectedOption?.name || placeholder}
+        </span>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-[var(--admin-dashboard-card-muted)] transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+      {isOpen ? (
+        <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-[360px] rounded-2xl border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-2 text-[var(--admin-dashboard-card-text)] shadow-[var(--admin-shell-shadow)]">
+          <button
+            type="button"
+            className="mb-2 flex h-10 w-full items-center justify-center gap-2 rounded-[12px] bg-transparent px-3 text-sm font-semibold text-[var(--admin-shell-primary-button-bg)] transition hover:bg-transparent hover:text-[var(--admin-shell-primary-button-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-input-focus)]"
+            onClick={() => {
+              setIsOpen(false)
+              setQuery('')
+              onCreateExercise()
+            }}
+          >
+            <Plus className="h-4 w-4 text-[var(--admin-shell-primary-button-bg)]" />
+            <span>Create exercise</span>
+          </button>
+          <div className="mb-2 flex items-center gap-2 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-3 py-2">
+            <Search className="h-4 w-4 text-[var(--admin-dashboard-card-muted)]" />
+            <input
+              autoFocus
+              type="text"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search exercises..."
+              className="w-full bg-transparent text-sm text-[var(--admin-dashboard-card-text)] outline-none placeholder:text-[var(--admin-dashboard-card-muted)]"
+            />
+          </div>
+          <div className="max-h-64 overflow-y-auto">
+            {filteredOptions.length ? (
+              filteredOptions.map((option) => {
+                const isSelected = option.name === value
+
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    className={`flex w-full items-center justify-between gap-3 rounded-[10px] px-3 py-2 text-left text-sm transition hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-shell-accent)] focus:bg-[var(--admin-dashboard-control-hover-bg)] focus:text-[var(--admin-shell-accent)] ${isSelected ? 'text-[var(--admin-shell-accent)]' : 'text-[var(--admin-dashboard-card-text)]'}`}
+                    onClick={() => handleSelect(option.name)}
+                  >
+                    <span className="truncate">{option.name}</span>
+                    {isSelected ? <Check className="h-4 w-4 shrink-0 text-[var(--admin-shell-accent)]" /> : null}
+                  </button>
+                )
+              })
+            ) : (
+              <div className="px-3 py-2 text-sm text-[var(--admin-dashboard-card-muted)]">No exercises found.</div>
+            )}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function ExerciseCard({ sectionIndex, exerciseIndex, sectionLabel, exercise, exerciseDraft, selectedMatch, exerciseMatchOptions = [], onMatchChange, onCreateExercise = () => {}, onExerciseNameChange, onExerciseNotesChange }) {
   const matchStatus = getReviewedMatchStatus(exercise, selectedMatch)
   const matchHelperText = getMatchHelperText(matchStatus)
 
@@ -572,16 +926,13 @@ function ExerciseCard({ sectionIndex, exerciseIndex, sectionLabel, exercise, exe
           ) : null}
         </div>
         <div className="min-w-[240px]">
-          <Select value={selectedMatch} onValueChange={onMatchChange}>
-            <SelectTrigger className={exerciseMatchSelectTriggerClassName}>
-              <SelectValue placeholder="Choose existing exercise" />
-            </SelectTrigger>
-            <SelectContent className={exerciseMatchSelectContentClassName}>
-              {exerciseMatchOptions.map((option) => (
-                <SelectItem key={option} value={option}>{option}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ExerciseMatchCombobox
+            value={selectedMatch}
+            options={exerciseMatchOptions}
+            onValueChange={onMatchChange}
+            onCreateExercise={onCreateExercise}
+            placeholder="Choose existing exercise"
+          />
         </div>
       </CardHeader>
       <CardContent className="space-y-4 px-4 pb-4">
@@ -610,6 +961,8 @@ export default function AiWorkoutDraftSheet({
   onAcceptAllRemaining = async () => {},
   isAccepting = false,
   destinationPreview = null,
+  programContext = null,
+  programOptions = [],
 }) {
   const sourceDraftList = useMemo(() => {
     if (drafts.length) return drafts
@@ -624,13 +977,56 @@ export default function AiWorkoutDraftSheet({
   const [isRevisingDraft, setIsRevisingDraft] = useState(false)
   const [isAcceptingDraft, setIsAcceptingDraft] = useState(false)
   const [exerciseMatches, setExerciseMatches] = useState({})
+  const [createdExerciseMatchOptions, setCreatedExerciseMatchOptions] = useState([])
+  const [exerciseCreateContext, setExerciseCreateContext] = useState(null)
+  const [isExerciseCreateSheetOpen, setIsExerciseCreateSheetOpen] = useState(false)
+  const [exerciseCreateFormValues, setExerciseCreateFormValues] = useState(() => createAiExerciseFormValues())
+  const [exerciseCreateError, setExerciseCreateError] = useState('')
+  const [isSavingCreatedExercise, setIsSavingCreatedExercise] = useState(false)
+  const [exerciseCreateMuscleOptions, setExerciseCreateMuscleOptions] = useState([])
+  const [programAssignmentMode, setProgramAssignmentMode] = useState('new')
+  const [selectedExistingProgramId, setSelectedExistingProgramId] = useState('')
 
   useEffect(() => {
     setDraftListOverride(sourceDraftList)
     setActiveDraftIndex(0)
     setRevisionPrompt('')
     setRevisionError('')
+    setCreatedExerciseMatchOptions([])
+    setExerciseCreateContext(null)
+    setIsExerciseCreateSheetOpen(false)
+    setProgramAssignmentMode('new')
+    setSelectedExistingProgramId('')
   }, [open, sourceDraftList])
+
+  useEffect(() => {
+    if (programAssignmentMode === 'existing' && !selectedExistingProgramId && programOptions[0]?.id) {
+      setSelectedExistingProgramId(programOptions[0].id)
+    }
+  }, [programAssignmentMode, selectedExistingProgramId, programOptions])
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function loadExerciseCreateOptions() {
+      try {
+        const payload = await requestAdminExerciseApi('/api/admin/exercises', { method: 'GET' })
+        if (!isMounted) return
+        setExerciseCreateMuscleOptions(payload?.muscleOptions || [])
+      } catch (_error) {
+        if (!isMounted) return
+        setExerciseCreateMuscleOptions([])
+      }
+    }
+
+    if (open) {
+      loadExerciseCreateOptions()
+    }
+
+    return () => {
+      isMounted = false
+    }
+  }, [open])
 
   function getDraftDestinationPreview(draftItem) {
     return typeof destinationPreview === 'function'
@@ -640,10 +1036,33 @@ export default function AiWorkoutDraftSheet({
 
   const activeDraft = draftList[Math.min(activeDraftIndex, draftList.length - 1)] ?? createSampleAiWorkoutDraft()
   const activeDestinationPreview = getDraftDestinationPreview(activeDraft)
+  const activeDestinationLabel = activeDestinationPreview?.shortLabel ?? activeDestinationPreview?.message?.replace(/^Will place into:\s*/, '')
   const { workout, sections = [], warnings = [] } = activeDraft
   const [overviewDraft, setOverviewDraft] = useState(() => createOverviewDraftState(activeDraft))
   const [sectionDrafts, setSectionDrafts] = useState(() => createSectionDraftState(sections))
   const [exerciseDrafts, setExerciseDrafts] = useState(() => createExerciseDraftState(sections))
+  const lockedProgramContext = programContext ? {
+    name: programContext.name || programContext.title || workout?.program || overviewDraft?.programName || '',
+    weekCount: programContext.weekCount ?? programContext.numberOfWeeks ?? '',
+    duration: programContext.duration ?? '',
+    description: programContext.description || '',
+  } : null
+  const selectedExistingProgram = useMemo(() => {
+    return programOptions.find((programOption) => programOption.id === selectedExistingProgramId) || null
+  }, [programOptions, selectedExistingProgramId])
+  const summaryProgramName = lockedProgramContext?.name
+    || (programAssignmentMode === 'existing'
+      ? selectedExistingProgram?.name || 'Select existing program'
+      : programAssignmentMode === 'unassigned'
+        ? 'Unassigned'
+        : overviewDraft.programName || 'Create new program')
+  const summaryProgramHelper = lockedProgramContext
+    ? 'Selected program'
+    : programAssignmentMode === 'existing'
+      ? 'Existing program'
+      : programAssignmentMode === 'unassigned'
+        ? 'Unassigned'
+        : 'Create new program'
 
   useEffect(() => {
     setOverviewDraft(createOverviewDraftState(activeDraft))
@@ -673,16 +1092,115 @@ export default function AiWorkoutDraftSheet({
   }, [sections, exerciseMatches])
   const blockingUnmatchedCount = reviewedMatchCounts.unmatched + reviewedMatchCounts.missing
   const hasBlockingUnmatchedExercises = blockingUnmatchedCount > 0
+  const hasBlockingScanWarning = warnings.some((warning) => warning?.blocking || warning?.severity === 'error')
+  const hasDuplicateSourceFile = Boolean(activeDestinationPreview?.duplicateSourceFileName)
+  const hasBlockingAcceptIssue = hasBlockingUnmatchedExercises || hasBlockingScanWarning
+  const acceptBlockedTitle = hasBlockingScanWarning
+    ? 'Fix the PDF scan before accepting.'
+    : hasBlockingUnmatchedExercises
+      ? 'Resolve unmatched exercises before accepting.'
+      : undefined
+  const acceptAllBlockedTitle = hasBlockingScanWarning
+    ? 'Fix blocked PDF scans before accepting all drafts.'
+    : hasBlockingUnmatchedExercises
+      ? 'Resolve unmatched exercises before accepting all drafts.'
+      : undefined
   const rawJson = useMemo(() => JSON.stringify(activeDraft, null, 2), [activeDraft])
+  const activeExerciseMatchOptions = useMemo(() => {
+    return createdExerciseMatchOptions.reduce(
+      (options, createdOption) => appendExerciseMatchOption(options, createdOption),
+      getExerciseMatchOptionsForDraft(activeDraft),
+    )
+  }, [activeDraft, createdExerciseMatchOptions])
 
   function getSelectedMatch(sectionLabel, exercise) {
     const key = getExerciseKey(sectionLabel, exercise.name)
     return exerciseMatches[key] ?? exercise.exerciseMatch?.exerciseName ?? ''
   }
 
+  function getSelectedMatchOption(sectionLabel, exercise) {
+    const selectedMatchName = getSelectedMatch(sectionLabel, exercise)
+    if (!selectedMatchName) return null
+    return activeExerciseMatchOptions.find((option) => option.name === selectedMatchName) || null
+  }
+
   function handleMatchChange(sectionLabel, exerciseName, nextMatch) {
     const key = getExerciseKey(sectionLabel, exerciseName)
     setExerciseMatches((currentMatches) => ({ ...currentMatches, [key]: nextMatch }))
+  }
+
+  function openCreateExerciseForMatch(sectionLabel, exercise) {
+    setExerciseCreateContext({ sectionLabel, exerciseName: exercise?.name || '' })
+    setExerciseCreateFormValues(createAiExerciseFormValues(exercise, activeDraft, exerciseCreateMuscleOptions))
+    setExerciseCreateError('')
+    setIsExerciseCreateSheetOpen(true)
+  }
+
+  async function handleExerciseCreateVideoFileChange(file) {
+    try {
+      const videoUrl = await uploadAiExerciseMediaFile({
+        kind: 'video',
+        file,
+        exerciseId: exerciseCreateFormValues.id || '',
+      })
+      setExerciseCreateFormValues((current) => ({
+        ...current,
+        videoName: file?.name ?? '',
+        videoUpload: null,
+        videoUrl: videoUrl || current.videoUrl || '',
+      }))
+      setExerciseCreateError('')
+    } catch (fileError) {
+      setExerciseCreateError(fileError?.message || 'Failed to upload the video.')
+    }
+  }
+
+  async function handleExerciseCreateThumbnailFileChange(file) {
+    try {
+      const thumbnailUrl = await uploadAiExerciseMediaFile({
+        kind: 'thumbnail',
+        file,
+        exerciseId: exerciseCreateFormValues.id || '',
+      })
+      setExerciseCreateFormValues((current) => ({
+        ...current,
+        thumbnailName: file?.name ?? '',
+        thumbnailUpload: null,
+        thumbnailUrl: thumbnailUrl || current.thumbnailUrl || '',
+      }))
+      setExerciseCreateError('')
+    } catch (fileError) {
+      setExerciseCreateError(fileError?.message || 'Failed to upload the thumbnail.')
+    }
+  }
+
+  async function handleCreateExerciseFromDraft() {
+    if (isSavingCreatedExercise) return
+    if (!exerciseCreateContext?.exerciseName) return
+
+    setIsSavingCreatedExercise(true)
+    setExerciseCreateError('')
+
+    try {
+      const payload = await requestAdminExerciseApi('/api/admin/exercises', {
+        method: 'POST',
+        body: JSON.stringify(exerciseCreateFormValues),
+      })
+      const createdExercise = payload?.exercise || {}
+      const createdExerciseOption = {
+        id: createdExercise.id || createdExercise.name || exerciseCreateFormValues.name,
+        name: createdExercise.name || exerciseCreateFormValues.name,
+      }
+
+      setCreatedExerciseMatchOptions((currentOptions) => appendExerciseMatchOption(currentOptions, createdExerciseOption))
+      handleMatchChange(exerciseCreateContext.sectionLabel, exerciseCreateContext.exerciseName, createdExerciseOption.name)
+      setIsExerciseCreateSheetOpen(false)
+      setExerciseCreateContext(null)
+    } catch (submitError) {
+      setExerciseCreateError(submitError?.message || 'Failed to create exercise.')
+    } finally {
+      setIsSavingCreatedExercise(false)
+    }
   }
 
   function handleOverviewChange(field, value) {
@@ -770,12 +1288,21 @@ export default function AiWorkoutDraftSheet({
       sectionDrafts: isActiveItem ? sectionDrafts : createSectionDraftState(draftSections),
       exerciseDrafts: isActiveItem ? exerciseDrafts : createExerciseDraftState(draftSections),
       getSelectedMatch: isActiveItem ? getSelectedMatch : (_sectionLabel, exercise) => exercise?.exerciseMatch?.exerciseName ?? '',
+      getSelectedMatchOption: isActiveItem
+        ? getSelectedMatchOption
+        : (_sectionLabel, exercise) => getExerciseMatchOptionsForDraft(draftItem).find((option) => option.name === exercise?.exerciseMatch?.exerciseName) || null,
+      programContext,
+      programAssignment: lockedProgramContext ? null : {
+        mode: programAssignmentMode,
+        programId: programAssignmentMode === 'existing' ? selectedExistingProgram?.id ?? '' : null,
+        programName: programAssignmentMode === 'existing' ? selectedExistingProgram?.name ?? '' : overviewDraft.programName,
+      },
     })
   }
 
   async function handleAcceptDraft() {
     if (isAcceptingDraft) return
-    if (hasBlockingUnmatchedExercises) return
+    if (hasBlockingAcceptIssue) return
     const acceptedDraft = buildAcceptedAiWorkoutDraftForItem(activeDraft, Math.min(activeDraftIndex, draftList.length - 1))
 
     setIsAcceptingDraft(true)
@@ -788,7 +1315,7 @@ export default function AiWorkoutDraftSheet({
 
   async function handleAcceptAllRemaining() {
     if (isAcceptingDraft) return
-    if (hasBlockingUnmatchedExercises) return
+    if (hasBlockingAcceptIssue) return
 
     const acceptedDrafts = draftList.map((draftItem, draftIndex) => buildAcceptedAiWorkoutDraftForItem(draftItem, draftIndex))
 
@@ -801,6 +1328,7 @@ export default function AiWorkoutDraftSheet({
   }
 
   return (
+    <div className="contents">
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
@@ -819,15 +1347,20 @@ export default function AiWorkoutDraftSheet({
                 <span>·</span>
                 <span>{workout.trainingType}</span>
               </SheetDescription>
-              {activeDestinationPreview?.message ? (
+              {activeDestinationLabel ? (
                 <div className={`inline-flex w-fit items-center rounded-full border px-3 py-1 text-xs font-semibold ${activeDestinationPreview?.isFallback ? 'border-amber-400/50 bg-amber-500/10 text-amber-600' : 'border-[#3BE0AF]/40 bg-[#3BE0AF]/10 text-[#06B686]'}`}>
-                  <span className="sr-only">{activeDestinationPreview?.isFallback ? 'Using clicked lane:' : 'Will place into:'}</span>
-                  {activeDestinationPreview?.message}
+                  <span className="sr-only">{activeDestinationPreview?.isFallback ? 'Using clicked lane:' : 'Selected lane:'}</span>
+                  {activeDestinationLabel}
                 </div>
               ) : null}
               {activeDestinationPreview?.appendWarning ? (
                 <div className="inline-flex w-fit items-center rounded-full border border-amber-400/50 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-600">
                   {activeDestinationPreview.appendWarning}
+                </div>
+              ) : null}
+              {activeDestinationPreview?.duplicateWarning ? (
+                <div className="inline-flex w-fit items-center rounded-full border border-red-400/50 bg-red-500/10 px-3 py-1 text-xs font-semibold text-red-600">
+                  {activeDestinationPreview.duplicateWarning}
                 </div>
               ) : null}
             </div>
@@ -870,11 +1403,11 @@ export default function AiWorkoutDraftSheet({
         <ScrollArea className="min-h-0 flex-1">
           <div className="space-y-6 px-6 py-5">
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-              <SummaryCard label="Program" value={workout.program} helper={workout.phase} />
+              <SummaryCard label="Program" value={summaryProgramName} helper={summaryProgramHelper} />
               <SummaryCard label="Sections" value={sections.length} featured />
               <SummaryCard label="Exercises" value={exerciseCount} featured />
               <SummaryCard label="Sets" value={totalSetCount} featured />
-              <SummaryCard label="Match Issues" value={blockingUnmatchedCount} helper={reviewedMatchCounts.suggested ? `${reviewedMatchCounts.suggested} suggested match${reviewedMatchCounts.suggested === 1 ? '' : 'es'}` : 'All exercise matches resolved'} featured />
+              <SummaryCard label="Match Issues" value={blockingUnmatchedCount} helper={reviewedMatchCounts.suggested ? `${reviewedMatchCounts.suggested} suggested match${reviewedMatchCounts.suggested === 1 ? '' : 'es'}` : 'All exercise matches resolved'} featured valueTone={blockingUnmatchedCount > 0 ? 'danger' : 'default'} />
             </div>
 
             {blockingUnmatchedCount > 0 ? (
@@ -985,65 +1518,133 @@ export default function AiWorkoutDraftSheet({
                   </CardContent>
                 </Card>
 
-                <Card className="rounded-[18px]">
-                  <CardHeader className="p-5">
-                    <CardTitle className="text-lg">Program details</CardTitle>
-                    <CardDescription>Only needed if no existing program matches this import.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="grid gap-4 px-5 pb-5 md:grid-cols-2">
-                    <div className="grid gap-2">
-                      <Label htmlFor="ai-draft-program-name">Program name</Label>
-                      <Input
-                        id="ai-draft-program-name"
-                        value={overviewDraft.programName}
-                        onChange={(event) => handleOverviewChange('programName', event.target.value)}
-                        placeholder="Only needed if no existing program matches this import"
-                        className={overviewInputClassName}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="ai-draft-number-of-weeks">Number of weeks</Label>
-                      <Input
-                        id="ai-draft-number-of-weeks"
-                        type="number"
-                        min="1"
-                        value={overviewDraft.numberOfWeeks}
-                        onChange={(event) => handleOverviewChange('numberOfWeeks', event.target.value)}
-                        className={overviewInputClassName}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="ai-draft-start-date">Start date</Label>
-                      <Input
-                        id="ai-draft-start-date"
-                        type="date"
-                        value={overviewDraft.startDate}
-                        onChange={(event) => handleOverviewChange('startDate', event.target.value)}
-                        className={overviewInputClassName}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="ai-draft-end-date">End date</Label>
-                      <Input
-                        id="ai-draft-end-date"
-                        type="date"
-                        value={overviewDraft.endDate}
-                        onChange={(event) => handleOverviewChange('endDate', event.target.value)}
-                        className={overviewInputClassName}
-                      />
-                    </div>
-                    <div className="grid gap-2 md:col-span-2">
-                      <Label htmlFor="ai-draft-description">Description</Label>
-                      <Textarea
-                        id="ai-draft-description"
-                        value={overviewDraft.description}
-                        onChange={(event) => handleOverviewChange('description', event.target.value)}
-                        placeholder="Only needed if no existing program matches this import"
-                        className={overviewTextareaClassName}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
+                {lockedProgramContext ? (
+                  <Card className="rounded-[18px]">
+                    <CardHeader className="p-5">
+                      <CardTitle className="text-lg">Selected program</CardTitle>
+                      <CardDescription>This workout will be added to the program you are already editing.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid gap-4 px-5 pb-5 md:grid-cols-2">
+                      <div className="rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-4">
+                        <p className="text-xs font-medium uppercase tracking-[0.12em] text-[var(--admin-dashboard-card-muted)]">Program</p>
+                        <p className="mt-1 text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{lockedProgramContext.name || overviewDraft.programName || 'Selected program'}</p>
+                      </div>
+                      <div className="rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-4">
+                        <p className="text-xs font-medium uppercase tracking-[0.12em] text-[var(--admin-dashboard-card-muted)]">Planner duration</p>
+                        <p className="mt-1 text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{lockedProgramContext.duration || `${lockedProgramContext.weekCount || overviewDraft.numberOfWeeks} weeks`}</p>
+                      </div>
+                      {lockedProgramContext.description ? (
+                        <div className="rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-4 md:col-span-2">
+                          <p className="text-xs font-medium uppercase tracking-[0.12em] text-[var(--admin-dashboard-card-muted)]">Description</p>
+                          <p className="mt-1 text-sm text-[var(--admin-dashboard-card-text)]">{lockedProgramContext.description}</p>
+                        </div>
+                      ) : null}
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card className="rounded-[18px]">
+                    <CardHeader className="p-5">
+                      <CardTitle className="text-lg">Program details</CardTitle>
+                      <CardDescription>Choose where this imported workout should live.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="grid gap-4 px-5 pb-5 md:grid-cols-2">
+                      <div className="grid gap-2 md:col-span-2">
+                        <Label htmlFor="ai-draft-program-assignment">Program option</Label>
+                        <Select value={programAssignmentMode} onValueChange={setProgramAssignmentMode}>
+                          <SelectTrigger id="ai-draft-program-assignment" className={overviewSelectTriggerClassName}>
+                            <SelectValue placeholder="Select program option" />
+                          </SelectTrigger>
+                          <SelectContent className={overviewSelectContentClassName}>
+                            {programAssignmentOptions.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {programAssignmentMode === 'existing' ? (
+                        <div className="grid gap-2 md:col-span-2">
+                          <Label htmlFor="ai-draft-existing-program">Existing program</Label>
+                          <Select value={selectedExistingProgramId} onValueChange={setSelectedExistingProgramId}>
+                            <SelectTrigger id="ai-draft-existing-program" className={overviewSelectTriggerClassName}>
+                              <SelectValue placeholder={programOptions.length ? 'Select existing program' : 'No existing programs found'} />
+                            </SelectTrigger>
+                            <SelectContent className={overviewSelectContentClassName}>
+                              {programOptions.map((programOption) => (
+                                <SelectItem key={programOption.id} value={programOption.id}>
+                                  {programOption.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-[var(--admin-dashboard-card-muted)]">Accepting this draft will attach the workout to the selected program.</p>
+                        </div>
+                      ) : null}
+
+                      {programAssignmentMode === 'unassigned' ? (
+                        <div className="rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-4 text-sm text-[var(--admin-dashboard-card-muted)] md:col-span-2">
+                          This will save the workout as unassigned in the library so it can be placed into a program later.
+                        </div>
+                      ) : null}
+
+                      {programAssignmentMode === 'new' ? (
+                        <>
+                      <div className="grid gap-2">
+                        <Label htmlFor="ai-draft-program-name">Program name</Label>
+                        <Input
+                          id="ai-draft-program-name"
+                          value={overviewDraft.programName}
+                          onChange={(event) => handleOverviewChange('programName', event.target.value)}
+                          placeholder="Only needed if no existing program matches this import"
+                          className={overviewInputClassName}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="ai-draft-number-of-weeks">Number of weeks</Label>
+                        <Input
+                          id="ai-draft-number-of-weeks"
+                          type="number"
+                          min="1"
+                          value={overviewDraft.numberOfWeeks}
+                          onChange={(event) => handleOverviewChange('numberOfWeeks', event.target.value)}
+                          className={overviewInputClassName}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="ai-draft-start-date">Start date</Label>
+                        <Input
+                          id="ai-draft-start-date"
+                          type="date"
+                          value={overviewDraft.startDate}
+                          onChange={(event) => handleOverviewChange('startDate', event.target.value)}
+                          className={overviewInputClassName}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="ai-draft-end-date">End date</Label>
+                        <Input
+                          id="ai-draft-end-date"
+                          type="date"
+                          value={overviewDraft.endDate}
+                          onChange={(event) => handleOverviewChange('endDate', event.target.value)}
+                          className={overviewInputClassName}
+                        />
+                      </div>
+                      <div className="grid gap-2 md:col-span-2">
+                        <Label htmlFor="ai-draft-description">Description</Label>
+                        <Textarea
+                          id="ai-draft-description"
+                          value={overviewDraft.description}
+                          onChange={(event) => handleOverviewChange('description', event.target.value)}
+                          placeholder="Only needed if no existing program matches this import"
+                          className={overviewTextareaClassName}
+                        />
+                      </div>
+                        </>
+                      ) : null}
+                    </CardContent>
+                  </Card>
+                )}
 
                 {warnings.length > 0 ? (
                   <Alert tone="warning" title="Warnings">
@@ -1061,7 +1662,7 @@ export default function AiWorkoutDraftSheet({
               </TabsContent>
 
               <TabsContent value="sections">
-                <Accordion type="multiple" defaultValue={sections.map((section) => section.label)} className="overflow-hidden rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)]">
+                <Accordion type="multiple" defaultValue={[]} className="overflow-hidden rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)]">
                   {sections.map((section, sectionIndex) => {
                     const sectionDraft = sectionDrafts[sectionIndex] ?? createSectionDraftState([section])[0]
 
@@ -1120,7 +1721,9 @@ export default function AiWorkoutDraftSheet({
                             exercise={exercise}
                             exerciseDraft={exerciseDraft}
                             selectedMatch={getSelectedMatch(section.label, exercise)}
+                            exerciseMatchOptions={activeExerciseMatchOptions}
                             onMatchChange={(nextMatch) => handleMatchChange(section.label, exercise.name, nextMatch)}
+                            onCreateExercise={() => openCreateExerciseForMatch(section.label, exercise)}
                             onExerciseNameChange={(nextName) => handleExerciseDraftChange(sectionIndex, exerciseIndex, 'name', nextName)}
                             onExerciseNotesChange={(nextNotes) => handleExerciseDraftChange(sectionIndex, exerciseIndex, 'notes', nextNotes)}
                           />
@@ -1158,16 +1761,13 @@ export default function AiWorkoutDraftSheet({
                           </div>
                           <p className="mt-1 text-sm text-[var(--admin-dashboard-card-muted)]">{matchHelperText}</p>
                         </div>
-                        <Select value={selectedMatch} onValueChange={(nextMatch) => handleMatchChange(section.label, exercise.name, nextMatch)}>
-                          <SelectTrigger className="h-10 rounded-[12px]">
-                            <SelectValue placeholder="Choose existing exercise" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {exerciseMatchOptions.map((option) => (
-                              <SelectItem key={option} value={option}>{option}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <ExerciseMatchCombobox
+                          value={selectedMatch}
+                          options={activeExerciseMatchOptions}
+                          onValueChange={(nextMatch) => handleMatchChange(section.label, exercise.name, nextMatch)}
+                          onCreateExercise={() => openCreateExerciseForMatch(section.label, exercise)}
+                          placeholder="Choose existing exercise"
+                        />
                       </CardContent>
                     </Card>
                     )
@@ -1187,7 +1787,7 @@ export default function AiWorkoutDraftSheet({
             <Card className="rounded-[18px]">
               <CardHeader className="p-5 pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg"><Bot className="size-5 text-[#06B686]" aria-hidden="true" />Revise with AI</CardTitle>
-                <CardDescription>Optional. Tell the importer what to change, then regenerate this temporary draft.</CardDescription>
+                <CardDescription>Tell the AI what to change and click on the "Revise with AI" button to apply those changes.</CardDescription>
               </CardHeader>
               <CardContent className="px-5 pb-5">
                 {revisionError ? (
@@ -1232,8 +1832,8 @@ export default function AiWorkoutDraftSheet({
               variant="outline"
               className="rounded-[12px] min-h-[40px] border-[#3BE0AF]/40 bg-[#3BE0AF]/10 text-[#06B686] hover:bg-[#3BE0AF]/15 hover:text-[#06B686]"
               onClick={handleAcceptAllRemaining}
-              disabled={isAccepting || isAcceptingDraft || hasBlockingUnmatchedExercises}
-              title={hasBlockingUnmatchedExercises ? 'Match all exercises before accepting these drafts.' : undefined}
+              disabled={isAccepting || isAcceptingDraft || hasBlockingAcceptIssue}
+              title={acceptAllBlockedTitle}
             >
               {isAccepting || isAcceptingDraft ? 'Accepting all…' : 'Accept All Remaining'}
             </Button>
@@ -1242,14 +1842,37 @@ export default function AiWorkoutDraftSheet({
             type="button"
             className="rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]"
             onClick={handleAcceptDraft}
-            disabled={isAccepting || isAcceptingDraft || hasBlockingUnmatchedExercises}
-            title={hasBlockingUnmatchedExercises ? 'Match all exercises before accepting this draft.' : undefined}
+            disabled={isAccepting || isAcceptingDraft || hasBlockingAcceptIssue}
+            title={acceptBlockedTitle}
           >
-            {hasBlockingUnmatchedExercises ? 'Resolve matches to accept' : isAccepting || isAcceptingDraft ? 'Accepting…' : 'Accept Draft'}
+            {hasBlockingScanWarning ? 'Fix PDF scan to accept' : hasBlockingUnmatchedExercises ? 'Resolve matches to accept' : isAccepting || isAcceptingDraft ? 'Accepting…' : 'Accept Draft'}
           </Button>
           </div>
         </SheetFooter>
       </SheetContent>
     </Sheet>
+    <ExerciseEditorDialog
+      open={isExerciseCreateSheetOpen}
+      onOpenChange={(isOpen) => {
+        setIsExerciseCreateSheetOpen(isOpen)
+        if (!isOpen) {
+          setExerciseCreateError('')
+        }
+      }}
+      mode="create"
+      values={exerciseCreateFormValues}
+      onValuesChange={setExerciseCreateFormValues}
+      equipmentOptions={exerciseCreateEquipmentOptions}
+      muscleOptions={exerciseCreateMuscleOptions}
+      categoryOptions={exerciseCreateCategoryOptions}
+      difficultyOptions={exerciseCreateDifficultyOptions}
+      statusOptions={exerciseCreateStatusOptions}
+      errorMessage={exerciseCreateError}
+      isSaving={isSavingCreatedExercise}
+      onThumbnailFileChange={handleExerciseCreateThumbnailFileChange}
+      onVideoFileChange={handleExerciseCreateVideoFileChange}
+      onPrimaryAction={handleCreateExerciseFromDraft}
+    />
+    </div>
   )
 }

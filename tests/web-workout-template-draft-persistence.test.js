@@ -102,3 +102,96 @@ test('createWorkoutTemplate persists draft sections exercises and sets into work
     ['template-exercise-2', 0, 'straight', 1, 30, null, null, 9, 90, 'Fast'],
   ])
 })
+
+
+test('listWorkoutTemplates rehydrates saved template sections for the editor sheet', async () => {
+  const fetchImpl = async (url, options = {}) => {
+    const parsedUrl = new URL(url)
+    const table = parsedUrl.pathname.split('/').pop()
+
+    if (table === 'workout_templates' && (options.method ?? 'GET') === 'GET') {
+      return createJsonResponse([
+        {
+          id: 'template-edge-a',
+          name: 'Edge Work A',
+          description: 'Reviewed edge work draft.',
+          training_type: 'Edge Work',
+          estimated_duration_minutes: 60,
+          thumbnail_url: null,
+          status: 'active',
+        },
+      ])
+    }
+
+    if (table === 'workout_template_exercises' && (options.method ?? 'GET') === 'GET') {
+      return createJsonResponse([
+        {
+          id: 'template-exercise-1',
+          workout_template_id: 'template-edge-a',
+          workout_template_block_id: null,
+          exercise_id: '00000000-0000-4000-8000-000000000001',
+          name_snapshot: 'Mohawk Edge Hold',
+          sort_order: 0,
+          notes: 'Stay low.',
+          default_rest_seconds: null,
+        },
+      ])
+    }
+
+    if (table === 'workout_template_sets' && (options.method ?? 'GET') === 'GET') {
+      return createJsonResponse([
+        {
+          id: 'template-set-1',
+          workout_template_exercise_id: 'template-exercise-1',
+          sort_order: 0,
+          set_type: 'straight',
+          target_reps: 3,
+          target_load: null,
+          target_load_unit: null,
+          target_duration_seconds: 20,
+          target_distance: null,
+          target_distance_unit: null,
+          target_rpe: 8,
+          target_rir: null,
+          target_rest_seconds: 45,
+          notes: 'Controlled',
+        },
+      ])
+    }
+
+    if (table === 'workout_template_blocks' && (options.method ?? 'GET') === 'GET') {
+      return createJsonResponse([
+        {
+          id: 'block-1',
+          workout_template_id: 'template-edge-a',
+          block_code: 'A1',
+          title: 'A1',
+          instructions: 'Edge block.',
+          sort_order: 0,
+        },
+      ])
+    }
+
+    return createJsonResponse({ message: `Unexpected ${options.method ?? 'GET'} ${table}` }, { status: 500 })
+  }
+
+  const repository = createProgramWorkoutRepository({
+    supabaseUrl: 'https://example.supabase.co',
+    serviceRoleKey: 'service-role-key',
+    fetchImpl,
+  })
+
+  const templates = await repository.listWorkoutTemplates()
+  const edgeWorkout = templates[0]
+
+  assert.equal(edgeWorkout.name, 'Edge Work A')
+  assert.equal(edgeWorkout.section_count, 1)
+  assert.equal(edgeWorkout.exercise_count, 1)
+  assert.equal(edgeWorkout.set_count, 1)
+  assert.deepEqual(edgeWorkout.trainingSections.map((section) => [section.label, section.instruction, section.exercises.length]), [
+    ['A1', 'Edge block.', 1],
+  ])
+  assert.deepEqual(edgeWorkout.trainingSections[0].exercises.map((exercise) => [exercise.title, exercise.instruction, exercise.sets.length]), [
+    ['Mohawk Edge Hold', 'Stay low.', 1],
+  ])
+})

@@ -11,7 +11,7 @@ import {
 import { Bot, ChevronDown, FileText, LoaderCircle, MoreHorizontal, Plus, Trash2, Upload } from 'lucide-react'
 import { parseAsJson, useQueryState } from 'nuqs'
 
-import AiWorkoutDraftSheet, { createSampleAiWorkoutDrafts } from '@/components/admin/ai-workout-draft-sheet'
+import AiWorkoutDraftSheet from '@/components/admin/ai-workout-draft-sheet'
 import WorkoutEditorDialog from '@/components/admin/workout-editor-dialog'
 import { Filters } from '@/components/reui/filters'
 import Badge from '@/components/ui/badge'
@@ -82,6 +82,7 @@ function mapWorkoutTemplateToWorkoutRow(template = {}) {
     status: formatWorkoutStatus(template.status),
     description: template.description ?? '',
     thumbnailUrl: template.thumbnail_url ?? '',
+    trainingSections: Array.isArray(template.trainingSections) ? template.trainingSections : [],
   }
 }
 
@@ -95,6 +96,15 @@ function createWorkoutFormValues(selectedWorkout = null) {
     focusArea: selectedWorkout?.focusArea && selectedWorkout.focusArea !== '--' ? normalizeWorkoutFocusArea(selectedWorkout.focusArea) : '',
     description: selectedWorkout?.description ?? '',
   }
+}
+
+function collapseTrainingSectionsOnLoad(sections = []) {
+  return Array.isArray(sections)
+    ? sections.map((section) => ({
+      ...section,
+      isExpanded: false,
+    }))
+    : []
 }
 
 function StatusCell({ status }) {
@@ -220,6 +230,26 @@ function createDraftWorkoutFormValues(acceptedDraft) {
     status: 'active',
     focusArea: normalizeWorkoutFocusArea(acceptedDraft?.workout?.trainingType ?? ''),
     description: acceptedDraft?.workout?.description ?? acceptedDraft?.workout?.notes ?? '',
+  }
+}
+
+function createDraftWorkoutTemplatePayload(acceptedDraft, trainingSections) {
+  return {
+    name: acceptedDraft?.workout?.name ?? 'AI imported workout',
+    description: acceptedDraft?.workout?.description ?? acceptedDraft?.workout?.notes ?? '',
+    focusArea: normalizeWorkoutFocusArea(acceptedDraft?.workout?.trainingType ?? ''),
+    status: 'active',
+    trainingSections,
+  }
+}
+
+function mapProgramOption(program = {}) {
+  return {
+    id: program.id,
+    name: program.name ?? 'Untitled program',
+    description: program.description ?? '',
+    weekCount: program.weekCount ?? '',
+    duration: program.duration ?? '',
   }
 }
 
@@ -434,7 +464,9 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
   const [isAiWorkoutDraftSheetOpen, setIsAiWorkoutDraftSheetOpen] = useState(false)
   const [aiWorkoutDrafts, setAiWorkoutDrafts] = useState([])
   const [acceptedAiWorkoutDraft, setAcceptedAiWorkoutDraft] = useState(null)
+  const [programOptions, setProgramOptions] = useState([])
   const [workoutImportFiles, setWorkoutImportFiles] = useState([])
+  const [aiWorkoutImportError, setAiWorkoutImportError] = useState('')
   const [workoutEditorMessage, setWorkoutEditorMessage] = useState('')
   const [isSavingWorkoutTemplate, setIsSavingWorkoutTemplate] = useState(false)
   const [isDeleteWorkoutDialogOpen, setIsDeleteWorkoutDialogOpen] = useState(false)
@@ -451,7 +483,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
   })
 
   const saveDisclaimer = ''
-  const workoutAiProcessingTimerRef = useRef(null)
+  const workoutAiProcessingAbortRef = useRef(null)
 
   const focusAreaOptions = useMemo(
     () => buildSelectFilterOptions(workoutsData.map((workout) => workout.focusArea).filter((value) => value && value !== '--')),
@@ -480,9 +512,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
 
   useEffect(() => {
     return () => {
-      if (workoutAiProcessingTimerRef.current) {
-        window.clearTimeout(workoutAiProcessingTimerRef.current)
-      }
+      workoutAiProcessingAbortRef.current?.abort()
     }
   }, [])
 
@@ -509,6 +539,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
       return [...currentFiles, ...newPdfFiles]
     })
     setIsAiWorkoutImportDialogOpen(true)
+    setAiWorkoutImportError('')
     event.target.value = ''
   }
 
@@ -518,6 +549,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
 
   function handleWorkoutImportPdfButtonClick() {
     if (workoutImportFiles.length > 0) {
+      setAiWorkoutImportError('')
       setIsAiWorkoutImportDialogOpen(true)
       return
     }
@@ -525,31 +557,49 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
     document.getElementById('workout-import-pdf-upload')?.click()
   }
 
-  function completeWorkoutAiDraftGeneration() {
-    setAiWorkoutDrafts(createSampleAiWorkoutDrafts(workoutImportFiles))
-    setIsWorkoutAiProcessing(false)
-    workoutAiProcessingTimerRef.current = null
-    setIsAiWorkoutImportDialogOpen(false)
-    setIsAiWorkoutDraftSheetOpen(true)
-  }
-
-  function handleGenerateWorkoutImportDraft() {
+  async function handleGenerateWorkoutImportDraft() {
     if (workoutImportFiles.length === 0 || isWorkoutAiProcessing) return
 
-    if (workoutAiProcessingTimerRef.current) {
-      window.clearTimeout(workoutAiProcessingTimerRef.current)
-    }
-
+    workoutAiProcessingAbortRef.current?.abort()
+    const abortController = new AbortController()
+    workoutAiProcessingAbortRef.current = abortController
+    setAiWorkoutImportError('')
     setIsWorkoutAiProcessing(true)
-    workoutAiProcessingTimerRef.current = window.setTimeout(completeWorkoutAiDraftGeneration, 3000)
+
+    try {
+      const formData = new FormData()
+      workoutImportFiles.forEach((file) => formData.append('files', file))
+
+      const response = await fetch('/api/admin/ai-workout-drafts', {
+        method: 'POST',
+        body: formData,
+        signal: abortController.signal,
+      })
+      const body = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(body?.error || 'Failed to create AI workout drafts.')
+      }
+
+      setAiWorkoutDrafts(body.drafts ?? [])
+      setIsAiWorkoutImportDialogOpen(false)
+      setIsAiWorkoutDraftSheetOpen(true)
+    } catch (error) {
+      if (error?.name !== 'AbortError') {
+        console.error('Failed to create AI workout drafts.', error)
+        setAiWorkoutImportError(error.message || 'Failed to create AI workout drafts.')
+      }
+    } finally {
+      if (workoutAiProcessingAbortRef.current === abortController) {
+        workoutAiProcessingAbortRef.current = null
+      }
+      setIsWorkoutAiProcessing(false)
+    }
   }
 
   function handleCancelWorkoutAiProcessing() {
-    if (workoutAiProcessingTimerRef.current) {
-      window.clearTimeout(workoutAiProcessingTimerRef.current)
-      workoutAiProcessingTimerRef.current = null
-    }
-
+    workoutAiProcessingAbortRef.current?.abort()
+    workoutAiProcessingAbortRef.current = null
     setIsWorkoutAiProcessing(false)
   }
 
@@ -565,7 +615,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
     setWorkoutDialogMode('draft')
     setSelectedWorkoutId(null)
     setWorkoutFormValues(createDraftWorkoutFormValues(acceptedAiWorkoutDraft))
-    setWorkoutTrainingSections(createDraftWorkoutTrainingSections(acceptedAiWorkoutDraft.sections))
+    setWorkoutTrainingSections(collapseTrainingSectionsOnLoad(createDraftWorkoutTrainingSections(acceptedAiWorkoutDraft.sections)))
     setWorkoutEditorMessage('')
     setIsCreateWorkoutDialogOpen(true)
   }
@@ -576,7 +626,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
     setOpenRowActionMenuId(null)
     setWorkoutDialogMode('edit')
     setSelectedWorkoutId(workout.id)
-    setWorkoutTrainingSections([])
+    setWorkoutTrainingSections(collapseTrainingSectionsOnLoad(workout.trainingSections))
     setWorkoutFormValues(createWorkoutFormValues(workout))
     setWorkoutEditorMessage('')
     setIsCreateWorkoutDialogOpen(true)
@@ -588,7 +638,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
     setOpenRowActionMenuId(null)
     setWorkoutDialogMode('duplicate')
     setSelectedWorkoutId(workout.id)
-    setWorkoutTrainingSections([])
+    setWorkoutTrainingSections(collapseTrainingSectionsOnLoad(workout.trainingSections))
     setWorkoutFormValues(createWorkoutFormValues(workout))
     setWorkoutEditorMessage('')
     setIsCreateWorkoutDialogOpen(true)
@@ -728,14 +778,24 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
     try {
       const isEdit = workoutDialogMode === 'edit'
       const isDraftPlanCreate = workoutDialogMode === 'draft'
-      const response = await fetch(isDraftPlanCreate ? '/api/admin/program-workouts' : '/api/admin/workout-templates', {
-        method: isEdit ? 'PATCH' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(isDraftPlanCreate ? {
+      const draftProgramAssignment = acceptedAiWorkoutDraft?.programAssignment ?? { mode: 'new' }
+      const saveUrl = isDraftPlanCreate && draftProgramAssignment.mode === 'unassigned'
+        ? '/api/admin/workout-templates'
+        : isDraftPlanCreate
+          ? '/api/admin/program-workouts'
+          : '/api/admin/workout-templates'
+      const draftPayload = draftProgramAssignment.mode === 'unassigned'
+        ? createDraftWorkoutTemplatePayload(acceptedAiWorkoutDraft, workoutTrainingSections)
+        : {
           createProgramPlanFromDraft: true,
+          programId: draftProgramAssignment.mode === 'existing' ? draftProgramAssignment.programId : undefined,
           workout: acceptedAiWorkoutDraft?.workout,
           trainingSections: workoutTrainingSections,
-        } : {
+        }
+      const response = await fetch(saveUrl, {
+        method: isEdit ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(isDraftPlanCreate ? draftPayload : {
           id: isEdit ? selectedWorkoutId : undefined,
           ...workoutFormValues,
           focusArea: workoutFormValues.focusArea === 'none' ? '' : workoutFormValues.focusArea,
@@ -748,7 +808,14 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
       }
       if (isDraftPlanCreate) {
         setAcceptedAiWorkoutDraft(null)
-        setWorkoutEditorMessage('Program plan created from draft.')
+        if (draftProgramAssignment.mode === 'unassigned') {
+          await reloadWorkoutTemplates()
+          setWorkoutEditorMessage('Workout saved as unassigned.')
+        } else if (draftProgramAssignment.mode === 'existing') {
+          setWorkoutEditorMessage('Workout added to existing program.')
+        } else {
+          setWorkoutEditorMessage('Program plan created from draft.')
+        }
       } else {
         await reloadWorkoutTemplates()
       }
@@ -793,25 +860,35 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
       setError('')
 
       try {
-        const response = await fetch('/api/admin/workout-templates', {
-          cache: 'no-store',
-        })
-        const payload = await response.json().catch(() => ({}))
+        const [workoutResponse, programResponse] = await Promise.all([
+          fetch('/api/admin/workout-templates', { cache: 'no-store' }),
+          fetch('/api/admin/programs', { cache: 'no-store' }),
+        ])
+        const workoutPayload = await workoutResponse.json().catch(() => ({}))
+        const programPayload = await programResponse.json().catch(() => ({}))
 
-        if (!response.ok) {
-          throw new Error(payload?.error || 'Failed to load workouts.')
+        if (!workoutResponse.ok) {
+          throw new Error(workoutPayload?.error || 'Failed to load workouts.')
+        }
+        if (!programResponse.ok) {
+          throw new Error(programPayload?.error || 'Failed to load programs.')
         }
 
-        const nextWorkouts = Array.isArray(payload.workoutTemplates)
-          ? payload.workoutTemplates.map(mapWorkoutTemplateToWorkoutRow)
+        const nextWorkouts = Array.isArray(workoutPayload.workoutTemplates)
+          ? workoutPayload.workoutTemplates.map(mapWorkoutTemplateToWorkoutRow)
+          : []
+        const nextProgramOptions = Array.isArray(programPayload.programs)
+          ? programPayload.programs.map(mapProgramOption).filter((programOption) => programOption.id)
           : []
 
         if (isMounted) {
           setWorkoutsData(nextWorkouts)
+          setProgramOptions(nextProgramOptions)
         }
       } catch (loadError) {
         if (isMounted) {
           setWorkoutsData([])
+          setProgramOptions([])
           setError(loadError?.message || 'Failed to load workouts.')
         }
       } finally {
@@ -1027,6 +1104,12 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
               </DialogHeader>
 
               <div className="space-y-5">
+                {aiWorkoutImportError ? (
+                  <div className="rounded-[14px] border border-[var(--ui-danger-border)] bg-[var(--ui-danger-surface)] px-4 py-3 text-sm font-medium text-[var(--ui-danger)]">
+                    {aiWorkoutImportError}
+                  </div>
+                ) : null}
+
                 <input
                   id="workout-import-dialog-pdf-upload"
                   type="file"
@@ -1150,6 +1233,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
         open={isAiWorkoutDraftSheetOpen}
         onOpenChange={setIsAiWorkoutDraftSheetOpen}
         drafts={aiWorkoutDrafts}
+        programOptions={programOptions}
         onCancel={() => setIsAiWorkoutDraftSheetOpen(false)}
         onAccept={handleAcceptAiWorkoutDraft}
       />

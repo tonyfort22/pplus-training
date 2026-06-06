@@ -5,6 +5,7 @@ import { resolve } from 'node:path'
 
 const repoRoot = resolve(import.meta.dirname, '..')
 const plannerPath = resolve(repoRoot, 'apps/web/components/admin/program-planner-view.jsx')
+const realPlannerRoutePath = resolve(repoRoot, 'apps/web/app/admin/programs/[programId]/page.jsx')
 
 function readPlannerSource() {
   return readFileSync(plannerPath, 'utf8')
@@ -13,7 +14,8 @@ function readPlannerSource() {
 test('program planner day lanes expose an AI import action beside normal template create', () => {
   const source = readPlannerSource()
 
-  assert.match(source, /import AiWorkoutDraftSheet, \{ createSampleAiWorkoutDrafts \} from '@\/components\/admin\/ai-workout-draft-sheet'/)
+  assert.match(source, /import AiWorkoutDraftSheet from '@\/components\/admin\/ai-workout-draft-sheet'/)
+  assert.doesNotMatch(source, /createSampleAiWorkoutDrafts/)
   assert.match(source, /function DayLane\([\s\S]*onImportAiWorkout/)
   assert.match(source, /onClick=\{\(\) => onImportAiWorkout\(day\.id\)\}/)
   assert.match(source, /Import AI Workout/)
@@ -28,7 +30,7 @@ test('program planner AI import keeps selected week and day context through draf
   assert.match(source, /const \[isAcceptingAiWorkoutDraft, setIsAcceptingAiWorkoutDraft\] = useState\(false\)/)
   assert.match(source, /function handleImportAiWorkout\(weekId, dayId\)/)
   assert.match(source, /setAiWorkoutImportTarget\(\{ weekId, dayId, weekLabel: targetWeek\?\.label, dayLabel: targetDay\?\.label, day: targetDay \}\)/)
-  assert.match(source, /setAiWorkoutDrafts\(createSampleAiWorkoutDrafts\(aiWorkoutImportFiles\)\)/)
+  assert.match(source, /fetch\('\/api\/admin\/ai-workout-drafts'/)
   assert.match(source, /function createProgramWorkoutDraftPayload\(\{ planner, day, acceptedDraft, trainingSections, sortOrder \}\)/)
   assert.match(source, /createProgramPlanFromDraft: true/)
   assert.match(source, /programId: planner\.id/)
@@ -51,14 +53,42 @@ test('program planner reuses the AI draft review sheet instead of forking anothe
 })
 
 
-test('program planner AI import QA mode is explicit and PDF-only', () => {
+test('real admin program detail route hides upload sheet while AI draft review sheet is open', () => {
+  const source = readPlannerSource()
+
+  assert.match(source, /<Sheet open=\{Boolean\(aiWorkoutImportTarget\) && !isAiWorkoutDraftSheetOpen\}/)
+  assert.match(source, /onOpenChange=\{\(isOpen\) => !isOpen && !isAiWorkoutDraftSheetOpen && closeAiWorkoutImport\(\)\}/)
+  assert.match(source, /<AiWorkoutDraftSheet[\s\S]*open=\{isAiWorkoutDraftSheetOpen\}/)
+})
+
+
+test('real admin program detail route uses persisted planner AI import unless it falls back to local seed data', () => {
+  const source = readPlannerSource()
+  const realRouteSource = readFileSync(realPlannerRoutePath, 'utf8')
+
+  assert.match(realRouteSource, /app\/admin\/programs\/\[programId\]\/page\.jsx|ProgramPlannerPage/)
+  assert.match(realRouteSource, /let isLocalSeedPlanner = true/)
+  assert.match(realRouteSource, /program = createProgramPlannerFromAdminProgram\(adminProgram\)[\s\S]*isLocalSeedPlanner = false/)
+  assert.match(realRouteSource, /const legacySeedTitle = seedTitle\.replace\(\/\^Program\\s\+\/i, 'Training Program '\)/)
+  assert.match(realRouteSource, /candidateName === seedTitle\.toLowerCase\(\) \|\| candidateName === legacySeedTitle\.toLowerCase\(\)/)
+  assert.match(realRouteSource, /<ProgramPlannerView program=\{program\} enableLocalAiImportPersistence=\{isLocalSeedPlanner\} \/>/)
+  assert.doesNotMatch(realRouteSource, /planner-ai-import/)
+  assert.match(source, /fetch\('\/api\/admin\/ai-workout-drafts'/)
+  assert.doesNotMatch(source, /createSampleAiWorkoutDrafts/)
+})
+
+
+test('program planner AI import QA route uses the real PDF draft API instead of sample drafts', () => {
   const source = readPlannerSource()
   const qaRouteSource = readFileSync(resolve(repoRoot, 'apps/web/app/qa/planner-ai-import/page.jsx'), 'utf8')
+  const createDraftsBlock = source.match(/async function handleCreateAiWorkoutDrafts\(\) \{[\s\S]*?\n  async function createPersistedAiWorkoutDraftForTarget/)?.[0] ?? ''
 
-  assert.match(source, /enableLocalAiImportQa = false/)
   assert.match(source, /accept="application\/pdf,\.pdf"/)
-  assert.match(source, /enableLocalAiImportQa[\s\S]*createPlannerWorkoutFromTrainingSections/)
-  assert.match(qaRouteSource, /<ProgramPlannerView program=\{program\} enableLocalAiImportQa \/>/)
+  assert.doesNotMatch(createDraftsBlock, /createSampleAiWorkoutDrafts/)
+  assert.match(createDraftsBlock, /fetch\('\/api\/admin\/ai-workout-drafts'/)
+  assert.doesNotMatch(qaRouteSource, /createSampleAiWorkoutDrafts/)
+  assert.match(qaRouteSource, /enableLocalAiImportPersistence/)
+  assert.match(qaRouteSource, /allowUnauthenticatedAiWorkoutDrafts/)
   assert.doesNotMatch(qaRouteSource, /AdminShell/)
 })
 
@@ -100,7 +130,7 @@ test('slice 21 saving edited local AI import keeps marker and training without c
 test('slice 22 duplicating local AI import stays local and preserves marker plus training', () => {
   const source = readPlannerSource()
 
-  assert.match(source, /const shouldSaveLocalAiImportWorkout = enableLocalAiImportQa && selectedWorkout\.workout\.source === 'ai-import'/)
+  assert.match(source, /const shouldSaveLocalAiImportWorkout = enableLocalAiImportPersistence && selectedWorkout\.workout\.source === 'ai-import'/)
   assert.match(source, /if \(selectedWorkoutMode === 'duplicate'\) \{[\s\S]*if \(shouldSaveLocalAiImportWorkout \|\| !selectedDay\?\.programDayId\) \{[\s\S]*const localDuplicateWorkout = \{[\s\S]*\.\.\.nextWorkout[\s\S]*id: `\$\{selectedWorkout\.workout\.id\}-copy-\$\{Date\.now\(\)\}`[\s\S]*programWorkoutId: null[\s\S]*\}[\s\S]*insertPlannerWorkoutAfterSelected\(currentPlanner, selectedWorkout, localDuplicateWorkout\)[\s\S]*return/)
   assert.match(source, /source: selectedWorkout\.workout\.source/)
   assert.match(source, /sourceFileName: selectedWorkout\.workout\.sourceFileName/)
@@ -110,7 +140,7 @@ test('slice 23 deleting local AI import removes the planner card without calling
   const source = readPlannerSource()
 
   assert.match(source, /function isLocalAiImportWorkout\(workout = \{\}\) \{[\s\S]*return workout\.source === 'ai-import' && !workout\.programWorkoutId[\s\S]*\}/)
-  assert.match(source, /const shouldDeleteLocalAiImportWorkout = enableLocalAiImportQa && isLocalAiImportWorkout\(workoutPendingDelete\.workout\)/)
+  assert.match(source, /const shouldDeleteLocalAiImportWorkout = enableLocalAiImportPersistence && isLocalAiImportWorkout\(workoutPendingDelete\.workout\)/)
   assert.match(source, /if \(!shouldDeleteLocalAiImportWorkout\) \{[\s\S]*const persistedProgramWorkoutId = getPersistedProgramWorkoutDeleteId\(workoutPendingDelete\.workout\)[\s\S]*await requestProgramWorkoutDelete\(persistedProgramWorkoutId\)[\s\S]*\}/)
   assert.match(source, /setPlanner\(\(currentPlanner\) => removePlannerWorkout\(currentPlanner, workoutPendingDelete\)\)/)
 })
@@ -176,7 +206,7 @@ test('slice 31 planner passes resolved AI draft destination preview into review 
   assert.match(source, /function formatAiWorkoutDraftTargetLabel\(target = \{\}\)/)
   assert.match(source, /function createAiWorkoutDraftDestinationPreview\(planner = \{\}, clickedTarget = \{\}, draft = \{\}\)/)
   assert.match(source, /const resolvedTarget = resolveAiWorkoutDraftTarget\(planner, clickedTarget, draft\)/)
-  assert.match(source, /const clickedTargetLabel = formatAiWorkoutDraftTargetLabel\(clickedResolvedTarget\)/)
+  assert.match(source, /const clickedTargetLabel = formatAiWorkoutDraftTargetLabel\(resolveClickedAiWorkoutDraftTarget\(planner, clickedTarget\)\)/)
   assert.match(source, /const resolvedTargetLabel = formatAiWorkoutDraftTargetLabel\(resolvedTarget\)/)
   assert.match(source, /const usedClickedFallback = hasDraftRoutingMetadata && !resolvedTarget\.usedDraftRouting/)
   assert.match(source, /isFallback: usedClickedFallback/)

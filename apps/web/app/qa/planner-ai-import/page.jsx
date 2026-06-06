@@ -8,7 +8,7 @@ export default function PlannerAiImportQaPage() {
 
   return (
     <main className="min-h-screen bg-[var(--admin-shell-page-bg)] p-6 text-[var(--admin-dashboard-card-text)]">
-      <ProgramPlannerView program={program} enableLocalAiImportQa />
+      <ProgramPlannerView program={program} enableLocalAiImportPersistence allowUnauthenticatedAiWorkoutDrafts />
     </main>
   )
 }

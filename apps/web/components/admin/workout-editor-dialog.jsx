@@ -159,7 +159,7 @@ export default function WorkoutEditorDialog({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="admin-shell-workouts-create-sheet border-l border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] !max-w-[var(--container-lg)]">
+      <SheetContent side="right" className="admin-shell-workouts-create-sheet !w-[min(1280px,calc(100vw-48px))] !max-w-[min(1280px,calc(100vw-48px))] border-l border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)]">
         <SheetHeader className="shrink-0 border-b border-[color:var(--admin-dashboard-card-border)] px-6 py-5">
           <SheetTitle className="text-[var(--admin-dashboard-card-text)]">{title}</SheetTitle>
           <SheetDescription>{description}</SheetDescription>

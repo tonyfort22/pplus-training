@@ -76,7 +76,7 @@ function createExercise(id, title, defaultSets = [], overrides = {}) {
   return {
     id: `${id}-${exerciseNumberSeed}`,
     title,
-    isExpanded: overrides.isExpanded ?? true,
+    isExpanded: overrides.isExpanded ?? false,
     showInstruction: overrides.showInstruction ?? false,
     instruction: overrides.instruction ?? '',
     sets: defaultSets.map((setValues) => createSet(setValues)),
@@ -87,7 +87,7 @@ function createSection(label, exercises = [], overrides = {}) {
   return {
     id: `section-${label.toLowerCase()}`,
     label,
-    isExpanded: overrides.isExpanded ?? true,
+    isExpanded: overrides.isExpanded ?? false,
     showInstruction: overrides.showInstruction ?? false,
     instruction: overrides.instruction ?? '',
     draftExerciseQuery: overrides.draftExerciseQuery ?? '',
@@ -98,11 +98,11 @@ function createSection(label, exercises = [], overrides = {}) {
 export function createInitialTrainingSections() {
   return [
     createSection('A1', [
-      createExercise('exercise-skater-hops', 'Skater hops', EXERCISE_LIBRARY[0].defaultSets, { isExpanded: true }),
+      createExercise('exercise-skater-hops', 'Skater hops', EXERCISE_LIBRARY[0].defaultSets, { isExpanded: false }),
       createExercise('exercise-sled-sprint', 'Sled sprint', EXERCISE_LIBRARY[1].defaultSets, { isExpanded: false }),
-    ], { isExpanded: true }),
+    ], { isExpanded: false }),
     createSection('A2', [
-      createExercise('exercise-copenhagen-plank', 'Copenhagen plank', EXERCISE_LIBRARY[2].defaultSets, { isExpanded: true }),
+      createExercise('exercise-copenhagen-plank', 'Copenhagen plank', EXERCISE_LIBRARY[2].defaultSets, { isExpanded: false }),
       createExercise('exercise-spirit-bike', 'Spirit Bike sprint', EXERCISE_LIBRARY[3].defaultSets, { isExpanded: false }),
     ], { isExpanded: false }),
   ]
