@@ -140,7 +140,9 @@ const EXERCISE_LIST_SELECT = [
   'default_rest',
   'default_tempo',
   'status',
+  'thumbnail_url',
   'created_at',
+  'exercise_sets(id,exercise_id,sort_order,set_type,target_reps,target_load,target_load_unit,target_duration,target_distance,target_rest,tempo,notes)',
   'exercise_muscle_maps(muscle_id,role,sort_order,muscles(id,name))',
 ].join(',')
 
@@ -164,6 +166,7 @@ const EXERCISE_DETAIL_SELECT = [
   'thumbnail_url',
   'video_url',
   'created_at',
+  'exercise_sets(id,exercise_id,sort_order,set_type,target_reps,target_load,target_load_unit,target_duration,target_distance,target_rest,tempo,notes)',
   'exercise_muscle_maps(muscle_id,role,sort_order,muscles(id,name))',
 ].join(',')
 
@@ -296,6 +299,29 @@ function getMovementTypeValues(row) {
     .filter(Boolean)
 }
 
+function getExerciseSetRows(row) {
+  const rows = Array.isArray(row?.exercise_sets) ? [...row.exercise_sets] : []
+  rows.sort((left, right) => (left?.sort_order ?? Number.MAX_SAFE_INTEGER) - (right?.sort_order ?? Number.MAX_SAFE_INTEGER))
+  return rows
+}
+
+function formatExerciseSetRow(row) {
+  return {
+    id: row?.id ?? null,
+    exerciseId: row?.exercise_id ?? null,
+    sortOrder: row?.sort_order ?? null,
+    setType: normalizeOptionalString(row?.set_type) ?? 'straight',
+    targetReps: normalizeOptionalString(row?.target_reps),
+    targetLoad: normalizeOptionalString(row?.target_load),
+    targetLoadUnit: normalizeOptionalString(row?.target_load_unit),
+    targetDuration: normalizeOptionalString(row?.target_duration),
+    targetDistance: normalizeOptionalString(row?.target_distance),
+    targetRest: normalizeOptionalString(row?.target_rest),
+    tempo: normalizeOptionalString(row?.tempo),
+    notes: normalizeOptionalString(row?.notes),
+  }
+}
+
 function formatExerciseRow(row, totalSetCount = 0) {
   const sortedMuscleMaps = getSortedMuscleMaps(row)
   const primaryMuscleMap = sortedMuscleMaps.find((map) => map?.role === 'primary') ?? null
@@ -308,6 +334,8 @@ function formatExerciseRow(row, totalSetCount = 0) {
   const defaultEquipment = normalizeOptionalString(row?.default_equipment)
   const thumbnailUrl = normalizeOptionalString(row?.thumbnail_url)
   const videoUrl = normalizeOptionalString(row?.video_url)
+  const exerciseSetRows = getExerciseSetRows(row)
+  const resolvedSetCount = exerciseSetRows.length || totalSetCount
 
   return {
     id: row.id,
@@ -325,8 +353,9 @@ function formatExerciseRow(row, totalSetCount = 0) {
     equipment: defaultEquipment,
     equipmentNeeded: defaultEquipment ? [normalizeExerciseFilterValue(defaultEquipment)] : [],
     movementTypeValues,
-    totalSetCount,
-    sets: normalizeOptionalString(row?.default_sets) ?? (totalSetCount > 0 ? String(totalSetCount) : '-'),
+    totalSetCount: resolvedSetCount,
+    exerciseSets: exerciseSetRows.map(formatExerciseSetRow),
+    sets: normalizeOptionalString(row?.default_sets) ?? (resolvedSetCount > 0 ? String(resolvedSetCount) : '-'),
     reps: normalizeOptionalString(row?.default_reps) ?? '-',
     duration: normalizeOptionalString(row?.default_duration) ?? '-',
     distance: normalizeOptionalString(row?.default_distance) ?? '-',
@@ -451,6 +480,42 @@ function buildExerciseMuscleMapRows(exerciseId, input = {}) {
   return rows
 }
 
+function parseSetCount(input = {}) {
+  const raw = normalizeOptionalString(input?.sets)
+  if (!raw) return 0
+  const match = raw.match(/\d+/)
+  if (!match) return 0
+  const count = Number.parseInt(match[0], 10)
+  if (!Number.isFinite(count) || count <= 0) return 0
+  return Math.min(count, 50)
+}
+
+function inferLoadUnit(value) {
+  const text = normalizeOptionalString(value)
+  if (!text) return null
+  const match = text.match(/[a-zA-Z%]+\s*$/)
+  return match ? match[0].trim() : null
+}
+
+function buildExerciseSetRows(exerciseId, input = {}) {
+  const setCount = parseSetCount(input)
+  if (!setCount) return []
+
+  return Array.from({ length: setCount }, (_, index) => ({
+    exercise_id: exerciseId,
+    sort_order: index + 1,
+    set_type: 'straight',
+    target_reps: normalizeOptionalString(input?.reps),
+    target_load: normalizeOptionalString(input?.weights),
+    target_load_unit: inferLoadUnit(input?.weights),
+    target_duration: normalizeOptionalString(input?.duration),
+    target_distance: normalizeOptionalString(input?.distance),
+    target_rest: normalizeOptionalString(input?.rest),
+    tempo: normalizeOptionalString(input?.tempo),
+    notes: normalizeOptionalString(input?.setNotes),
+  }))
+}
+
 function mergeExerciseResponseWithInput(exerciseRow, input = {}) {
   const primaryMuscleId = normalizeOptionalString(input?.primaryMuscleId) ?? ''
   const secondaryMuscleIds = normalizeSelectedValues(input?.secondaryMuscleIds).filter((muscleId) => muscleId !== primaryMuscleId)
@@ -469,6 +534,15 @@ async function replaceExerciseMuscleMaps(client, exerciseId, input = {}) {
     return []
   }
   return client.insertTable('exercise_muscle_maps', rows)
+}
+
+async function replaceExerciseSetRows(client, exerciseId, input = {}) {
+  await client.deleteTable('exercise_sets', `?exercise_id=eq.${encodeURIComponent(exerciseId)}`)
+  const rows = buildExerciseSetRows(exerciseId, input)
+  if (!rows.length) {
+    return []
+  }
+  return client.insertTable('exercise_sets', rows)
 }
 
 export function createAdminExerciseRepository(overrides = {}) {
@@ -568,6 +642,11 @@ export function createAdminExerciseRepository(overrides = {}) {
         await client.insertTable('exercise_muscle_maps', muscleRows)
       }
 
+      const setRows = buildExerciseSetRows(insertedRow.id, input)
+      if (setRows.length) {
+        await client.insertTable('exercise_sets', setRows)
+      }
+
       return mergeExerciseResponseWithInput(formatExerciseRow(insertedRow, 0), input)
     },
 
@@ -611,6 +690,7 @@ export function createAdminExerciseRepository(overrides = {}) {
       }
 
       await replaceExerciseMuscleMaps(client, normalizedExerciseId, input)
+      await replaceExerciseSetRows(client, normalizedExerciseId, input)
 
       return mergeExerciseResponseWithInput(formatExerciseRow(updatedRow, 0), input)
     },

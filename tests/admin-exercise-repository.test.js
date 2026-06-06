@@ -71,6 +71,10 @@ test('createAdminExerciseRepository creates an exercise and role-based muscle ma
         return jsonResponse(body.map((row, index) => ({ id: `map-${index + 1}`, ...row })))
       }
 
+      if (table === 'exercise_sets' && method === 'POST') {
+        return jsonResponse(body.map((row, index) => ({ id: `set-${index + 1}`, ...row })))
+      }
+
       throw new Error(`Unexpected request in create test: ${method} ${parsedUrl.toString()}`)
     },
   })
@@ -161,6 +165,23 @@ test('createAdminExerciseRepository creates an exercise and role-based muscle ma
       sort_order: 2,
     },
   ])
+  const setInsertCall = calls.find((call) => call.table === 'exercise_sets' && call.method === 'POST')
+  assert.ok(setInsertCall)
+  assert.equal(setInsertCall.body.length, 4)
+  assert.deepEqual(setInsertCall.body.map((row) => row.sort_order), [1, 2, 3, 4])
+  assert.deepEqual(setInsertCall.body[0], {
+    exercise_id: 'exercise-1',
+    sort_order: 1,
+    set_type: 'straight',
+    target_reps: '8',
+    target_load: '40 lb',
+    target_load_unit: 'lb',
+    target_duration: '30 sec',
+    target_distance: '20 m',
+    target_rest: '60 sec',
+    tempo: '3-1-1-0',
+    notes: null,
+  })
 })
 
 test('createAdminExerciseRepository patches an exercise and replaces muscle mappings', async () => {
@@ -220,6 +241,15 @@ test('createAdminExerciseRepository patches an exercise and replaces muscle mapp
 
       if (table === 'exercise_muscle_maps' && method === 'POST') {
         return jsonResponse(body.map((row, index) => ({ id: `map-${index + 1}`, ...row })))
+      }
+
+      if (table === 'exercise_sets' && method === 'DELETE') {
+        assert.equal(parsedUrl.searchParams.get('exercise_id'), 'eq.exercise-1')
+        return jsonResponse(null, 204)
+      }
+
+      if (table === 'exercise_sets' && method === 'POST') {
+        return jsonResponse(body.map((row, index) => ({ id: `set-${index + 1}`, ...row })))
       }
 
       throw new Error(`Unexpected request in update test: ${method} ${parsedUrl.toString()}`)
@@ -288,20 +318,25 @@ test('createAdminExerciseRepository patches an exercise and replaces muscle mapp
 
   const muscleMapInsertCall = calls.find((call) => call.table === 'exercise_muscle_maps' && call.method === 'POST')
   assert.ok(muscleMapInsertCall)
-  assert.deepEqual(muscleMapInsertCall.body, [
-    {
-      exercise_id: 'exercise-1',
-      muscle_id: 'muscle-glutes',
-      role: 'primary',
-      sort_order: 0,
-    },
-    {
-      exercise_id: 'exercise-1',
-      muscle_id: 'muscle-quads',
-      role: 'secondary',
-      sort_order: 1,
-    },
-  ])
+  const setDeleteCall = calls.find((call) => call.table === 'exercise_sets' && call.method === 'DELETE')
+  assert.ok(setDeleteCall)
+
+  const setInsertCall = calls.find((call) => call.table === 'exercise_sets' && call.method === 'POST')
+  assert.ok(setInsertCall)
+  assert.equal(setInsertCall.body.length, 5)
+  assert.deepEqual(setInsertCall.body.at(-1), {
+    exercise_id: 'exercise-1',
+    sort_order: 5,
+    set_type: 'straight',
+    target_reps: '6',
+    target_load: '45 lb',
+    target_load_unit: 'lb',
+    target_duration: '30 sec',
+    target_distance: '10 m',
+    target_rest: '90 sec',
+    tempo: '3-1-1-0',
+    notes: null,
+  })
 })
 
 test('createAdminExerciseRepository accepts only direct Supabase mp4 exercise video_url values', async () => {

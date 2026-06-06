@@ -29,7 +29,10 @@ test('exercise library uses admin light-mode controls and direct Supabase mp4 vi
   assert.match(repositorySource, /input\?\.video_url/)
   assert.match(repositorySource, /bucket:\s*'exercise-videos'/)
   assert.match(repositorySource, /contentType:\s*normalizedUpload\.contentType \|\| contentType \|\| 'video\/mp4'/)
-  assert.doesNotMatch(tableSource, /youtube\.com|youtu\.be|YouTube|youtube/i)
+  assert.match(tableSource, /youtubeLink/)
+  assert.match(tableSource, /onGenerateYoutubeMedia/)
+  assert.doesNotMatch(repositorySource, /default.*youtube/i)
+  assert.doesNotMatch(repositorySource, /video_url:\s*normalizeOptionalString\(input\?\.youtube/i)
 
   assert.doesNotMatch(tableSource, /className="rounded-\[12px\] min-h-\[40px\] !border !border-\[#24334A\] bg-transparent text-\[#DCE6F8\]/)
   assert.doesNotMatch(tableSource, /className="h-9 w-\[76px\] rounded-\[10px\] !border-\[#24334A\] bg-\[#111D30\]/)

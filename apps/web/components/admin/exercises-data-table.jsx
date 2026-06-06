@@ -270,6 +270,7 @@ export default function ExercisesDataTable({ searchQuery = '' }) {
   const [exerciseFormValues, setExerciseFormValues] = useState(() => createExerciseFormValues())
   const [exerciseEditorError, setExerciseEditorError] = useState('')
   const [isSavingExercise, setIsSavingExercise] = useState(false)
+  const [isGeneratingExerciseYoutubeMedia, setIsGeneratingExerciseYoutubeMedia] = useState(false)
   const [isExerciseDeleteDialogOpen, setIsExerciseDeleteDialogOpen] = useState(false)
   const [exercisePendingDelete, setExercisePendingDelete] = useState(null)
   const [exerciseDeleteError, setExerciseDeleteError] = useState('')
@@ -385,6 +386,52 @@ export default function ExercisesDataTable({ searchQuery = '' }) {
       setExerciseEditorError('')
     } catch (fileError) {
       setExerciseEditorError(fileError?.message || 'Failed to upload the thumbnail.')
+    }
+  }
+
+  async function handleGenerateExerciseYoutubeMedia() {
+    const youtubeLink = exerciseFormValues.youtubeLink?.trim() || ''
+    if (!youtubeLink) {
+      setExerciseEditorError('Paste a YouTube link first.')
+      return
+    }
+
+    setIsGeneratingExerciseYoutubeMedia(true)
+    setExerciseEditorError('')
+
+    try {
+      const response = await fetch('/api/admin/exercise-youtube-media', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          youtubeUrl: youtubeLink,
+          exerciseId: exerciseFormValues.id || '',
+          exerciseName: exerciseFormValues.name || '',
+        }),
+      })
+      const payload = await response.json()
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Failed to generate exercise media from YouTube.')
+      }
+
+      setExerciseFormValues((current) => ({
+        ...current,
+        youtubeLink: payload.youtubeUrl || current.youtubeLink || '',
+        videoUrl: payload.videoUrl || current.videoUrl || '',
+        videoName: payload.videoName || current.videoName || '',
+        videoUpload: null,
+        thumbnailUrl: payload.thumbnailUrl || current.thumbnailUrl || '',
+        thumbnailName: payload.thumbnailName || current.thumbnailName || '',
+        thumbnailUpload: null,
+      }))
+      setExerciseEditorError('')
+    } catch (generationError) {
+      setExerciseEditorError(generationError?.message || 'Failed to generate exercise media from YouTube.')
+    } finally {
+      setIsGeneratingExerciseYoutubeMedia(false)
     }
   }
 
@@ -835,6 +882,8 @@ export default function ExercisesDataTable({ searchQuery = '' }) {
         statusOptions={statusOptions}
         errorMessage={exerciseEditorError}
         isSaving={isSavingExercise}
+        isGeneratingYoutubeMedia={isGeneratingExerciseYoutubeMedia}
+        onGenerateYoutubeMedia={handleGenerateExerciseYoutubeMedia}
         onThumbnailFileChange={handleThumbnailFileChange}
         onVideoFileChange={handleVideoFileChange}
         onPrimaryAction={handleExerciseEditorSubmit}

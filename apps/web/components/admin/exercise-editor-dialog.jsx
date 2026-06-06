@@ -1,9 +1,11 @@
 'use client'
 
-import { ChevronDown } from 'lucide-react'
+import { Bot, ChevronDown, Upload } from 'lucide-react'
 
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
-import CompactFileUpload from '@/components/ui/compact-file-upload'
+import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
+import { MediaPlayer, MediaPlayerControls, MediaPlayerVideo } from '@/components/ui/media-player'
 import {
   Sheet,
   SheetContent,
@@ -15,7 +17,6 @@ import {
 import MultiCombobox from '@/components/ui/multi-combobox'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import Textarea from '@/components/ui/textarea'
-import AvatarFileUpload from '@/components/ui/avatar-file-upload'
 
 function FieldLabel({ children, htmlFor }) {
   return (
@@ -75,6 +76,89 @@ function DropdownSelectField({ id, value, options = [], placeholder, onValueChan
   )
 }
 
+function ExerciseGeneratedMediaPreview({ values, onThumbnailFileChange = () => {}, isSaving = false }) {
+  const hasThumbnail = Boolean(values.thumbnailUrl)
+  const hasVideo = Boolean(values.videoUrl)
+  const hasGeneratedMedia = hasThumbnail || hasVideo
+
+  if (!hasGeneratedMedia) return null
+
+  return (
+    <Accordion
+      type="single"
+      collapsible
+      className="overflow-hidden rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)]"
+    >
+      <AccordionItem value="medias-preview">
+        <AccordionTrigger className="px-4 py-4">
+          <span className="flex flex-col gap-1">
+            <span>Medias preview</span>
+            <span className="text-xs font-normal text-[var(--admin-dashboard-card-muted)]">
+              Generated thumbnail and MP4 preview
+            </span>
+          </span>
+        </AccordionTrigger>
+        <AccordionContent className="space-y-5">
+          {hasThumbnail ? (
+            <div className="grid gap-2">
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--admin-dashboard-card-muted)]">Thumbnail</p>
+              <div className="overflow-hidden rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)]">
+                <div className="group relative aspect-[21/9] w-full overflow-hidden bg-[var(--admin-shell-surface-muted)]">
+                  <img
+                    src={values.thumbnailUrl}
+                    alt={values.name ? `${values.name} thumbnail preview` : 'Exercise thumbnail preview'}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.015]"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all duration-200 group-hover:bg-black/35 group-hover:opacity-100">
+                    <input
+                      id="exercise-thumbnail-cover-upload"
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      className="sr-only"
+                      disabled={isSaving}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0]
+                        if (file) onThumbnailFileChange(file)
+                        event.target.value = ''
+                      }}
+                    />
+                    <label
+                      htmlFor="exercise-thumbnail-cover-upload"
+                      aria-disabled={isSaving}
+                      className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-[12px] bg-white px-4 text-sm font-medium text-slate-900 shadow-sm transition-colors hover:bg-white/90 aria-disabled:pointer-events-none aria-disabled:cursor-not-allowed aria-disabled:opacity-60"
+                    >
+                      <Upload className="size-4" aria-hidden="true" />
+                      Change Thumbnail
+                    </label>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-xs text-[var(--admin-dashboard-card-muted)]">
+                  <span className="truncate" title={values.thumbnailName || values.thumbnailUrl}>
+                    {values.thumbnailName || 'Generated thumbnail'}
+                  </span>
+                  <span>Cover preview</span>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {hasVideo ? (
+            <div className="grid gap-2">
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--admin-dashboard-card-muted)]">Video MP4</p>
+              <MediaPlayer>
+                <MediaPlayerVideo poster={values.thumbnailUrl || ''} aria-label={values.name ? `${values.name} video preview` : 'Exercise video preview'}>
+                  <source src={values.videoUrl} type="video/mp4" />
+                </MediaPlayerVideo>
+                <MediaPlayerControls videoUrl={values.videoUrl} />
+              </MediaPlayer>
+            </div>
+          ) : null}
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
+  )
+}
+
 export default function ExerciseEditorDialog({
   open,
   onOpenChange,
@@ -88,6 +172,8 @@ export default function ExerciseEditorDialog({
   statusOptions = [],
   errorMessage = '',
   isSaving = false,
+  isGeneratingYoutubeMedia = false,
+  onGenerateYoutubeMedia = () => {},
   onThumbnailFileChange = () => {},
   onVideoFileChange = () => {},
   onPrimaryAction = null,
@@ -103,7 +189,7 @@ export default function ExerciseEditorDialog({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="admin-shell-exercises-create-sheet !max-w-[var(--container-lg)] gap-0 border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] shadow-[var(--admin-shell-shadow)]"
+        className="admin-shell-exercises-create-sheet !w-[min(1280px,calc(100vw-48px))] !max-w-[min(1280px,calc(100vw-48px))] gap-0 border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] shadow-[var(--admin-shell-shadow)]"
       >
         <div className="shrink-0 border-b border-[var(--admin-dashboard-card-border)] px-6 py-5">
           <SheetHeader className="p-0 pr-10">
@@ -122,30 +208,31 @@ export default function ExerciseEditorDialog({
               </div>
 
               <div className="grid gap-2">
-                <FieldLabel htmlFor="exercise-video">Video</FieldLabel>
-                <CompactFileUpload
-                  id="exercise-video"
-                  accept="video/mp4"
-                  buttonLabel="Upload video"
-                  helperText={values.videoUrl ? 'Replace saved video' : 'MP4 upload'}
-                  fileName={values.videoName || values.videoUrl || ''}
-                  onFileChange={onVideoFileChange}
-                  disabled={isSaving}
-                />
+                <FieldLabel htmlFor="exercise-youtube-link">YouTube link</FieldLabel>
+                <InputGroup className="admin-shell-exercise-youtube-input-group h-11 rounded-[12px] border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] has-disabled:bg-[var(--admin-dashboard-control-bg)] has-disabled:opacity-100 has-[[data-slot=input-group-control]:focus-visible]:border-[var(--admin-shell-accent)] has-[[data-slot=input-group-control]:focus-visible]:ring-0">
+                  <InputGroupInput
+                    id="exercise-youtube-link"
+                    value={values.youtubeLink || ''}
+                    onChange={(event) => updateField('youtubeLink', event.target.value)}
+                    placeholder="Paste a YouTube link"
+                    className="h-full px-4 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)]"
+                  />
+                  <InputGroupAddon align="inline-end" className="pr-2.5">
+                    <InputGroupButton
+                      type="button"
+                      size="sm"
+                      className="h-8 rounded-[10px] border border-[#3BE0AF]/40 bg-[#3BE0AF]/10 px-3 text-sm font-medium text-[#06B686] hover:bg-[#3BE0AF]/15 hover:text-[#06B686] disabled:cursor-not-allowed disabled:border-[#3BE0AF]/25 disabled:bg-[#3BE0AF]/5 disabled:text-[#06B686]/55 disabled:opacity-100"
+                      onClick={onGenerateYoutubeMedia}
+                      disabled={isSaving || isGeneratingYoutubeMedia || !values.youtubeLink?.trim()}
+                    >
+                      <Bot className="size-4" aria-hidden="true" />
+                      {isGeneratingYoutubeMedia ? 'Creating medias...' : 'Generate content with AI'}
+                    </InputGroupButton>
+                  </InputGroupAddon>
+                </InputGroup>
               </div>
 
-              <div className="grid gap-2">
-                <FieldLabel htmlFor="exercise-thumbnail">Thumbnail</FieldLabel>
-                <AvatarFileUpload
-                  id="exercise-thumbnail"
-                  label="Thumbnail"
-                  helperText={values.thumbnailUrl ? 'Replace saved thumbnail' : 'Avatar upload'}
-                  fileName={values.thumbnailName || values.thumbnailUrl || ''}
-                  previewLabel={values.name || 'Exercise thumbnail'}
-                  onFileChange={onThumbnailFileChange}
-                  disabled={isSaving}
-                />
-              </div>
+              <ExerciseGeneratedMediaPreview values={values} onThumbnailFileChange={onThumbnailFileChange} isSaving={isSaving} />
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="grid gap-2">
