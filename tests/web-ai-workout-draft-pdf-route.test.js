@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { deflateSync } from 'node:zlib'
 
@@ -43,7 +43,7 @@ async function scanPdfFixture(path, sourceFileName) {
   return { extractedText, draft, exercises: draft.sections.flatMap((section) => section.exercises) }
 }
 
-test('OSD26 custom-encoded PDFs scan through generic OCR/table parsing instead of one hardcoded workout', async () => {
+test('OSD26 custom-encoded PDFs scan through generic OCR/table parsing instead of one hardcoded workout', async (t) => {
   const cases = [
     {
       path: '/Users/anthonyfortugno/Desktop/OSD26+P1+A.pdf',
@@ -71,7 +71,13 @@ test('OSD26 custom-encoded PDFs scan through generic OCR/table parsing instead o
     },
   ]
 
-  for (const testCase of cases) {
+  const availableCases = cases.filter((testCase) => existsSync(testCase.path))
+  if (availableCases.length === 0) {
+    t.skip('local OSD26 PDF fixtures are not available in this environment')
+    return
+  }
+
+  for (const testCase of availableCases) {
     const { draft, exercises } = await scanPdfFixture(testCase.path, testCase.sourceFileName)
     const exerciseNames = exercises.map((exercise) => exercise.name)
 
