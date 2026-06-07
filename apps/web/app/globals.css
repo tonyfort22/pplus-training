@@ -1963,6 +1963,51 @@ html[data-theme='light'] .admin-shell-overview-card-badge-negative {
   background: rgba(255, 122, 144, 0.2);
 }
 
+.admin-shell-overview-select-trigger {
+  height: 40px !important;
+  min-height: 40px !important;
+  border: 1px solid var(--admin-dashboard-card-border) !important;
+  border-radius: 12px !important;
+  background: var(--admin-dashboard-control-bg) !important;
+  color: var(--admin-dashboard-card-text) !important;
+  box-shadow: none !important;
+}
+
+.admin-shell-overview-select-trigger:hover {
+  background: var(--admin-dashboard-control-hover-bg) !important;
+}
+
+.admin-shell-overview-select-trigger:focus-visible {
+  border-color: var(--admin-shell-accent) !important;
+  box-shadow: 0 0 0 2px var(--admin-input-focus) !important;
+}
+
+.admin-shell-overview-select-trigger svg {
+  color: var(--admin-dashboard-card-muted) !important;
+  opacity: 1 !important;
+}
+
+.admin-shell-overview-select-content {
+  border: 1px solid var(--admin-dashboard-card-border) !important;
+  background: var(--admin-dashboard-card-bg) !important;
+  color: var(--admin-dashboard-card-text) !important;
+  box-shadow: var(--admin-shell-shadow) !important;
+}
+
+.admin-shell-overview-select-item {
+  border-radius: 10px !important;
+  background: transparent !important;
+  color: var(--admin-dashboard-card-text) !important;
+}
+
+.admin-shell-overview-select-item:hover,
+.admin-shell-overview-select-item:focus,
+.admin-shell-overview-select-item[data-highlighted],
+.admin-shell-overview-select-item[data-state='checked'] {
+  background: transparent !important;
+  color: var(--admin-shell-accent) !important;
+}
+
 .admin-shell-overview-card-change {
   display: inline-flex;
   width: fit-content;
@@ -2004,7 +2049,7 @@ html[data-theme='light'] .admin-shell-overview-card-badge-negative {
   gap: 24px;
   padding: 24px;
   border: 1px solid var(--admin-dashboard-card-border);
-  border-radius: 8px;
+  border-radius: var(--radius-xl);
   background: var(--admin-dashboard-card-bg);
   overflow: hidden;
 }
@@ -2238,7 +2283,7 @@ html[data-theme='light'] .admin-shell-overview-card-badge-negative {
   min-height: 198px;
   padding: 24px;
   border: 1px solid var(--admin-dashboard-card-border);
-  border-radius: 8px;
+  border-radius: var(--radius-xl);
   background: var(--admin-dashboard-card-bg);
 }
 

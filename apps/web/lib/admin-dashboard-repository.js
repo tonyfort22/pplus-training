@@ -92,8 +92,8 @@ function createTrend(current, previous) {
   }
 }
 
-function createSummaryMetric({ id, label, value, previousValue = 0, footerHeadline, footerSubtext }) {
-  const trend = createTrend(value, previousValue)
+function createSummaryMetric({ id, label, value, previousValue = 0, footerHeadline, footerSubtext, change, changeDirection }) {
+  const trend = change ? { change, direction: changeDirection ?? 'neutral' } : createTrend(value, previousValue)
   return {
     id,
     label,
@@ -213,17 +213,21 @@ function createTrainingExecution({ window, dueWorkoutRows, completedSessionRows 
   const total = buckets.reduce((sum, bucket) => sum + bucket.completed, 0)
   const dueTotal = buckets.reduce((sum, bucket) => sum + bucket.assigned, 0)
   const missedTotal = buckets.reduce((sum, bucket) => sum + bucket.missed, 0)
+  const completedDueTotal = countCompletedDueWorkouts(dueWorkoutRows, completedSessionRows)
+  const trendDirection = dueTotal && completedDueTotal >= dueTotal ? 'positive' : completedDueTotal > 0 ? 'negative' : 'neutral'
   return {
     title: 'Training execution',
     total,
     dueTotal,
     missedTotal,
-    value: `${total} completed`,
-    trend: createTrend(total, countRowsInWindow(completedSessionRows, ['completed_at'], { start: window.previousStart, end: window.previousEnd })).change,
+    completedDueTotal,
+    trendDirection,
+    value: `${formatPercent(completedDueTotal, dueTotal)} completed`,
+    trend: formatPercent(completedDueTotal, dueTotal),
     rangeLabel: labelForRange(window.range),
     buckets,
     legend: ['Completed', 'Assigned', 'Missed'],
-    footer: dueTotal ? `${total} completed · ${dueTotal} due · ${missedTotal} missed` : 'No due workouts in this range',
+    footer: dueTotal ? `${completedDueTotal} of ${dueTotal} due workouts completed · ${missedTotal} missed` : 'No due workouts in this range',
   }
 }
 
@@ -397,12 +401,13 @@ export function createAdminDashboardRepository(options = {}) {
       }
 
       const window = getRangeWindow(range, now)
-      const [athleteRows, programRows, workoutTemplateRows, exerciseRows, assignmentRows, sessionRows, inviteRows] = await Promise.all([
+      const [athleteRows, programRows, workoutTemplateRows, exerciseRows, workoutTemplateExerciseRows, assignmentRows, sessionRows, inviteRows] = await Promise.all([
         requestTable('athlete_profiles', '?select=id,status,created_at'),
         requestTable('programs', '?select=id,status,created_at'),
         requestTable('workout_templates', '?select=id,name,training_type,status,created_at'),
         requestTable('exercises', '?select=id,created_at'),
-        requestTable('program_workouts', '?select=id,athlete_id,workout_template_id,name_snapshot,status,scheduled_date,created_at'),
+        requestTable('workout_template_exercises', '?select=id,workout_template_id,exercise_id'),
+        requestTable('program_workouts', '?select=id,athlete_id,program_id,workout_template_id,name_snapshot,status,scheduled_date,created_at'),
         requestTable('workout_sessions', '?select=id,athlete_id,program_workout_id,workout_template_id,name_snapshot,status,completed_at,started_at,created_at'),
         requestTable('athlete_invitations', '?select=id,used_at,revoked_at,expires_at,created_at'),
       ])
@@ -413,52 +418,85 @@ export function createAdminDashboardRepository(options = {}) {
       const activeWorkoutTemplates = (Array.isArray(workoutTemplateRows) ? workoutTemplateRows : []).filter((row) => row?.status !== 'archived')
       const exercises = Array.isArray(exerciseRows) ? exerciseRows : []
       const assignments = Array.isArray(assignmentRows) ? assignmentRows : []
+      const activeProgramIds = new Set(activePrograms.map((program) => program.id))
+      const activeWorkoutTemplateIds = new Set(activeWorkoutTemplates.map((workoutTemplate) => workoutTemplate.id))
+      const exerciseIds = new Set(exercises.map((exercise) => exercise.id))
+      const usedExerciseIds = new Set(
+        (Array.isArray(workoutTemplateExerciseRows) ? workoutTemplateExerciseRows : [])
+          .filter((row) => row?.workout_template_id && activeWorkoutTemplateIds.has(row.workout_template_id))
+          .map((row) => row?.exercise_id)
+          .filter((exerciseId) => exerciseId && exerciseIds.has(exerciseId))
+      )
+      const usedExerciseCount = usedExerciseIds.size
+      const assignedProgramIds = new Set(
+        assignments
+          .map((row) => row?.program_id)
+          .filter((programId) => programId && activeProgramIds.has(programId))
+      )
+      const assignedProgramCount = assignedProgramIds.size
+      const assignedWorkoutTemplateIds = new Set(
+        assignments
+          .map((row) => row?.workout_template_id)
+          .filter((workoutTemplateId) => workoutTemplateId && activeWorkoutTemplateIds.has(workoutTemplateId))
+      )
+      const assignedWorkoutTemplateCount = assignedWorkoutTemplateIds.size
       const completedSessions = (Array.isArray(sessionRows) ? sessionRows : []).filter(isCompletedSession)
       const invites = Array.isArray(inviteRows) ? inviteRows : []
       const dueWorkouts = assignments.filter((row) => isDueWorkout(row, new Date(now)) && isBetween(valueDate(row, ['scheduled_date', 'created_at']), window.start, window.end))
       const currentCompletedSessions = completedSessions.filter((row) => isBetween(valueDate(row, ['completed_at']), window.start, window.end))
-      const pendingInviteCount = invites.filter((row) => isPendingInvite(row, new Date(now))).length
+      const inviteCount = invites.length
+      const acceptedInviteCount = invites.filter((row) => Boolean(row?.used_at)).length
 
       const summary = {
         athletes: createSummaryMetric({
           id: 'athletes',
           label: 'Athletes',
-          value: activeAthletes.length,
-          previousValue: activeAthletes.length,
-          footerHeadline: activeAthletes.length ? 'Current coach-visible roster' : 'No athletes yet',
+          value: athletes.length,
+          previousValue: athletes.length,
+          footerHeadline: athletes.length ? 'Total athletes' : 'No athletes yet',
           footerSubtext: `${activeAthletes.length} active athletes`,
+          change: `${formatPercent(activeAthletes.length, athletes.length)} active`,
+          changeDirection: activeAthletes.length ? 'positive' : 'neutral',
         }),
         programs: createSummaryMetric({
           id: 'programs',
           label: 'Programs',
           value: activePrograms.length,
           previousValue: activePrograms.length,
-          footerHeadline: activePrograms.length ? 'Current program library' : 'No programs yet',
-          footerSubtext: `${activePrograms.length} non-archived programs`,
+          footerHeadline: activePrograms.length ? 'Total programs' : 'No programs yet',
+          footerSubtext: `${assignedProgramCount} of ${activePrograms.length} assigned programs`,
+          change: `${formatPercent(assignedProgramCount, activePrograms.length)} assigned`,
+          changeDirection: assignedProgramCount ? 'positive' : 'neutral',
         }),
         workouts: createSummaryMetric({
           id: 'workouts',
           label: 'Workouts',
           value: activeWorkoutTemplates.length,
           previousValue: activeWorkoutTemplates.length,
-          footerHeadline: activeWorkoutTemplates.length ? 'Workout template library' : 'No workouts yet',
-          footerSubtext: `${activeWorkoutTemplates.length} non-archived workouts`,
+          footerHeadline: activeWorkoutTemplates.length ? 'Total workouts' : 'No workouts yet',
+          footerSubtext: `${assignedWorkoutTemplateCount} of ${activeWorkoutTemplates.length} assigned workouts`,
+          change: `${formatPercent(assignedWorkoutTemplateCount, activeWorkoutTemplates.length)} assigned`,
+          changeDirection: assignedWorkoutTemplateCount ? 'positive' : 'neutral',
         }),
         exercises: createSummaryMetric({
           id: 'exercises',
           label: 'Exercises',
           value: exercises.length,
           previousValue: exercises.length,
-          footerHeadline: exercises.length ? 'Exercise library' : 'No exercises yet',
-          footerSubtext: `${exercises.length} exercises available`,
+          footerHeadline: exercises.length ? 'Total exercises' : 'No exercises yet',
+          footerSubtext: `${usedExerciseCount} of ${exercises.length} used in workouts`,
+          change: `${formatPercent(usedExerciseCount, exercises.length)} used`,
+          changeDirection: usedExerciseCount ? 'positive' : 'neutral',
         }),
         invites: createSummaryMetric({
           id: 'invites',
           label: 'Invites',
-          value: pendingInviteCount,
-          previousValue: pendingInviteCount,
-          footerHeadline: pendingInviteCount ? 'Pending athlete invites' : 'No pending invites',
-          footerSubtext: `${pendingInviteCount} pending invites`,
+          value: inviteCount,
+          previousValue: inviteCount,
+          footerHeadline: inviteCount ? 'Total athlete invites' : 'No invites yet',
+          footerSubtext: `${acceptedInviteCount} of ${inviteCount} accepted invites`,
+          change: `${formatPercent(acceptedInviteCount, inviteCount)} accepted`,
+          changeDirection: acceptedInviteCount ? 'positive' : 'neutral',
         }),
       }
 
