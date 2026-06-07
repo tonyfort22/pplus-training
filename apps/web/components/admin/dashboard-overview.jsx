@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/chart'
 import { CalendarHeatmap } from '@/components/ui/calendar-heatmap'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const defaultDashboardRange = 'last-month'
 
@@ -111,7 +112,7 @@ function OverviewSummaryCard({ card }) {
         <div className="flex w-full items-start gap-2 text-sm">
           <CardIcon className="admin-shell-overview-card-change-arrow-icon mt-0.5 text-[#3BE0AF]" aria-hidden="true" />
           <div className="flex items-center gap-2 leading-none font-medium text-[var(--admin-dashboard-card-text)]">
-            {card.footerHeadline} <TrendArrowIcon direction={card.changeDirection} />
+            {card.footerHeadline}
           </div>
         </div>
       </CardFooter>
@@ -132,12 +133,107 @@ function EmptyOverviewState() {
 
 function LoadingOverviewState() {
   return (
-    <Card className="admin-shell-overview-loading" role="status" aria-label="Dashboard overview loading">
-      <CardHeader>
-        <CardTitle>Loading dashboard…</CardTitle>
-        <CardDescription>Pulling real account metrics.</CardDescription>
-      </CardHeader>
-    </Card>
+    <div className="admin-shell-overview-loading" role="status" aria-label="Dashboard overview loading">
+      <section className="admin-shell-overview-loading-summary flex flex-col gap-4 px-4 lg:px-0" aria-label="Dashboard summary loading skeleton">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {Array.from({ length: 3 }, (_, index) => (
+            <Card key={`summary-skeleton-top-${index}`} className="@container/card h-full">
+              <CardHeader className="admin-shell-overview-card-header">
+                <CardDescription className="admin-shell-overview-card-label-row">
+                  <Skeleton className="h-4 w-28" />
+                </CardDescription>
+                <CardTitle className="admin-shell-overview-card-value">
+                  <Skeleton className="h-12 w-24" />
+                </CardTitle>
+                <CardAction>
+                  <Skeleton className="h-7 w-20 rounded-full" />
+                </CardAction>
+              </CardHeader>
+              <CardFooter>
+                <div className="flex w-full items-center gap-2">
+                  <Skeleton className="h-4 w-4 rounded-full" />
+                  <Skeleton className="h-4 w-36" />
+                </div>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {Array.from({ length: 2 }, (_, index) => (
+            <Card key={`summary-skeleton-bottom-${index}`} className="@container/card h-full">
+              <CardHeader className="admin-shell-overview-card-header">
+                <CardDescription className="admin-shell-overview-card-label-row">
+                  <Skeleton className="h-4 w-32" />
+                </CardDescription>
+                <CardTitle className="admin-shell-overview-card-value">
+                  <Skeleton className="h-12 w-20" />
+                </CardTitle>
+                <CardAction>
+                  <Skeleton className="h-7 w-20 rounded-full" />
+                </CardAction>
+              </CardHeader>
+              <CardFooter>
+                <div className="flex w-full items-center gap-2">
+                  <Skeleton className="h-4 w-4 rounded-full" />
+                  <Skeleton className="h-4 w-40" />
+                </div>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      <section className="admin-shell-overview-loading-analytics admin-shell-overview-analytics-layout" aria-label="Dashboard analytics loading skeleton">
+        <Card className="admin-shell-overview-performance-panel pt-0">
+          <CardHeader className="admin-shell-overview-performance-header border-b border-[var(--admin-dashboard-card-border)] py-5 sm:flex-row sm:items-center">
+            <div className="admin-shell-overview-performance-title-block flex-1 space-y-3">
+              <Skeleton className="h-8 w-56" />
+              <Skeleton className="h-4 w-72 max-w-full" />
+            </div>
+            <CardAction>
+              <Skeleton className="hidden h-9 w-[160px] rounded-lg sm:flex" />
+            </CardAction>
+          </CardHeader>
+          <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
+            <div className="admin-shell-overview-loading-chart admin-shell-overview-performance-chart flex h-[250px] w-full items-end gap-3 rounded-xl border border-[var(--admin-dashboard-card-border)] p-4">
+              {Array.from({ length: 8 }, (_, index) => (
+                <Skeleton key={`training-chart-skeleton-${index}`} className="flex-1 rounded-t-lg" style={{ height: `${32 + ((index % 4) * 14)}%` }} />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="admin-shell-overview-bottom-row admin-shell-overview-side-column">
+          <Card className="admin-shell-overview-insight-card">
+            <CardHeader className="space-y-3">
+              <Skeleton className="h-8 w-44" />
+              <Skeleton className="h-4 w-64 max-w-full" />
+            </CardHeader>
+            <CardContent className="admin-shell-overview-workout-results-content overflow-x-auto">
+              <div className="admin-shell-overview-loading-chart flex h-[320px] min-w-[720px] items-end gap-4 rounded-xl border border-[var(--admin-dashboard-card-border)] p-4">
+                {Array.from({ length: 9 }, (_, index) => (
+                  <Skeleton key={`workout-chart-skeleton-${index}`} className="w-10 rounded-t-lg" style={{ height: `${28 + ((index % 5) * 12)}%` }} />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="admin-shell-overview-insight-card">
+            <CardHeader className="space-y-3">
+              <Skeleton className="h-8 w-52" />
+              <Skeleton className="h-4 w-72 max-w-full" />
+            </CardHeader>
+            <CardContent>
+              <div className="admin-shell-overview-loading-heatmap admin-shell-overview-session-chart grid min-h-[220px] grid-cols-7 gap-2 rounded-xl border border-[var(--admin-dashboard-card-border)] p-4">
+                {Array.from({ length: 35 }, (_, index) => (
+                  <Skeleton key={`heatmap-skeleton-${index}`} className="aspect-square rounded-md" />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+    </div>
   )
 }
 
@@ -258,18 +354,18 @@ function TrainingExecutionPanel({ trainingExecution, trainingExecutionRange, onT
         <div className="admin-shell-overview-performance-title-block flex-1">
           <div className="admin-shell-overview-performance-kicker-row">
             <span className="admin-shell-overview-performance-kicker">Training execution</span>
-            <Badge tone="success">{trainingExecution?.trend ?? '0%'}</Badge>
+            <Badge tone={getTrendTone(trainingExecution?.trendDirection)} className={getTrendBadgeClass(trainingExecution?.trendDirection)}>{trainingExecution?.trend ?? '0%'}</Badge>
           </div>
           <CardDescription>{trainingExecution?.footer ?? 'No due workouts in this range'}</CardDescription>
         </div>
         <CardAction>
           <Select value={trainingExecutionRange} onValueChange={onTrainingExecutionRangeChange}>
-            <SelectTrigger className="hidden w-[160px] rounded-lg sm:ml-auto sm:flex" aria-label="Select a value">
+            <SelectTrigger className="admin-shell-overview-select-trigger hidden w-[160px] sm:ml-auto sm:flex" aria-label="Select training execution range">
               <SelectValue placeholder="Last month" />
             </SelectTrigger>
-            <SelectContent className="rounded-xl">
+            <SelectContent className="admin-shell-overview-select-content rounded-xl">
               {overviewRangeOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id} className="rounded-lg">
+                <SelectItem key={option.id} value={option.id} className="admin-shell-overview-select-item">
                   {option.label}
                 </SelectItem>
               ))}
@@ -344,12 +440,12 @@ function WorkoutResultsPanel({ workoutResults }) {
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Select value={selectedCategory} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[190px] rounded-lg" aria-label="Category">
+              <SelectTrigger className="admin-shell-overview-select-trigger w-[190px]" aria-label="Select workout results category">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
-              <SelectContent className="rounded-xl">
+              <SelectContent className="admin-shell-overview-select-content rounded-xl">
                 {categoryOptions.map((option) => (
-                  <SelectItem key={option} value={option} className="rounded-lg">
+                  <SelectItem key={option} value={option} className="admin-shell-overview-select-item">
                     {option}
                   </SelectItem>
                 ))}
