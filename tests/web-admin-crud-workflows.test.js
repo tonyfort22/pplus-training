@@ -32,6 +32,11 @@ test('admin dashboard CRUD workflow matrix has no fake row actions for requested
 
   assert.match(invitesRoute, /export async function GET\(\)/)
   assert.match(invitesRoute, /export async function POST\(request\)/)
+  assert.match(invitesRoute, /if \(body\?\.action === 'resend'\)/)
+  assert.match(invitesRoute, /const inviteRows = await inviteRepository\.listInvitesByIds\(\{ inviteIds: body\.inviteIds \}\)/)
+  assert.match(invitesRoute, /athleteRepository\.sendAthleteInvite\(\{[\s\S]*athleteId: invite\.athleteProfileId,[\s\S]*inviteeEmail: invite\.email/)
+  assert.match(invitesRoute, /return json\(\{ result: \{ resentInvites, skippedInvites \} \}\)/)
+  assert.match(inviteRepository, /async listInvitesByIds\(\{ inviteIds = \[\] \}\)/)
   assert.match(invitesRoute, /export async function PATCH\(request\)/)
   assert.match(inviteRepository, /async cancelInvite\(\{ inviteId \}\)/)
   assert.match(invitesTable, /<DropdownMenuItem disabled=\{!canCancel\} onSelect=\{onCancelInvite\}>Cancel invite<\/DropdownMenuItem>/)

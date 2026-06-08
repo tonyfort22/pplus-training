@@ -8,7 +8,7 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { ChevronDown, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
+import { Archive, BookOpen, ChevronDown, Download, MoreHorizontal, Plus, RotateCcw, Trash2, UserPlus } from 'lucide-react'
 import { parseAsJson, useQueryState } from 'nuqs'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -29,6 +29,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -61,6 +62,13 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import Textarea from '@/components/ui/textarea'
 import { Filters } from '@/components/reui/filters'
+import { useToast } from '@/hooks/use-toast'
+import {
+  buildGroupsExportCsv,
+  downloadGroupsExportFile,
+  getGroupsExportFileName,
+  groupExportColumns,
+} from '@/lib/admin-groups-export'
 
 function getAthleteInitials(name = '') {
   const initials = String(name || '')
@@ -299,12 +307,28 @@ function groupMatchesFilters(group, filters) {
 }
 
 export default function GroupsDataTable({ searchQuery = '' }) {
+  const { toastManager } = useToast()
   const [groups, setGroups] = useState([])
   const [athleteOptions, setAthleteOptions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [isCreateEditGroupDialogOpen, setIsCreateEditGroupDialogOpen] = useState(false)
   const [isDeleteGroupDialogOpen, setIsDeleteGroupDialogOpen] = useState(false)
+  const [isAddAthletesSheetOpen, setIsAddAthletesSheetOpen] = useState(false)
+  const [isRestoreGroupsSheetOpen, setIsRestoreGroupsSheetOpen] = useState(false)
+  const [isRestoringGroups, setIsRestoringGroups] = useState(false)
+  const [isArchiveGroupsDialogOpen, setIsArchiveGroupsDialogOpen] = useState(false)
+  const [isArchivingGroups, setIsArchivingGroups] = useState(false)
+  const [isExportGroupsSheetOpen, setIsExportGroupsSheetOpen] = useState(false)
+  const [isExportingGroups, setIsExportingGroups] = useState(false)
+  const [isAssignProgramSheetOpen, setIsAssignProgramSheetOpen] = useState(false)
+  const [selectedAssignProgramId, setSelectedAssignProgramId] = useState('')
+  const [programOptions, setProgramOptions] = useState([])
+  const [isAssigningProgram, setIsAssigningProgram] = useState(false)
+  const [selectedBulkAthleteIds, setSelectedBulkAthleteIds] = useState([])
+  const [athleteSearchQuery, setAthleteSearchQuery] = useState('')
+  const [isAddingAthletesToGroups, setIsAddingAthletesToGroups] = useState(false)
+  const [isBulkActionsMenuOpen, setIsBulkActionsMenuOpen] = useState(false)
   const [groupDialogMode, setGroupDialogMode] = useState('create')
   const [selectedGroupId, setSelectedGroupId] = useState(null)
   const [groupFormValues, setGroupFormValues] = useState(() => createGroupFormValues())
@@ -334,11 +358,13 @@ export default function GroupsDataTable({ searchQuery = '' }) {
         if (!cancelled) {
           setGroups(Array.isArray(payload?.groups) ? payload.groups : [])
           setAthleteOptions(Array.isArray(payload?.athleteOptions) ? payload.athleteOptions : [])
+          setProgramOptions(Array.isArray(payload?.programOptions) ? payload.programOptions : [])
         }
       } catch (loadError) {
         if (!cancelled) {
           setGroups([])
           setAthleteOptions([])
+          setProgramOptions([])
           setError(loadError?.message || 'Failed to load groups.')
         }
       } finally {
@@ -431,6 +457,237 @@ export default function GroupsDataTable({ searchQuery = '' }) {
     state: { rowSelection, columnFilters, columnVisibility, pagination },
   })
 
+  const selectedGroupCount = table.getSelectedRowModel().rows.length
+  const selectedBulkGroups = table.getSelectedRowModel().rows.map((row) => row.original)
+  const selectedBulkGroupIds = selectedBulkGroups.map((group) => group.id).filter(Boolean)
+  const selectedAssignProgram = programOptions.find((program) => program.id === selectedAssignProgramId) ?? null
+  const assignProgramDisabled = selectedGroupCount === 0 || !selectedAssignProgramId || isAssigningProgram
+  const exportGroupsFileName = getGroupsExportFileName()
+  const exportGroupsDisabled = selectedGroupCount === 0 || isExportingGroups
+  const restoreEligibleGroups = selectedBulkGroups.filter((group) => normalizeGroupFilterValue(group.statusValue || group.status) === 'archived')
+  const restoreSkippedGroups = selectedBulkGroups.filter((group) => normalizeGroupFilterValue(group.statusValue || group.status) !== 'archived')
+  const archiveEligibleGroups = selectedBulkGroups.filter((group) => normalizeGroupFilterValue(group.statusValue || group.status) !== 'archived')
+  const archiveSkippedGroups = selectedBulkGroups.filter((group) => normalizeGroupFilterValue(group.statusValue || group.status) === 'archived')
+  const normalizedAthleteSearchQuery = athleteSearchQuery.trim().toLowerCase()
+  const filteredBulkAthleteOptions = athleteOptions.filter((athlete) => {
+    if (!normalizedAthleteSearchQuery) return true
+    return String(athlete.name || '').toLowerCase().includes(normalizedAthleteSearchQuery)
+  })
+
+  function handleBulkActionsMenuOpenChange(open) {
+    if (open && selectedGroupCount === 0) {
+      setIsBulkActionsMenuOpen(false)
+      return
+    }
+
+    setIsBulkActionsMenuOpen(open)
+  }
+
+  function handleOpenRestoreGroupsSheet() {
+    if (selectedGroupCount === 0 || isRestoringGroups) return
+
+    setIsBulkActionsMenuOpen(false)
+    setIsRestoreGroupsSheetOpen(true)
+  }
+
+  async function handleConfirmRestoreGroups() {
+    if (restoreEligibleGroups.length === 0 || isRestoringGroups) return
+
+    setIsRestoringGroups(true)
+    setError('')
+    const submitPromise = (async () => {
+      const response = await fetch('/api/admin/groups', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'restore',
+          groupIds: restoreEligibleGroups.map((group) => group.id),
+        }),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload?.error || 'Failed to restore groups.')
+      return payload?.result ?? {}
+    })()
+
+    try {
+      await toastManager.promise(submitPromise, {
+        loading: { title: 'Restoring groups...', data: { close: true } },
+        success: (result) => ({
+          title: 'Groups restored',
+          description: `${result?.restoredCount ?? restoreEligibleGroups.length} group${(result?.restoredCount ?? restoreEligibleGroups.length) === 1 ? '' : 's'} restored.${result?.skippedCount ? ` ${result.skippedCount} skipped.` : ''}`,
+          data: { close: true },
+        }),
+        error: (restoreError) => ({
+          title: 'Failed to restore groups',
+          description: restoreError?.message || 'We could not restore these groups right now.',
+          data: { close: true },
+        }),
+      })
+
+      setIsRestoreGroupsSheetOpen(false)
+      setRowSelection({})
+      setRefreshKey((currentValue) => currentValue + 1)
+    } finally {
+      setIsRestoringGroups(false)
+    }
+  }
+
+  function handleOpenArchiveGroupsDialog() {
+    if (selectedGroupCount === 0 || isArchivingGroups) return
+
+    setIsBulkActionsMenuOpen(false)
+    setIsArchiveGroupsDialogOpen(true)
+  }
+
+  async function handleConfirmArchiveGroups() {
+    if (archiveEligibleGroups.length === 0 || isArchivingGroups) return
+
+    setIsArchivingGroups(true)
+    setError('')
+    const submitPromise = (async () => {
+      const response = await fetch('/api/admin/groups', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'archive',
+          groupIds: archiveEligibleGroups.map((group) => group.id),
+        }),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload?.error || 'Failed to archive groups.')
+      return payload?.result ?? {}
+    })()
+
+    try {
+      await toastManager.promise(submitPromise, {
+        loading: { title: 'Archiving groups...', data: { close: true } },
+        success: (result) => ({
+          title: 'Groups archived',
+          description: `${result?.archivedCount ?? archiveEligibleGroups.length} group${(result?.archivedCount ?? archiveEligibleGroups.length) === 1 ? '' : 's'} archived.${result?.skippedCount ? ` ${result.skippedCount} skipped.` : ''}`,
+          data: { close: true },
+        }),
+        error: (archiveError) => ({
+          title: 'Failed to archive groups',
+          description: archiveError?.message || 'We could not archive these groups right now.',
+          data: { close: true },
+        }),
+      })
+
+      setIsArchiveGroupsDialogOpen(false)
+      setRowSelection({})
+      setRefreshKey((currentValue) => currentValue + 1)
+    } finally {
+      setIsArchivingGroups(false)
+    }
+  }
+
+  function handleOpenExportGroupsSheet() {
+    if (exportGroupsDisabled) return
+
+    setIsBulkActionsMenuOpen(false)
+    setIsExportGroupsSheetOpen(true)
+  }
+
+  function handleAssignProgramSheetOpenChange(open) {
+    setIsAssignProgramSheetOpen(open)
+
+    if (!open) {
+      setIsBulkActionsMenuOpen(false)
+      setSelectedAssignProgramId('')
+    }
+  }
+
+  function handleOpenAssignProgramSheet() {
+    if (selectedGroupCount === 0 || isAssigningProgram) return
+
+    setIsBulkActionsMenuOpen(false)
+    setSelectedAssignProgramId('')
+    setIsAssignProgramSheetOpen(true)
+  }
+
+  async function handleAssignProgramToGroupsSubmit() {
+    if (assignProgramDisabled) return
+
+    setIsAssigningProgram(true)
+    setError('')
+    const submitPromise = (async () => {
+      const response = await fetch('/api/admin/groups', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'assign-program',
+          groupIds: selectedBulkGroupIds,
+          sourceProgramId: selectedAssignProgramId,
+        }),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload?.error || 'Failed to assign program to groups.')
+      return payload?.result ?? {}
+    })()
+
+    try {
+      await toastManager.promise(submitPromise, {
+        loading: { title: 'Assigning program...', data: { close: true } },
+        success: (result) => ({
+          title: 'Program assigned',
+          description: `${selectedAssignProgram?.name || 'Program'} assigned to ${result?.groupsUpdated ?? selectedBulkGroupIds.length} group${(result?.groupsUpdated ?? selectedBulkGroupIds.length) === 1 ? '' : 's'} and ${result?.athletesUpdated ?? result?.createdProgramsCount ?? 0} athlete${(result?.athletesUpdated ?? result?.createdProgramsCount ?? 0) === 1 ? '' : 's'}.`,
+          data: { close: true },
+        }),
+        error: (assignError) => ({
+          title: 'Failed to assign program',
+          description: assignError?.message || 'We could not assign this program to these groups right now.',
+          data: { close: true },
+        }),
+      })
+
+      setIsAssignProgramSheetOpen(false)
+      setIsBulkActionsMenuOpen(false)
+      setSelectedAssignProgramId('')
+      setRowSelection({})
+      setRefreshKey((currentValue) => currentValue + 1)
+    } finally {
+      setIsAssigningProgram(false)
+    }
+  }
+
+  function handleConfirmExportGroups() {
+    if (exportGroupsDisabled) return
+
+    setIsExportingGroups(true)
+
+    try {
+      const csv = buildGroupsExportCsv(selectedBulkGroups)
+      downloadGroupsExportFile({
+        content: csv,
+        fileName: exportGroupsFileName,
+        mimeType: 'text/csv;charset=utf-8',
+      })
+      toastManager.show({
+        title: 'Groups export ready',
+        description: `${selectedGroupCount} group${selectedGroupCount === 1 ? '' : 's'} exported.`,
+        variant: 'success',
+        data: { close: true },
+      })
+      setIsExportGroupsSheetOpen(false)
+      setRowSelection({})
+    } catch (exportError) {
+      toastManager.show({
+        title: 'Failed to export groups',
+        description: exportError?.message || 'We could not generate this groups export right now.',
+        variant: 'error',
+        data: { close: true },
+      })
+    } finally {
+      setIsExportingGroups(false)
+    }
+  }
+
+  useEffect(() => {
+    if (selectedGroupCount === 0) {
+      setIsBulkActionsMenuOpen(false)
+    }
+  }, [selectedGroupCount])
+
   useEffect(() => {
     table.getColumn('name')?.setFilterValue(searchQuery)
   }, [searchQuery, table])
@@ -520,6 +777,70 @@ export default function GroupsDataTable({ searchQuery = '' }) {
     }
   }
 
+  function handleAddAthletesSheetOpenChange(open) {
+    setIsAddAthletesSheetOpen(open)
+
+    if (!open) {
+      setIsBulkActionsMenuOpen(false)
+      setSelectedBulkAthleteIds([])
+      setAthleteSearchQuery('')
+    }
+  }
+
+  function toggleSelectedBulkAthleteId(athleteId) {
+    setSelectedBulkAthleteIds((currentIds) => (
+      currentIds.includes(athleteId)
+        ? currentIds.filter((currentId) => currentId !== athleteId)
+        : [...currentIds, athleteId]
+    ))
+  }
+
+  async function handleAddAthletesToGroupsSubmit() {
+    if (selectedBulkAthleteIds.length === 0 || selectedBulkGroupIds.length === 0 || isAddingAthletesToGroups) return
+
+    setIsAddingAthletesToGroups(true)
+    setError('')
+    const submitPromise = (async () => {
+      const response = await fetch('/api/admin/groups', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'add-athletes',
+          groupIds: selectedBulkGroupIds,
+          athleteIds: selectedBulkAthleteIds,
+        }),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload?.error || 'Failed to add athletes to groups.')
+      return payload?.result ?? {}
+    })()
+
+    try {
+      await toastManager.promise(submitPromise, {
+        loading: { title: 'Adding athletes to groups...', data: { close: true } },
+        success: (result) => ({
+          title: 'Athletes added to groups',
+          description: `${result?.athletesAdded ?? selectedBulkAthleteIds.length} athlete${selectedBulkAthleteIds.length === 1 ? '' : 's'} added to ${result?.groupsUpdated ?? selectedBulkGroupIds.length} group${selectedBulkGroupIds.length === 1 ? '' : 's'}.`,
+          data: { close: true },
+        }),
+        error: (submitError) => ({
+          title: 'Failed to add athletes to groups',
+          description: submitError?.message || 'We could not add these athletes to groups right now.',
+          data: { close: true },
+        }),
+      })
+
+      setIsAddAthletesSheetOpen(false)
+      setIsBulkActionsMenuOpen(false)
+      setSelectedBulkAthleteIds([])
+      setAthleteSearchQuery('')
+      setRowSelection({})
+      setRefreshKey((currentValue) => currentValue + 1)
+    } finally {
+      setIsAddingAthletesToGroups(false)
+    }
+  }
+
   const emptyStateMessage = error || (groupFilters.length > 0 ? 'No groups match the current filters.' : 'No groups found.')
   const pageSizeOptions = [5, 10, 20, 30]
   const totalRows = table.getFilteredRowModel().rows.length
@@ -531,38 +852,541 @@ export default function GroupsDataTable({ searchQuery = '' }) {
   return (
     <div className="admin-shell-athletes-table-example">
       <div className="flex flex-col gap-3">
-        <div className="flex w-full items-center justify-between gap-3">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button type="button" className="admin-shell-athletes-example-columns-button">
-                Columns
-                <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {table.getAllColumns().filter((column) => column.getCanHide()).map((column) => (
-                <DropdownMenuCheckboxItem key={column.id} className="capitalize" checked={column.getIsVisible()} onCheckedChange={(value) => column.toggleVisibility(!!value)}>
-                  {column.columnDef.meta?.label ?? column.id}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button type="button" onClick={openCreateGroupDialog} className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] md:self-auto">Create group</Button>
-        </div>
-        <div className="flex w-full flex-wrap items-center justify-start gap-2">
-          <Filters
-            filters={groupFilters}
-            fields={groupFilterFields}
-            onChange={setGroupFilters}
-            trigger={
-              <Button type="button" variant="outline" className="admin-shell-athletes-filter-trigger rounded-[12px] min-h-[40px] shadow-none">
-                <Plus className="size-4" />
-                Add filter
-              </Button>
-            }
-          />
+        <div className="flex w-full flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-start gap-2">
+            <Filters
+              filters={groupFilters}
+              fields={groupFilterFields}
+              onChange={setGroupFilters}
+              trigger={
+                <Button type="button" variant="outline" className="admin-shell-athletes-filter-trigger rounded-[12px] min-h-[40px] shadow-none">
+                  <Plus className="size-4" />
+                  Add filter
+                </Button>
+              }
+            />
+          </div>
+          <div className="flex shrink-0 items-center justify-end gap-3">
+            <DropdownMenu open={isBulkActionsMenuOpen} onOpenChange={handleBulkActionsMenuOpenChange}>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className="admin-shell-athletes-example-columns-button" disabled={selectedGroupCount === 0} aria-label="Group bulk actions">
+                  {selectedGroupCount > 0 ? `Bulk actions (${selectedGroupCount})` : 'Bulk actions'}
+                  <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[190px]">
+                <DropdownMenuLabel>Bulk actions</DropdownMenuLabel>
+                <DropdownMenuItem className="admin-shell-athletes-bulk-menu-item" onSelect={(event) => {
+                  event.preventDefault()
+                  setIsBulkActionsMenuOpen(false)
+                  setSelectedBulkAthleteIds([])
+                  setAthleteSearchQuery('')
+                  setIsAddAthletesSheetOpen(true)
+                }}>
+                  <UserPlus className="size-4" aria-hidden="true" />
+                  Add athletes
+                </DropdownMenuItem>
+                <DropdownMenuItem className="admin-shell-athletes-bulk-menu-item" onSelect={(event) => {
+                  event.preventDefault()
+                  handleOpenRestoreGroupsSheet()
+                }}>
+                  <RotateCcw className="size-4" aria-hidden="true" />
+                  Restore
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="admin-shell-athletes-bulk-menu-item"
+                  disabled={exportGroupsDisabled}
+                  aria-label="Open groups export workflow"
+                  onSelect={(event) => {
+                    event.preventDefault()
+                    handleOpenExportGroupsSheet()
+                  }}
+                >
+                  <Download className="size-4" aria-hidden="true" />
+                  Export
+                </DropdownMenuItem>
+                <DropdownMenuItem className="admin-shell-athletes-bulk-menu-item" onSelect={(event) => {
+                  event.preventDefault()
+                  handleOpenAssignProgramSheet()
+                }}>
+                  <BookOpen className="size-4" aria-hidden="true" />
+                  Assign program
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="admin-shell-athletes-bulk-menu-item admin-shell-athletes-bulk-menu-item-danger" onSelect={(event) => {
+                  event.preventDefault()
+                  handleOpenArchiveGroupsDialog()
+                }}>
+                  <Archive className="size-4" aria-hidden="true" />
+                  Archive
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className="admin-shell-athletes-example-columns-button">
+                  Columns
+                  <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {table.getAllColumns().filter((column) => column.getCanHide()).map((column) => (
+                  <DropdownMenuCheckboxItem key={column.id} className="capitalize" checked={column.getIsVisible()} onCheckedChange={(value) => column.toggleVisibility(!!value)}>
+                    {column.columnDef.meta?.label ?? column.id}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button type="button" onClick={openCreateGroupDialog} className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] md:self-auto">Create group</Button>
+          </div>
         </div>
       </div>
+
+      <Sheet open={isAddAthletesSheetOpen} onOpenChange={handleAddAthletesSheetOpenChange}>
+        <SheetContent side="right" className="admin-shell-groups-add-athletes-sheet border-l border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] !max-w-[var(--container-lg)]">
+          <SheetHeader className="shrink-0 border-b border-[var(--admin-dashboard-card-border)] px-6 py-5">
+            <SheetTitle className="text-[var(--admin-dashboard-card-text)]">Add athletes</SheetTitle>
+            <SheetDescription className="text-[var(--admin-dashboard-card-muted)]">
+              Choose athletes to add to {selectedGroupCount} selected groups.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <div className="grid gap-5">
+              <section className="rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-4">
+                <div className="grid gap-1">
+                  <h3 className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">Selected groups</h3>
+                  <p className="text-sm text-[var(--admin-dashboard-card-muted)]">{selectedGroupCount} groups selected</p>
+                </div>
+                <div className="mt-4 grid gap-2">
+                  {selectedBulkGroups.slice(0, 3).map((group) => (
+                    <div key={group.id} className="flex items-center justify-between gap-3 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-3 py-2">
+                      <span className="truncate text-sm font-medium text-[var(--admin-dashboard-card-text)]">{group.name}</span>
+                      <span className="shrink-0 text-xs text-[var(--admin-dashboard-card-muted)]">{group.athleteCountLabel ?? `${group.athleteCount ?? group.athletes?.length ?? 0} athletes`}</span>
+                    </div>
+                  ))}
+                  {selectedGroupCount > 3 ? (
+                    <p className="text-xs font-medium text-[var(--admin-shell-primary-button-bg)]">+ {selectedGroupCount - 3} more</p>
+                  ) : null}
+                </div>
+              </section>
+
+              <section className="grid gap-3">
+                <div className="grid gap-1">
+                  <h3 className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">Athletes list</h3>
+                  <p className="text-sm text-[var(--admin-dashboard-card-muted)]">Select one or more athletes to add to these groups.</p>
+                </div>
+                <Input
+                  className="h-11 rounded-[12px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:ring-[var(--admin-shell-accent)]/20"
+                  placeholder="Search athletes..."
+                  value={athleteSearchQuery}
+                  onChange={(event) => setAthleteSearchQuery(event.target.value)}
+                />
+                <div className="grid max-h-[320px] gap-2 overflow-y-auto pr-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                  {filteredBulkAthleteOptions.length > 0 ? (
+                    filteredBulkAthleteOptions.map((athlete) => {
+                      const isAthleteSelected = selectedBulkAthleteIds.includes(athlete.id)
+                      return (
+                        <button
+                          type="button"
+                          key={athlete.id}
+                          className={`flex items-center gap-3 rounded-[14px] border px-3 py-3 text-left transition-colors ${isAthleteSelected ? 'border-[var(--admin-shell-primary-button-bg)] bg-[#3BE0AF]/10 hover:bg-[#3BE0AF]/10' : 'border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] hover:bg-[#3BE0AF]/10'}`}
+                          onClick={() => toggleSelectedBulkAthleteId(athlete.id)}
+                        >
+                          <Checkbox
+                            className="admin-shell-athletes-checkbox-input"
+                            checked={isAthleteSelected}
+                            onClick={(event) => event.stopPropagation()}
+                            onChange={() => toggleSelectedBulkAthleteId(athlete.id)}
+                            aria-label={`Select ${athlete.name}`}
+                          />
+                          <Avatar className="size-9 border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] text-[11px] text-[var(--admin-dashboard-card-text)]">
+                            <AvatarImage src={athlete.avatarUrl} alt={athlete.name} />
+                            <AvatarFallback>{getAthleteInitials(athlete.name)}</AvatarFallback>
+                          </Avatar>
+                          <span className="grid min-w-0 gap-0.5">
+                            <span className="truncate text-sm font-medium text-[var(--admin-dashboard-card-text)]">{athlete.name}</span>
+                            <span className="text-xs text-[var(--admin-dashboard-card-muted)]">{isAthleteSelected ? 'Will be added' : 'Available to add'}</span>
+                          </span>
+                        </button>
+                      )
+                    })
+                  ) : (
+                    <div className="rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-3 py-4 text-sm text-[var(--admin-dashboard-card-muted)]">
+                      No athletes found.
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs font-medium text-[var(--admin-dashboard-card-muted)]">{selectedBulkAthleteIds.length} athletes selected</p>
+              </section>
+            </div>
+          </div>
+
+          <SheetFooter className="shrink-0 border-t border-[var(--admin-dashboard-card-border)] px-6 py-5 sm:flex-row sm:justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-[12px] min-h-[40px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-shell-text-strong)]"
+              onClick={() => setIsAddAthletesSheetOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]"
+              disabled={isAddingAthletesToGroups || selectedBulkAthleteIds.length === 0 || selectedGroupCount === 0}
+              onClick={handleAddAthletesToGroupsSubmit}
+            >
+              {isAddingAthletesToGroups ? 'Adding...' : 'Add athletes'}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      <Dialog open={isArchiveGroupsDialogOpen} onOpenChange={setIsArchiveGroupsDialogOpen}>
+        <DialogContent className="admin-shell-groups-archive-dialog border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] text-[var(--admin-dashboard-card-text)] sm:max-w-[560px]">
+          <DialogHeader>
+            <DialogTitle>Archive groups</DialogTitle>
+            <DialogDescription>Review the selected groups before moving them out of active workflows.</DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-2">
+            <div className="grid gap-3 rounded-[18px] border border-red-500/25 bg-red-500/10 p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-red-500/15 text-red-400">
+                  <Archive className="size-5" aria-hidden="true" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">
+                    {archiveEligibleGroups.length} group{archiveEligibleGroups.length === 1 ? '' : 's'} will be archived
+                  </p>
+                  <p className="mt-1 text-sm text-[var(--admin-dashboard-card-muted)]">
+                    Archived groups are hidden from active group workflows but can be restored later.
+                  </p>
+                  {archiveSkippedGroups.length > 0 ? (
+                    <p className="mt-2 text-sm text-[var(--admin-dashboard-card-muted)]">
+                      {archiveSkippedGroups.length} selected group{archiveSkippedGroups.length === 1 ? '' : 's'} already archived
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+
+            {archiveEligibleGroups.length > 0 ? (
+              <div className="grid gap-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--admin-dashboard-card-muted)]">Ready to archive</div>
+                <div className="grid max-h-[220px] gap-2 overflow-y-auto pr-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                  {archiveEligibleGroups.map((group) => (
+                    <div key={`archive-${group.id}`} className="flex items-center justify-between gap-3 rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{group.name}</p>
+                        <p className="truncate text-sm text-[var(--admin-dashboard-card-muted)]">{group.athleteCountLabel ?? `${group.athleteCount ?? group.athletes?.length ?? 0} athletes`}</p>
+                      </div>
+                      <StatusCell status={group.status} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-4 text-sm text-[var(--admin-dashboard-card-muted)]">
+                No selected groups can be archived. Only active groups can be archived.
+              </div>
+            )}
+
+            {archiveSkippedGroups.length > 0 ? (
+              <div className="grid gap-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--admin-dashboard-card-muted)]">Already archived</div>
+                <div className="grid max-h-[160px] gap-2 overflow-y-auto pr-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                  {archiveSkippedGroups.map((group) => (
+                    <div key={`archive-skip-${group.id}`} className="flex items-center justify-between gap-3 rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{group.name}</p>
+                        <p className="truncate text-sm text-[var(--admin-dashboard-card-muted)]">Already archived</p>
+                      </div>
+                      <StatusCell status={group.status} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          <DialogFooter className="sm:flex-row sm:justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-[12px] min-h-[40px]"
+              onClick={() => setIsArchiveGroupsDialogOpen(false)}
+              disabled={isArchivingGroups}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="rounded-[12px] min-h-[40px] bg-red-500/90 text-white hover:bg-red-500"
+              disabled={archiveEligibleGroups.length === 0 || isArchivingGroups}
+              onClick={handleConfirmArchiveGroups}
+            >
+              {isArchivingGroups ? 'Archiving...' : `Archive ${archiveEligibleGroups.length} group${archiveEligibleGroups.length === 1 ? '' : 's'}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Sheet open={isRestoreGroupsSheetOpen} onOpenChange={setIsRestoreGroupsSheetOpen}>
+        <SheetContent side="right" className="admin-shell-groups-restore-sheet border-l border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] !max-w-[var(--container-lg)]">
+          <SheetHeader className="shrink-0 border-b border-[var(--admin-dashboard-card-border)] px-6 py-5">
+            <SheetTitle>Restore groups</SheetTitle>
+            <SheetDescription>Review the selected groups before restoring them to active status.</SheetDescription>
+          </SheetHeader>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <div className="grid gap-5">
+              <div className="grid gap-3 rounded-[20px] border border-[var(--admin-shell-primary-button-bg)]/30 bg-[#3BE0AF]/10 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#3BE0AF]/15 text-[var(--admin-shell-primary-button-bg)]">
+                    <RotateCcw className="size-5" aria-hidden="true" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">
+                      {restoreEligibleGroups.length} group{restoreEligibleGroups.length === 1 ? '' : 's'} will be restored
+                    </p>
+                    <p className="mt-1 text-sm text-[var(--admin-dashboard-card-muted)]">
+                      Restored groups return to active status and become available in admin workflows again.
+                    </p>
+                    {restoreSkippedGroups.length > 0 ? (
+                      <p className="mt-2 text-sm text-[var(--admin-dashboard-card-muted)]">
+                        {restoreSkippedGroups.length} selected group{restoreSkippedGroups.length === 1 ? '' : 's'} already active
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+
+              {restoreEligibleGroups.length > 0 ? (
+                <div className="grid gap-3">
+                  <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--admin-dashboard-card-muted)]">Ready to restore</div>
+                  <div className="grid gap-2">
+                    {restoreEligibleGroups.map((group) => (
+                      <div key={`restore-${group.id}`} className="flex items-center justify-between gap-3 rounded-[16px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-4 py-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{group.name}</p>
+                          <p className="truncate text-sm text-[var(--admin-dashboard-card-muted)]">{group.athleteCountLabel ?? `${group.athleteCount ?? group.athletes?.length ?? 0} athletes`}</p>
+                        </div>
+                        <StatusCell status={group.status} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-4 text-sm text-[var(--admin-dashboard-card-muted)]">
+                  No selected groups can be restored. Only archived groups can be restored.
+                </div>
+              )}
+
+              {restoreSkippedGroups.length > 0 ? (
+                <div className="grid gap-3">
+                  <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--admin-dashboard-card-muted)]">Already active</div>
+                  <div className="grid gap-2">
+                    {restoreSkippedGroups.map((group) => (
+                      <div key={`restore-skip-${group.id}`} className="flex items-center justify-between gap-3 rounded-[16px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 py-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{group.name}</p>
+                          <p className="truncate text-sm text-[var(--admin-dashboard-card-muted)]">Already active</p>
+                        </div>
+                        <StatusCell status={group.status} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <SheetFooter className="shrink-0 border-t border-[var(--admin-dashboard-card-border)] px-6 py-5 sm:flex-row sm:justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-[12px] min-h-[40px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-shell-text-strong)]"
+              onClick={() => setIsRestoreGroupsSheetOpen(false)}
+              disabled={isRestoringGroups}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]"
+              disabled={restoreEligibleGroups.length === 0 || isRestoringGroups}
+              onClick={handleConfirmRestoreGroups}
+            >
+              {isRestoringGroups ? 'Restoring...' : `Restore ${restoreEligibleGroups.length} group${restoreEligibleGroups.length === 1 ? '' : 's'}`}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={isExportGroupsSheetOpen} onOpenChange={setIsExportGroupsSheetOpen}>
+        <SheetContent side="right" className="admin-shell-groups-export-sheet border-l border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] !max-w-[var(--container-lg)]">
+          <SheetHeader className="shrink-0 border-b border-[color:var(--admin-dashboard-card-border)] px-6 py-5">
+            <SheetTitle>Export groups</SheetTitle>
+            <SheetDescription>
+              Review the selected groups before downloading a CSV export.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <div className="grid gap-5">
+              <div className="grid gap-3 rounded-[20px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-4">
+                <div className="grid gap-1">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--admin-dashboard-card-muted)]">Selected groups</p>
+                  <p className="text-2xl font-semibold text-[var(--admin-dashboard-card-text)]">{selectedGroupCount}</p>
+                </div>
+                <div className="grid gap-2 text-sm text-[var(--admin-dashboard-card-muted)]">
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Format</span>
+                    <span className="font-medium text-[var(--admin-dashboard-card-text)]">CSV</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Filename</span>
+                    <span className="truncate font-medium text-[var(--admin-dashboard-card-text)]">{exportGroupsFileName}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--admin-dashboard-card-muted)]">Included columns</div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {groupExportColumns.map((column) => (
+                    <div key={column} className="rounded-[14px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-3 py-2 text-sm font-medium text-[var(--admin-dashboard-card-text)]">
+                      {column}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--admin-dashboard-card-muted)]">Selected group preview</div>
+                <div className="grid max-h-[360px] gap-2 overflow-y-auto pr-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                  {selectedBulkGroups.map((group) => (
+                    <div key={`export-${group.id}`} className="flex items-center justify-between gap-3 rounded-[16px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{group.name}</p>
+                        <p className="truncate text-sm text-[var(--admin-dashboard-card-muted)]">{group.athleteCountLabel ?? `${group.athleteCount ?? group.athletes?.length ?? 0} athletes`}</p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-3">
+                        <span className="hidden text-sm text-[var(--admin-dashboard-card-muted)] sm:inline">{group.updated}</span>
+                        <StatusCell status={group.status} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <SheetFooter className="shrink-0 border-t border-[color:var(--admin-dashboard-card-border)] px-6 py-5 sm:flex-row sm:justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-[12px] min-h-[40px] border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]"
+              onClick={() => setIsExportGroupsSheetOpen(false)}
+              disabled={isExportingGroups}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]"
+              disabled={exportGroupsDisabled}
+              onClick={handleConfirmExportGroups}
+            >
+              {isExportingGroups ? 'Preparing CSV...' : 'Download CSV'}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={isAssignProgramSheetOpen} onOpenChange={handleAssignProgramSheetOpenChange}>
+        <SheetContent side="right" className="admin-shell-groups-assign-program-sheet border-l border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] !max-w-[var(--container-lg)]">
+          <SheetHeader className="shrink-0 border-b border-[var(--admin-dashboard-card-border)] px-6 py-5">
+            <SheetTitle className="text-[var(--admin-dashboard-card-text)]">Assign program</SheetTitle>
+            <SheetDescription className="text-[var(--admin-dashboard-card-muted)]">
+              Choose a program to assign to {selectedGroupCount} selected groups.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <div className="grid gap-5">
+              <section className="rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-4">
+                <div className="grid gap-1">
+                  <h3 className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">Selected groups</h3>
+                  <p className="text-sm text-[var(--admin-dashboard-card-muted)]">{selectedGroupCount} groups selected</p>
+                </div>
+                <div className="mt-4 grid gap-2">
+                  {selectedBulkGroups.slice(0, 3).map((group) => (
+                    <div key={`assign-${group.id}`} className="flex items-center justify-between gap-3 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-3 py-2">
+                      <span className="truncate text-sm font-medium text-[var(--admin-dashboard-card-text)]">{group.name}</span>
+                      <span className="shrink-0 text-xs text-[var(--admin-dashboard-card-muted)]">{group.athleteCountLabel ?? `${group.athleteCount ?? group.athletes?.length ?? 0} athletes`}</span>
+                    </div>
+                  ))}
+                  {selectedGroupCount > 3 ? (
+                    <p className="text-xs font-medium text-[var(--admin-shell-primary-button-bg)]">+ {selectedGroupCount - 3} more</p>
+                  ) : null}
+                </div>
+              </section>
+
+              <section className="grid gap-3">
+                <div className="grid gap-1">
+                  <h3 className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">Program</h3>
+                  <p className="text-sm text-[var(--admin-dashboard-card-muted)]">This clones the selected program into every athlete in the selected groups.</p>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button type="button" className="admin-shell-athletes-example-columns-button admin-shell-athletes-create-select-trigger w-full" aria-label="Program">
+                      <span className="truncate">{selectedAssignProgram?.name ?? 'Select a program'}</span>
+                      <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="min-w-[var(--radix-dropdown-menu-trigger-width)]">
+                    {programOptions.length > 0 ? (
+                      programOptions.map((program) => (
+                        <DropdownMenuItem key={program.id} onSelect={() => setSelectedAssignProgramId(program.id)}>
+                          <div className="grid gap-0.5">
+                            <span className="text-sm font-medium">{program.name}</span>
+                            <span className="text-xs text-[var(--admin-dashboard-card-muted)]">{`${program.workouts ?? program.workoutCount ?? 0} workouts`}</span>
+                          </div>
+                        </DropdownMenuItem>
+                      ))
+                    ) : (
+                      <DropdownMenuItem disabled>No programs available</DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </section>
+            </div>
+          </div>
+
+          <SheetFooter className="shrink-0 border-t border-[var(--admin-dashboard-card-border)] px-6 py-5 sm:flex-row sm:justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-[12px] min-h-[40px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-shell-text-strong)]"
+              onClick={() => setIsAssignProgramSheetOpen(false)}
+              disabled={isAssigningProgram}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]"
+              disabled={assignProgramDisabled}
+              onClick={handleAssignProgramToGroupsSubmit}
+            >
+              {isAssigningProgram ? 'Assigning...' : 'Assign program'}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       <Sheet open={isCreateEditGroupDialogOpen} onOpenChange={setIsCreateEditGroupDialogOpen}>
         <SheetContent side="right" className="admin-shell-groups-create-sheet border-l border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] !max-w-[var(--container-lg)]">

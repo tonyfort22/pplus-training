@@ -69,7 +69,7 @@ function DropdownMenuItem({ className, inset, ...props }) {
   )
 }
 
-function DropdownMenuCheckboxItem({ className, children, checked, ...props }) {
+function DropdownMenuCheckboxItem({ className, children, checked, checkIconClassName, ...props }) {
   return (
     <DropdownMenuPrimitive.CheckboxItem
       className={cn(
@@ -81,7 +81,7 @@ function DropdownMenuCheckboxItem({ className, children, checked, ...props }) {
     >
       <span className="absolute left-3 flex h-3.5 w-3.5 items-center justify-center">
         <DropdownMenuPrimitive.ItemIndicator>
-          <CheckIcon className="h-4 w-4" />
+          <CheckIcon className={cn("h-4 w-4", checkIconClassName)} />
         </DropdownMenuPrimitive.ItemIndicator>
       </span>
       {children}

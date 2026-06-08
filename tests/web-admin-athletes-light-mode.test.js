@@ -7,10 +7,18 @@ import { fileURLToPath } from 'node:url'
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const cssPath = resolve(repoRoot, 'apps/web/app/globals.css')
 const athletesDataTablePath = resolve(repoRoot, 'apps/web/components/admin/athletes-data-table.jsx')
+const invitesDataTablePath = resolve(repoRoot, 'apps/web/components/admin/invites-data-table.jsx')
+const groupsDataTablePath = resolve(repoRoot, 'apps/web/components/admin/groups-data-table.jsx')
+const rankingsDataTablePath = resolve(repoRoot, 'apps/web/components/admin/rankings-data-table.jsx')
+const programsDataTablePath = resolve(repoRoot, 'apps/web/components/admin/programs-data-table.jsx')
 
 test('all athletes table surface uses admin light-mode tokens instead of dark-coded colors', () => {
   const cssSource = readFileSync(cssPath, 'utf8')
   const athletesSource = readFileSync(athletesDataTablePath, 'utf8')
+  const invitesSource = readFileSync(invitesDataTablePath, 'utf8')
+  const groupsSource = readFileSync(groupsDataTablePath, 'utf8')
+  const rankingsSource = readFileSync(rankingsDataTablePath, 'utf8')
+  const programsSource = readFileSync(programsDataTablePath, 'utf8')
 
   assert.match(cssSource, /html\[data-theme='light'\]\s*\{[^}]*--admin-athletes-table-shell-bg:\s*#ffffff;[^}]*--admin-athletes-row-even-bg:\s*#ffffff;[^}]*--admin-athletes-row-odd-bg:\s*#f8fafc;[^}]*--admin-athletes-row-border:\s*#eef2f7;/)
   assert.match(cssSource, /html\[data-theme='dark'\]\s*\{[^}]*--admin-athletes-table-shell-bg:\s*rgba\(9, 16, 29, 0\.65\);[^}]*--admin-athletes-row-even-bg:\s*rgba\(15, 23, 38, 0\.94\);[^}]*--admin-athletes-row-odd-bg:\s*rgba\(12, 19, 32, 0\.96\);[^}]*--admin-athletes-row-border:\s*rgba\(24, 35, 56, 0\.7\);/)
@@ -29,10 +37,30 @@ test('all athletes table surface uses admin light-mode tokens instead of dark-co
   assert.match(cssSource, /\.admin-shell-athletes-row-menu\s*\{[^}]*color:\s*var\(--admin-dashboard-card-muted\);/)
   assert.match(cssSource, /\.admin-shell-athletes-row-menu:hover\s*\{[^}]*background:\s*var\(--admin-shell-nav-active-bg\);[^}]*color:\s*var\(--admin-shell-nav-active-text\);/)
   assert.match(cssSource, /\.admin-shell-athletes-example-columns-button\s*\{[^}]*border:\s*1px solid var\(--admin-dashboard-card-border\);[^}]*background:\s*var\(--admin-dashboard-control-bg\);[^}]*color:\s*var\(--admin-dashboard-card-text\);/)
+  assert.match(cssSource, /\.admin-shell-athletes-example-columns-button:focus-visible\s*\{[^}]*outline:\s*none;[^}]*border-color:\s*var\(--admin-dashboard-card-border\);[^}]*box-shadow:\s*0 0 0 2px var\(--admin-input-focus\);/)
+  assert.match(cssSource, /\.admin-shell-athletes-example-columns-button\[data-state='open'\]\s*\{[^}]*outline:\s*none;[^}]*border-color:\s*var\(--admin-dashboard-card-border\);[^}]*box-shadow:\s*0 0 0 2px var\(--admin-input-focus\);/)
   assert.match(cssSource, /\.admin-shell-athletes-filter-trigger\s*\{[^}]*border:\s*1px solid var\(--admin-dashboard-card-border\);[^}]*background:\s*var\(--admin-dashboard-control-bg\);[^}]*color:\s*var\(--admin-dashboard-card-text\);/)
   assert.match(cssSource, /\.admin-shell-athletes-pagination-bar\s*\{[^}]*color:\s*var\(--admin-dashboard-card-muted\);/)
   assert.match(cssSource, /\.admin-shell-athletes-example-pagination-button\s*\{[^}]*border:\s*1px solid var\(--admin-dashboard-card-border\);[^}]*background:\s*var\(--admin-dashboard-control-bg\);[^}]*color:\s*var\(--admin-dashboard-card-text\);/)
   assert.match(cssSource, /\.admin-shell-athletes-example-pagination-button-active\s*\{[^}]*background:\s*var\(--admin-shell-primary-button-bg\);[^}]*color:\s*#0B1120;/)
+  assert.match(cssSource, /--admin-shell-primary-red-bg:\s*#ef4444;/)
+  assert.match(cssSource, /--admin-shell-primary-red-light-bg:\s*rgba\(239, 68, 68, 0\.12\);/)
+  assert.match(cssSource, /\.admin-shell-athletes-status-badge-active\s*\{[^}]*border-color:\s*transparent;[^}]*background:\s*var\(--admin-shell-primary-green-light-bg\);[^}]*color:\s*var\(--admin-shell-primary-button-bg\);/)
+  assert.match(cssSource, /\.admin-shell-athletes-status-badge-inactive\s*\{[^}]*border-color:\s*transparent;[^}]*background:\s*var\(--admin-shell-primary-red-light-bg\);[^}]*color:\s*var\(--admin-shell-primary-red-bg\);/)
+  assert.match(cssSource, /\.admin-shell-invites-status-badge-accepted\s*\{[^}]*border-color:\s*transparent;[^}]*background:\s*var\(--admin-shell-primary-green-light-bg\);[^}]*color:\s*var\(--admin-shell-primary-button-bg\);/)
+  assert.match(cssSource, /\.admin-shell-invites-status-badge-expired,\s*\.admin-shell-invites-status-badge-canceled\s*\{[^}]*border-color:\s*transparent;[^}]*background:\s*var\(--admin-shell-primary-red-light-bg\);[^}]*color:\s*var\(--admin-shell-primary-red-bg\);/)
+  assert.doesNotMatch(cssSource, /\.admin-shell-athletes-status-badge-active\s*\{[^}]*color:\s*#078968;/)
+  assert.doesNotMatch(cssSource, /\.admin-shell-athletes-status-badge-inactive\s*\{[^}]*color:\s*#dc2626;/)
+  assert.doesNotMatch(cssSource, /\.admin-shell-invites-status-badge-accepted\s*\{[^}]*color:\s*#078968;/)
+  assert.doesNotMatch(cssSource, /\.admin-shell-invites-status-badge-expired,[^}]*color:\s*#dc2626;/)
+
+  assert.match(invitesSource, /admin-shell-invites-status-badge admin-shell-invites-status-badge-\$\{normalizedStatus \|\| 'unknown'\}/)
+  for (const tableSource of [athletesSource, groupsSource, rankingsSource, programsSource]) {
+    assert.match(tableSource, /admin-shell-athletes-status-badge admin-shell-athletes-status-badge-active/)
+  }
+  for (const tableSource of [athletesSource, rankingsSource, programsSource]) {
+    assert.match(tableSource, /admin-shell-athletes-status-badge admin-shell-athletes-status-badge-inactive/)
+  }
 
   assert.match(athletesSource, /admin-shell-athletes-filter-trigger/)
   assert.match(athletesSource, /admin-shell-athletes-pagination-bar/)

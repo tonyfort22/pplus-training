@@ -42,6 +42,10 @@ export async function PATCH(request) {
     const body = await request.json()
 
     if (body?.action === 'archive') {
+      if (Array.isArray(body?.groupIds)) {
+        const result = await repository.archiveGroups(body ?? {})
+        return json({ result })
+      }
       const group = await repository.archiveGroup(body ?? {})
       return json({ group })
     }
@@ -51,13 +55,23 @@ export async function PATCH(request) {
       return json({ group })
     }
 
+    if (body?.action === 'restore') {
+      const result = await repository.restoreGroups(body ?? {})
+      return json({ result })
+    }
+
     if (body?.action === 'delete') {
       const result = await repository.deleteGroup(body ?? {})
       return json({ result })
     }
 
     if (body?.action === 'assign-program') {
-      const result = await repository.assignProgramToGroup(body ?? {})
+      const result = await repository.assignProgramToGroups(body ?? {})
+      return json({ result })
+    }
+
+    if (body?.action === 'add-athletes') {
+      const result = await repository.addAthletesToGroups(body ?? {})
       return json({ result })
     }
 

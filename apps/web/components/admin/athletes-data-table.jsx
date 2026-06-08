@@ -8,11 +8,12 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { ChevronDown, MoreHorizontal, Plus } from 'lucide-react'
+import { BookOpen, ChevronDown, Download, MoreHorizontal, Plus, Send, Trash2, UsersRound } from 'lucide-react'
 import { parseAsJson, useQueryState } from 'nuqs'
 
 import { Filters, createFilter } from '@/components/reui/filters'
 import { useToast } from '@/hooks/use-toast'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import Avatar from '@/components/ui/avatar'
 import Badge from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -36,7 +37,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Select,
@@ -47,6 +48,290 @@ import {
 } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
+const ATHLETE_TABLE_COLUMN_WIDTHS = {
+  select: '44px',
+  name: '260px',
+  program: '210px',
+  workoutsPercentage: '170px',
+  lastActive: '145px',
+  status: '120px',
+  actions: '52px',
+}
+
+const BULK_EXPORT_FIELD_GROUPS = [
+  {
+    id: 'athlete-profile',
+    label: 'Athlete profile',
+    description: 'Core athlete profile table fields.',
+    fields: [
+      'id',
+      'user_id',
+      'coach_id',
+      'first_name',
+      'last_name',
+      'date_of_birth',
+      'sport',
+      'position',
+      'handedness',
+      'gender',
+      'height_cm',
+      'weight_kg',
+      'avatar_url',
+      'units_preference',
+      'weight_unit_preference',
+      'distance_unit_preference',
+      'theme_preference',
+      'status',
+      'created_at',
+      'updated_at',
+    ],
+  },
+  {
+    id: 'invitation',
+    label: 'Invitation',
+    description: 'Athlete invitation and email delivery fields.',
+    fields: [
+      'id',
+      'coach_id',
+      'invitee_email',
+      'expires_at',
+      'used_at',
+      'revoked_at',
+      'sent_at',
+      'athlete_profile_id',
+      'created_by_user_id',
+      'created_at',
+      'updated_at',
+    ],
+  },
+  {
+    id: 'current-program',
+    label: 'Current program',
+    description: 'Latest assigned program fields for the athlete.',
+    fields: [
+      'id',
+      'athlete_id',
+      'coach_id',
+      'name',
+      'description',
+      'start_date',
+      'end_date',
+      'status',
+      'created_at',
+      'updated_at',
+    ],
+  },
+  {
+    id: 'planned-workouts',
+    label: 'Planned workouts',
+    description: 'Program workout rows attached to the athlete.',
+    fields: [
+      'id',
+      'athlete_id',
+      'coach_id',
+      'program_id',
+      'program_phase_id',
+      'program_day_id',
+      'workout_template_id',
+      'name_snapshot',
+      'notes',
+      'import_source',
+      'import_source_file_name',
+      'bg_color',
+      'text_color',
+      'status',
+      'sort_order',
+      'scheduled_date',
+      'scheduled_start_time',
+      'scheduled_end_time',
+      'created_at',
+      'updated_at',
+    ],
+  },
+  {
+    id: 'workout-sessions',
+    label: 'Workout sessions',
+    description: 'Completed and in-progress workout session fields.',
+    fields: [
+      'id',
+      'athlete_id',
+      'coach_id',
+      'program_id',
+      'program_day_id',
+      'program_workout_id',
+      'workout_template_id',
+      'name_snapshot',
+      'status',
+      'started_at',
+      'completed_at',
+      'elapsed_seconds',
+      'notes',
+      'perceived_difficulty',
+      'total_exercises_count',
+      'completed_exercises_count',
+      'total_sets_count',
+      'completed_sets_count',
+      'created_at',
+      'updated_at',
+    ],
+  },
+  {
+    id: 'load-summaries',
+    label: 'Load summaries',
+    description: 'Computed training load summary fields.',
+    fields: [
+      'id',
+      'athlete_id',
+      'workout_session_id',
+      'completed_sets',
+      'completed_reps',
+      'volume_load',
+      'effort_adjusted_load',
+      'session_difficulty',
+      'log_date',
+      'created_at',
+    ],
+  },
+  {
+    id: 'groups',
+    label: 'Groups',
+    description: 'Group and membership fields connected to the athlete.',
+    fields: [
+      'athlete_group_id',
+      'group_name',
+      'group_description',
+      'access_level',
+      'group_status',
+      'created_by_user_id',
+      'archived_at',
+      'group_created_at',
+      'group_updated_at',
+      'membership_id',
+      'added_by_user_id',
+      'membership_created_at',
+      'membership_updated_at',
+    ],
+  },
+]
+
+const DEFAULT_BULK_EXPORT_FIELDS = BULK_EXPORT_FIELD_GROUPS.map((fieldGroup) => fieldGroup.id)
+
+function getBulkExportFieldValue(athlete, groupId, fieldName) {
+  if (groupId === 'athlete-profile') {
+    const profileFields = {
+      id: athlete.id,
+      user_id: athlete.userId,
+      coach_id: athlete.coachId,
+      first_name: athlete.firstName,
+      last_name: athlete.lastName,
+      date_of_birth: athlete.dateOfBirth,
+      sport: athlete.sport,
+      position: athlete.position,
+      handedness: athlete.handedness,
+      gender: athlete.gender,
+      height_cm: athlete.heightCm,
+      weight_kg: athlete.weightKg,
+      avatar_url: athlete.avatarUrl,
+      units_preference: athlete.unitsPreference,
+      weight_unit_preference: athlete.weightUnitPreference,
+      distance_unit_preference: athlete.distanceUnitPreference,
+      theme_preference: athlete.themePreference,
+      status: athlete.status,
+      created_at: athlete.createdAt,
+      updated_at: athlete.updatedAt,
+    }
+    return profileFields[fieldName]
+  }
+
+  if (groupId === 'invitation') {
+    const invitationFields = {
+      invitee_email: athlete.inviteeEmail,
+      athlete_profile_id: athlete.id,
+      sent_at: athlete.hasInvite ? 'stored invitation' : '',
+    }
+    return invitationFields[fieldName]
+  }
+
+  if (groupId === 'current-program') {
+    const currentProgramFields = {
+      athlete_id: athlete.id,
+      name: athlete.program,
+      status: athlete.program && athlete.program !== '-' ? 'Assigned' : '',
+    }
+    return currentProgramFields[fieldName]
+  }
+
+  if (groupId === 'planned-workouts') {
+    const plannedWorkoutFields = {
+      athlete_id: athlete.id,
+      status: athlete.workoutsTarget > 0 ? 'Planned' : '',
+      name_snapshot: athlete.program,
+    }
+    return plannedWorkoutFields[fieldName]
+  }
+
+  if (groupId === 'workout-sessions') {
+    const workoutSessionFields = {
+      athlete_id: athlete.id,
+      status: athlete.workoutsCompleted > 0 ? 'Completed sessions' : '',
+      completed_sets_count: athlete.workoutsCompleted,
+    }
+    return workoutSessionFields[fieldName]
+  }
+
+  if (groupId === 'load-summaries') {
+    const loadSummaryFields = {
+      athlete_id: athlete.id,
+      completed_sets: athlete.workoutsCompleted,
+    }
+    return loadSummaryFields[fieldName]
+  }
+
+  return ''
+}
+
+function formatBulkExportCsvValue(value) {
+  if (value === null || value === undefined) return ''
+  const stringValue = String(value)
+  if (/[",\n\r]/.test(stringValue)) {
+    return `"${stringValue.replace(/"/g, '""')}"`
+  }
+  return stringValue
+}
+
+function buildBulkExportCsv(athletesToExport, selectedFieldGroupIds) {
+  const selectedGroups = BULK_EXPORT_FIELD_GROUPS.filter((fieldGroup) => selectedFieldGroupIds.includes(fieldGroup.id))
+  const exportColumns = selectedGroups.flatMap((fieldGroup) => (
+    fieldGroup.fields.map((fieldName) => ({
+      groupId: fieldGroup.id,
+      fieldName,
+      header: `${fieldGroup.id}.${fieldName}`,
+    }))
+  ))
+  const headers = ['export_row', 'athlete_name', ...exportColumns.map((column) => column.header)]
+  const rows = athletesToExport.map((athlete, index) => [
+    index + 1,
+    athlete.name,
+    ...exportColumns.map((column) => getBulkExportFieldValue(athlete, column.groupId, column.fieldName)),
+  ])
+
+  return [headers, ...rows]
+    .map((row) => row.map(formatBulkExportCsvValue).join(','))
+    .join('\n')
+}
+
+function downloadBulkExportFile({ content, fileName, mimeType }) {
+  const blob = new Blob([content], { type: mimeType })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = fileName
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
 
 function getInitials(name) {
   return name
@@ -597,6 +882,25 @@ export function AthletesDataTable({ searchQuery = '' }) {
   const [isDeletingAthlete, setIsDeletingAthlete] = useState(false)
   const [openRowActionMenuId, setOpenRowActionMenuId] = useState(null)
   const [pendingRowAction, setPendingRowAction] = useState(null)
+  const [isBulkActionsMenuOpen, setIsBulkActionsMenuOpen] = useState(false)
+  const [isBulkInviteSheetOpen, setIsBulkInviteSheetOpen] = useState(false)
+  const [bulkInviteEmailsByAthleteId, setBulkInviteEmailsByAthleteId] = useState({})
+  const [isSendingBulkInvites, setIsSendingBulkInvites] = useState(false)
+  const [isBulkExportSheetOpen, setIsBulkExportSheetOpen] = useState(false)
+  const [bulkExportFields, setBulkExportFields] = useState(DEFAULT_BULK_EXPORT_FIELDS)
+  const [isExportingAthletes, setIsExportingAthletes] = useState(false)
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false)
+  const [isDeletingSelectedAthletes, setIsDeletingSelectedAthletes] = useState(false)
+  const [isAddToGroupsSheetOpen, setIsAddToGroupsSheetOpen] = useState(false)
+  const [selectedGroupIds, setSelectedGroupIds] = useState([])
+  const [isAddingToGroups, setIsAddingToGroups] = useState(false)
+  const [groupOptions, setGroupOptions] = useState([])
+  const [groupSearchQuery, setGroupSearchQuery] = useState('')
+  const [isAssignProgramSheetOpen, setIsAssignProgramSheetOpen] = useState(false)
+  const [selectedAssignProgramId, setSelectedAssignProgramId] = useState('')
+  const [programOptions, setProgramOptions] = useState([])
+  const [isLoadingAssignPrograms, setIsLoadingAssignPrograms] = useState(false)
+  const [isAssigningProgram, setIsAssigningProgram] = useState(false)
 
   const [createAthleteMeasurementUnit, setCreateAthleteMeasurementUnit] = useState('imperial')
   const [createAthleteProfileImage, setCreateAthleteProfileImage] = useState('')
@@ -757,6 +1061,78 @@ export function AthletesDataTable({ searchQuery = '' }) {
     const normalizedFilters = Array.isArray(athleteFilters) ? athleteFilters : []
     return athletes.filter((athlete) => athleteMatchesFilters(athlete, normalizedFilters))
   }, [athleteFilters, athletes])
+
+  useEffect(() => {
+    if (!isAddToGroupsSheetOpen) return
+
+    let cancelled = false
+
+    async function loadGroupOptions() {
+      try {
+        const response = await fetch('/api/admin/groups', {
+          cache: 'no-store',
+        })
+        const payload = await response.json().catch(() => ({}))
+
+        if (!response.ok) {
+          throw new Error(payload?.error || 'Failed to load groups.')
+        }
+
+        if (!cancelled) {
+          setGroupOptions(Array.isArray(payload?.groups) ? payload.groups : [])
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setGroupOptions([])
+        }
+      }
+    }
+
+    loadGroupOptions()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isAddToGroupsSheetOpen])
+
+  useEffect(() => {
+    if (!isAssignProgramSheetOpen) return
+
+    let cancelled = false
+
+    async function loadAssignProgramOptions() {
+      setIsLoadingAssignPrograms(true)
+
+      try {
+        const response = await fetch('/api/admin/programs', {
+          cache: 'no-store',
+        })
+        const payload = await response.json().catch(() => ({}))
+
+        if (!response.ok) {
+          throw new Error(payload?.error || 'Failed to load programs.')
+        }
+
+        if (!cancelled) {
+          setProgramOptions(Array.isArray(payload?.programs) ? payload.programs : [])
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setProgramOptions([])
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingAssignPrograms(false)
+        }
+      }
+    }
+
+    loadAssignProgramOptions()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isAssignProgramSheetOpen])
 
   const table = useReactTable({
     data: filteredAthletes,
@@ -1058,65 +1434,887 @@ export function AthletesDataTable({ searchQuery = '' }) {
   const pageStart = totalRows === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1
   const pageEnd = Math.min((pagination.pageIndex + 1) * pagination.pageSize, totalRows)
   const pageNumbers = Array.from({ length: table.getPageCount() }, (_, index) => index)
+  const selectedAthleteCount = table.getSelectedRowModel().rows.length
+
+  useEffect(() => {
+    if (selectedAthleteCount === 0) {
+      setIsBulkActionsMenuOpen(false)
+    }
+  }, [selectedAthleteCount])
+
+  const selectedAthleteRows = table.getSelectedRowModel().rows
+  const selectedAthletes = selectedAthleteRows.map((row) => row.original)
+  const selectedInviteAthletes = selectedAthletes.filter((athlete) => athlete.status !== 'Active')
+  const selectedInviteReadyCount = selectedInviteAthletes.filter((athlete) => athlete.hasInvite).length
+  const selectedInviteNeedsEmailCount = selectedInviteAthletes.length - selectedInviteReadyCount
+  const selectedBulkInvitePayloads = selectedInviteAthletes.map((athlete) => ({
+    athleteId: athlete.id,
+    inviteeEmail: athlete.hasInvite ? '' : String(bulkInviteEmailsByAthleteId[athlete.id] ?? '').trim().toLowerCase(),
+    needsEmail: !athlete.hasInvite,
+  }))
+  const selectedExportActiveCount = selectedAthletes.filter((athlete) => athlete.status === 'Active').length
+  const selectedExportInactiveCount = selectedAthleteCount - selectedExportActiveCount
+  const bulkInviteSendDisabled = selectedInviteAthletes.length === 0
+    || isSendingBulkInvites
+    || selectedBulkInvitePayloads.some((payload) => payload.needsEmail && !payload.inviteeEmail)
+  const bulkExportDisabled = isExportingAthletes || selectedAthleteCount === 0 || bulkExportFields.length === 0
+  const selectedAssignProgram = programOptions.find((program) => program.id === selectedAssignProgramId) ?? null
+  const normalizedGroupSearchQuery = groupSearchQuery.trim().toLowerCase()
+  const filteredGroupOptions = groupOptions.filter((group) => {
+    if (!normalizedGroupSearchQuery) return true
+    return String(group.name ?? '').toLowerCase().includes(normalizedGroupSearchQuery)
+  })
+
+  function handleBulkActionsMenuOpenChange(open) {
+    if (open && selectedAthleteCount === 0) {
+      setIsBulkActionsMenuOpen(false)
+      return
+    }
+
+    setIsBulkActionsMenuOpen(open)
+  }
+
+  function handleBulkInviteSheetOpenChange(open) {
+    setIsBulkInviteSheetOpen(open)
+
+    if (!open) {
+      setIsBulkActionsMenuOpen(false)
+      setBulkInviteEmailsByAthleteId({})
+    }
+  }
+
+  function resetBulkExportState() {
+    setBulkExportFields(DEFAULT_BULK_EXPORT_FIELDS)
+  }
+
+  function handleBulkExportSheetOpenChange(open) {
+    setIsBulkExportSheetOpen(open)
+
+    if (!open) {
+      setIsBulkActionsMenuOpen(false)
+      resetBulkExportState()
+    }
+  }
+
+  function toggleBulkExportField(fieldId) {
+    setBulkExportFields((currentFields) => (
+      currentFields.includes(fieldId)
+        ? currentFields.filter((currentField) => currentField !== fieldId)
+        : [...currentFields, fieldId]
+    ))
+  }
+
+  function updateBulkInviteEmail(athleteId, email) {
+    setBulkInviteEmailsByAthleteId((currentEmails) => ({
+      ...currentEmails,
+      [athleteId]: email,
+    }))
+  }
+
+  async function handleBulkInviteSubmit() {
+    if (bulkInviteSendDisabled) return
+
+    setIsSendingBulkInvites(true)
+
+    const submitPromise = (async () => {
+      const sentAthletes = await Promise.all(selectedBulkInvitePayloads.map(async (invitePayload) => {
+        const response = await fetch('/api/admin/invites', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ athleteId: invitePayload.athleteId, inviteeEmail: invitePayload.inviteeEmail }),
+        })
+        const payload = await response.json().catch(() => ({}))
+
+        if (!response.ok) {
+          throw new Error(payload?.error || 'Failed to send athlete invite.')
+        }
+
+        return payload?.athlete || null
+      }))
+
+      return sentAthletes.filter(Boolean)
+    })()
+
+    try {
+      await toastManager.promise(submitPromise, {
+        loading: { title: 'Sending invites...', data: { close: true } },
+        success: (sentAthletes) => ({
+          title: 'Invitations sent',
+          description: `${sentAthletes.length} athlete invite${sentAthletes.length === 1 ? '' : 's'} sent.`,
+          data: { close: true },
+        }),
+        error: (submitError) => ({
+          title: 'Failed to send invites',
+          description: submitError?.message || 'We could not send these athlete invites right now.',
+          data: { close: true },
+        }),
+      })
+
+      setIsBulkInviteSheetOpen(false)
+      setIsBulkActionsMenuOpen(false)
+      setBulkInviteEmailsByAthleteId({})
+      setRowSelection({})
+      setRefreshKey((currentValue) => currentValue + 1)
+    } finally {
+      setIsSendingBulkInvites(false)
+    }
+  }
+
+  function handleBulkExportSubmit() {
+    if (bulkExportDisabled) return
+
+    setIsExportingAthletes(true)
+
+    try {
+      const timestamp = new Date().toISOString().slice(0, 10)
+
+      const csv = buildBulkExportCsv(selectedAthletes, bulkExportFields)
+      downloadBulkExportFile({
+        content: csv,
+        fileName: `pplus-athletes-export-${timestamp}.csv`,
+        mimeType: 'text/csv;charset=utf-8',
+      })
+
+      toastManager.show({
+        title: 'Athletes export ready',
+        description: `${selectedAthleteCount} athlete${selectedAthleteCount === 1 ? '' : 's'} exported.`,
+        variant: 'success',
+        data: { close: true },
+      })
+      setIsBulkExportSheetOpen(false)
+      setIsBulkActionsMenuOpen(false)
+      setRowSelection({})
+      resetBulkExportState()
+    } catch (exportError) {
+      toastManager.show({
+        title: 'Failed to export athletes',
+        description: exportError?.message || 'We could not generate this athlete export right now.',
+        variant: 'error',
+        data: { close: true },
+      })
+    } finally {
+      setIsExportingAthletes(false)
+    }
+  }
+
+  async function handleBulkDeleteAthletes() {
+    if (selectedAthleteCount === 0 || isDeletingSelectedAthletes) return
+
+    const selectedAthleteIds = selectedAthletes.map((athlete) => athlete.id).filter(Boolean)
+    if (selectedAthleteIds.length === 0) return
+
+    setIsDeletingSelectedAthletes(true)
+    const submitPromise = (async () => {
+      const response = await fetch('/api/admin/athletes', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ athleteIds: selectedAthleteIds }),
+      })
+      const payload = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Failed to delete selected athletes.')
+      }
+
+      return payload?.result || null
+    })()
+
+    try {
+      await toastManager.promise(submitPromise, {
+        loading: { title: 'Deleting athletes...', data: { close: true } },
+        success: { title: 'Athletes deleted', description: `${selectedAthleteCount} athlete${selectedAthleteCount === 1 ? '' : 's'} removed from the workspace.`, data: { close: true } },
+        error: (deleteError) => ({
+          title: 'Failed to delete athletes',
+          description: deleteError?.message || 'We could not delete these athletes right now.',
+          data: { close: true },
+        }),
+      })
+
+      setIsBulkDeleteDialogOpen(false)
+      setIsBulkActionsMenuOpen(false)
+      setRowSelection({})
+      setRefreshKey((currentValue) => currentValue + 1)
+    } finally {
+      setIsDeletingSelectedAthletes(false)
+    }
+  }
+
+  function handleAddToGroupsSheetOpenChange(open) {
+    setIsAddToGroupsSheetOpen(open)
+
+    if (!open) {
+      setIsBulkActionsMenuOpen(false)
+      setSelectedGroupIds([])
+      setGroupSearchQuery('')
+    }
+  }
+
+  function toggleSelectedGroupId(groupId) {
+    setSelectedGroupIds((currentIds) => (
+      currentIds.includes(groupId)
+        ? currentIds.filter((currentId) => currentId !== groupId)
+        : [...currentIds, groupId]
+    ))
+  }
+
+  async function handleAddToGroupsSubmit() {
+    if (selectedGroupIds.length === 0 || selectedAthleteCount === 0) return
+
+    const selectedAthleteIds = selectedAthletes.map((athlete) => athlete.id).filter(Boolean)
+    if (selectedAthleteIds.length === 0) return
+
+    setIsAddingToGroups(true)
+
+    const submitPromise = (async () => {
+      const response = await fetch('/api/admin/groups', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'add-athletes',
+          groupIds: selectedGroupIds,
+          athleteIds: selectedAthleteIds,
+        }),
+      })
+      const payload = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Failed to add athletes to groups.')
+      }
+
+      return payload?.result ?? {}
+    })()
+
+    try {
+      await toastManager.promise(submitPromise, {
+        loading: { title: 'Adding to groups...', data: { close: true } },
+        success: (result) => ({
+          title: 'Athletes added to groups',
+          description: `${result?.athletesAdded ?? selectedAthleteIds.length} athlete${selectedAthleteIds.length === 1 ? '' : 's'} added to ${result?.groupsUpdated ?? selectedGroupIds.length} group${selectedGroupIds.length === 1 ? '' : 's'}.`,
+          data: { close: true },
+        }),
+        error: (submitError) => ({
+          title: 'Failed to add to groups',
+          description: submitError?.message || 'We could not add these athletes to groups right now.',
+          data: { close: true },
+        }),
+      })
+
+      setIsAddToGroupsSheetOpen(false)
+      setIsBulkActionsMenuOpen(false)
+      setSelectedGroupIds([])
+      setGroupSearchQuery('')
+      setRowSelection({})
+      setRefreshKey((currentValue) => currentValue + 1)
+    } finally {
+      setIsAddingToGroups(false)
+    }
+  }
+
+  function handleAssignProgramSheetOpenChange(open) {
+    setIsAssignProgramSheetOpen(open)
+
+    if (!open) {
+      setIsBulkActionsMenuOpen(false)
+    }
+  }
+
+  async function handleAssignProgramSubmit() {
+    if (!selectedAssignProgram || selectedAthleteCount === 0) return
+
+    const selectedAthleteIds = selectedAthletes.map((athlete) => athlete.id).filter(Boolean)
+    if (selectedAthleteIds.length === 0) return
+
+    setIsAssigningProgram(true)
+
+    const submitPromise = (async () => {
+      const response = await fetch('/api/admin/programs', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: selectedAssignProgram.id,
+          athleteIds: selectedAthleteIds,
+          name: selectedAssignProgram.name,
+          startDate: selectedAssignProgram.startDate ?? '',
+          endDate: selectedAssignProgram.endDate ?? '',
+          description: selectedAssignProgram.description ?? '',
+        }),
+      })
+      const payload = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Failed to assign program.')
+      }
+
+      return payload?.program || selectedAssignProgram
+    })()
+
+    try {
+      await toastManager.promise(submitPromise, {
+        loading: { title: 'Assigning program...', data: { close: true } },
+        success: (program) => ({
+          title: 'Program assigned',
+          description: `${program?.name || selectedAssignProgram.name} assigned to ${selectedAthleteIds.length} athlete${selectedAthleteIds.length === 1 ? '' : 's'}.`,
+          data: { close: true },
+        }),
+        error: (submitError) => ({
+          title: 'Failed to assign program',
+          description: submitError?.message || 'We could not assign this program right now.',
+          data: { close: true },
+        }),
+      })
+
+      setIsAssignProgramSheetOpen(false)
+      setIsBulkActionsMenuOpen(false)
+      setSelectedAssignProgramId('')
+      setRowSelection({})
+      setRefreshKey((currentValue) => currentValue + 1)
+    } finally {
+      setIsAssigningProgram(false)
+    }
+  }
 
   return (
     <div className="admin-shell-athletes-table-example">
       <div className="flex flex-col gap-3">
-        <div className="flex w-full items-center justify-between gap-3">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button type="button" className="admin-shell-athletes-example-columns-button">
-                Columns
-                <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {table
-                .getAllColumns()
-                .filter((column) => column.getCanHide())
-                .map((column) => (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    className="capitalize"
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                  >
-                    {column.columnDef.meta?.label ?? column.id}
-                  </DropdownMenuCheckboxItem>
-                ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button
-            type="button"
-            onClick={() => {
-              setAthleteDialogMode('create')
-              setEditingAthleteId(null)
-              setSendAthleteInvite(true)
-              setIsCreateEditAthleteDialogOpen(true)
-            }}
-            className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] md:self-auto"
-          >
-            Create athlete
-          </Button>
-        </div>
-        <div className="flex w-full flex-wrap items-center justify-start gap-2">
-          <Filters
-            filters={athleteFilters}
-            fields={athleteFilterFields}
-            onChange={setAthleteFilters}
-            trigger={
-              <Button
-                type="button"
-                variant="outline"
-                className="admin-shell-athletes-filter-trigger rounded-[12px] min-h-[40px] shadow-none"
-              >
-                <Plus className="size-4" />
-                Add filter
-              </Button>
-            }
-          />
+        <div className="flex w-full flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-start gap-2">
+            <Filters
+              filters={athleteFilters}
+              fields={athleteFilterFields}
+              onChange={setAthleteFilters}
+              trigger={
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="admin-shell-athletes-filter-trigger rounded-[12px] min-h-[40px] shadow-none"
+                >
+                  <Plus className="size-4" />
+                  Add filter
+                </Button>
+              }
+            />
+          </div>
+          <div className="flex shrink-0 items-center justify-end gap-3">
+            <DropdownMenu open={isBulkActionsMenuOpen} onOpenChange={handleBulkActionsMenuOpenChange}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="admin-shell-athletes-example-columns-button"
+                  disabled={selectedAthleteCount === 0}
+                  aria-label="Bulk actions"
+                >
+                  {selectedAthleteCount > 0 ? `Bulk actions (${selectedAthleteCount})` : 'Bulk actions'}
+                  <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[190px]">
+                <DropdownMenuItem
+                  className="admin-shell-athletes-bulk-menu-item"
+                  onSelect={(event) => {
+                    event.preventDefault()
+                    setIsBulkActionsMenuOpen(false)
+                    setSelectedAssignProgramId('')
+                    setIsAssignProgramSheetOpen(true)
+                  }}
+                >
+                  <BookOpen className="size-4" aria-hidden="true" />
+                  Assign program
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="admin-shell-athletes-bulk-menu-item"
+                  onSelect={(event) => {
+                    event.preventDefault()
+                    setIsBulkActionsMenuOpen(false)
+                    setSelectedGroupIds([])
+                    setGroupSearchQuery('')
+                    setIsAddToGroupsSheetOpen(true)
+                  }}
+                >
+                  <UsersRound className="size-4" aria-hidden="true" />
+                  Add to groups
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="admin-shell-athletes-bulk-menu-item"
+                  onSelect={(event) => {
+                    event.preventDefault()
+                    setIsBulkActionsMenuOpen(false)
+                    setBulkInviteEmailsByAthleteId({})
+                    setIsBulkInviteSheetOpen(true)
+                  }}
+                >
+                  <Send className="size-4" aria-hidden="true" />
+                  Send invite
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="admin-shell-athletes-bulk-menu-item"
+                  onSelect={(event) => {
+                    event.preventDefault()
+                    setIsBulkActionsMenuOpen(false)
+                    resetBulkExportState()
+                    setIsBulkExportSheetOpen(true)
+                  }}
+                >
+                  <Download className="size-4" aria-hidden="true" />
+                  Export
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="admin-shell-athletes-bulk-menu-item admin-shell-athletes-bulk-menu-item-danger"
+                  onSelect={(event) => {
+                    event.preventDefault()
+                    setIsBulkActionsMenuOpen(false)
+                    setIsBulkDeleteDialogOpen(true)
+                  }}
+                >
+                  <Trash2 className="size-4" aria-hidden="true" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className="admin-shell-athletes-example-columns-button">
+                  Columns
+                  <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {table
+                  .getAllColumns()
+                  .filter((column) => column.getCanHide())
+                  .map((column) => (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      className="capitalize"
+                      checkIconClassName="text-[var(--admin-shell-primary-button-bg)]"
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                    >
+                      {column.columnDef.meta?.label ?? column.id}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              type="button"
+              onClick={() => {
+                setAthleteDialogMode('create')
+                setEditingAthleteId(null)
+                setSendAthleteInvite(true)
+                setIsCreateEditAthleteDialogOpen(true)
+              }}
+              className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] md:self-auto"
+            >
+              Create athlete
+            </Button>
+          </div>
         </div>
       </div>
+
+      <Sheet open={isAddToGroupsSheetOpen} onOpenChange={handleAddToGroupsSheetOpenChange}>
+        <SheetContent side="right" className="admin-shell-athletes-add-groups-sheet border-l border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] !max-w-[var(--container-lg)]">
+          <SheetHeader className="shrink-0 border-b border-[var(--admin-dashboard-card-border)] px-6 py-5">
+            <SheetTitle className="text-[var(--admin-dashboard-card-text)]">Add to groups</SheetTitle>
+            <SheetDescription className="text-[var(--admin-dashboard-card-muted)]">
+              Choose one or more groups for {selectedAthleteCount} selected athletes.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <div className="grid gap-5">
+              <section className="rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-4">
+                <div className="grid gap-1">
+                  <h3 className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">Selected athletes</h3>
+                  <p className="text-sm text-[var(--admin-dashboard-card-muted)]">{selectedAthleteCount} athletes selected</p>
+                </div>
+                <div className="mt-4 grid gap-2">
+                  {selectedAthletes.slice(0, 3).map((athlete) => (
+                    <div key={athlete.id} className="flex items-center justify-between gap-3 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-3 py-2">
+                      <span className="truncate text-sm font-medium text-[var(--admin-dashboard-card-text)]">{athlete.name}</span>
+                      <span className="shrink-0 text-xs text-[var(--admin-dashboard-card-muted)]">{athlete.program || '-'}</span>
+                    </div>
+                  ))}
+                  {selectedAthleteCount > 3 ? (
+                    <p className="text-xs font-medium text-[var(--admin-shell-primary-button-bg)]">+ {selectedAthleteCount - 3} more</p>
+                  ) : null}
+                </div>
+              </section>
+
+              <section className="grid gap-3">
+                <div className="grid gap-1">
+                  <h3 className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">Groups</h3>
+                  <p className="text-sm text-[var(--admin-dashboard-card-muted)]">Select one or more groups to add these athletes to.</p>
+                </div>
+                <Input
+                  className="h-11 rounded-[12px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:ring-[var(--admin-shell-accent)]/20"
+                  placeholder="Search groups..."
+                  value={groupSearchQuery}
+                  onChange={(event) => setGroupSearchQuery(event.target.value)}
+                />
+                <div className="grid max-h-[320px] gap-2 overflow-y-auto pr-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                  {filteredGroupOptions.length > 0 ? (
+                    filteredGroupOptions.map((group) => {
+                      const isGroupSelected = selectedGroupIds.includes(group.id)
+                      return (
+                        <button
+                          type="button"
+                          key={group.id}
+                          className={`flex items-center gap-3 rounded-[14px] border px-3 py-3 text-left transition-colors ${isGroupSelected ? 'border-[var(--admin-shell-primary-button-bg)] bg-[#3BE0AF]/10 hover:bg-[#3BE0AF]/10' : 'border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] hover:bg-[#3BE0AF]/10'}`}
+                          onClick={() => toggleSelectedGroupId(group.id)}
+                        >
+                          <Checkbox
+                            className="admin-shell-athletes-checkbox-input"
+                            checked={isGroupSelected}
+                            onClick={(event) => event.stopPropagation()}
+                            onChange={() => toggleSelectedGroupId(group.id)}
+                            aria-label={`Select ${group.name}`}
+                          />
+                          <span className="grid min-w-0 gap-0.5">
+                            <span className="truncate text-sm font-medium text-[var(--admin-dashboard-card-text)]">{group.name}</span>
+                            <span className="text-xs text-[var(--admin-dashboard-card-muted)]">{group.athleteCountLabel ?? `${group.athleteCount ?? group.athletes?.length ?? 0} athletes`}</span>
+                          </span>
+                        </button>
+                      )
+                    })
+                  ) : (
+                    <div className="rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-3 py-4 text-sm text-[var(--admin-dashboard-card-muted)]">
+                      No groups found.
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs font-medium text-[var(--admin-dashboard-card-muted)]">{selectedGroupIds.length} groups selected</p>
+              </section>
+            </div>
+          </div>
+
+          <SheetFooter className="shrink-0 border-t border-[var(--admin-dashboard-card-border)] px-6 py-5 sm:flex-row sm:justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-[12px] min-h-[40px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-shell-text-strong)]"
+              onClick={() => setIsAddToGroupsSheetOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]"
+              disabled={isAddingToGroups || selectedGroupIds.length === 0 || selectedAthleteCount === 0}
+              onClick={handleAddToGroupsSubmit}
+            >
+              {isAddingToGroups ? 'Adding...' : 'Add to groups'}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={isBulkInviteSheetOpen} onOpenChange={handleBulkInviteSheetOpenChange}>
+        <SheetContent side="right" className="admin-shell-athletes-bulk-invite-sheet border-l border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] !max-w-[var(--container-lg)]">
+          <SheetHeader className="shrink-0 border-b border-[var(--admin-dashboard-card-border)] px-6 py-5">
+            <SheetTitle className="text-[var(--admin-dashboard-card-text)]">Send invites</SheetTitle>
+            <SheetDescription className="text-[var(--admin-dashboard-card-muted)]">
+              Prepare invitations for {selectedInviteAthletes.length} selected inactive athletes.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <div className="grid gap-5">
+              <section className="grid gap-3 rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-4">
+                <div className="grid gap-1">
+                  <h3 className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">Invite readiness</h3>
+                  <p className="text-sm text-[var(--admin-dashboard-card-muted)]">Review who can receive an invite now and who needs an email first.</p>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-3 py-3">
+                    <p className="text-lg font-semibold text-[var(--admin-dashboard-card-text)]">{selectedInviteReadyCount}</p>
+                    <p className="text-xs text-[var(--admin-dashboard-card-muted)]">Ready to resend</p>
+                  </div>
+                  <div className="rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-3 py-3">
+                    <p className="text-lg font-semibold text-[var(--admin-dashboard-card-text)]">{selectedInviteNeedsEmailCount}</p>
+                    <p className="text-xs text-[var(--admin-dashboard-card-muted)]">Need email</p>
+                  </div>
+                  <div className="rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-3 py-3">
+                    <p className="text-lg font-semibold text-[var(--admin-dashboard-card-text)]">{selectedAthleteCount - selectedInviteAthletes.length}</p>
+                    <p className="text-xs text-[var(--admin-dashboard-card-muted)]">Skipped active</p>
+                  </div>
+                </div>
+              </section>
+
+              <section className="grid gap-3">
+                <div className="grid gap-1">
+                  <h3 className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">Selected athletes</h3>
+                  <p className="text-sm text-[var(--admin-dashboard-card-muted)]">Existing invited athletes can be resent. New invitees need an email before sending.</p>
+                </div>
+                <div className="grid max-h-[420px] gap-2 overflow-y-auto pr-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                  {selectedInviteAthletes.length > 0 ? (
+                    selectedInviteAthletes.map((athlete) => (
+                      <div key={athlete.id} className="grid gap-3 rounded-[16px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 py-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{athlete.name}</p>
+                            <p className="truncate text-xs text-[var(--admin-dashboard-card-muted)]">{athlete.program || 'No program assigned'}</p>
+                          </div>
+                          <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-medium ${athlete.hasInvite ? 'border-[var(--admin-shell-primary-button-bg)] bg-[#3BE0AF]/10 text-[var(--admin-shell-primary-button-bg)]' : 'border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] text-[var(--admin-dashboard-card-muted)]'}`}>
+                            {athlete.hasInvite ? 'Ready to resend' : 'Needs email'}
+                          </span>
+                        </div>
+                        {!athlete.hasInvite ? (
+                          <Input
+                            className="h-10 rounded-[12px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-3 text-sm text-[var(--admin-dashboard-card-text)] placeholder:text-[var(--admin-dashboard-card-muted)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:ring-[var(--admin-shell-accent)]/20"
+                            placeholder="athlete@email.com"
+                            type="email"
+                            value={bulkInviteEmailsByAthleteId[athlete.id] ?? ''}
+                            onChange={(event) => updateBulkInviteEmail(athlete.id, event.target.value)}
+                          />
+                        ) : null}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-3 py-4 text-sm text-[var(--admin-dashboard-card-muted)]">
+                      No inactive athletes selected.
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              <p className="rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 py-3 text-xs text-[var(--admin-dashboard-card-muted)]">
+                Ready athletes will send immediately. Athletes without stored invite emails need an email before testing.
+              </p>
+            </div>
+          </div>
+
+          <SheetFooter className="shrink-0 border-t border-[var(--admin-dashboard-card-border)] px-6 py-5 sm:flex-row sm:justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-[12px] min-h-[40px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-shell-text-strong)]"
+              onClick={() => setIsBulkInviteSheetOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]"
+              disabled={bulkInviteSendDisabled}
+              onClick={handleBulkInviteSubmit}
+            >
+              {isSendingBulkInvites ? 'Sending...' : 'Send invites'}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={isBulkExportSheetOpen} onOpenChange={handleBulkExportSheetOpenChange}>
+        <SheetContent side="right" className="admin-shell-athletes-export-sheet border-l border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] !max-w-[var(--container-lg)]">
+          <SheetHeader className="shrink-0 border-b border-[var(--admin-dashboard-card-border)] px-6 py-5">
+            <SheetTitle className="text-[var(--admin-dashboard-card-text)]">Export athletes</SheetTitle>
+            <SheetDescription className="text-[var(--admin-dashboard-card-muted)]">
+              Choose what to include for {selectedAthleteCount} selected athletes.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <div className="grid gap-5">
+              <section className="grid gap-3 rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-4">
+                <div className="grid gap-1">
+                  <h3 className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">Export summary</h3>
+                  <p className="text-sm text-[var(--admin-dashboard-card-muted)]">Review the selected roster before choosing export options.</p>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-3 py-3">
+                    <p className="text-lg font-semibold text-[var(--admin-dashboard-card-text)]">{selectedAthleteCount}</p>
+                    <p className="text-xs text-[var(--admin-dashboard-card-muted)]">Selected</p>
+                  </div>
+                  <div className="rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-3 py-3">
+                    <p className="text-lg font-semibold text-[var(--admin-dashboard-card-text)]">{selectedExportActiveCount}</p>
+                    <p className="text-xs text-[var(--admin-dashboard-card-muted)]">Active</p>
+                  </div>
+                  <div className="rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-3 py-3">
+                    <p className="text-lg font-semibold text-[var(--admin-dashboard-card-text)]">{selectedExportInactiveCount}</p>
+                    <p className="text-xs text-[var(--admin-dashboard-card-muted)]">Inactive</p>
+                  </div>
+                </div>
+              </section>
+
+              <section className="grid gap-3">
+                <div className="grid gap-1">
+                  <h3 className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">Export format</h3>
+                  <p className="text-sm text-[var(--admin-dashboard-card-muted)]">This export downloads as a CSV file.</p>
+                </div>
+                <div className="rounded-[14px] border border-[var(--admin-shell-primary-button-bg)] bg-[#3BE0AF]/10 px-4 py-3 text-left">
+                  <span className="block text-sm font-semibold text-[var(--admin-dashboard-card-text)]">CSV</span>
+                  <span className="mt-1 block text-xs text-[var(--admin-dashboard-card-muted)]">Spreadsheet-friendly athlete rows</span>
+                </div>
+              </section>
+
+              <section className="grid gap-3">
+                <div className="grid gap-1">
+                  <h3 className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">Included fields</h3>
+                  <p className="text-sm text-[var(--admin-dashboard-card-muted)]">Open a group to see every possible field from the database.</p>
+                </div>
+                <Accordion type="multiple" className="grid gap-2">
+                  {BULK_EXPORT_FIELD_GROUPS.map((fieldGroup) => (
+                    <AccordionItem
+                      key={fieldGroup.id}
+                      value={fieldGroup.id}
+                      className={`overflow-hidden rounded-[14px] border transition-colors ${bulkExportFields.includes(fieldGroup.id) ? 'border-[var(--admin-shell-primary-button-bg)] bg-[#3BE0AF]/10' : 'border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)]'}`}
+                    >
+                      <AccordionTrigger className="px-3 py-3 hover:bg-[#3BE0AF]/10">
+                        <span className="flex min-w-0 flex-1 items-start gap-3">
+                          <Checkbox
+                            className="admin-shell-athletes-checkbox-input mt-0.5"
+                            checked={bulkExportFields.includes(fieldGroup.id)}
+                            onClick={(event) => event.stopPropagation()}
+                            onChange={(event) => {
+                              event.stopPropagation()
+                              toggleBulkExportField(fieldGroup.id)
+                            }}
+                            aria-label={`Include ${fieldGroup.label} fields`}
+                          />
+                          <span className="grid min-w-0 gap-0.5">
+                            <span className="text-sm font-medium text-[var(--admin-dashboard-card-text)]">{fieldGroup.label}</span>
+                            <span className="text-xs leading-5 text-[var(--admin-dashboard-card-muted)]">{fieldGroup.description}</span>
+                          </span>
+                        </span>
+                      </AccordionTrigger>
+                      <AccordionContent className="px-3 pb-3 pt-0">
+                        <div className="flex flex-wrap gap-2 pl-8">
+                          {fieldGroup.fields.map((fieldName) => (
+                            <span key={fieldName} className="rounded-full border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-2.5 py-1 text-xs font-medium text-[var(--admin-dashboard-card-muted)]">
+                              {fieldName}
+                            </span>
+                          ))}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </section>
+
+              <section className="rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-4">
+                <div className="grid gap-1">
+                  <h3 className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">Selected athletes preview</h3>
+                  <p className="text-sm text-[var(--admin-dashboard-card-muted)]">First rows that will be included.</p>
+                </div>
+                <div className="mt-4 grid gap-2">
+                  {selectedAthletes.slice(0, 3).map((athlete) => (
+                    <div key={athlete.id} className="flex items-center justify-between gap-3 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-3 py-2">
+                      <span className="truncate text-sm font-medium text-[var(--admin-dashboard-card-text)]">{athlete.name}</span>
+                      <span className="shrink-0 text-xs text-[var(--admin-dashboard-card-muted)]">{athlete.program || athlete.status || '-'}</span>
+                    </div>
+                  ))}
+                  {selectedAthleteCount > 3 ? (
+                    <p className="text-xs font-medium text-[var(--admin-shell-primary-button-bg)]">+ {selectedAthleteCount - 3} more</p>
+                  ) : null}
+                </div>
+              </section>
+
+            </div>
+          </div>
+
+          <SheetFooter className="shrink-0 border-t border-[var(--admin-dashboard-card-border)] px-6 py-5 sm:flex-row sm:justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-[12px] min-h-[40px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-shell-text-strong)]"
+              onClick={() => setIsBulkExportSheetOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] disabled:opacity-60"
+              disabled={bulkExportDisabled}
+              onClick={handleBulkExportSubmit}
+            >
+              {isExportingAthletes ? 'Exporting...' : 'Export athletes'}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={isAssignProgramSheetOpen} onOpenChange={handleAssignProgramSheetOpenChange}>
+        <SheetContent side="right" className="admin-shell-athletes-assign-program-sheet border-l border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] !max-w-[var(--container-lg)]">
+          <SheetHeader className="shrink-0 border-b border-[var(--admin-dashboard-card-border)] px-6 py-5">
+            <SheetTitle className="text-[var(--admin-dashboard-card-text)]">Assign program</SheetTitle>
+            <SheetDescription className="text-[var(--admin-dashboard-card-muted)]">
+              Choose a program for {selectedAthleteCount} selected athletes.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <div className="grid gap-5">
+              <section className="rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="grid gap-1">
+                    <h3 className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">Selected athletes</h3>
+                    <p className="text-sm text-[var(--admin-dashboard-card-muted)]">{selectedAthleteCount} athletes selected</p>
+                  </div>
+                </div>
+                <div className="mt-4 grid gap-2">
+                  {selectedAthletes.slice(0, 3).map((athlete) => (
+                    <div key={athlete.id} className="flex items-center justify-between gap-3 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-3 py-2">
+                      <span className="truncate text-sm font-medium text-[var(--admin-dashboard-card-text)]">{athlete.name}</span>
+                      <span className="shrink-0 text-xs text-[var(--admin-dashboard-card-muted)]">{athlete.program || '-'}</span>
+                    </div>
+                  ))}
+                  {selectedAthleteCount > 3 ? (
+                    <p className="text-xs font-medium text-[var(--admin-shell-primary-button-bg)]">+ {selectedAthleteCount - 3} more</p>
+                  ) : null}
+                </div>
+              </section>
+
+              <section className="grid gap-3">
+                <span className="text-sm font-medium text-[var(--admin-dashboard-card-text)]">Program</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button type="button" className="admin-shell-athletes-example-columns-button admin-shell-athletes-create-select-trigger w-full" aria-label="Program">
+                      <span className="truncate">{selectedAssignProgram?.name ?? 'Select a program'}</span>
+                      <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="min-w-[var(--radix-dropdown-menu-trigger-width)]">
+                    {isLoadingAssignPrograms ? (
+                      <DropdownMenuItem disabled>Loading programs...</DropdownMenuItem>
+                    ) : programOptions.length > 0 ? (
+                      programOptions.map((program) => (
+                        <DropdownMenuItem key={program.id} onSelect={() => setSelectedAssignProgramId(program.id)}>
+                          <div className="grid gap-0.5">
+                            <span className="text-sm font-medium">{program.name}</span>
+                            <span className="text-xs text-[var(--admin-dashboard-card-muted)]">{`${program.workouts ?? program.workoutCount ?? 0} workouts`}</span>
+                          </div>
+                        </DropdownMenuItem>
+                      ))
+                    ) : (
+                      <DropdownMenuItem disabled>No programs available</DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </section>
+
+            </div>
+          </div>
+
+          <SheetFooter className="shrink-0 border-t border-[var(--admin-dashboard-card-border)] px-6 py-5 sm:flex-row sm:justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-[12px] min-h-[40px] !border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-shell-text-strong)]"
+              onClick={() => setIsAssignProgramSheetOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]"
+              disabled={isAssigningProgram || !selectedAssignProgramId || selectedAthleteCount === 0}
+              onClick={handleAssignProgramSubmit}
+            >
+              {isAssigningProgram ? 'Assigning...' : 'Assign program'}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
       <Sheet open={isCreateEditAthleteDialogOpen} onOpenChange={(open) => {
         setIsCreateEditAthleteDialogOpen(open)
@@ -1382,6 +2580,43 @@ export function AthletesDataTable({ searchQuery = '' }) {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={isBulkDeleteDialogOpen} onOpenChange={setIsBulkDeleteDialogOpen}>
+        <DialogContent className="admin-shell-athletes-invite-dialog border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] text-[var(--admin-dashboard-card-text)] sm:max-w-[440px]">
+          <DialogHeader>
+            <DialogTitle>Delete athletes</DialogTitle>
+            <DialogDescription>These athletes will be permanently deleted.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2 rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-3 text-sm text-[var(--admin-dashboard-card-muted)]">
+            <p className="font-medium text-[var(--admin-dashboard-card-text)]">{selectedAthleteCount} athlete{selectedAthleteCount === 1 ? '' : 's'} selected</p>
+            {selectedAthletes.slice(0, 3).map((athlete) => (
+              <p key={athlete.id}>{athlete.name}</p>
+            ))}
+            {selectedAthleteCount > 3 ? (
+              <p>+ {selectedAthleteCount - 3} more</p>
+            ) : null}
+          </div>
+          <DialogFooter className="sm:flex-row sm:justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-[12px] min-h-[40px]"
+              onClick={() => setIsBulkDeleteDialogOpen(false)}
+              disabled={isDeletingSelectedAthletes}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="rounded-[12px] min-h-[40px] bg-red-500/90 text-white hover:bg-red-500"
+              onClick={handleBulkDeleteAthletes}
+              disabled={isDeletingSelectedAthletes || selectedAthleteCount === 0}
+            >
+              {isDeletingSelectedAthletes ? 'Deleting...' : 'Delete athletes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="admin-shell-athletes-invite-dialog border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] text-[var(--admin-dashboard-card-text)] sm:max-w-[440px]">
           <DialogHeader>
@@ -1412,6 +2647,14 @@ export function AthletesDataTable({ searchQuery = '' }) {
 
       <div className="admin-shell-athletes-table-shell">
         <Table className="admin-shell-athletes-table">
+          <colgroup>
+            {table.getVisibleLeafColumns().map((column) => (
+              <col
+                key={column.id}
+                style={{ width: ATHLETE_TABLE_COLUMN_WIDTHS[column.id] ?? 'auto' }}
+              />
+            ))}
+          </colgroup>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>

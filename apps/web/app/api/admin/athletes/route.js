@@ -47,7 +47,9 @@ export async function DELETE(request) {
   try {
     const repository = createAdminAthleteRepository()
     const body = await request.json()
-    const result = await repository.deleteAthlete(body ?? {})
+    const result = Array.isArray(body?.athleteIds)
+      ? await repository.deleteAthletes({ athleteIds: body.athleteIds })
+      : await repository.deleteAthlete(body ?? {})
     return json({ result })
   } catch (error) {
     return handleRouteError(error)
