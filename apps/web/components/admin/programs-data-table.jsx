@@ -10,7 +10,7 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { ChevronDown, CircleAlert, CircleCheckBig, LoaderCircle, MoreHorizontal, Plus, Trash2, X } from 'lucide-react'
+import { Archive, Copy, Download, UserPlus, ChevronDown, CircleAlert, CircleCheckBig, LoaderCircle, MoreHorizontal, Plus, Trash2, X } from 'lucide-react'
 
 import { Filters } from '@/components/reui/filters'
 import { useToast } from '@/hooks/use-toast'
@@ -32,6 +32,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
@@ -57,6 +58,12 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import Textarea from '@/components/ui/textarea'
+import {
+  buildProgramsExportCsv,
+  downloadProgramsExportFile,
+  getProgramsExportFileName,
+  programExportColumns,
+} from '@/lib/admin-programs-export'
 
 function getInitials(name) {
   return name
@@ -69,11 +76,13 @@ function getInitials(name) {
 
 function createProgramFormValues(program = {}) {
   return {
-    athleteIds: Array.isArray(program.athleteIds)
-      ? program.athleteIds.filter(Boolean)
-      : program.athleteId
-        ? [program.athleteId]
-        : [],
+    athleteIds: Array.isArray(program.assignedAthleteIds)
+      ? program.assignedAthleteIds.filter(Boolean)
+      : Array.isArray(program.athleteIds)
+        ? program.athleteIds.filter(Boolean)
+        : program.athleteId
+          ? [program.athleteId]
+          : [],
     name: program.name ?? '',
     weeks: program.duration?.split(' ')?.[0] ?? '',
     startDate: program.startDate ?? '',
@@ -82,6 +91,15 @@ function createProgramFormValues(program = {}) {
   }
 }
 
+function createDuplicateCopyOptions() {
+  return {
+    details: true,
+    athletes: false,
+    schedule: true,
+    exercises: true,
+    notes: true,
+  }
+}
 
 function normalizeProgramFilterValue(value) {
   return String(value ?? '').trim().toLowerCase()
@@ -336,7 +354,10 @@ function StatusCell({ status }) {
 function RowActionsCell({
   isOpen = false,
   onOpenChange = () => {},
-  onEditAction = () => {},
+  onDuplicateAction = () => {},
+  onAssignAction = () => {},
+  onExportAction = () => {},
+  onArchiveAction = () => {},
   onDeleteAction = () => {},
 }) {
   return (
@@ -347,22 +368,27 @@ function RowActionsCell({
           <MoreHorizontal className="admin-shell-athletes-row-menu-icon" aria-hidden="true" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" className="min-w-[190px]">
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-        <DropdownMenuItem
-          onSelect={() => {
-            onEditAction()
-            onOpenChange(false)
-          }}
-        >
-          Edit
+        <DropdownMenuItem onSelect={() => { onDuplicateAction(); onOpenChange(false) }}>
+          <Copy className="size-4" aria-hidden="true" />
+          Duplicate
         </DropdownMenuItem>
-        <DropdownMenuItem
-          onSelect={() => {
-            onDeleteAction()
-            onOpenChange(false)
-          }}
-        >
+        <DropdownMenuItem onSelect={() => { onAssignAction(); onOpenChange(false) }}>
+          <UserPlus className="size-4" aria-hidden="true" />
+          Assign to athletes
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => { onExportAction(); onOpenChange(false) }}>
+          <Download className="size-4" aria-hidden="true" />
+          Export
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => { onArchiveAction(); onOpenChange(false) }}>
+          <Archive className="size-4" aria-hidden="true" />
+          Archive
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => { onDeleteAction(); onOpenChange(false) }}>
+          <Trash2 className="size-4" aria-hidden="true" />
           Delete
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -382,14 +408,23 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
     parseAsJson((value) => (Array.isArray(value) ? value : [])).withDefault([]),
   )
   const [isCreateProgramDialogOpen, setIsCreateProgramDialogOpen] = useState(false)
+  const [isArchiveProgramDialogOpen, setIsArchiveProgramDialogOpen] = useState(false)
+  const [selectedArchiveProgramIds, setSelectedArchiveProgramIds] = useState([])
+  const [isArchivingProgram, setIsArchivingProgram] = useState(false)
+  const [isExportProgramSheetOpen, setIsExportProgramSheetOpen] = useState(false)
+  const [selectedExportProgramIds, setSelectedExportProgramIds] = useState([])
+  const [isExportingPrograms, setIsExportingPrograms] = useState(false)
   const [isDeleteProgramDialogOpen, setIsDeleteProgramDialogOpen] = useState(false)
-  const [selectedDeleteProgramId, setSelectedDeleteProgramId] = useState(null)
+  const [selectedDeleteProgramIds, setSelectedDeleteProgramIds] = useState([])
+  const [isBulkActionsMenuOpen, setIsBulkActionsMenuOpen] = useState(false)
   const [isDeletingProgram, setIsDeletingProgram] = useState(false)
   const [programToast, setProgramToast] = useState(null)
   const [programDialogMode, setProgramDialogMode] = useState('create')
-  const [activeProgramDialogTab, setActiveProgramDialogTab] = useState('details')
   const [selectedProgramId, setSelectedProgramId] = useState(null)
-  const [programFormValues, setProgramFormValues] = useState(() => createProgramFormValues())
+  const [selectedDuplicateSourceProgramId, setSelectedDuplicateSourceProgramId] = useState(null)
+  const [activeProgramDialogTab, setActiveProgramDialogTab] = useState('details')
+  const [programFormValues, setProgramFormValues] = useState(createProgramFormValues())
+  const [duplicateCopyOptions, setDuplicateCopyOptions] = useState(createDuplicateCopyOptions())
   const [isSavingProgram, setIsSavingProgram] = useState(false)
   const [openRowActionMenuId, setOpenRowActionMenuId] = useState(null)
   const [pendingRowAction, setPendingRowAction] = useState(null)
@@ -462,6 +497,96 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
     setIsCreateProgramDialogOpen(true)
   }
 
+  function openAssignProgramDialog(programId) {
+    const selectedProgram = programs.find((program) => program.id === programId)
+
+    if (!selectedProgram) {
+      return
+    }
+
+    setProgramDialogMode('assign')
+    setActiveProgramDialogTab('athletes')
+    setSelectedProgramId(programId)
+    setProgramFormValues(createProgramFormValues(selectedProgram))
+    setIsCreateProgramDialogOpen(true)
+  }
+
+  function openDuplicateProgramDialog(programId) {
+    const selectedProgram = programs.find((program) => program.id === programId)
+
+    if (!selectedProgram) {
+      return
+    }
+
+    setProgramDialogMode('duplicate')
+    setActiveProgramDialogTab('details')
+    setSelectedProgramId(null)
+    setSelectedDuplicateSourceProgramId(programId)
+    setDuplicateCopyOptions(createDuplicateCopyOptions())
+    setProgramFormValues({
+      ...createProgramFormValues(selectedProgram),
+      athleteIds: [],
+      name: `${selectedProgram.name} copy`,
+      startDate: '',
+      endDate: '',
+    })
+    setIsCreateProgramDialogOpen(true)
+  }
+
+  function handleDuplicateCopyOptionChange(option, checked) {
+    setDuplicateCopyOptions((current) => ({
+      ...current,
+      [option]: option === 'details' ? true : checked,
+    }))
+
+    if (option === 'athletes') {
+      setProgramFormValues((current) => ({
+        ...current,
+        athleteIds: checked && duplicateSourceProgram ? createProgramFormValues(duplicateSourceProgram).athleteIds : [],
+      }))
+    }
+  }
+
+  function openExportProgramSheet(programIds) {
+    const nextProgramIds = Array.isArray(programIds) ? programIds.filter(Boolean) : programIds ? [programIds] : []
+    if (nextProgramIds.length === 0) return
+    setSelectedExportProgramIds(nextProgramIds)
+    setIsExportProgramSheetOpen(true)
+  }
+
+  function handleConfirmExportPrograms() {
+    if (exportProgramsDisabled) return
+
+    setIsExportingPrograms(true)
+
+    try {
+      const csv = buildProgramsExportCsv(exportProgramsToReview)
+      downloadProgramsExportFile({
+        content: csv,
+        fileName: exportProgramsFileName,
+        mimeType: 'text/csv;charset=utf-8',
+      })
+      toastManager.show({
+        title: 'Programs export ready',
+        description: `${exportProgramsToReview.length} program${exportProgramsToReview.length === 1 ? '' : 's'} exported.`,
+        variant: 'success',
+        data: { close: true },
+      })
+      setIsExportProgramSheetOpen(false)
+      setSelectedExportProgramIds([])
+      setRowSelection({})
+    } catch (exportError) {
+      toastManager.show({
+        title: 'Failed to export programs',
+        description: exportError?.message || 'We could not generate this programs export right now.',
+        variant: 'error',
+        data: { close: true },
+      })
+    } finally {
+      setIsExportingPrograms(false)
+    }
+  }
+
   function upsertProgram(nextProgram) {
     if (!nextProgram?.id) return
 
@@ -487,29 +612,37 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
       description: programFormValues.description,
     }
     const isEditingProgram = programDialogMode === 'edit'
+    const isAssigningProgram = programDialogMode === 'assign'
+    const isDuplicatingProgram = programDialogMode === 'duplicate'
 
     setIsSavingProgram(true)
     setError('')
 
     const loadingToastId = toastManager.show({
-      title: isEditingProgram ? 'Saving program...' : 'Creating program...',
+      title: isEditingProgram ? 'Saving program...' : isAssigningProgram ? 'Saving assignments...' : isDuplicatingProgram ? 'Duplicating program...' : 'Creating program...',
       variant: 'loading',
       duration: 0,
       data: { close: true },
     })
     showProgramToast({
-      title: isEditingProgram ? 'Saving program...' : 'Creating program...',
+      title: isEditingProgram ? 'Saving program...' : isAssigningProgram ? 'Saving assignments...' : isDuplicatingProgram ? 'Duplicating program...' : 'Creating program...',
       variant: 'loading',
       duration: 0,
     })
 
     try {
       const response = await fetch('/api/admin/programs', {
-        method: isEditingProgram ? 'PATCH' : 'POST',
+        method: isEditingProgram || isAssigningProgram ? 'PATCH' : 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(isEditingProgram ? { id: selectedProgramId, ...payload } : payload),
+        body: JSON.stringify(isDuplicatingProgram
+          ? { action: 'duplicate', sourceProgramId: selectedDuplicateSourceProgramId, copyOptions: duplicateCopyOptions, ...payload }
+          : isAssigningProgram
+            ? { action: 'assign-athletes', id: selectedProgramId, athleteIds: programFormValues.athleteIds }
+            : isEditingProgram
+              ? { id: selectedProgramId, ...payload }
+              : payload),
       })
       const result = await response.json()
 
@@ -523,10 +656,14 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
       }
 
       const successToast = {
-        title: isEditingProgram ? 'Program updated' : 'Program created',
+        title: isEditingProgram ? 'Program updated' : isAssigningProgram ? 'Program assignments updated' : isDuplicatingProgram ? 'Program duplicated' : 'Program created',
         description: isEditingProgram
           ? `Saved changes to ${nextProgram?.name || 'this program'}.`
-          : `Created ${nextProgram?.name || 'this program'} and opened it for further editing.`,
+          : isAssigningProgram
+            ? `Saved athlete assignments for ${nextProgram?.name || 'this program'}.`
+            : isDuplicatingProgram
+            ? `Created ${nextProgram?.name || 'this program'}.`
+            : `Created ${nextProgram?.name || 'this program'} and opened it for further editing.`,
         variant: 'success',
         data: { close: true },
       }
@@ -539,7 +676,7 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
       setProgramFormValues(createProgramFormValues(nextProgram))
       setRefreshKey((current) => current + 1)
 
-      if (isEditingProgram) {
+      if (isEditingProgram || isAssigningProgram) {
         setIsCreateProgramDialogOpen(false)
       } else {
         setProgramDialogMode('edit')
@@ -553,8 +690,8 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
       }, 0)
     } catch (saveError) {
       const errorToast = {
-        title: isEditingProgram ? 'Failed to save program' : 'Failed to create program',
-        description: saveError?.message || (isEditingProgram ? 'We could not save this program right now.' : 'We could not create this program right now.'),
+        title: isEditingProgram ? 'Failed to save program' : isAssigningProgram ? 'Failed to save assignments' : isDuplicatingProgram ? 'Failed to duplicate program' : 'Failed to create program',
+        description: saveError?.message || (isEditingProgram ? 'We could not save this program right now.' : isAssigningProgram ? 'We could not save athlete assignments right now.' : isDuplicatingProgram ? 'We could not duplicate this program right now.' : 'We could not create this program right now.'),
         variant: 'error',
         duration: 6000,
         data: { close: true },
@@ -590,8 +727,55 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
     })
   }
 
+  async function handleArchiveProgram() {
+    const programIdsToArchive = archiveEligiblePrograms.map((program) => program.id).filter(Boolean)
+    if (programIdsToArchive.length === 0) return
+
+    setIsArchivingProgram(true)
+    setError('')
+
+    try {
+      const response = await fetch('/api/admin/programs', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'archive-programs', programIds: programIdsToArchive }),
+      })
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result?.error || 'Failed to archive program.')
+      }
+
+      const archivedPrograms = Array.isArray(result?.archivedPrograms) ? result.archivedPrograms : []
+      const skippedPrograms = Array.isArray(result?.skippedPrograms) ? result.skippedPrograms : []
+      const archivedProgramMap = new Map(archivedPrograms.map((program) => [program.id, program]))
+
+      setPrograms((current) => current.map((program) => archivedProgramMap.get(program.id) ?? program))
+      setIsArchiveProgramDialogOpen(false)
+      setSelectedArchiveProgramIds([])
+      setRowSelection({})
+      setRefreshKey((current) => current + 1)
+      toastManager.show({
+        title: archivedPrograms.length === 1 ? 'Program archived' : 'Programs archived',
+        description: skippedPrograms.length > 0
+          ? `${archivedPrograms.length} archived. ${skippedPrograms.length} already archived skipped.`
+          : archivedPrograms.length === 1
+            ? 'The program was moved to archived.'
+            : `${archivedPrograms.length} programs were moved to archived.`,
+        variant: 'success',
+        data: { close: true },
+      })
+    } catch (archiveError) {
+      setError(archiveError?.message || 'Failed to archive program.')
+      toastManager.show({ title: 'Failed to archive program', description: archiveError?.message || 'We could not archive this program right now.', variant: 'error', data: { close: true } })
+    } finally {
+      setIsArchivingProgram(false)
+    }
+  }
+
   async function handleDeleteProgram() {
-    if (!selectedDeleteProgramId) return
+    const programIdsToDelete = deleteProgramsToReview.map((program) => program.id).filter(Boolean)
+    if (programIdsToDelete.length === 0) return
 
     setIsDeletingProgram(true)
     setError('')
@@ -600,7 +784,7 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
       const response = await fetch('/api/admin/programs', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: selectedDeleteProgramId }),
+        body: JSON.stringify({ action: 'delete-programs', programIds: programIdsToDelete }),
       })
       const result = await response.json()
 
@@ -608,11 +792,20 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
         throw new Error(result?.error || 'Failed to delete program.')
       }
 
-      setPrograms((current) => current.filter((program) => program.id !== selectedDeleteProgramId))
+      const deletedPrograms = Array.isArray(result?.deletedPrograms) ? result.deletedPrograms : []
+      const deletedProgramIds = deletedPrograms.map((program) => program.id).filter(Boolean)
+
+      setPrograms((current) => current.filter((program) => !deletedProgramIds.includes(program.id)))
       setIsDeleteProgramDialogOpen(false)
-      setSelectedDeleteProgramId(null)
+      setSelectedDeleteProgramIds([])
+      setRowSelection({})
       setRefreshKey((current) => current + 1)
-      toastManager.show({ title: 'Program deleted', description: 'The program was permanently deleted.', variant: 'success', data: { close: true } })
+      toastManager.show({
+        title: programIdsToDelete.length === 1 ? 'Program deleted' : 'Programs deleted',
+        description: programIdsToDelete.length === 1 ? 'The program was permanently deleted.' : `${programIdsToDelete.length} programs were permanently deleted.`,
+        variant: 'success',
+        data: { close: true },
+      })
     } catch (deleteError) {
       setError(deleteError?.message || 'Failed to delete program.')
       toastManager.show({ title: 'Failed to delete program', description: deleteError?.message || 'We could not delete this program right now.', variant: 'error', data: { close: true } })
@@ -730,7 +923,10 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
             onOpenChange={(isOpen) => {
               setOpenRowActionMenuId(isOpen ? row.original.id : null)
             }}
-            onEditAction={() => setPendingRowAction({ type: 'edit', programId: row.original.id })}
+            onDuplicateAction={() => setPendingRowAction({ type: 'duplicate', programId: row.original.id })}
+            onAssignAction={() => setPendingRowAction({ type: 'assign', programId: row.original.id })}
+            onExportAction={() => setPendingRowAction({ type: 'export', programId: row.original.id })}
+            onArchiveAction={() => setPendingRowAction({ type: 'archive', programId: row.original.id })}
             onDeleteAction={() => setPendingRowAction({ type: 'delete', programId: row.original.id })}
           />
         ),
@@ -742,7 +938,9 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
   )
 
   const selectedProgram = useMemo(() => programs.find((program) => program.id === selectedProgramId) ?? null, [programs, selectedProgramId])
-  const isProgramPersisted = programDialogMode === 'edit' && Boolean(selectedProgramId)
+  const duplicateSourceProgram = useMemo(() => programs.find((program) => program.id === selectedDuplicateSourceProgramId) ?? null, [programs, selectedDuplicateSourceProgramId])
+  const assignSourceProgram = programDialogMode === 'assign' ? selectedProgram : null
+  const isProgramPersisted = (programDialogMode === 'edit' || programDialogMode === 'assign') && Boolean(selectedProgramId)
 
   const filteredPrograms = useMemo(() => {
     const normalizedFilters = Array.isArray(programFilters) ? programFilters : []
@@ -766,6 +964,53 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
       pagination,
     },
   })
+
+  const selectedPrograms = table.getSelectedRowModel().rows.map((row) => row.original)
+  const selectedProgramCount = selectedPrograms.length
+  const selectedProgramIds = selectedPrograms.map((program) => program.id).filter(Boolean)
+  const exportProgramsToReview = useMemo(() => programs.filter((program) => selectedExportProgramIds.includes(program.id)), [programs, selectedExportProgramIds])
+  const exportProgramsFileName = getProgramsExportFileName()
+  const exportProgramsDisabled = exportProgramsToReview.length === 0 || isExportingPrograms
+  const archiveProgramsToReview = useMemo(() => programs.filter((program) => selectedArchiveProgramIds.includes(program.id)), [programs, selectedArchiveProgramIds])
+  const archiveEligiblePrograms = archiveProgramsToReview.filter((program) => normalizeProgramFilterValue(program.statusValue || program.status) !== 'archived')
+  const archiveSkippedPrograms = archiveProgramsToReview.filter((program) => normalizeProgramFilterValue(program.statusValue || program.status) === 'archived')
+  const deleteProgramsToReview = useMemo(() => programs.filter((program) => selectedDeleteProgramIds.includes(program.id)), [programs, selectedDeleteProgramIds])
+  const deleteProgramCount = deleteProgramsToReview.length
+
+  function handleBulkActionsMenuOpenChange(isOpen) {
+    setIsBulkActionsMenuOpen(selectedProgramCount > 0 ? isOpen : false)
+  }
+
+  function handleDuplicateSelectedProgram() {
+    setIsBulkActionsMenuOpen(false)
+    if (selectedProgramIds.length !== 1) return
+    openDuplicateProgramDialog(selectedProgramIds[0])
+  }
+
+  function handleAssignSelectedProgram() {
+    setIsBulkActionsMenuOpen(false)
+    if (selectedProgramIds.length !== 1) return
+    openAssignProgramDialog(selectedProgramIds[0])
+  }
+
+  function handleExportSelectedPrograms() {
+    setIsBulkActionsMenuOpen(false)
+    openExportProgramSheet(selectedProgramIds)
+  }
+
+  function handleOpenArchiveSelectedProgramsDialog() {
+    setIsBulkActionsMenuOpen(false)
+    if (selectedProgramIds.length === 0) return
+    setSelectedArchiveProgramIds(selectedProgramIds)
+    setIsArchiveProgramDialogOpen(true)
+  }
+
+  function handleOpenDeleteSelectedProgramsDialog() {
+    setIsBulkActionsMenuOpen(false)
+    if (selectedProgramIds.length === 0) return
+    setSelectedDeleteProgramIds(selectedProgramIds)
+    setIsDeleteProgramDialogOpen(true)
+  }
 
   useEffect(() => {
     table.getColumn('name')?.setFilterValue(searchQuery)
@@ -799,8 +1044,25 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
       openEditProgramDialog(pendingRowAction.programId)
     }
 
+    if (pendingRowAction.type === 'assign') {
+      openAssignProgramDialog(pendingRowAction.programId)
+    }
+
+    if (pendingRowAction.type === 'duplicate') {
+      openDuplicateProgramDialog(pendingRowAction.programId)
+    }
+
+    if (pendingRowAction.type === 'export') {
+      openExportProgramSheet([pendingRowAction.programId])
+    }
+
+    if (pendingRowAction.type === 'archive') {
+      setSelectedArchiveProgramIds([pendingRowAction.programId])
+      setIsArchiveProgramDialogOpen(true)
+    }
+
     if (pendingRowAction.type === 'delete') {
-      setSelectedDeleteProgramId(pendingRowAction.programId)
+      setSelectedDeleteProgramIds([pendingRowAction.programId])
       setIsDeleteProgramDialogOpen(true)
     }
 
@@ -817,55 +1079,104 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
 
   return (
     <div className="admin-shell-athletes-table-example">
-      <div className="grid gap-3">
-        <div className="flex w-full items-center justify-between gap-3">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button type="button" className="admin-shell-athletes-example-columns-button">
-                Columns
-                <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {table
-                .getAllColumns()
-                .filter((column) => column.getCanHide())
-                .map((column) => (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    className="capitalize"
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                  >
-                    {column.columnDef.meta?.label ?? column.id}
-                  </DropdownMenuCheckboxItem>
-                ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button
-            type="button"
-            onClick={openCreateProgramDialog}
-            className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] md:self-auto"
-          >
-            Create a program
-          </Button>
-        </div>
-        <div className="flex w-full flex-wrap items-center justify-start gap-2">
-          <Filters
-            filters={programFilters}
-            fields={programFilterFields}
-            onChange={setProgramFilters}
-            trigger={
-              <Button
-                type="button"
-                variant="outline"
-                className="admin-shell-athletes-filter-trigger rounded-[12px] min-h-[40px] shadow-none"
-              >
-                <Plus className="size-4" />
-                Add filter
-              </Button>
-            }
-          />
+      <div className="flex flex-col gap-3">
+        <div className="flex w-full flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-start gap-2">
+            <Filters
+              filters={programFilters}
+              fields={programFilterFields}
+              onChange={setProgramFilters}
+              trigger={
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="admin-shell-athletes-filter-trigger rounded-[12px] min-h-[40px] shadow-none"
+                >
+                  <Plus className="size-4" />
+                  Add filter
+                </Button>
+              }
+            />
+          </div>
+          <div className="flex shrink-0 items-center justify-end gap-3">
+            <DropdownMenu open={isBulkActionsMenuOpen} onOpenChange={handleBulkActionsMenuOpenChange}>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className="admin-shell-athletes-example-columns-button" aria-label="Program bulk actions">
+                  {selectedProgramCount > 0 ? `Bulk actions (${selectedProgramCount})` : 'Bulk actions'}
+                  <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[190px]">
+                <DropdownMenuLabel>{selectedProgramCount > 0 ? 'Bulk actions' : 'Select programs first'}</DropdownMenuLabel>
+                <DropdownMenuItem className="admin-shell-athletes-bulk-menu-item" disabled={selectedProgramCount !== 1} onSelect={(event) => {
+                  event.preventDefault()
+                  handleDuplicateSelectedProgram()
+                }}>
+                  <Copy className="size-4" aria-hidden="true" />
+                  Duplicate
+                </DropdownMenuItem>
+                <DropdownMenuItem className="admin-shell-athletes-bulk-menu-item" disabled={selectedProgramCount !== 1} onSelect={(event) => {
+                  event.preventDefault()
+                  handleAssignSelectedProgram()
+                }}>
+                  <UserPlus className="size-4" aria-hidden="true" />
+                  Assign to athletes
+                </DropdownMenuItem>
+                <DropdownMenuItem className="admin-shell-athletes-bulk-menu-item" disabled={selectedProgramCount === 0} onSelect={(event) => {
+                  event.preventDefault()
+                  handleExportSelectedPrograms()
+                }}>
+                  <Download className="size-4" aria-hidden="true" />
+                  Export
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="admin-shell-athletes-bulk-menu-item admin-shell-athletes-bulk-menu-item-danger" disabled={selectedProgramCount === 0} onSelect={(event) => {
+                  event.preventDefault()
+                  handleOpenArchiveSelectedProgramsDialog()
+                }}>
+                  <Archive className="size-4" aria-hidden="true" />
+                  Archive
+                </DropdownMenuItem>
+                <DropdownMenuItem className="admin-shell-athletes-bulk-menu-item admin-shell-athletes-bulk-menu-item-danger" disabled={selectedProgramCount === 0} onSelect={(event) => {
+                  event.preventDefault()
+                  handleOpenDeleteSelectedProgramsDialog()
+                }}>
+                  <Trash2 className="size-4" aria-hidden="true" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className="admin-shell-athletes-example-columns-button">
+                  Columns
+                  <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {table
+                  .getAllColumns()
+                  .filter((column) => column.getCanHide())
+                  .map((column) => (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      className="capitalize"
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                    >
+                      {column.columnDef.meta?.label ?? column.id}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              type="button"
+              onClick={openCreateProgramDialog}
+              className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] md:self-auto"
+            >
+              Create a program
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -917,6 +1228,8 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
             setPendingRowAction(null)
             setProgramDialogMode('create')
             setSelectedProgramId(null)
+            setSelectedDuplicateSourceProgramId(null)
+            setDuplicateCopyOptions(createDuplicateCopyOptions())
             setActiveProgramDialogTab('details')
             setProgramFormValues(createProgramFormValues())
           }
@@ -928,11 +1241,15 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
         >
           <div className="shrink-0 border-b border-[var(--admin-dashboard-card-border)] px-6 py-5">
             <SheetHeader>
-              <SheetTitle>{programDialogMode === 'edit' ? 'Edit program' : 'Create a program'}</SheetTitle>
+              <SheetTitle>{programDialogMode === 'edit' ? 'Edit program' : programDialogMode === 'duplicate' ? 'Duplicate program' : programDialogMode === 'assign' ? 'Assign to athletes' : 'Create a program'}</SheetTitle>
               <SheetDescription>
                 {programDialogMode === 'edit'
                   ? 'Update the information below.'
-                  : 'Fill out the information below.'}
+                  : programDialogMode === 'duplicate'
+                    ? 'Create a copy of this program and choose which program content should carry over.'
+                    : programDialogMode === 'assign'
+                      ? 'Choose which athletes should receive this program.'
+                      : 'Fill out the information below.'}
               </SheetDescription>
             </SheetHeader>
           </div>
@@ -946,7 +1263,7 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
               }}
               className="grid gap-5 admin-shell-athletes-create-tabs"
             >
-              {isProgramPersisted ? (
+              {isProgramPersisted && programDialogMode !== 'assign' ? (
                 <TabsList className="admin-shell-program-dialog-tabs-list">
                   <TabsTrigger value="details" className="admin-shell-program-dialog-tabs-trigger">Details</TabsTrigger>
                   <TabsTrigger value="athletes" className="admin-shell-program-dialog-tabs-trigger">Athletes</TabsTrigger>
@@ -954,6 +1271,50 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
               ) : null}
 
               <TabsContent value="details" className="grid gap-5">
+                {programDialogMode === 'duplicate' && duplicateSourceProgram ? (
+                  <div className="admin-shell-programs-duplicate-source-card rounded-[16px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--admin-dashboard-card-muted)]">Source program</p>
+                    <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{duplicateSourceProgram.name}</p>
+                        <p className="mt-1 text-sm text-[var(--admin-dashboard-card-muted)]">{duplicateSourceProgram.athletesLabel}</p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-[var(--admin-dashboard-card-muted)]">
+                        <span>{duplicateSourceProgram.duration}</span>
+                        <span>{duplicateSourceProgram.workouts} workouts</span>
+                        <span>{duplicateSourceProgram.exercises} exercises</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+
+                {programDialogMode === 'duplicate' ? (
+                  <div className="grid gap-3 rounded-[16px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-4">
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">Copy from original</p>
+                      <p className="mt-1 text-sm text-[var(--admin-dashboard-card-muted)]">Workout schedule includes program weeks, days, planned workouts, blocks, exercises, and sets. Exercise history and completed sessions are never copied.</p>
+                    </div>
+                    {[
+                      { key: 'details', label: 'Program details', disabled: true },
+                      { key: 'athletes', label: 'Assigned athletes' },
+                      { key: 'schedule', label: 'Workout schedule' },
+                      { key: 'exercises', label: 'Workout exercises and sets' },
+                      { key: 'notes', label: 'Notes / descriptions' },
+                    ].map((option) => (
+                      <label key={option.key} className="flex items-center gap-3 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-3 py-2 text-sm text-[var(--admin-dashboard-card-text)]">
+                        <Checkbox
+                          className="admin-shell-athletes-checkbox-input"
+                          checked={Boolean(duplicateCopyOptions[option.key])}
+                          disabled={option.disabled}
+                          onChange={(event) => handleDuplicateCopyOptionChange(option.key, event.target.checked)}
+                          aria-label={`Copy ${option.label}`}
+                        />
+                        <span>{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                ) : null}
+
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
                     <label className="text-sm font-medium text-[var(--admin-dashboard-card-text)]" htmlFor="create-program-name">
@@ -1027,6 +1388,35 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
               </TabsContent>
 
               <TabsContent value="athletes" className="grid gap-3">
+                {assignSourceProgram ? (
+                  <div className="admin-shell-programs-assign-source-card rounded-[16px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--admin-dashboard-card-muted)]">Program to assign</p>
+                    <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{assignSourceProgram.name}</p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-[var(--admin-dashboard-card-muted)]">
+                        <span>{assignSourceProgram.duration}</span>
+                        <span>{assignSourceProgram.workouts} workouts</span>
+                        <span>{assignSourceProgram.exercises} exercises</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+
+                {programDialogMode === 'assign' ? (
+                  <div className="admin-shell-programs-assignment-summary grid gap-3 rounded-[16px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-4 sm:grid-cols-2">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--admin-dashboard-card-muted)]">Selected athletes</p>
+                      <p className="mt-1 text-2xl font-semibold text-[var(--admin-dashboard-card-text)]">{programFormValues.athleteIds.length}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--admin-dashboard-card-muted)]">Available athletes</p>
+                      <p className="mt-1 text-2xl font-semibold text-[var(--admin-dashboard-card-text)]">{athleteOptions.length}</p>
+                    </div>
+                  </div>
+                ) : null}
+
                 <div className="space-y-1">
                   <p className="text-sm font-medium text-[var(--admin-dashboard-card-text)]">Athletes list</p>
                   <p className="text-sm text-[var(--admin-dashboard-card-muted)]">Assign athletes to this program.</p>
@@ -1092,21 +1482,256 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
               }}
               className="admin-shell-programs-create-submit rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isSavingProgram ? (programDialogMode === 'edit' ? 'Saving...' : 'Creating...') : programDialogMode === 'edit' ? 'Save changes' : 'Create program'}
+              {isSavingProgram ? (programDialogMode === 'edit' ? 'Saving...' : programDialogMode === 'assign' ? 'Saving assignments...' : programDialogMode === 'duplicate' ? 'Duplicating...' : 'Creating...') : programDialogMode === 'edit' ? 'Save changes' : programDialogMode === 'assign' ? 'Assign athletes' : programDialogMode === 'duplicate' ? 'Duplicate program' : 'Create program'}
             </Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>
 
-      <Dialog open={isDeleteProgramDialogOpen} onOpenChange={setIsDeleteProgramDialogOpen}>
-        <DialogContent className="admin-shell-athletes-invite-dialog border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] text-[var(--admin-dashboard-card-text)] sm:max-w-[440px]">
+      <Sheet open={isExportProgramSheetOpen} onOpenChange={setIsExportProgramSheetOpen}>
+        <SheetContent side="right" className="admin-shell-programs-export-sheet border-l border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] !max-w-[var(--container-lg)]">
+          <SheetHeader className="shrink-0 border-b border-[color:var(--admin-dashboard-card-border)] px-6 py-5">
+            <SheetTitle>Export programs</SheetTitle>
+            <SheetDescription>
+              Review the selected programs before downloading a CSV export.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <div className="grid gap-5">
+              <div className="admin-shell-programs-export-summary grid gap-3 rounded-[20px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-4">
+                <div className="grid gap-1">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--admin-dashboard-card-muted)]">Selected programs</p>
+                  <p className="text-2xl font-semibold text-[var(--admin-dashboard-card-text)]">{exportProgramsToReview.length}</p>
+                </div>
+                <div className="grid gap-2 text-sm text-[var(--admin-dashboard-card-muted)]">
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Format</span>
+                    <span className="font-medium text-[var(--admin-dashboard-card-text)]">CSV</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Filename</span>
+                    <span className="truncate font-medium text-[var(--admin-dashboard-card-text)]">{exportProgramsFileName}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--admin-dashboard-card-muted)]">Included columns</div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {programExportColumns.map((column) => (
+                    <div key={column} className="rounded-[14px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-3 py-2 text-sm font-medium text-[var(--admin-dashboard-card-text)]">
+                      {column}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--admin-dashboard-card-muted)]">Selected program preview</div>
+                <div className="grid max-h-[360px] gap-2 overflow-y-auto pr-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                  {exportProgramsToReview.map((program) => (
+                    <div key={`export-${program.id}`} className="flex items-center justify-between gap-3 rounded-[16px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{program.name}</p>
+                        <p className="truncate text-sm text-[var(--admin-dashboard-card-muted)]">{program.athletesLabel}</p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-3">
+                        <span className="hidden text-sm text-[var(--admin-dashboard-card-muted)] sm:inline">{program.duration} · {program.workouts} workouts</span>
+                        <Badge tone={program.status === 'Active' ? 'success' : 'warning'} className={program.status === 'Active' ? 'admin-shell-athletes-status-badge admin-shell-athletes-status-badge-active normal-case tracking-normal' : 'admin-shell-athletes-status-badge admin-shell-athletes-status-badge-pending normal-case tracking-normal'}>{program.status}</Badge>
+                      </div>
+                    </div>
+                  ))}
+                  {exportProgramsToReview.length === 0 ? (
+                    <div className="rounded-[16px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-4 py-3 text-sm text-[var(--admin-dashboard-card-muted)]">No programs selected.</div>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <SheetFooter className="shrink-0 border-t border-[color:var(--admin-dashboard-card-border)] px-6 py-5 sm:flex-row sm:justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-[12px] min-h-[40px] border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]"
+              onClick={() => {
+                setIsExportProgramSheetOpen(false)
+                setSelectedExportProgramIds([])
+              }}
+              disabled={isExportingPrograms}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={exportProgramsDisabled}
+              onClick={handleConfirmExportPrograms}
+              className="rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isExportingPrograms ? 'Preparing CSV...' : 'Download CSV'}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      <Dialog open={isArchiveProgramDialogOpen} onOpenChange={setIsArchiveProgramDialogOpen}>
+        <DialogContent className="admin-shell-programs-archive-dialog border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] text-[var(--admin-dashboard-card-text)] sm:max-w-[560px]">
           <DialogHeader>
-            <DialogTitle>Delete program</DialogTitle>
-            <DialogDescription>This program will be permanently deleted.</DialogDescription>
+            <DialogTitle>Archive programs</DialogTitle>
+            <DialogDescription>Review the selected programs before moving them out of active workflows.</DialogDescription>
           </DialogHeader>
+
+          <div className="grid gap-4 py-2">
+            <div className="admin-shell-programs-archive-summary grid gap-3 rounded-[18px] border border-red-500/25 bg-red-500/10 p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-red-500/15 text-red-400">
+                  <Archive className="size-5" aria-hidden="true" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">
+                    {archiveEligiblePrograms.length} program{archiveEligiblePrograms.length === 1 ? '' : 's'} will be archived
+                  </p>
+                  <p className="mt-1 text-sm text-[var(--admin-dashboard-card-muted)]">
+                    Archived programs are hidden from active program workflows but stay available for records.
+                  </p>
+                  {archiveSkippedPrograms.length > 0 ? (
+                    <p className="mt-2 text-sm text-[var(--admin-dashboard-card-muted)]">
+                      {archiveSkippedPrograms.length} selected program{archiveSkippedPrograms.length === 1 ? '' : 's'} already archived
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+
+            {archiveEligiblePrograms.length > 0 ? (
+              <div className="grid gap-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--admin-dashboard-card-muted)]">Ready to archive</div>
+                <div className="grid max-h-[220px] gap-2 overflow-y-auto pr-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                  {archiveEligiblePrograms.map((program) => (
+                    <div key={`archive-${program.id}`} className="flex items-center justify-between gap-3 rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{program.name}</p>
+                        <p className="truncate text-sm text-[var(--admin-dashboard-card-muted)]">{program.athletesLabel}</p>
+                      </div>
+                      <StatusCell status={program.status} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-4 text-sm text-[var(--admin-dashboard-card-muted)]">
+                No selected programs can be archived. Only active, draft, or unknown programs can be archived.
+              </div>
+            )}
+
+            {archiveSkippedPrograms.length > 0 ? (
+              <div className="grid gap-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--admin-dashboard-card-muted)]">Already archived</div>
+                <div className="grid max-h-[160px] gap-2 overflow-y-auto pr-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                  {archiveSkippedPrograms.map((program) => (
+                    <div key={`archive-skip-${program.id}`} className="flex items-center justify-between gap-3 rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{program.name}</p>
+                        <p className="truncate text-sm text-[var(--admin-dashboard-card-muted)]">Already archived</p>
+                      </div>
+                      <StatusCell status={program.status} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+
           <DialogFooter className="sm:flex-row sm:justify-end gap-3">
-            <Button type="button" variant="outline" className="rounded-[12px] min-h-[40px]" onClick={() => setIsDeleteProgramDialogOpen(false)} disabled={isDeletingProgram}>Cancel</Button>
-            <Button type="button" disabled={isDeletingProgram} className="rounded-[12px] min-h-[40px] bg-red-500/90 text-white hover:bg-red-500" onClick={handleDeleteProgram}>{isDeletingProgram ? 'Deleting...' : 'Delete program'}</Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-[12px] min-h-[40px]"
+              onClick={() => setIsArchiveProgramDialogOpen(false)}
+              disabled={isArchivingProgram}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={archiveEligiblePrograms.length === 0 || isArchivingProgram}
+              className="rounded-[12px] min-h-[40px] bg-red-500/90 text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={handleArchiveProgram}
+            >
+              {isArchivingProgram ? 'Archiving...' : `Archive ${archiveEligiblePrograms.length} program${archiveEligiblePrograms.length === 1 ? '' : 's'}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteProgramDialogOpen} onOpenChange={setIsDeleteProgramDialogOpen}>
+        <DialogContent className="admin-shell-programs-delete-dialog border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] text-[var(--admin-dashboard-card-text)] sm:max-w-[440px]">
+          <DialogHeader>
+            <DialogTitle>{deleteProgramCount === 1 ? 'Delete program' : 'Delete programs'}</DialogTitle>
+            <DialogDescription>This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-2">
+            <div className="admin-shell-programs-delete-summary grid gap-3 rounded-[18px] border border-red-500/25 bg-red-500/10 p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-red-500/15 text-red-400">
+                  <Trash2 className="size-5" aria-hidden="true" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">
+                    {deleteProgramCount} program{deleteProgramCount === 1 ? '' : 's'} will be permanently deleted
+                  </p>
+                  <p className="mt-1 text-sm text-[var(--admin-dashboard-card-muted)]">
+                    Deleting programs removes them from the program library and cannot be reversed.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {deleteProgramsToReview.length > 0 ? (
+              <div className="grid gap-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--admin-dashboard-card-muted)]">Programs selected</div>
+                <div className="grid gap-2">
+                  {deleteProgramsToReview.slice(0, 3).map((program) => (
+                    <div key={`delete-${program.id}`} className="flex items-center justify-between gap-3 rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{program.name}</p>
+                        <p className="truncate text-sm text-[var(--admin-dashboard-card-muted)]">{program.athletesLabel}</p>
+                      </div>
+                      <StatusCell status={program.status} />
+                    </div>
+                  ))}
+                </div>
+                {deleteProgramCount > 3 ? (
+                  <p className="text-sm text-[var(--admin-dashboard-card-muted)]">+ {deleteProgramCount - 3} more</p>
+                ) : null}
+              </div>
+            ) : (
+              <div className="rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-4 text-sm text-[var(--admin-dashboard-card-muted)]">
+                Select at least one program before deleting.
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="sm:flex-row sm:justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-[12px] min-h-[40px]"
+              onClick={() => setIsDeleteProgramDialogOpen(false)}
+              disabled={isDeletingProgram}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={isDeletingProgram || deleteProgramCount === 0}
+              className="rounded-[12px] min-h-[40px] bg-red-500/90 text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={handleDeleteProgram}
+            >
+              {isDeletingProgram ? 'Deleting...' : deleteProgramCount === 1 ? 'Delete program' : `Delete ${deleteProgramCount} programs`}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -79,7 +79,9 @@ test('admin programs workouts exercises settings surfaces expose persisted creat
   assert.match(programsRoute, /export async function PATCH\(request\)/)
   assert.match(programRepository, /async createProgram\(\{/)
   assert.match(programRepository, /async updateProgram\(\{/)
-  assert.match(programsTable, /method: isEditingProgram \? 'PATCH' : 'POST'/)
+  assert.match(programsTable, /method: isEditingProgram \|\| isAssigningProgram \? 'PATCH' : 'POST'/)
+  assert.match(programsTable, /isDuplicatingProgram[\s\S]*\? \{ action: 'duplicate'/)
+  assert.match(programsTable, /isAssigningProgram[\s\S]*\? \{ action: 'assign-athletes'/)
 
   const workoutsTable = source('apps/web/components/admin/workouts-data-table.jsx')
   const workoutRoute = source('apps/web/app/api/admin/workout-templates/route.js')

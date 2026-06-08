@@ -147,6 +147,15 @@ function formatProgramTypeLabel(row) {
   return row?.athlete_id ? 'Assigned' : 'Unassigned'
 }
 
+function createProgramAssignmentGroupKey(row = {}) {
+  return [
+    row.coach_id ?? '',
+    row.name ?? '',
+    row.start_date ?? '',
+    row.end_date ?? '',
+  ].join('::')
+}
+
 function createCounter(rows, key) {
   return rows.reduce((accumulator, row) => {
     const value = row?.[key]
@@ -163,6 +172,10 @@ function mapAthleteOption(row) {
 
 function normalizeAthleteIds(athleteIds = []) {
   return Array.from(new Set((Array.isArray(athleteIds) ? athleteIds : []).map((value) => String(value ?? '').trim()).filter(Boolean)))
+}
+
+function normalizeProgramIds(programIds = []) {
+  return Array.from(new Set((Array.isArray(programIds) ? programIds : []).map((value) => String(value ?? '').trim()).filter(Boolean)))
 }
 
 function normalizeWeekCount(value) {
@@ -220,11 +233,13 @@ function formatProgramRow(row, context) {
   const weekCount = context.weekCountByProgramId.get(row.id) ?? 0
   const workoutCount = context.workoutCountByProgramId.get(row.id) ?? 0
   const exerciseCount = context.exerciseCountByProgramId.get(row.id) ?? 0
+  const assignedAthleteIds = context.athleteIdsByAssignmentGroup?.get(createProgramAssignmentGroupKey(row)) ?? (row.athlete_id ? [row.athlete_id] : [])
 
   return {
     id: row.id,
     athleteId: row.athlete_id ?? null,
     athleteIds: row.athlete_id ? [row.athlete_id] : [],
+    assignedAthleteIds,
     coachId: row.coach_id ?? null,
     programType: formatProgramTypeLabel(row),
     name: row.name ?? 'Untitled program',
@@ -239,6 +254,7 @@ function formatProgramRow(row, context) {
     endDate: row.end_date ?? '',
     description: row.description ?? '',
     status: formatStatusLabel(row.status),
+    statusValue: row.status ?? '',
   }
 }
 
@@ -422,6 +438,13 @@ async function syncProgramAthleteAssignments({ programId, athleteIds = [], name,
   const coachId = existingProgram.coachId || await resolveCoachId()
   const targetAthleteIds = athleteIds.length ? athleteIds : [null]
   const primaryAthleteId = targetAthleteIds[0]
+  const siblingRows = await requestTable(
+    'programs',
+    `?select=id,athlete_id&name=eq.${encodeURIComponent(existingProgram.name)}&coach_id=eq.${encodeURIComponent(coachId)}&start_date=${existingProgram.startDate ? `eq.${encodeURIComponent(existingProgram.startDate)}` : 'is.null'}&end_date=${existingProgram.endDate ? `eq.${encodeURIComponent(existingProgram.endDate)}` : 'is.null'}`,
+  )
+  const siblingRowsList = Array.isArray(siblingRows) ? siblingRows.filter((row) => row.id !== programId) : []
+  const siblingByAthleteId = new Map(siblingRowsList.filter((row) => row.athlete_id).map((row) => [row.athlete_id, row]))
+  const wantedSiblingAthleteIds = targetAthleteIds.slice(1).filter(Boolean)
 
   await patchTable(
     'programs',
@@ -436,14 +459,11 @@ async function syncProgramAthleteAssignments({ programId, athleteIds = [], name,
       status: existingProgram.status?.toLowerCase?.() || 'active',
     }),
   )
-
-  const siblingRows = await requestTable(
-    'programs',
-    `?select=id,athlete_id&name=eq.${encodeURIComponent(existingProgram.name)}&coach_id=eq.${encodeURIComponent(coachId)}&start_date=${existingProgram.startDate ? `eq.${encodeURIComponent(existingProgram.startDate)}` : 'is.null'}&end_date=${existingProgram.endDate ? `eq.${encodeURIComponent(existingProgram.endDate)}` : 'is.null'}`,
-  )
-  const siblingRowsList = Array.isArray(siblingRows) ? siblingRows.filter((row) => row.id !== programId) : []
-  const siblingByAthleteId = new Map(siblingRowsList.filter((row) => row.athlete_id).map((row) => [row.athlete_id, row]))
-  const wantedSiblingAthleteIds = targetAthleteIds.slice(1).filter(Boolean)
+  await patchTable('program_workouts', `?program_id=eq.${encodeURIComponent(programId)}`, {
+    athlete_id: primaryAthleteId,
+    coach_id: coachId,
+    updated_at: new Date().toISOString(),
+  })
 
   for (const athleteId of wantedSiblingAthleteIds) {
     const existingSibling = siblingByAthleteId.get(athleteId)
@@ -461,10 +481,15 @@ async function syncProgramAthleteAssignments({ programId, athleteIds = [], name,
           status: existingProgram.status?.toLowerCase?.() || 'active',
         }),
       )
+      await patchTable('program_workouts', `?program_id=eq.${encodeURIComponent(existingSibling.id)}`, {
+        athlete_id: athleteId,
+        coach_id: coachId,
+        updated_at: new Date().toISOString(),
+      })
       continue
     }
 
-    await insertTable('programs', buildProgramPayload({
+    const createdRows = await insertTable('programs', buildProgramPayload({
       athleteId,
       coachId,
       name,
@@ -473,6 +498,14 @@ async function syncProgramAthleteAssignments({ programId, athleteIds = [], name,
       endDate,
       status: existingProgram.status?.toLowerCase?.() || 'active',
     }))
+    const createdProgram = Array.isArray(createdRows) ? createdRows[0] : createdRows
+    if (createdProgram?.id) {
+      await cloneProgramPlanningTree({
+        sourceProgramId: programId,
+        targetProgramId: createdProgram.id,
+        copyOptions: { schedule: true, exercises: true, notes: true },
+      })
+    }
   }
 
   const wantedSiblingSet = new Set(wantedSiblingAthleteIds)
@@ -483,6 +516,157 @@ async function syncProgramAthleteAssignments({ programId, athleteIds = [], name,
   }
 
   return getProgramById(programId)
+}
+
+function resolveDuplicateCopyOptions(copyOptions = {}) {
+  return {
+    details: true,
+    athletes: Boolean(copyOptions.athletes),
+    schedule: copyOptions.schedule !== false,
+    exercises: copyOptions.exercises !== false,
+    notes: copyOptions.notes !== false,
+  }
+}
+
+function inFilter(values = []) {
+  return values.map((value) => encodeURIComponent(value)).join(',')
+}
+
+async function cloneProgramPlanningTree({ sourceProgramId, targetProgramId, copyOptions = {} }) {
+  const resolvedOptions = resolveDuplicateCopyOptions(copyOptions)
+  if (!sourceProgramId || !targetProgramId || !resolvedOptions.schedule) return
+
+  const [targetRows, weekRows, workoutRows] = await Promise.all([
+    requestTable('programs', `?select=id,athlete_id,coach_id&id=eq.${encodeURIComponent(targetProgramId)}&limit=1`),
+    requestTable('program_weeks', `?select=id,program_id,week_index,name,start_date,end_date&program_id=eq.${encodeURIComponent(sourceProgramId)}&order=week_index.asc`),
+    requestTable('program_workouts', `?select=id,athlete_id,coach_id,program_id,program_day_id,workout_template_id,name_snapshot,notes,bg_color,text_color,status,sort_order,scheduled_date,scheduled_start_time,scheduled_end_time,import_source,import_source_file_name&program_id=eq.${encodeURIComponent(sourceProgramId)}&order=sort_order.asc`),
+  ])
+
+  const targetProgram = Array.isArray(targetRows) ? targetRows[0] : null
+  const sourceWeeks = Array.isArray(weekRows) ? weekRows : []
+  const sourceWorkouts = Array.isArray(workoutRows) ? workoutRows : []
+  const weekIdMap = new Map()
+  const dayIdMap = new Map()
+  const workoutIdMap = new Map()
+  const blockIdMap = new Map()
+  const exerciseIdMap = new Map()
+
+  if (sourceWeeks.length > 0) {
+    const createdWeeks = await insertTable('program_weeks', sourceWeeks.map((week) => ({
+      program_id: targetProgramId,
+      week_index: week.week_index,
+      name: week.name,
+      start_date: week.start_date,
+      end_date: week.end_date,
+    })))
+    ;(Array.isArray(createdWeeks) ? createdWeeks : []).forEach((createdWeek, index) => {
+      if (sourceWeeks[index]?.id && createdWeek?.id) weekIdMap.set(sourceWeeks[index].id, createdWeek.id)
+    })
+  }
+
+  const sourceWeekIds = sourceWeeks.map((week) => week.id).filter(Boolean)
+  const sourceDays = sourceWeekIds.length
+    ? await requestTable('program_days', `?select=id,program_week_id,day_index,date,name,notes,status&program_week_id=in.(${inFilter(sourceWeekIds)})&order=day_index.asc`)
+    : []
+  const dayRows = Array.isArray(sourceDays) ? sourceDays : []
+  if (dayRows.length > 0) {
+    const createdDays = await insertTable('program_days', dayRows.map((day) => ({
+      program_week_id: weekIdMap.get(day.program_week_id),
+      day_index: day.day_index,
+      date: day.date,
+      name: day.name,
+      notes: resolvedOptions.notes ? day.notes : null,
+      status: day.status,
+    })).filter((day) => day.program_week_id))
+    ;(Array.isArray(createdDays) ? createdDays : []).forEach((createdDay, index) => {
+      if (dayRows[index]?.id && createdDay?.id) dayIdMap.set(dayRows[index].id, createdDay.id)
+    })
+  }
+
+  if (sourceWorkouts.length > 0) {
+    const createdWorkouts = await insertTable('program_workouts', sourceWorkouts.map((workout) => ({
+      athlete_id: targetProgram?.athlete_id ?? null,
+      coach_id: targetProgram?.coach_id ?? workout.coach_id ?? null,
+      program_id: targetProgramId,
+      program_day_id: dayIdMap.get(workout.program_day_id) ?? null,
+      workout_template_id: workout.workout_template_id,
+      name_snapshot: workout.name_snapshot,
+      notes: resolvedOptions.notes ? workout.notes : null,
+      bg_color: workout.bg_color,
+      text_color: workout.text_color,
+      status: workout.status,
+      sort_order: workout.sort_order,
+      scheduled_date: workout.scheduled_date,
+      scheduled_start_time: workout.scheduled_start_time,
+      scheduled_end_time: workout.scheduled_end_time,
+      import_source: workout.import_source,
+      import_source_file_name: workout.import_source_file_name,
+    })))
+    ;(Array.isArray(createdWorkouts) ? createdWorkouts : []).forEach((createdWorkout, index) => {
+      if (sourceWorkouts[index]?.id && createdWorkout?.id) workoutIdMap.set(sourceWorkouts[index].id, createdWorkout.id)
+    })
+  }
+
+  if (!resolvedOptions.exercises || workoutIdMap.size === 0) return
+
+  const sourceWorkoutIds = Array.from(workoutIdMap.keys())
+  const [blockRows, exerciseRows] = await Promise.all([
+    requestTable('program_workout_blocks', `?select=id,program_workout_id,block_code,title,instructions,sort_order&program_workout_id=in.(${inFilter(sourceWorkoutIds)})&order=sort_order.asc`),
+    requestTable('program_workout_exercises', `?select=id,program_workout_id,program_workout_block_id,exercise_id,name_snapshot,sort_order,notes,default_rest_seconds&program_workout_id=in.(${inFilter(sourceWorkoutIds)})&order=sort_order.asc`),
+  ])
+
+  const sourceBlocks = Array.isArray(blockRows) ? blockRows : []
+  if (sourceBlocks.length > 0) {
+    const createdBlocks = await insertTable('program_workout_blocks', sourceBlocks.map((block) => ({
+      program_workout_id: workoutIdMap.get(block.program_workout_id),
+      block_code: block.block_code,
+      title: block.title,
+      instructions: resolvedOptions.notes ? block.instructions : null,
+      sort_order: block.sort_order,
+    })).filter((block) => block.program_workout_id))
+    ;(Array.isArray(createdBlocks) ? createdBlocks : []).forEach((createdBlock, index) => {
+      if (sourceBlocks[index]?.id && createdBlock?.id) blockIdMap.set(sourceBlocks[index].id, createdBlock.id)
+    })
+  }
+
+  const sourceExercises = Array.isArray(exerciseRows) ? exerciseRows : []
+  if (sourceExercises.length > 0) {
+    const createdExercises = await insertTable('program_workout_exercises', sourceExercises.map((exercise) => ({
+      program_workout_id: workoutIdMap.get(exercise.program_workout_id),
+      program_workout_block_id: blockIdMap.get(exercise.program_workout_block_id) ?? null,
+      exercise_id: exercise.exercise_id,
+      name_snapshot: exercise.name_snapshot,
+      sort_order: exercise.sort_order,
+      notes: resolvedOptions.notes ? exercise.notes : null,
+      default_rest_seconds: exercise.default_rest_seconds,
+    })).filter((exercise) => exercise.program_workout_id))
+    ;(Array.isArray(createdExercises) ? createdExercises : []).forEach((createdExercise, index) => {
+      if (sourceExercises[index]?.id && createdExercise?.id) exerciseIdMap.set(sourceExercises[index].id, createdExercise.id)
+    })
+  }
+
+  const sourceExerciseIds = Array.from(exerciseIdMap.keys())
+  if (sourceExerciseIds.length === 0) return
+
+  const setRows = await requestTable('program_workout_sets', `?select=id,program_workout_exercise_id,sort_order,set_type,target_reps,target_load,target_load_unit,target_duration_seconds,target_distance,target_distance_unit,target_rpe,target_rir,target_rest_seconds,notes&program_workout_exercise_id=in.(${inFilter(sourceExerciseIds)})&order=sort_order.asc`)
+  const sourceSets = Array.isArray(setRows) ? setRows : []
+  if (sourceSets.length > 0) {
+    await insertTable('program_workout_sets', sourceSets.map((set) => ({
+      program_workout_exercise_id: exerciseIdMap.get(set.program_workout_exercise_id),
+      sort_order: set.sort_order,
+      set_type: set.set_type,
+      target_reps: set.target_reps,
+      target_load: set.target_load,
+      target_load_unit: set.target_load_unit,
+      target_duration_seconds: set.target_duration_seconds,
+      target_distance: set.target_distance,
+      target_distance_unit: set.target_distance_unit,
+      target_rpe: set.target_rpe,
+      target_rir: set.target_rir,
+      target_rest_seconds: set.target_rest_seconds,
+      notes: resolvedOptions.notes ? set.notes : null,
+    })).filter((set) => set.program_workout_exercise_id))
+  }
 }
 
 export function createAdminProgramRepository() {
@@ -517,13 +701,20 @@ export function createAdminProgramRepository() {
         return accumulator
       }, new Map())
 
+      const programRowsList = Array.isArray(programRows) ? programRows : []
       const context = {
         weekCountByProgramId,
         workoutCountByProgramId,
         exerciseCountByProgramId,
+        athleteIdsByAssignmentGroup: programRowsList.reduce((map, row) => {
+          const groupKey = createProgramAssignmentGroupKey(row)
+          if (!map.has(groupKey)) map.set(groupKey, [])
+          if (row?.athlete_id) map.get(groupKey).push(row.athlete_id)
+          return map
+        }, new Map()),
       }
 
-      return Array.isArray(programRows) ? programRows.map((row) => formatProgramRow(row, context)) : []
+      return programRowsList.map((row) => formatProgramRow(row, context))
     },
 
     async createProgram({ athleteIds = [], name, weeks, startDate = '', endDate = '', description = '', status = 'active' }) {
@@ -580,11 +771,114 @@ export function createAdminProgramRepository() {
       })
     },
 
+    async assignProgramToAthletes({ programId, athleteIds = [] }) {
+      if (!programId) throw createRepositoryError('Program id is required.', 400)
+      const existingProgram = await getProgramById(programId)
+      const normalizedAthleteIds = normalizeAthleteIds(athleteIds)
+
+      return syncProgramAthleteAssignments({
+        programId,
+        athleteIds: normalizedAthleteIds,
+        name: existingProgram.name,
+        startDate: existingProgram.startDate,
+        endDate: existingProgram.endDate,
+        description: existingProgram.description,
+      })
+    },
+
+    async duplicateProgram({ sourceProgramId, athleteIds = [], name, startDate = '', endDate = '', description = '', copyOptions = {} }) {
+      if (!sourceProgramId) throw createRepositoryError('Source program id is required.', 400)
+      if (!name || !String(name).trim()) throw createRepositoryError('Program name is required.', 400)
+
+      const sourceProgram = await getProgramById(sourceProgramId)
+      const resolvedCopyOptions = resolveDuplicateCopyOptions(copyOptions)
+      const normalizedAthleteIds = normalizeAthleteIds(athleteIds)
+      const targetAthleteIds = resolvedCopyOptions.athletes
+        ? (normalizedAthleteIds.length ? normalizedAthleteIds : normalizeAthleteIds(sourceProgram.athleteIds))
+        : normalizedAthleteIds
+      const coachId = sourceProgram.coachId || await resolveCoachId()
+      const createdProgramIds = []
+      const duplicateAthleteIds = targetAthleteIds.length ? targetAthleteIds : [null]
+
+      for (const athleteId of duplicateAthleteIds) {
+        const createdProgramRows = await insertTable('programs', buildProgramPayload({
+          athleteId,
+          coachId,
+          name,
+          description: resolvedCopyOptions.notes ? description : '',
+          startDate,
+          endDate,
+          status: sourceProgram.status?.toLowerCase?.() || 'active',
+        }))
+        const createdProgram = Array.isArray(createdProgramRows) ? createdProgramRows[0] : createdProgramRows
+        const createdProgramId = createdProgram?.id
+        if (!createdProgramId) throw createRepositoryError('Program duplicate did not return an id.', 500)
+        createdProgramIds.push(createdProgramId)
+        await cloneProgramPlanningTree({ sourceProgramId, targetProgramId: createdProgramId, copyOptions: resolvedCopyOptions })
+      }
+
+      return getProgramById(createdProgramIds[0])
+    },
+
+    async archivePrograms({ programIds = [] }) {
+      const normalizedProgramIds = normalizeProgramIds(programIds)
+      if (normalizedProgramIds.length === 0) throw createRepositoryError('At least one program id is required.', 400)
+
+      const programRows = await requestTable('programs', `?select=id,status&id=in.(${inFilter(normalizedProgramIds)})`)
+      const foundProgramIds = new Set((Array.isArray(programRows) ? programRows : []).map((program) => program.id).filter(Boolean))
+      const missingProgramIds = normalizedProgramIds.filter((programId) => !foundProgramIds.has(programId))
+      if (missingProgramIds.length > 0) throw createRepositoryError('One or more selected programs were not found.', 404)
+
+      const eligibleProgramIds = programRows.filter((program) => String(program?.status ?? '').trim().toLowerCase() !== 'archived')
+        .map((program) => program.id)
+        .filter(Boolean)
+
+      if (eligibleProgramIds.length > 0) {
+        await patchTable('programs', `?id=in.(${inFilter(eligibleProgramIds)})`, {
+          status: 'archived',
+          updated_at: new Date().toISOString(),
+        })
+      }
+
+      const skippedPrograms = programRows
+        .filter((program) => String(program?.status ?? '').trim().toLowerCase() === 'archived')
+        .map((program) => ({ id: program.id, reason: 'Already archived' }))
+      const archivedPrograms = eligibleProgramIds.length > 0
+        ? await Promise.all(eligibleProgramIds.map((programId) => getProgramById(programId)))
+        : []
+
+      return { archivedPrograms, skippedPrograms }
+    },
+
+    async archiveProgram(programId) {
+      if (!programId) throw createRepositoryError('Program id is required.', 400)
+      const result = await this.archivePrograms({ programIds: [programId] })
+      const archivedProgram = result.archivedPrograms[0]
+      if (!archivedProgram) throw createRepositoryError('Program is already archived.', 409)
+      return archivedProgram
+    },
+
+    async deletePrograms({ programIds = [] }) {
+      const normalizedProgramIds = normalizeProgramIds(programIds)
+      if (normalizedProgramIds.length === 0) throw createRepositoryError('At least one program id is required.', 400)
+
+      const programRows = await requestTable('programs', `?select=id&id=in.(${inFilter(normalizedProgramIds)})`)
+      const foundProgramIds = new Set((Array.isArray(programRows) ? programRows : []).map((program) => program.id).filter(Boolean))
+      const missingProgramIds = normalizedProgramIds.filter((programId) => !foundProgramIds.has(programId))
+      if (missingProgramIds.length > 0) throw createRepositoryError('One or more selected programs were not found.', 404)
+
+      const deletedRows = await deleteTable('programs', `?id=in.(${inFilter(normalizedProgramIds)})`)
+      const deletedPrograms = Array.isArray(deletedRows) && deletedRows.length > 0
+        ? deletedRows.map((program) => ({ id: program.id })).filter((program) => program.id)
+        : normalizedProgramIds.map((programId) => ({ id: programId }))
+
+      return { deletedPrograms }
+    },
+
     async deleteProgram(programId) {
       if (!programId) throw createRepositoryError('Program id is required.', 400)
-      const deletedRows = await deleteTable('programs', `?id=eq.${encodeURIComponent(programId)}`)
-      if (Array.isArray(deletedRows) && deletedRows.length === 0) throw createRepositoryError('Program not found.', 404)
-      return { id: programId }
+      const result = await this.deletePrograms({ programIds: [programId] })
+      return result.deletedPrograms[0]
     },
   }
 }

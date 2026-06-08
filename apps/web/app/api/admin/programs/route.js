@@ -28,6 +28,18 @@ export async function POST(request) {
   try {
     const repository = createAdminProgramRepository()
     const payload = await request.json()
+    if (payload?.action === 'duplicate') {
+      const program = await repository.duplicateProgram({
+        sourceProgramId: payload?.sourceProgramId,
+        athleteIds: payload?.athleteIds,
+        name: payload?.name,
+        startDate: payload?.startDate,
+        endDate: payload?.endDate,
+        description: payload?.description,
+        copyOptions: payload?.copyOptions,
+      })
+      return json({ program }, { status: 201 })
+    }
     const program = await repository.createProgram({
       athleteIds: payload?.athleteIds,
       name: payload?.name,
@@ -47,6 +59,21 @@ export async function PATCH(request) {
   try {
     const repository = createAdminProgramRepository()
     const payload = await request.json()
+    if (payload?.action === 'archive-programs') {
+      const { archivedPrograms, skippedPrograms } = await repository.archivePrograms({ programIds: payload?.programIds })
+      return json({ archivedPrograms, skippedPrograms })
+    }
+    if (payload?.action === 'archive') {
+      const program = await repository.archiveProgram(payload?.id)
+      return json({ program })
+    }
+    if (payload?.action === 'assign-athletes') {
+      const program = await repository.assignProgramToAthletes({
+        programId: payload?.id,
+        athleteIds: payload?.athleteIds,
+      })
+      return json({ program })
+    }
     const program = await repository.updateProgram({
       programId: payload?.id,
       athleteIds: payload?.athleteIds,
@@ -65,6 +92,10 @@ export async function DELETE(request) {
   try {
     const repository = createAdminProgramRepository()
     const payload = await request.json()
+    if (payload?.action === 'delete-programs') {
+      const { deletedPrograms } = await repository.deletePrograms({ programIds: payload?.programIds })
+      return json({ deletedPrograms })
+    }
     const deletedProgram = await repository.deleteProgram(payload?.id)
     return json({ program: deletedProgram })
   } catch (error) {
