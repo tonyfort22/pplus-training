@@ -968,6 +968,7 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
   const selectedPrograms = table.getSelectedRowModel().rows.map((row) => row.original)
   const selectedProgramCount = selectedPrograms.length
   const selectedProgramIds = selectedPrograms.map((program) => program.id).filter(Boolean)
+
   const exportProgramsToReview = useMemo(() => programs.filter((program) => selectedExportProgramIds.includes(program.id)), [programs, selectedExportProgramIds])
   const exportProgramsFileName = getProgramsExportFileName()
   const exportProgramsDisabled = exportProgramsToReview.length === 0 || isExportingPrograms
@@ -977,8 +978,19 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
   const deleteProgramsToReview = useMemo(() => programs.filter((program) => selectedDeleteProgramIds.includes(program.id)), [programs, selectedDeleteProgramIds])
   const deleteProgramCount = deleteProgramsToReview.length
 
+  useEffect(() => {
+    if (selectedProgramCount === 0) {
+      setIsBulkActionsMenuOpen(false)
+    }
+  }, [selectedProgramCount])
+
   function handleBulkActionsMenuOpenChange(isOpen) {
-    setIsBulkActionsMenuOpen(selectedProgramCount > 0 ? isOpen : false)
+    if (isOpen && selectedProgramCount === 0) {
+      setIsBulkActionsMenuOpen(false)
+      return
+    }
+
+    setIsBulkActionsMenuOpen(isOpen)
   }
 
   function handleDuplicateSelectedProgram() {
@@ -1099,9 +1111,15 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
             />
           </div>
           <div className="flex shrink-0 items-center justify-end gap-3">
-            <DropdownMenu open={isBulkActionsMenuOpen} onOpenChange={handleBulkActionsMenuOpenChange}>
+            <DropdownMenu open={isBulkActionsMenuOpen && selectedProgramCount > 0} onOpenChange={handleBulkActionsMenuOpenChange}>
               <DropdownMenuTrigger asChild>
-                <button type="button" className="admin-shell-athletes-example-columns-button" aria-label="Program bulk actions">
+                <button
+                  type="button"
+                  className="admin-shell-athletes-example-columns-button"
+                  aria-label="Program bulk actions"
+                  disabled={selectedProgramCount === 0}
+                  aria-disabled={selectedProgramCount === 0}
+                >
                   {selectedProgramCount > 0 ? `Bulk actions (${selectedProgramCount})` : 'Bulk actions'}
                   <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
                 </button>

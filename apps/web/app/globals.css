@@ -1262,6 +1262,51 @@ html[data-theme='light'] [data-radix-popper-content-wrapper]:has(.admin-dashboar
   color: var(--admin-shell-nav-active-text) !important;
 }
 
+.admin-shell-workouts-assign-program-select-trigger {
+  min-height: 44px;
+  width: 100%;
+  border: 1px solid var(--admin-dashboard-card-border);
+  border-radius: 12px;
+  background: var(--admin-dashboard-control-bg);
+  color: var(--admin-dashboard-card-text);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.admin-shell-workouts-assign-program-select-trigger:hover {
+  background: var(--admin-dashboard-control-hover-bg);
+}
+
+.admin-shell-workouts-assign-program-select-trigger[data-state='open'] {
+  outline: none;
+  border-color: var(--admin-dashboard-card-border);
+  box-shadow: 0 0 0 2px var(--admin-input-focus);
+}
+
+.admin-shell-workouts-assign-program-select-trigger:focus-visible {
+  outline: none;
+  border-color: var(--admin-dashboard-card-border);
+  box-shadow: 0 0 0 2px var(--admin-input-focus);
+}
+
+.admin-shell-workouts-assign-program-select-content {
+  border-color: var(--admin-shell-control-border) !important;
+  background: var(--admin-shell-control-bg) !important;
+  color: var(--admin-shell-text) !important;
+}
+
+.admin-shell-workouts-assign-program-select-item {
+  border-radius: 12px !important;
+  color: var(--admin-shell-text) !important;
+}
+
+.admin-shell-workouts-assign-program-select-item[data-highlighted],
+.admin-shell-workouts-assign-program-select-item:hover,
+.admin-shell-workouts-assign-program-select-item:focus {
+  background: var(--admin-shell-nav-active-bg) !important;
+  color: var(--admin-shell-nav-active-text) !important;
+}
+
 .admin-dashboard-sidebar-primary-text {
   color: var(--admin-shell-text-strong);
 }

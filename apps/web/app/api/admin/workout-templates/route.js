@@ -1,3 +1,6 @@
+import { cookies } from 'next/headers'
+
+import { PPLUS_ADMIN_ACCESS_TOKEN_COOKIE } from '@/lib/admin-auth-cookies'
 import { createProgramWorkoutRepository } from '@/lib/program-workout-repository'
 
 function json(payload, init = {}) {
@@ -11,8 +14,20 @@ function handleRouteError(error) {
   )
 }
 
+async function requireAdminAccessToken() {
+  const cookieStore = await cookies()
+  const accessToken = cookieStore.get(PPLUS_ADMIN_ACCESS_TOKEN_COOKIE)?.value
+  if (!accessToken) {
+    const error = new Error('Unauthorized admin request.')
+    error.status = 401
+    throw error
+  }
+  return accessToken
+}
+
 export async function GET() {
   try {
+    await requireAdminAccessToken()
     const repository = createProgramWorkoutRepository()
     const workoutTemplates = await repository.listWorkoutTemplates()
     return json({ workoutTemplates })
@@ -23,6 +38,7 @@ export async function GET() {
 
 export async function POST(request) {
   try {
+    await requireAdminAccessToken()
     const repository = createProgramWorkoutRepository()
     const body = await request.json()
     const workoutTemplate = await repository.createWorkoutTemplate(body ?? {})
@@ -34,8 +50,22 @@ export async function POST(request) {
 
 export async function PATCH(request) {
   try {
+    await requireAdminAccessToken()
     const repository = createProgramWorkoutRepository()
     const body = await request.json()
+    if (body?.action === 'assign-workout-templates-to-program') {
+      const assignment = await repository.assignWorkoutTemplatesToProgram({
+        programId: body?.programId,
+        workoutTemplateIds: body?.workoutTemplateIds,
+      })
+      return json(assignment)
+    }
+    if (body?.action === 'archive-workout-templates') {
+      const archiveResult = await repository.archiveWorkoutTemplates({
+        workoutTemplateIds: body?.workoutTemplateIds,
+      })
+      return json(archiveResult)
+    }
     const workoutTemplate = await repository.updateWorkoutTemplate(body?.id, body ?? {})
     return json({ workoutTemplate })
   } catch (error) {
@@ -45,10 +75,13 @@ export async function PATCH(request) {
 
 export async function DELETE(request) {
   try {
+    await requireAdminAccessToken()
     const repository = createProgramWorkoutRepository()
     const body = await request.json()
-    const workoutTemplate = await repository.archiveWorkoutTemplate(body?.id)
-    return json({ workoutTemplate })
+    const deleteResult = await repository.deleteWorkoutTemplates({
+      workoutTemplateIds: body?.workoutTemplateIds ?? [body?.id].filter(Boolean),
+    })
+    return json(deleteResult)
   } catch (error) {
     return handleRouteError(error)
   }
