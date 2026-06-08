@@ -112,6 +112,19 @@ function createRepositoryClient(overrides = {}) {
     }, `${table} patch`)
   }
 
+  async function deleteTable(table, query = '') {
+    return requestJson(`${config.baseRestUrl}/${table}${query}`, {
+      method: 'DELETE',
+      headers: {
+        apikey: config.serviceRoleKey,
+        Authorization: `Bearer ${config.serviceRoleKey}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        Prefer: 'return=representation',
+      },
+    }, `${table} delete`)
+  }
+
   async function authAdminRequest(path, { method = 'GET', body } = {}) {
     return requestJson(`${config.baseUrl}${path}`, {
       method,
@@ -130,8 +143,15 @@ function createRepositoryClient(overrides = {}) {
     requestTable,
     insertTable,
     patchTable,
+    deleteTable,
     authAdminRequest,
   }
+}
+
+function normalizeAthleteIds(athleteIds = []) {
+  return Array.from(new Set((Array.isArray(athleteIds) ? athleteIds : [])
+    .map((value) => String(value ?? '').trim())
+    .filter(Boolean)))
 }
 
 function formatShortcutCode(index) {
@@ -645,6 +665,14 @@ export function createAdminAthleteRepository(overrides = {}) {
       const rows = await client.deleteTable('athlete_profiles', `?id=eq.${encodeURIComponent(athleteId)}`)
       const deletedAthlete = Array.isArray(rows) ? rows[0] : rows
       return { athleteId, deletedAthlete: deletedAthlete ?? null }
+    },
+
+    async deleteAthletes({ athleteIds = [] }) {
+      const normalizedAthleteIds = normalizeAthleteIds(athleteIds)
+      if (normalizedAthleteIds.length === 0) throw createRepositoryError('At least one athlete ID is required.', 400)
+
+      await Promise.all(normalizedAthleteIds.map((athleteId) => this.deleteAthlete({ athleteId })))
+      return { athleteIds: normalizedAthleteIds, deletedCount: normalizedAthleteIds.length }
     },
 
     async sendAthleteInvite({ athleteId, inviteeEmail = '' }) {
