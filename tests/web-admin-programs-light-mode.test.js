@@ -49,8 +49,10 @@ test('programs library row action dropdown matches requested action order and ha
 
   assert.match(programsSource, /function RowActionsCell\([\s\S]*onDuplicateAction = \(\) => \{\},[\s\S]*onAssignAction = \(\) => \{\},[\s\S]*onExportAction = \(\) => \{\},[\s\S]*onArchiveAction = \(\) => \{\},[\s\S]*onDeleteAction = \(\) => \{\},/)
   assert.match(programsSource, /<DropdownMenuContent align="end" className="min-w-\[190px\]">[\s\S]*Duplicate[\s\S]*Assign to athletes[\s\S]*Export[\s\S]*<DropdownMenuSeparator \/>[\s\S]*Archive[\s\S]*Delete/)
-  assert.match(programsSource, /<DropdownMenu open=\{isBulkActionsMenuOpen\} onOpenChange=\{handleBulkActionsMenuOpenChange\}>[\s\S]*Bulk actions[\s\S]*Duplicate[\s\S]*Assign to athletes[\s\S]*Export[\s\S]*<DropdownMenuSeparator \/>[\s\S]*Archive[\s\S]*Delete/)
-  assert.match(programsSource, /disabled=\{selectedProgramCount === 0\}/)
+  assert.match(programsSource, /useEffect\(\(\) => \{[\s\S]*if \(selectedProgramCount === 0\) \{[\s\S]*setIsBulkActionsMenuOpen\(false\)[\s\S]*\}\s*\}, \[selectedProgramCount\]\)/)
+  assert.match(programsSource, /function handleBulkActionsMenuOpenChange\(isOpen\) \{[\s\S]*if \(isOpen && selectedProgramCount === 0\) \{[\s\S]*setIsBulkActionsMenuOpen\(false\)[\s\S]*return[\s\S]*\}[\s\S]*setIsBulkActionsMenuOpen\(isOpen\)/)
+  assert.match(programsSource, /<DropdownMenu open=\{isBulkActionsMenuOpen && selectedProgramCount > 0\} onOpenChange=\{handleBulkActionsMenuOpenChange\}>[\s\S]*Bulk actions[\s\S]*Duplicate[\s\S]*Assign to athletes[\s\S]*Export[\s\S]*<DropdownMenuSeparator \/>[\s\S]*Archive[\s\S]*Delete/)
+  assert.match(programsSource, /aria-label="Program bulk actions"[\s\S]{0,260}disabled=\{selectedProgramCount === 0\}[\s\S]{0,120}aria-disabled=\{selectedProgramCount === 0\}/)
   assert.match(programsSource, /selectedProgramCount > 0 \? `Bulk actions \(\$\{selectedProgramCount\}\)` : 'Bulk actions'/)
   assert.match(programsSource, /disabled=\{selectedProgramCount !== 1\}[\s\S]*handleDuplicateSelectedProgram/)
   assert.match(programsSource, /disabled=\{selectedProgramCount !== 1\}[\s\S]*handleAssignSelectedProgram/)
@@ -187,7 +189,7 @@ test('programs library controls keep the same dropdown row positioning as the ot
 
   const controlsMatch = programsSource.match(/<div className="flex flex-col gap-3">[\s\S]*?\n      \{programToast \? \(/)?.[0] ?? ''
   assert.ok(controlsMatch.includes('<div className="flex flex-col gap-3">'))
-  assert.match(controlsMatch, /<div className="flex w-full flex-wrap items-start justify-between gap-3">[\s\S]*<div className="flex min-w-0 flex-1 flex-wrap items-center justify-start gap-2">[\s\S]*<Filters[\s\S]*Add filter[\s\S]*<div className="flex shrink-0 items-center justify-end gap-3">[\s\S]*<DropdownMenu>[\s\S]*Columns[\s\S]*Create a program/)
+  assert.match(controlsMatch, /<div className="flex w-full flex-wrap items-start justify-between gap-3">[\s\S]*<div className="flex min-w-0 flex-1 flex-wrap items-center justify-start gap-2">[\s\S]*<Filters[\s\S]*Add filter[\s\S]*<div className="flex shrink-0 items-center justify-end gap-3">[\s\S]*aria-label="Program bulk actions"[\s\S]*<DropdownMenu>[\s\S]*Columns[\s\S]*Create a program/)
   assert.doesNotMatch(controlsMatch, /<div className="grid gap-3">/)
   assert.doesNotMatch(controlsMatch, /<div className="flex w-full items-center justify-between gap-3">[\s\S]*Columns[\s\S]*Create a program[\s\S]*<Filters/)
 })

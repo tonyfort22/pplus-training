@@ -72,7 +72,7 @@ test('programs table uses shared export helpers and keeps the workflow test-read
   assert.match(programsSource, /from '@\/lib\/admin-programs-export'/)
   assert.match(programsSource, /buildProgramsExportCsv,[\s\S]*downloadProgramsExportFile,[\s\S]*getProgramsExportFileName,[\s\S]*programExportColumns,/)
   assert.match(programsSource, /const exportProgramsFileName = getProgramsExportFileName\(\)/)
-  assert.match(programsSource, /<button type="button" className="admin-shell-athletes-example-columns-button" aria-label="Program bulk actions">/)
+  assert.match(programsSource, /aria-label="Program bulk actions"[\s\S]*disabled=\{selectedProgramCount === 0\}/)
   assert.match(programsSource, /<DropdownMenuLabel>\{selectedProgramCount > 0 \? 'Bulk actions' : 'Select programs first'\}<\/DropdownMenuLabel>/)
   assert.match(programsSource, /<DropdownMenuItem className="admin-shell-athletes-bulk-menu-item" disabled=\{selectedProgramCount === 0\}[\s\S]*handleExportSelectedPrograms\(\)/)
   assert.match(programsSource, /function handleConfirmExportPrograms\(\) \{[\s\S]*if \(exportProgramsDisabled\) return[\s\S]*setIsExportingPrograms\(true\)[\s\S]*buildProgramsExportCsv\(exportProgramsToReview\)[\s\S]*fileName: exportProgramsFileName[\s\S]*text\/csv;charset=utf-8[\s\S]*Programs export ready[\s\S]*setIsExportProgramSheetOpen\(false\)[\s\S]*setSelectedExportProgramIds\(\[\]\)[\s\S]*setRowSelection\(\{\}\)/)

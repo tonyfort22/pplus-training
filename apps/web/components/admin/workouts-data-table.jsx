@@ -8,12 +8,20 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { Bot, ChevronDown, FileText, LoaderCircle, MoreHorizontal, Plus, Trash2, Upload } from 'lucide-react'
+import { Archive, Bot, ChevronDown, Copy, Download, FileText, LoaderCircle, MoreHorizontal, Plus, Trash2, Upload, UserPlus } from 'lucide-react'
 import { parseAsJson, useQueryState } from 'nuqs'
 
 import AiWorkoutDraftSheet from '@/components/admin/ai-workout-draft-sheet'
+import WorkoutArchiveDialog from '@/components/admin/workout-archive-dialog'
+import WorkoutDeleteDialog from '@/components/admin/workout-delete-dialog'
 import WorkoutEditorDialog from '@/components/admin/workout-editor-dialog'
 import { Filters } from '@/components/reui/filters'
+import {
+  buildWorkoutsExportCsv,
+  downloadWorkoutsExportFile,
+  getWorkoutsExportFileName,
+  workoutExportColumns,
+} from '@/lib/admin-workouts-export'
 import Badge from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import Checkbox from '@/components/ui/checkbox'
@@ -32,10 +40,12 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
@@ -73,6 +83,13 @@ function mapWorkoutTemplateToWorkoutRow(template = {}) {
   return {
     id: template.id,
     name: template.name ?? 'Workout',
+    coachId: template.coach_id ?? '',
+    category: template.category ?? '',
+    focusAreaRaw: template.focus_area ?? '',
+    trainingType: template.training_type ?? '',
+    backgroundColor: template.bg_color ?? '',
+    textColor: template.text_color ?? '',
+    estimatedDurationMinutes: template.estimated_duration_minutes ?? '',
     duration: formatWorkoutDuration(template.estimated_duration_minutes),
     sections: template.section_count ?? '--',
     exercises: template.exercise_count ?? '--',
@@ -82,6 +99,8 @@ function mapWorkoutTemplateToWorkoutRow(template = {}) {
     status: formatWorkoutStatus(template.status),
     description: template.description ?? '',
     thumbnailUrl: template.thumbnail_url ?? '',
+    createdAt: template.created_at ?? '',
+    updatedAt: template.updated_at ?? '',
     trainingSections: Array.isArray(template.trainingSections) ? template.trainingSections : [],
   }
 }
@@ -470,9 +489,23 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
   const [workoutEditorMessage, setWorkoutEditorMessage] = useState('')
   const [isSavingWorkoutTemplate, setIsSavingWorkoutTemplate] = useState(false)
   const [isDeleteWorkoutDialogOpen, setIsDeleteWorkoutDialogOpen] = useState(false)
+  const [isArchiveWorkoutDialogOpen, setIsArchiveWorkoutDialogOpen] = useState(false)
   const [selectedDeleteWorkoutId, setSelectedDeleteWorkoutId] = useState(null)
+  const [selectedDeleteWorkoutIds, setSelectedDeleteWorkoutIds] = useState([])
+  const [selectedArchiveWorkoutIds, setSelectedArchiveWorkoutIds] = useState([])
   const [isDeletingWorkoutTemplate, setIsDeletingWorkoutTemplate] = useState(false)
+  const [isArchivingWorkoutTemplates, setIsArchivingWorkoutTemplates] = useState(false)
   const [deleteWorkoutMessage, setDeleteWorkoutMessage] = useState('')
+  const [archiveWorkoutMessage, setArchiveWorkoutMessage] = useState('')
+  const [bulkWorkoutMessage, setBulkWorkoutMessage] = useState('')
+  const [isBulkWorkoutMenuOpen, setIsBulkWorkoutMenuOpen] = useState(false)
+  const [isAssignWorkoutSheetOpen, setIsAssignWorkoutSheetOpen] = useState(false)
+  const [assignWorkoutProgramId, setAssignWorkoutProgramId] = useState('')
+  const [assignWorkoutMessage, setAssignWorkoutMessage] = useState('')
+  const [isAssigningWorkoutsToProgram, setIsAssigningWorkoutsToProgram] = useState(false)
+  const [isExportWorkoutSheetOpen, setIsExportWorkoutSheetOpen] = useState(false)
+  const [selectedExportWorkoutIds, setSelectedExportWorkoutIds] = useState([])
+  const [isExportingWorkouts, setIsExportingWorkouts] = useState(false)
   const [openRowActionMenuId, setOpenRowActionMenuId] = useState(null)
   const [rowSelection, setRowSelection] = useState({})
   const [columnFilters, setColumnFilters] = useState([])
@@ -649,6 +682,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
 
     setOpenRowActionMenuId(null)
     setSelectedDeleteWorkoutId(workout.id)
+    setSelectedDeleteWorkoutIds([workout.id])
     setDeleteWorkoutMessage('')
     setIsDeleteWorkoutDialogOpen(true)
   }
@@ -755,6 +789,144 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
     },
   })
 
+  const selectedWorkoutRows = table.getSelectedRowModel().rows.map((row) => row.original)
+  const selectedWorkoutCount = selectedWorkoutRows.length
+  const exportWorkoutsToReview = useMemo(
+    () => workoutsData.filter((workout) => selectedExportWorkoutIds.includes(workout.id)),
+    [selectedExportWorkoutIds, workoutsData],
+  )
+  const deleteWorkoutsToReview = useMemo(
+    () => workoutsData.filter((workout) => selectedDeleteWorkoutIds.includes(workout.id)),
+    [selectedDeleteWorkoutIds, workoutsData],
+  )
+  const archiveWorkoutsToReview = useMemo(
+    () => workoutsData.filter((workout) => selectedArchiveWorkoutIds.includes(workout.id)),
+    [selectedArchiveWorkoutIds, workoutsData],
+  )
+  const exportWorkoutsFileName = getWorkoutsExportFileName()
+  const exportWorkoutsDisabled = isExportingWorkouts || exportWorkoutsToReview.length === 0
+  const selectedAssignProgram = useMemo(
+    () => programOptions.find((programOption) => programOption.id === assignWorkoutProgramId) ?? null,
+    [assignWorkoutProgramId, programOptions],
+  )
+
+  useEffect(() => {
+    if (selectedWorkoutCount === 0) {
+      setIsBulkWorkoutMenuOpen(false)
+    }
+  }, [selectedWorkoutCount])
+
+  function handleBulkWorkoutMenuOpenChange(isOpen) {
+    if (isOpen && selectedWorkoutCount === 0) {
+      setIsBulkWorkoutMenuOpen(false)
+      return
+    }
+
+    setIsBulkWorkoutMenuOpen(isOpen)
+  }
+
+  function handleDuplicateSelectedWorkout() {
+    if (selectedWorkoutCount !== 1) return
+    openDuplicateWorkoutDialog(selectedWorkoutRows[0])
+  }
+
+  function handleOpenAssignSelectedWorkoutsSheet() {
+    if (selectedWorkoutCount === 0) return
+    setIsBulkWorkoutMenuOpen(false)
+    setBulkWorkoutMessage('')
+    setAssignWorkoutMessage('')
+    setAssignWorkoutProgramId('')
+    setIsAssignWorkoutSheetOpen(true)
+  }
+
+  function handleAssignSelectedWorkoutsToProgram() {
+    handleOpenAssignSelectedWorkoutsSheet()
+  }
+
+  async function handleConfirmAssignSelectedWorkouts() {
+    if (!assignWorkoutProgramId || selectedWorkoutCount === 0 || isAssigningWorkoutsToProgram) return
+    setBulkWorkoutMessage('')
+    setAssignWorkoutMessage('')
+    setIsAssigningWorkoutsToProgram(true)
+
+    try {
+      const response = await fetch('/api/admin/workout-templates', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'assign-workout-templates-to-program',
+          programId: assignWorkoutProgramId,
+          workoutTemplateIds: selectedWorkoutRows.map((workout) => workout.id).filter(Boolean),
+        }),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Failed to assign workouts to program.')
+      }
+
+      const assignedCount = Array.isArray(payload.assignedWorkouts) ? payload.assignedWorkouts.length : selectedWorkoutCount
+      setBulkWorkoutMessage(`Assigned ${assignedCount} workout${assignedCount === 1 ? '' : 's'} to ${selectedAssignProgram?.name ?? 'the selected program'}.`)
+      setRowSelection({})
+      setAssignWorkoutProgramId('')
+      setIsAssignWorkoutSheetOpen(false)
+    } catch (assignError) {
+      setAssignWorkoutMessage(assignError?.message || 'Failed to assign workouts to program.')
+    } finally {
+      setIsAssigningWorkoutsToProgram(false)
+    }
+  }
+
+  function handleCloseAssignWorkoutSheet(isOpen) {
+    if (isAssigningWorkoutsToProgram && !isOpen) return
+    setIsAssignWorkoutSheetOpen(isOpen)
+    if (!isOpen) {
+      setAssignWorkoutProgramId('')
+      setAssignWorkoutMessage('')
+    }
+  }
+
+  function handleOpenExportSelectedWorkoutsSheet() {
+    if (selectedWorkoutCount === 0) return
+    setIsBulkWorkoutMenuOpen(false)
+    setBulkWorkoutMessage('')
+    setSelectedExportWorkoutIds(selectedWorkoutRows.map((workout) => workout.id).filter(Boolean))
+    setIsExportWorkoutSheetOpen(true)
+  }
+
+  async function handleConfirmExportWorkouts() {
+    if (exportWorkoutsDisabled) return
+    setIsExportingWorkouts(true)
+    try {
+      const csv = buildWorkoutsExportCsv(exportWorkoutsToReview)
+      downloadWorkoutsExportFile({
+        content: csv,
+        fileName: exportWorkoutsFileName,
+      })
+      setIsExportWorkoutSheetOpen(false)
+      setSelectedExportWorkoutIds([])
+      table.resetRowSelection()
+    } finally {
+      setIsExportingWorkouts(false)
+    }
+  }
+
+  function handleOpenArchiveSelectedWorkoutsDialog() {
+    if (selectedWorkoutCount === 0) return
+    setIsBulkWorkoutMenuOpen(false)
+    setSelectedArchiveWorkoutIds(selectedWorkoutRows.map((workout) => workout.id).filter(Boolean))
+    setArchiveWorkoutMessage('')
+    setIsArchiveWorkoutDialogOpen(true)
+  }
+
+  function handleOpenDeleteSelectedWorkoutsDialog() {
+    if (selectedWorkoutCount === 0) return
+    setIsBulkWorkoutMenuOpen(false)
+    setSelectedDeleteWorkoutId(selectedWorkoutRows[0]?.id ?? null)
+    setSelectedDeleteWorkoutIds(selectedWorkoutRows.map((workout) => workout.id).filter(Boolean))
+    setDeleteWorkoutMessage('')
+    setIsDeleteWorkoutDialogOpen(true)
+  }
+
   async function reloadWorkoutTemplates() {
     const response = await fetch('/api/admin/workout-templates', {
       cache: 'no-store',
@@ -827,8 +999,42 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
     }
   }
 
+  async function handleArchiveWorkoutTemplates() {
+    if (selectedArchiveWorkoutIds.length === 0) return
+
+    setIsArchivingWorkoutTemplates(true)
+    setArchiveWorkoutMessage('')
+    try {
+      const response = await fetch('/api/admin/workout-templates', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'archive-workout-templates',
+          workoutTemplateIds: selectedArchiveWorkoutIds,
+        }),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Failed to archive workout templates.')
+      }
+
+      await reloadWorkoutTemplates()
+      table.resetRowSelection()
+      const archivedCount = Array.isArray(payload.archivedWorkouts) ? payload.archivedWorkouts.length : selectedArchiveWorkoutIds.length
+      const skippedCount = Array.isArray(payload.skippedWorkouts) ? payload.skippedWorkouts.length : 0
+      setBulkWorkoutMessage(`Archived ${archivedCount} workout${archivedCount === 1 ? '' : 's'}${skippedCount > 0 ? `; skipped ${skippedCount} already archived` : ''}.`)
+      setIsArchiveWorkoutDialogOpen(false)
+      setSelectedArchiveWorkoutIds([])
+    } catch (archiveError) {
+      setArchiveWorkoutMessage(archiveError?.message || 'Failed to archive workout templates.')
+    } finally {
+      setIsArchivingWorkoutTemplates(false)
+    }
+  }
+
   async function handleDeleteWorkoutTemplate() {
-    if (!selectedDeleteWorkoutId) return
+    const workoutIds = selectedDeleteWorkoutIds.length > 0 ? selectedDeleteWorkoutIds : [selectedDeleteWorkoutId].filter(Boolean)
+    if (workoutIds.length === 0) return
 
     setIsDeletingWorkoutTemplate(true)
     setDeleteWorkoutMessage('')
@@ -836,15 +1042,20 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
       const response = await fetch('/api/admin/workout-templates', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: selectedDeleteWorkoutId }),
+        body: JSON.stringify({ workoutTemplateIds: workoutIds }),
       })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) {
         throw new Error(payload?.error || 'Failed to delete workout template.')
       }
+
       await reloadWorkoutTemplates()
+      table.resetRowSelection()
+      const deletedCount = Array.isArray(payload.deletedWorkouts) ? payload.deletedWorkouts.length : workoutIds.length
+      setBulkWorkoutMessage(`Deleted ${deletedCount} workout${deletedCount === 1 ? '' : 's'}.`)
       setIsDeleteWorkoutDialogOpen(false)
       setSelectedDeleteWorkoutId(null)
+      setSelectedDeleteWorkoutIds([])
     } catch (deleteError) {
       setDeleteWorkoutMessage(deleteError?.message || 'Failed to delete workout template.')
     } finally {
@@ -929,31 +1140,104 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
   return (
     <div className="admin-shell-athletes-table-example">
       <div className="flex flex-col gap-3">
-        <div className="flex w-full items-center justify-between gap-3">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button type="button" className="admin-shell-athletes-example-columns-button">
-                Columns
-                <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {table
-                .getAllColumns()
-                .filter((column) => column.getCanHide())
-                .map((column) => (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    className="capitalize"
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                  >
-                    {column.columnDef.meta?.label ?? column.id}
-                  </DropdownMenuCheckboxItem>
-                ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <div className="flex flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+        <div className="flex w-full flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-start gap-2">
+            <Filters
+              filters={Array.isArray(workoutFilters) ? workoutFilters : []}
+              fields={workoutFilterFields}
+              onChange={setWorkoutFilters}
+              trigger={
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="admin-shell-athletes-filter-trigger rounded-[12px] min-h-[40px] shadow-none"
+                >
+                  <Plus className="size-4" />
+                  Add filter
+                </Button>
+              }
+            />
+          </div>
+          <div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+            <DropdownMenu
+              open={isBulkWorkoutMenuOpen && selectedWorkoutCount > 0}
+              onOpenChange={handleBulkWorkoutMenuOpenChange}
+            >
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="admin-shell-athletes-example-columns-button"
+                  aria-label="Workout bulk actions"
+                  disabled={selectedWorkoutCount === 0}
+                  aria-disabled={selectedWorkoutCount === 0}
+                >
+                  {selectedWorkoutCount > 0 ? `Bulk actions (${selectedWorkoutCount})` : 'Bulk actions'}
+                  <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[190px]">
+                <DropdownMenuLabel>{selectedWorkoutCount > 0 ? 'Bulk actions' : 'Select workouts first'}</DropdownMenuLabel>
+                <DropdownMenuItem className="admin-shell-athletes-bulk-menu-item" disabled={selectedWorkoutCount !== 1} onSelect={(event) => {
+                  event.preventDefault()
+                  handleDuplicateSelectedWorkout()
+                }}>
+                  <Copy className="size-4" aria-hidden="true" />
+                  Duplicate
+                </DropdownMenuItem>
+                <DropdownMenuItem className="admin-shell-athletes-bulk-menu-item" disabled={selectedWorkoutCount === 0} onSelect={(event) => {
+                  event.preventDefault()
+                  handleAssignSelectedWorkoutsToProgram()
+                }}>
+                  <UserPlus className="size-4" aria-hidden="true" />
+                  Assign to program
+                </DropdownMenuItem>
+                <DropdownMenuItem className="admin-shell-athletes-bulk-menu-item" disabled={selectedWorkoutCount === 0} onSelect={(event) => {
+                  event.preventDefault()
+                  handleOpenExportSelectedWorkoutsSheet()
+                }}>
+                  <Download className="size-4" aria-hidden="true" />
+                  Export
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="admin-shell-athletes-bulk-menu-item admin-shell-athletes-bulk-menu-item-danger" disabled={selectedWorkoutCount === 0} onSelect={(event) => {
+                  event.preventDefault()
+                  handleOpenArchiveSelectedWorkoutsDialog()
+                }}>
+                  <Archive className="size-4" aria-hidden="true" />
+                  Archive
+                </DropdownMenuItem>
+                <DropdownMenuItem className="admin-shell-athletes-bulk-menu-item admin-shell-athletes-bulk-menu-item-danger" disabled={selectedWorkoutCount === 0} onSelect={(event) => {
+                  event.preventDefault()
+                  handleOpenDeleteSelectedWorkoutsDialog()
+                }}>
+                  <Trash2 className="size-4" aria-hidden="true" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className="admin-shell-athletes-example-columns-button">
+                  Columns
+                  <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {table
+                  .getAllColumns()
+                  .filter((column) => column.getCanHide())
+                  .map((column) => (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      className="capitalize"
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                    >
+                      {column.columnDef.meta?.label ?? column.id}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <div aria-label="Workout import PDF upload">
               <Button
                 type="button"
@@ -980,23 +1264,6 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
               Create workout
             </Button>
           </div>
-        </div>
-        <div className="flex w-full flex-wrap items-center justify-start gap-2">
-          <Filters
-            filters={Array.isArray(workoutFilters) ? workoutFilters : []}
-            fields={workoutFilterFields}
-            onChange={setWorkoutFilters}
-            trigger={
-              <Button
-                type="button"
-                variant="outline"
-                className="admin-shell-athletes-filter-trigger rounded-[12px] min-h-[40px] shadow-none"
-              >
-                <Plus className="size-4" />
-                Add filter
-              </Button>
-            }
-          />
         </div>
       </div>
 
@@ -1029,6 +1296,12 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
               </Button>
             </div>
           </div>
+        </div>
+      ) : null}
+
+      {bulkWorkoutMessage ? (
+        <div className="rounded-[16px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-4 py-3 text-sm text-[var(--admin-dashboard-card-muted)]">
+          {bulkWorkoutMessage}
         </div>
       ) : null}
 
@@ -1238,38 +1511,213 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
         onAccept={handleAcceptAiWorkoutDraft}
       />
 
-      <Dialog open={isDeleteWorkoutDialogOpen} onOpenChange={setIsDeleteWorkoutDialogOpen}>
-        <DialogContent className="admin-shell-athletes-invite-dialog border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] text-[var(--admin-dashboard-card-text)] sm:max-w-[440px]">
-          <DialogHeader>
-            <DialogTitle>Delete workout</DialogTitle>
-            <DialogDescription>This workout will be permanently deleted.</DialogDescription>
-          </DialogHeader>
-          {deleteWorkoutMessage ? (
-            <p className="admin-shell-workout-editor-message rounded-[12px] px-4 py-3 text-sm">
-              {deleteWorkoutMessage}
-            </p>
-          ) : null}
-          <DialogFooter className="sm:flex-row sm:justify-end gap-3">
+      <Sheet open={isExportWorkoutSheetOpen} onOpenChange={setIsExportWorkoutSheetOpen}>
+        <SheetContent side="right" className="admin-shell-workouts-export-sheet border-l border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] !max-w-[var(--container-lg)]">
+          <SheetHeader className="shrink-0 border-b border-[color:var(--admin-dashboard-card-border)] px-6 py-5">
+            <SheetTitle>Export workouts</SheetTitle>
+            <SheetDescription>
+              Review the selected workouts before downloading a CSV export.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <div className="grid gap-5">
+              <div className="admin-shell-workouts-export-summary grid gap-3 rounded-[20px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-4">
+                <div className="grid gap-1">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--admin-dashboard-card-muted)]">Selected workouts</p>
+                  <p className="text-2xl font-semibold text-[var(--admin-dashboard-card-text)]">{exportWorkoutsToReview.length}</p>
+                </div>
+                <div className="grid gap-2 text-sm text-[var(--admin-dashboard-card-muted)]">
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Format</span>
+                    <span className="font-medium text-[var(--admin-dashboard-card-text)]">CSV</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Filename</span>
+                    <span className="truncate font-medium text-[var(--admin-dashboard-card-text)]">{exportWorkoutsFileName}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--admin-dashboard-card-muted)]">Included columns</div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {workoutExportColumns.map((column) => (
+                    <div key={column} className="rounded-[14px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-3 py-2 text-sm font-medium text-[var(--admin-dashboard-card-text)]">
+                      {column}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-3">
+                <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--admin-dashboard-card-muted)]">Selected workout preview</div>
+                <div className="grid max-h-[360px] gap-2 overflow-y-auto pr-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                  {exportWorkoutsToReview.map((workout) => (
+                    <div key={`export-${workout.id}`} className="flex items-center justify-between gap-3 rounded-[16px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-4 py-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{workout.name}</p>
+                        <p className="truncate text-sm text-[var(--admin-dashboard-card-muted)]">{workout.focusArea} · {workout.exerciseCount} exercise{workout.exerciseCount === 1 ? '' : 's'}</p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-3">
+                        <span className="hidden text-sm text-[var(--admin-dashboard-card-muted)] sm:inline">{workout.duration} · {workout.setCount} sets</span>
+                        <Badge tone={workout.status === 'Active' ? 'success' : 'warning'} className={workout.status === 'Active' ? 'admin-shell-workouts-status-badge admin-shell-workouts-status-badge-active normal-case tracking-normal' : 'admin-shell-workouts-status-badge admin-shell-workouts-status-badge-inactive normal-case tracking-normal'}>{workout.status}</Badge>
+                      </div>
+                    </div>
+                  ))}
+                  {exportWorkoutsToReview.length === 0 ? (
+                    <div className="rounded-[16px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-4 py-3 text-sm text-[var(--admin-dashboard-card-muted)]">No workouts selected.</div>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <SheetFooter className="shrink-0 border-t border-[color:var(--admin-dashboard-card-border)] px-6 py-5 sm:flex-row sm:justify-end gap-3">
             <Button
               type="button"
               variant="outline"
-              className="rounded-[12px] min-h-[40px]"
-              onClick={() => setIsDeleteWorkoutDialogOpen(false)}
-              disabled={isDeletingWorkoutTemplate}
+              className="rounded-[12px] min-h-[40px] border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]"
+              onClick={() => {
+                setIsExportWorkoutSheetOpen(false)
+                setSelectedExportWorkoutIds([])
+              }}
+              disabled={isExportingWorkouts}
             >
               Cancel
             </Button>
             <Button
               type="button"
-              className="rounded-[12px] min-h-[40px] bg-red-500/90 text-white hover:bg-red-500"
-              onClick={handleDeleteWorkoutTemplate}
-              disabled={isDeletingWorkoutTemplate}
+              disabled={exportWorkoutsDisabled}
+              onClick={handleConfirmExportWorkouts}
+              className="rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {isDeletingWorkoutTemplate ? 'Deleting...' : 'Delete workout'}
+              {isExportingWorkouts ? 'Preparing CSV...' : 'Download CSV'}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={isAssignWorkoutSheetOpen} onOpenChange={handleCloseAssignWorkoutSheet}>
+        <SheetContent side="right" className="admin-shell-workouts-assign-sheet border-l border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] !max-w-[var(--container-lg)]">
+          <div className="flex h-full flex-col">
+            <SheetHeader className="border-b border-[color:var(--admin-dashboard-card-border)] px-6 py-5 text-left">
+              <SheetTitle>Assign to program</SheetTitle>
+              <SheetDescription>
+                Review the selected workouts, choose a target program, then confirm the planned assignment handoff.
+              </SheetDescription>
+            </SheetHeader>
+
+            <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
+              <div className="rounded-[20px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--admin-dashboard-card-muted)]">Selected workouts</p>
+                <p className="mt-2 text-2xl font-semibold text-[var(--admin-dashboard-card-text)]">
+                  {selectedWorkoutCount} workout{selectedWorkoutCount === 1 ? '' : 's'}
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-[var(--admin-dashboard-card-text)]" htmlFor="assign-workout-program-trigger">
+                  Target program
+                </label>
+                <Select value={assignWorkoutProgramId} onValueChange={setAssignWorkoutProgramId}>
+                  <SelectTrigger id="assign-workout-program-trigger" className="admin-shell-workouts-assign-program-select-trigger">
+                    <SelectValue placeholder="Select a program" />
+                  </SelectTrigger>
+                  <SelectContent className="admin-dashboard-dropdown-content admin-shell-workouts-assign-program-select-content">
+                    {programOptions.length > 0 ? (
+                      programOptions.map((programOption) => (
+                        <SelectItem key={programOption.id} value={programOption.id} className="admin-shell-workouts-assign-program-select-item">
+                          {programOption.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="no-programs" className="admin-shell-workouts-assign-program-select-item" disabled>No programs available</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {assignWorkoutMessage ? (
+                <p className="admin-shell-workout-editor-message rounded-[12px] px-4 py-3 text-sm">
+                  {assignWorkoutMessage}
+                </p>
+              ) : null}
+
+              {selectedAssignProgram ? (
+                <div className="rounded-[18px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--admin-dashboard-card-muted)]">Program selected</p>
+                  <p className="mt-2 text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{selectedAssignProgram.name}</p>
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-[var(--admin-dashboard-card-muted)]">
+                    {selectedAssignProgram.duration ? <span>{selectedAssignProgram.duration}</span> : null}
+                    {selectedAssignProgram.weekCount ? <span>{selectedAssignProgram.weekCount} weeks</span> : null}
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">Assignment preview</p>
+                  <p className="text-xs text-[var(--admin-dashboard-card-muted)]">Selected workouts queued for the target program.</p>
+                </div>
+                <div className="space-y-2">
+                  {selectedWorkoutRows.map((workout) => (
+                    <div key={workout.id} className="rounded-[16px] border border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-3">
+                      <p className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{workout.name}</p>
+                      <div className="mt-1 flex flex-wrap gap-2 text-xs text-[var(--admin-dashboard-card-muted)]">
+                        <span>{workout.duration}</span>
+                        <span>{workout.exerciseCount} exercises</span>
+                        <span>{workout.setCount} sets</span>
+                        <span>{workout.focusArea}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <SheetFooter className="border-t border-[color:var(--admin-dashboard-card-border)] px-6 py-4 sm:flex-row sm:justify-end">
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-[12px] min-h-[40px]"
+                  onClick={() => handleCloseAssignWorkoutSheet(false)}
+                  disabled={isAssigningWorkoutsToProgram}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  className="rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]"
+                  disabled={!assignWorkoutProgramId || selectedWorkoutCount === 0 || isAssigningWorkoutsToProgram}
+                  onClick={handleConfirmAssignSelectedWorkouts}
+                >
+                  {isAssigningWorkoutsToProgram ? 'Assigning...' : 'Confirm assignment'}
+                </Button>
+              </div>
+            </SheetFooter>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <WorkoutArchiveDialog
+        open={isArchiveWorkoutDialogOpen}
+        onOpenChange={setIsArchiveWorkoutDialogOpen}
+        workouts={archiveWorkoutsToReview}
+        isArchiving={isArchivingWorkoutTemplates}
+        message={archiveWorkoutMessage}
+        onConfirm={handleArchiveWorkoutTemplates}
+      />
+
+      <WorkoutDeleteDialog
+        open={isDeleteWorkoutDialogOpen}
+        onOpenChange={setIsDeleteWorkoutDialogOpen}
+        workouts={deleteWorkoutsToReview}
+        isDeleting={isDeletingWorkoutTemplate}
+        message={deleteWorkoutMessage}
+        onConfirm={handleDeleteWorkoutTemplate}
+      />
 
       <div className="admin-shell-athletes-table-shell">
         <Table className="admin-shell-athletes-table">

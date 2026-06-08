@@ -16,7 +16,7 @@ test('workouts table upload button opens cancel-style PDF import dialog with tab
   assert.doesNotMatch(source, /No image attached/)
   assert.doesNotMatch(source, /Upload image/)
   assert.doesNotMatch(source, /accept="image\/\*"/)
-  assert.match(source, /import \{ Bot, ChevronDown, FileText, LoaderCircle, MoreHorizontal, Plus, Trash2, Upload \} from 'lucide-react'/)
+  assert.match(source, /import \{[^}]*Bot[^}]*ChevronDown[^}]*FileText[^}]*LoaderCircle[^}]*MoreHorizontal[^}]*Plus[^}]*Trash2[^}]*Upload[^}]*\} from 'lucide-react'/)
   assert.match(source, /import \{ Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle \} from '@\/components\/ui\/empty'/)
 
   assert.match(source, /const \[isAiWorkoutImportDialogOpen, setIsAiWorkoutImportDialogOpen\] = useState\(false\)/)
