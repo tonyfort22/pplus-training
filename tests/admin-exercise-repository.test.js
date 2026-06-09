@@ -127,7 +127,7 @@ test('createAdminExerciseRepository creates an exercise and role-based muscle ma
   assert.equal(exerciseInsertCall.body.description, 'Loaded unilateral strength builder.')
   assert.equal(exerciseInsertCall.body.difficulty, 'intermediate')
   assert.equal(exerciseInsertCall.body.stimulus_type, 'strength')
-  assert.equal(exerciseInsertCall.body.default_equipment, 'dumbbell')
+  assert.equal(exerciseInsertCall.body.default_equipment, 'dumbbell, bench')
   assert.equal(exerciseInsertCall.body.thumbnail_url.endsWith('/thumb.png'), true)
   assert.equal(exerciseInsertCall.body.thumbnail_url.includes('/storage/v1/object/public/exercise-media/'), true)
   assert.equal(exerciseInsertCall.body.video_url.endsWith('/demo.mp4'), true)
