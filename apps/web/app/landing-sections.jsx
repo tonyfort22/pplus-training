@@ -1,7 +1,10 @@
 import Image from 'next/image'
+import { Menu, X } from 'lucide-react'
 import { Mail, MapPin, Phone } from 'lucide-react'
 import PublicLanguageSwitcher from '../components/public-language-switcher'
 import PublicThemeToggle from '../components/public-theme-toggle'
+import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import LandingHeaderScrollFrame from './landing-header-scroll-frame'
 import { DEFAULT_LANGUAGE, getLocalizedHref } from '../lib/i18n/language'
 import * as landingContentFallback from './landing-content'
 
@@ -12,6 +15,13 @@ const footerContactIcons = {
   phone: Phone,
   mail: Mail,
 }
+
+const landingHeaderNavItems = (navCopy, language) => [
+  { key: 'features', href: getLocalizedHref('/#features', language), label: navCopy.features },
+  { key: 'program', href: getLocalizedHref('/#programs', language), label: navCopy.program },
+  { key: 'faq', href: getLocalizedHref('/faq', language), label: navCopy.faq },
+  { key: 'support', href: getLocalizedHref('/support', language), label: navCopy.support },
+]
 
 function FooterLinkColumn({ title, links, language }) {
   return (
@@ -60,19 +70,19 @@ export function LandingHeader({ language = DEFAULT_LANGUAGE, currentPath = '/', 
     faq: 'FAQ',
     support: 'Support',
   }
+  const navItems = landingHeaderNavItems(navCopy, language)
 
   return (
-    <header className="landing-header">
-      <div className="landing-shell landing-header-inner">
+    <LandingHeaderScrollFrame>
+      <div className="landing-header-desktop landing-shell landing-header-inner">
         <a href={getLocalizedHref('/', language)} className="landing-header-brand" aria-label="PPLUS Training home">
           <LandingLogo className="landing-logo-header" priority />
         </a>
 
         <nav className="landing-header-nav" aria-label="Primary">
-          <a href={getLocalizedHref('/#features', language)}>{navCopy.features}</a>
-          <a href={getLocalizedHref('/#programs', language)}>{navCopy.program}</a>
-          <a href={getLocalizedHref('/faq', language)}>{navCopy.faq}</a>
-          <a href={getLocalizedHref('/support', language)}>{navCopy.support}</a>
+          {navItems.map((item) => (
+            <a key={item.key} href={item.href}>{item.label}</a>
+          ))}
         </nav>
 
         <div className="landing-header-actions">
@@ -87,7 +97,59 @@ export function LandingHeader({ language = DEFAULT_LANGUAGE, currentPath = '/', 
           </a>
         </div>
       </div>
-    </header>
+
+      <div className="landing-header-mobile landing-shell">
+        <a href={getLocalizedHref('/', language)} className="landing-header-brand" aria-label="PPLUS Training home">
+          <LandingLogo className="landing-logo-header" priority />
+        </a>
+
+        <Sheet>
+          <SheetTrigger asChild>
+            <button className="landing-mobile-menu-button" type="button" aria-label="Open navigation menu">
+              <Menu aria-hidden="true" />
+              <span>Menu</span>
+            </button>
+          </SheetTrigger>
+          <SheetContent side="right" className="landing-mobile-menu-sheet" showCloseButton={false}>
+            <SheetHeader className="landing-mobile-menu-header">
+              <div className="landing-mobile-menu-header-row">
+                <SheetTitle className="landing-mobile-menu-title">Menu</SheetTitle>
+                <SheetClose asChild>
+                  <button className="landing-mobile-menu-close" type="button" aria-label="Close navigation menu">
+                    <X aria-hidden="true" />
+                  </button>
+                </SheetClose>
+              </div>
+            </SheetHeader>
+
+            <nav className="landing-mobile-menu-nav" aria-label="Mobile primary">
+              {navItems.map((item) => (
+                <SheetClose key={item.key} asChild>
+                  <a className="landing-mobile-menu-link" href={item.href}>{item.label}</a>
+                </SheetClose>
+              ))}
+            </nav>
+
+            <div className="landing-mobile-menu-actions">
+              <div className="landing-mobile-menu-switcher-row">
+                <PublicLanguageSwitcher language={language} currentPath={currentPath} />
+                <PublicThemeToggle />
+              </div>
+              <SheetClose asChild>
+                <a className="landing-store-link landing-mobile-store-link" href={APP_STORE_DOWNLOAD_URL} aria-label="Download PPLUS Training on the App Store">
+                  <Image
+                    src="/landing/brand/app-store-badge.svg"
+                    alt="Download on the App Store"
+                    width={154}
+                    height={46}
+                  />
+                </a>
+              </SheetClose>
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
+    </LandingHeaderScrollFrame>
   )
 }
 

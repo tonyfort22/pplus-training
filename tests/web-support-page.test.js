@@ -113,6 +113,6 @@ test('landing navigation points Support to the real support page', () => {
   const landingSectionsSource = readFileSync(landingSectionsPath, 'utf8')
   const landingContentSource = readFileSync(landingContentPath, 'utf8')
 
-  assert.match(landingSectionsSource, /<a href=\{getLocalizedHref\('\/support', language\)\}>\{navCopy\.support\}<\/a>/, 'header Support nav should link to localized /support')
+  assert.match(landingSectionsSource, /\{ key: 'support', href: getLocalizedHref\('\/support', language\), label: navCopy\.support \}/, 'header Support nav should link to localized /support')
   assert.match(landingContentSource, /\{ label: 'Support', href: '\/support' \}/, 'footer Support resource link should link to /support')
 })

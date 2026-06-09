@@ -35,7 +35,7 @@ test('public light header keeps Sign In out of the header while preserving dark 
   assert.match(sectionsSource, /<PublicLanguageSwitcher language=\{language\} currentPath=\{currentPath\} \/>\s*<a className="landing-store-link landing-store-link-header"/)
   assert.match(css, /html\[data-public-theme='light'\] \.landing-header-nav\s*\{[^}]*color:\s*#111827;/)
   assert.doesNotMatch(css, /html\[data-public-theme='light'\] \.landing-signin-link/)
-  assert.match(css, /html\[data-public-theme='light'\] \.public-language-switcher\s*\{[^}]*background:\s*#ffffff;/)
+  assert.match(css, /html\[data-public-theme='light'\] \.public-language-switcher\s*\{[^}]*border-color:\s*#F8FAFC;[^}]*background:\s*transparent;/)
 })
 
 test('public light mode uses the light PPLUS logo asset in the header and footer', () => {
