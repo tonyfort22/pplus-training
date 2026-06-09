@@ -41,9 +41,21 @@ test('public header renders an EN/FR segmented language switcher without exposin
   assert.match(sectionsSource, /export function LandingHeader\(\{ language = DEFAULT_LANGUAGE, currentPath = '\/', copy \} = \{\}\)/)
   assert.match(sectionsSource, /const navCopy = copy\?\.home\?\.nav \|\| \{/)
 
-  assert.match(cssSource, /\.public-language-switcher\s*\{[^}]*display:\s*inline-grid;[^}]*grid-template-columns:\s*repeat\(2, minmax\(40px, 1fr\)\);/)
-  assert.match(cssSource, /\.public-language-switcher-option\s*\{[^}]*border-radius:\s*999px;/)
-  assert.match(cssSource, /\.public-language-switcher-option-active\s*\{[^}]*background:\s*var\(--landing-accent\);/)
+  assert.match(cssSource, /\.public-language-switcher\s*\{[^}]*width:\s*62px;[^}]*height:\s*36px;/, 'language switcher should match public theme toggle dimensions')
+  assert.match(cssSource, /\.public-language-switcher\s*\{[^}]*border:\s*1px solid #24334A;[^}]*border-radius:\s*6px;[^}]*background:\s*#111D30;/, 'language switcher should match dark public theme toggle shell')
+  assert.match(cssSource, /\.public-language-switcher-option\s*\{[^}]*width:\s*31px;[^}]*height:\s*36px;/, 'language switcher text slots should match the theme toggle halves')
+  assert.match(cssSource, /\.public-language-switcher-option-active\s*\{[^}]*color:\s*#06D6A0;/, 'active language text should use the same green as the active theme icon')
+  assert.match(cssSource, /html\[data-public-theme='light'\] \.public-language-switcher\s*\{[^}]*border-color:\s*#F8FAFC;[^}]*background:\s*transparent;/, 'light-mode language switcher should match the light theme toggle shell')
+
+  const switcherRule = cssSource.match(/\.public-language-switcher\s*\{[^}]*\}/)?.[0] || ''
+  const optionRule = cssSource.match(/\.public-language-switcher-option\s*\{[^}]*\}/)?.[0] || ''
+  const activeOptionRule = cssSource.match(/\.public-language-switcher-option-active\s*\{[^}]*\}/)?.[0] || ''
+  const lightSwitcherRule = cssSource.match(/html\[data-public-theme='light'\] \.public-language-switcher\s*\{[^}]*\}/)?.[0] || ''
+  assert.doesNotMatch(switcherRule, /box-shadow:/, 'language switcher shell should not have a box shadow')
+  assert.doesNotMatch(optionRule, /border-radius:\s*999px/, 'language switcher should not use the old pill option styling')
+  assert.doesNotMatch(activeOptionRule, /background:/, 'active language option should not use a filled pill background')
+  assert.doesNotMatch(activeOptionRule, /box-shadow:/, 'active language option should not have a box shadow')
+  assert.doesNotMatch(lightSwitcherRule, /box-shadow:/, 'light-mode language switcher should not have a box shadow')
 })
 
 test('localized href helper keeps English clean and appends lang=fr for French routes', async () => {

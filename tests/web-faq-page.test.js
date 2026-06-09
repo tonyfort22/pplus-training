@@ -42,5 +42,5 @@ test('landing navigation and footer point FAQ to the real faq page', () => {
   const sectionsSource = readFileSync(landingSectionsPath, 'utf8')
 
   assert.match(contentSource, /\{ label: 'FAQ', href: '\/faq' \}/)
-  assert.match(sectionsSource, /<a href=\{getLocalizedHref\('\/faq', language\)\}>\{navCopy\.faq\}<\/a>/)
+  assert.match(sectionsSource, /\{ key: 'faq', href: getLocalizedHref\('\/faq', language\), label: navCopy\.faq \}/)
 })

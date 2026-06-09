@@ -91,6 +91,13 @@ test('web root serves the marketing landing page and admin login lives at /admin
   assert.match(cssSource, /\.landing-footer\s*\{/)
 })
 
+test('landing hero hides the floating animated icon cards at tablet width and below', () => {
+  const cssSource = readFileSync(cssPath, 'utf8')
+
+  assert.match(cssSource, /@media \(max-width:\s*768px\) \{[\s\S]*\.landing-hero-icon-cloud\s*\{[^}]*display:\s*none;[^}]*\}/, 'floating hero icon cloud should be hidden at 768px and below')
+  assert.match(cssSource, /@media \(max-width:\s*768px\) \{[\s\S]*\.landing-hero-icon-box\s*\{[^}]*display:\s*none;[^}]*animation:\s*none;[^}]*\}/, 'individual animated icon cards should be hidden and not animate at 768px and below')
+})
+
 test('public footer logo, address, and phone have the expected link behavior', () => {
   const landingSectionsSource = readFileSync(landingSectionsPath, 'utf8')
   const landingContentSource = readFileSync(landingContentPath, 'utf8')
