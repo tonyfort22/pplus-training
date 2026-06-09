@@ -188,6 +188,13 @@ function normalizeExerciseFilterValue(value) {
   return String(value ?? '').trim().toLowerCase()
 }
 
+function splitEquipmentValues(value) {
+  return String(value ?? '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
 function slugifyExerciseName(value) {
   return String(value || '')
     .trim()
@@ -332,6 +339,7 @@ function formatExerciseRow(row, totalSetCount = 0) {
   const muscleNames = getSortedMuscleNames(row)
   const movementTypeValues = getMovementTypeValues(row)
   const defaultEquipment = normalizeOptionalString(row?.default_equipment)
+  const equipmentNeeded = splitEquipmentValues(defaultEquipment)
   const thumbnailUrl = normalizeOptionalString(row?.thumbnail_url)
   const videoUrl = normalizeOptionalString(row?.video_url)
   const exerciseSetRows = getExerciseSetRows(row)
@@ -351,7 +359,7 @@ function formatExerciseRow(row, totalSetCount = 0) {
     primaryMuscleId: primaryMuscleMap?.muscle_id ?? '',
     secondaryMuscleIds,
     equipment: defaultEquipment,
-    equipmentNeeded: defaultEquipment ? [normalizeExerciseFilterValue(defaultEquipment)] : [],
+    equipmentNeeded,
     movementTypeValues,
     totalSetCount: resolvedSetCount,
     exerciseSets: exerciseSetRows.map(formatExerciseSetRow),
@@ -437,7 +445,7 @@ function buildExerciseWritePayload(input = {}, { includeSlug = false } = {}) {
   }
 
   const equipmentValues = normalizeSelectedValues(input?.equipmentNeeded)
-  payload.default_equipment = equipmentValues[0] ?? null
+  payload.default_equipment = equipmentValues.length > 0 ? equipmentValues.join(', ') : null
   payload.default_sets = normalizeOptionalString(input?.sets)
   payload.default_reps = normalizeOptionalString(input?.reps)
   payload.default_distance = normalizeOptionalString(input?.distance)
