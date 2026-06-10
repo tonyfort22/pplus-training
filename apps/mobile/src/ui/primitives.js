@@ -1,3 +1,4 @@
+import { Children, cloneElement, isValidElement, useState } from 'react'
 import { Pressable, Text, TextInput, View } from 'react-native'
 import { Check, ChevronLeft, ChevronRight, Search, X } from 'lucide-react-native'
 
@@ -101,7 +102,7 @@ export function AppDangerPillButton({ theme, label, onPress, leftIcon = null, st
   )
 }
 
-export function AppSheetHeader({ theme, title, onBack, rightAction = null }) {
+export function AppSheetHeader({ theme, title, onBack, rightAction = null, leftIcon = null }) {
   return (
     <View className="mb-7 flex-row items-center justify-between">
       <Pressable
@@ -109,7 +110,7 @@ export function AppSheetHeader({ theme, title, onBack, rightAction = null }) {
         style={{ borderWidth: 1, borderColor: theme.border, backgroundColor: theme.surface }}
         onPress={onBack}
       >
-        <ChevronLeft color={theme.icon} size={20} strokeWidth={2.6} />
+        {leftIcon || <ChevronLeft color={theme.icon} size={20} strokeWidth={2.6} />}
       </Pressable>
       <Text className="flex-1 text-center text-[24px] font-bold" style={{ color: theme.text }}>{title}</Text>
       <View className="min-w-[44px] items-end">{rightAction}</View>
@@ -151,17 +152,47 @@ export function AppListRow({ theme, title, body = '', onPress = null, leading = 
   )
 }
 
-export function AppSearchInput({ theme, value, onChangeText, placeholder = 'Search' }) {
+function renderFocusableInputChildren(children, setIsFocused) {
+  return Children.map(children, (child) => {
+    if (!isValidElement(child)) return child
+
+    return cloneElement(child, {
+      onFocus: (event) => {
+        setIsFocused(true)
+        child.props.onFocus?.(event)
+      },
+      onBlur: (event) => {
+        setIsFocused(false)
+        child.props.onBlur?.(event)
+      },
+    })
+  })
+}
+
+export function AppSearchInput({ theme, value, onChangeText, placeholder = 'Search', onFocus, onBlur }) {
+  const [isSearchFocused, setIsSearchFocused] = useState(false)
+
   return (
-    <View className="flex-row items-center rounded-[24px] px-5 py-3.5" style={{ borderWidth: 1, borderColor: theme.border, backgroundColor: theme.surface }}>
+    <View className="flex-row items-center rounded-[24px] px-5 py-3.5" style={{ borderWidth: 1, borderColor: isSearchFocused ? theme.inputFocusBorder : theme.border, backgroundColor: theme.surface }}>
       <Search color={theme.iconMuted} size={18} strokeWidth={2.2} />
       <TextInput
-        className="ml-3 flex-1 px-0 py-0 text-[16px]"
-        style={{ backgroundColor: 'transparent', outlineStyle: 'none', color: theme.text }}
+        className="ml-3 min-w-0 flex-1 px-0 py-0 text-[16px]"
+        style={{ backgroundColor: 'transparent', outlineStyle: 'none', color: theme.text, lineHeight: 20, includeFontPadding: false, textAlignVertical: 'center' }}
         placeholder={placeholder}
         placeholderTextColor={theme.textSoft}
         value={value}
+        numberOfLines={1}
+        autoCorrect={false}
+        autoCapitalize="none"
         onChangeText={onChangeText}
+        onFocus={(event) => {
+          setIsSearchFocused(true)
+          onFocus?.(event)
+        }}
+        onBlur={(event) => {
+          setIsSearchFocused(false)
+          onBlur?.(event)
+        }}
       />
     </View>
   )
@@ -182,11 +213,13 @@ export function AppStatusBadge({ theme, label, tone = 'neutral' }) {
 }
 
 export function AppStatusIconBadge({ theme, status, size = 'md' }) {
-  const sizeClassName = size === 'sm'
-    ? 'h-8 w-8 rounded-[10px]'
-    : 'h-10 w-10 rounded-[12px]'
+  const sizeClassName = size === 'xs'
+    ? 'h-6 w-6 rounded-[8px]'
+    : size === 'sm'
+      ? 'h-8 w-8 rounded-[10px]'
+      : 'h-10 w-10 rounded-[12px]'
 
-  const iconSize = size === 'sm' ? 15 : 18
+  const iconSize = size === 'xs' ? 12 : size === 'sm' ? 15 : 18
   const toneStyle = status === 'done'
     ? { borderColor: theme.accentBorder, backgroundColor: theme.accentSurface, iconColor: theme.accentText, Icon: Check }
     : status === 'upcoming'
@@ -233,15 +266,16 @@ export function AppNoticeCard({ theme, title = '', body = '', tone = 'neutral', 
 }
 
 export function AppFieldShell({ theme, children, onPress = null, trailing = null, className = '' }) {
+  const [isFieldFocused, setIsFieldFocused] = useState(false)
   const Wrapper = onPress ? Pressable : View
   const shellClassName = `flex-row items-center rounded-[20px] px-5 py-4 ${className}`.trim()
   return (
     <Wrapper
       className={shellClassName}
-      style={{ borderWidth: 1, borderColor: theme.border, backgroundColor: theme.surface }}
+      style={{ borderWidth: 1, borderColor: isFieldFocused ? theme.inputFocusBorder : theme.border, backgroundColor: theme.surface }}
       onPress={onPress}
     >
-      <View className="flex-1 justify-center">{children}</View>
+      <View className="flex-1 justify-center">{renderFocusableInputChildren(children, setIsFieldFocused)}</View>
       {trailing}
     </Wrapper>
   )

@@ -69,6 +69,19 @@ function createMobileWorkoutClient({ env, fetchImpl, accessToken }) {
   })
 }
 
+function createMobileGroupsClient({ env, fetchImpl, accessToken }) {
+  if (!env?.EXPO_PUBLIC_SUPABASE_URL || !env?.EXPO_PUBLIC_SUPABASE_ANON_KEY) {
+    return null
+  }
+
+  return data.groups.createSupabaseRestGroupRepository({
+    url: env.EXPO_PUBLIC_SUPABASE_URL,
+    anonKey: env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+    accessToken,
+    fetchImpl,
+  })
+}
+
 export async function createMobileAppBootstrap({
   env = process.env,
   fetchImpl,
@@ -178,6 +191,13 @@ export async function createMobileAppBootstrap({
       const coachAthletes = typeof identityClient?.listAthleteProfilesForCoach === 'function'
         ? await identityClient.listAthleteProfilesForCoach(coachProfile.id)
         : []
+      const groupsClient = createMobileGroupsClient({ env, fetchImpl, accessToken: resolvedAccessToken })
+      let coachGroups = []
+      try {
+        coachGroups = await groupsClient?.listGroupsForCoach?.(coachProfile.id) || []
+      } catch {
+        coachGroups = []
+      }
       const coachDisplayName = getCoachDisplayName(currentUser, coachProfile)
 
       return {
@@ -190,6 +210,7 @@ export async function createMobileAppBootstrap({
           lastName: coachProfile.lastName ?? currentUser?.lastName ?? '',
         },
         coachAthletes,
+        coachGroups,
         athleteProfile: null,
         trainState: null,
         sessionStore: null,

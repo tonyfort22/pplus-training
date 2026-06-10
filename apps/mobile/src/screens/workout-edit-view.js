@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown, Clock3, Dumbbell, Link2, Mic, Sparkles, Trash2, Zap } from 'lucide-react-native';
 import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { Swipeable } from 'react-native-gesture-handler';
+import { RectButton, Swipeable } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getAppTheme } from '../theme/app-theme.js';
 import { AppButton, AppDangerPillButton, AppOutlinedActionButton, AppSurfaceCard } from '../ui/primitives.js';
@@ -96,11 +96,6 @@ function GlassActionSurface({ children, className = '', style, theme }) {
         style,
       ]}
     >
-      <View
-        pointerEvents="none"
-        className="absolute inset-x-0 top-0 h-[1px]"
-        style={{ backgroundColor: theme.buttonHighlight }}
-      />
       {children}
     </View>
   )
@@ -109,13 +104,25 @@ function GlassActionSurface({ children, className = '', style, theme }) {
 function SwipeableSetRow({ children, onDelete, theme }) {
   function renderRightActions() {
     return (
-      <Pressable
-        className="h-full w-24 items-center justify-center rounded-[18px]"
+      <RectButton
         onPress={onDelete}
-        style={{ backgroundColor: theme.dangerSurface, borderWidth: 1, borderColor: theme.dangerBorder }}
+        style={{ backgroundColor: 'transparent', alignItems: 'center', height: '100%', justifyContent: 'center', width: 96 }}
       >
-        <Trash2 color={theme.dangerText} size={18} strokeWidth={2.2} />
-      </Pressable>
+        <View
+          style={{
+            alignItems: 'center',
+            backgroundColor: theme.dangerSurface,
+            borderColor: theme.dangerBorder,
+            height: 50,
+            width: 72,
+            borderRadius: 18,
+            borderWidth: 1,
+            justifyContent: 'center',
+          }}
+        >
+          <Trash2 color={theme.dangerText} size={18} strokeWidth={2.2} />
+        </View>
+      </RectButton>
     )
   }
 

@@ -47,6 +47,39 @@ test('getWorkoutSheetModel prefers a direct program workout snapshot when the se
   assert.equal(model.exercises[0].sets[0].reps, '3')
 })
 
+test('getWorkoutSheetModel uses a dumbbell fallback when workout detail exercise thumbnails are empty', () => {
+  const model = getWorkoutSheetModel({
+    workoutModel: {
+      workoutName: 'Phase 4 Speed Accelerator B',
+      exerciseCount: 0,
+      exercises: [],
+      actionPayload: { selectedDayId: 'mon', programWorkoutId: 'pw-speed-b' },
+    },
+    session: null,
+    programWorkout: {
+      id: 'pw-speed-b',
+      nameSnapshot: 'Phase 4 Speed Accelerator B',
+      exercises: [
+        {
+          id: 'pwe-bench',
+          exerciseId: 'exercise-bench',
+          nameSnapshot: 'Barbell Bench Press',
+          thumbnailUrl: null,
+          sortOrder: 1,
+          defaultRestSeconds: 10,
+          sets: [
+            { id: 'pws-1', sortOrder: 1, targetReps: 3, targetLoad: 0, targetRpe: 6, targetRestSeconds: 10 },
+          ],
+        },
+      ],
+    },
+    selectedDayId: 'mon',
+  })
+
+  assert.equal(model.exercises[0].thumbnailUrl, null)
+  assert.equal(model.exercises[0].thumbnailIcon, 'dumbbell')
+})
+
 test('getWorkoutSheetModel preserves a created workout title even when the workout has no exercises yet', () => {
   const model = getWorkoutSheetModel({
     workoutModel: {

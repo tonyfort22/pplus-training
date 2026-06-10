@@ -62,7 +62,7 @@ test('admin coach profile repository saves approved coach fields and optional av
       },
       async uploadCoachAvatar(payload) {
         uploadCalls.push(payload)
-        return 'https://cdn/new-avatar.jpg'
+        return { path: 'coach-1/coach-avatar.png', publicUrl: 'https://cdn/new-avatar.jpg', payload: { Key: 'coach-avatars/coach-1/coach-avatar.png' } }
       },
       async updateCoachProfile(payload) {
         updateCalls.push(payload)

@@ -65,6 +65,19 @@ test('admin settings profile uses light-mode admin tokens instead of dark-coded 
   assert.doesNotMatch(profileSource, /border-\[#24334A\]|bg-\[#111D30\]|bg-\[#0F1728\]|bg-\[#0D1625\]|text-\[#DCE6F8\]|text-\[#EEF4FF\]|text-\[#8EA0BC\]|placeholder:text-\[#70809E\]/)
 })
 
+test('admin settings profile avatar falls back cleanly when the saved image url cannot load', () => {
+  const settingsSource = readFileSync(settingsViewPath, 'utf8')
+  const uploaderSource = extractFunction(settingsSource, 'ProfilePhotoUploader')
+
+  assert.match(uploaderSource, /const \[hasPreviewError, setHasPreviewError\] = useState\(false\)/)
+  assert.match(uploaderSource, /useEffect\(\(\) => \{\s*setHasPreviewError\(false\)\s*\}, \[previewSrc\]\)/)
+  assert.match(uploaderSource, /const canRenderPreview = Boolean\(previewSrc\) && !hasPreviewError/)
+  assert.match(uploaderSource, /onError=\{\(\) => setHasPreviewError\(true\)\}/)
+  assert.match(uploaderSource, /<img[\s\S]*src=\{previewSrc\}/)
+  assert.doesNotMatch(uploaderSource, /<Avatar[\s\S]*src=\{previewSrc\}/)
+  assert.match(uploaderSource, /canRenderPreview \? \([\s\S]*\) : \([\s\S]*aria-label=\{profileName \? `Avatar fallback for \$\{profileName\}` : 'Coach avatar fallback'\}/)
+})
+
 test('admin settings profile and account layouts fill the content width without parent card shells', () => {
   const settingsSource = readFileSync(settingsViewPath, 'utf8')
   const profileSource = extractFunction(settingsSource, 'AdminSettingsProfileView')

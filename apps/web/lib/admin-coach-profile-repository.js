@@ -114,12 +114,13 @@ export function createAdminCoachProfileRepository(overrides = {}) {
 
       if (avatarUpload?.dataUrl) {
         const { fileBuffer, contentType } = parseDataUrlToUploadPayload(avatarUpload.dataUrl)
-        nextAvatarUrl = await repository.uploadCoachAvatar({
+        const uploadedAvatar = await repository.uploadCoachAvatar({
           coachId: coachProfile.id,
           fileBuffer,
           contentType: avatarUpload.contentType || contentType || 'image/jpeg',
           fileName: avatarUpload.fileName || 'profile.jpg',
         })
+        nextAvatarUrl = typeof uploadedAvatar === 'string' ? uploadedAvatar : normalizeText(uploadedAvatar?.publicUrl)
       }
 
       const updatedProfile = await repository.updateCoachProfile({

@@ -147,6 +147,48 @@ function isDetailedProgramRecord(value) {
   return Boolean(value?.id && Array.isArray(value?.weeks))
 }
 
+function formatDurationFromMinutes(value, { estimated = false } = {}) {
+  const minutes = Number(value)
+  if (!Number.isFinite(minutes) || minutes <= 0) return ''
+
+  const roundedMinutes = Math.round(minutes)
+  const hours = Math.floor(roundedMinutes / 60)
+  const remainingMinutes = roundedMinutes % 60
+  const parts = []
+  if (hours > 0) parts.push(`${hours}h`)
+  if (remainingMinutes > 0 || hours === 0) parts.push(hours > 0 ? `${remainingMinutes}m` : `${remainingMinutes} min`)
+  return `${estimated ? 'Est. ' : ''}${parts.join(' ')}`
+}
+
+function formatDurationFromSeconds(value, { estimated = false } = {}) {
+  const seconds = Number(value)
+  if (!Number.isFinite(seconds) || seconds <= 0) return ''
+  return formatDurationFromMinutes(Math.max(1, seconds / 60), { estimated })
+}
+
+function estimateDurationFromWorkoutSets(workout = {}) {
+  const exercises = Array.isArray(workout.exercises) ? workout.exercises : []
+  const totalSets = exercises.reduce((sum, exercise) => sum + (Array.isArray(exercise?.sets) ? exercise.sets.length : Number(exercise?.setCount || exercise?.set_count || 0) || 0), 0)
+  if (totalSets <= 0) return ''
+  return formatDurationFromMinutes(Math.max(1, totalSets * 7), { estimated: true })
+}
+
+function getWorkoutDurationLabel(workout = {}) {
+  return String(
+    workout.durationLabel
+      || workout.estimatedDurationLabel
+      || workout.estimated_duration_label
+      || workout.actualDurationLabel
+      || workout.actual_duration_label
+      || formatDurationFromSeconds(workout.elapsedSeconds ?? workout.elapsed_seconds ?? workout.actualDurationSeconds ?? workout.actual_duration_seconds)
+      || formatDurationFromMinutes(workout.actualDurationMinutes ?? workout.actual_duration_minutes)
+      || formatDurationFromSeconds(workout.estimatedDurationSeconds ?? workout.estimated_duration_seconds, { estimated: true })
+      || formatDurationFromMinutes(workout.estimatedDurationMinutes ?? workout.estimated_duration_minutes, { estimated: true })
+      || estimateDurationFromWorkoutSets(workout)
+      || ''
+  ).trim()
+}
+
 function buildDaysFromDetailedProgram(program) {
   const firstWeek = Array.isArray(program?.weeks) ? program.weeks[0] : null
   const days = Array.isArray(firstWeek?.days) ? firstWeek.days : []
@@ -157,6 +199,7 @@ function buildDaysFromDetailedProgram(program) {
       id: day.id || `split-day-${index + 1}`,
       dayLabel: formatWeekdayShortLabel(day.date) || day.name?.slice(0, 3) || '',
       routineLabel: workout?.nameSnapshot || null,
+      durationLabel: workout ? getWorkoutDurationLabel(workout) : '',
       actionLabel: workout?.nameSnapshot ? null : '+ Add',
       isAssigned: Boolean(workout?.nameSnapshot),
     }
@@ -169,6 +212,7 @@ function buildDaysFromTrainState(trainState) {
     id: day.id || `split-day-${index + 1}`,
     dayLabel: day.dayLabel || '',
     routineLabel: day.workoutPreview?.workoutName && day.workoutPreview?.programWorkoutId ? day.workoutPreview.workoutName : null,
+    durationLabel: day.workoutPreview?.programWorkoutId ? getWorkoutDurationLabel(day.workoutPreview) : '',
     actionLabel: day.workoutPreview?.programWorkoutId ? null : '+ Add',
     isAssigned: Boolean(day.workoutPreview?.programWorkoutId),
   }))
@@ -264,6 +308,7 @@ export function getProgramEditViewModel(source, options = {}) {
       createWorkoutView: buildCreateWorkoutView(),
       addExerciseSheet: buildAddExerciseSheet(),
       helperNote: 'The training split repeats until the end date. Use a 7-day split to keep weekdays fixed.',
+      endProgramLabel: 'End Program',
     }
   }
 
@@ -285,5 +330,6 @@ export function getProgramEditViewModel(source, options = {}) {
     createWorkoutView: buildCreateWorkoutView(),
     addExerciseSheet: buildAddExerciseSheet(),
     helperNote: 'The training split repeats until the end date. Use a 7-day split to keep weekdays fixed.',
+    endProgramLabel: 'End Program',
   }
 }

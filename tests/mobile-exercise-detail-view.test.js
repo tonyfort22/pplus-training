@@ -630,6 +630,25 @@ test('mobile exercise detail view is video-ready and keeps one shared shell whil
   assert.match(packageSource, /"expo-video"/)
 })
 
+test('mobile exercise detail Progress and History remove the outer parent card styling while keeping inner data surfaces', () => {
+  const screenSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/exercise-detail-view.js'), 'utf8')
+
+  assert.match(screenSource, /function ExerciseProgressChart\({ model, theme }\)/)
+  assert.match(screenSource, /<Text className="text-\[22px\] font-semibold" style=\{\{ color: theme\.text \}\}>\{model\.progressTitle \|\| 'Progress'\}<\/Text>/)
+  assert.match(screenSource, /\{latestProgressPointDisplayValue\}/)
+  assert.doesNotMatch(screenSource, /function ExerciseProgressChart\({ model, theme }\) \{[\s\S]*className="overflow-hidden rounded-\[28px\] border px-4 py-4"[\s\S]*backgroundColor: theme\.surface/)
+  assert.match(screenSource, /function ExerciseProgressChart\({ model, theme }\) \{[\s\S]*className="mt-5 overflow-hidden rounded-\[22px\] border px-2 py-3"[\s\S]*backgroundColor: theme\.background/)
+
+  assert.match(screenSource, /<Text className="text-\[22px\] font-semibold" style=\{\{ color: resolvedTheme\.text \}\}>\{model\.progressTitle \|\| 'Progress'\}<\/Text>/)
+  assert.match(screenSource, /No data available for this exercise/)
+  assert.doesNotMatch(screenSource, /\) : \([\s\S]*className="overflow-hidden rounded-\[28px\] border px-4 py-4"[\s\S]*backgroundColor: resolvedTheme\.surface[\s\S]*No data available for this exercise/)
+  assert.match(screenSource, /\) : \([\s\S]*className="mt-5 min-h-\[160px\] items-center justify-center rounded-\[22px\] border px-5 py-5"[\s\S]*backgroundColor: resolvedTheme\.background[\s\S]*No data available for this exercise/)
+
+  assert.match(screenSource, /function ExerciseHistoryTable\({ model, historyMode, onHistoryModeChange, theme }\) \{[\s\S]*<View className="gap-3 px-5">[\s\S]*model\.historyHeaders\.map/)
+  assert.doesNotMatch(screenSource, /function ExerciseHistoryTable\({ model, historyMode, onHistoryModeChange, theme }\) \{[\s\S]*className="mx-5 gap-3 rounded-\[28px\] border px-4 py-4"[\s\S]*backgroundColor: theme\.surface/)
+  assert.match(screenSource, /function ExerciseHistoryTable\({ model, historyMode, onHistoryModeChange, theme }\) \{[\s\S]*className="min-h-\[132px\] items-center justify-center rounded-\[20px\] border px-5"[\s\S]*backgroundColor: theme\.background[\s\S]*No history found/)
+})
+
 test('mobile exercise detail view can classify a speed exercise with no results yet and still render an honest empty speed detail state', () => {
   const model = getExerciseDetailViewModel({
     exercise: {

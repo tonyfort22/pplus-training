@@ -49,11 +49,7 @@ function ExerciseProgressChart({ model, theme }) {
   return (
     <View className="gap-4">
       <Text className="text-[22px] font-semibold" style={{ color: theme.text }}>{model.progressTitle || 'Progress'}</Text>
-      <View
-        className="overflow-hidden rounded-[28px] border px-4 py-4"
-        style={{ borderColor: theme.border, backgroundColor: theme.surface }}
-      >
-        <View className="flex-row items-start justify-between gap-4">
+      <View className="flex-row items-start justify-between gap-4">
           <View className="flex-1 gap-2">
             <Text className="text-[11px] font-semibold uppercase tracking-[1.4px]" style={{ color: theme.textSoft }}>
               {model.progressYAxisLabel || 'VALUE'}
@@ -138,7 +134,6 @@ function ExerciseProgressChart({ model, theme }) {
         <Text className="mt-4 text-center text-[11px] font-semibold uppercase tracking-[1px]" style={{ color: theme.textSoft }}>
           {model.progressXAxisLabel || 'DATE'}
         </Text>
-      </View>
     </View>
   )
 }
@@ -170,7 +165,7 @@ function ExerciseHistoryTable({ model, historyMode, onHistoryModeChange, theme }
         </View>
       </View>
 
-      <View className="mx-5 gap-3 rounded-[28px] border px-4 py-4" style={{ borderColor: theme.border, backgroundColor: theme.surface }}>
+      <View className="gap-3 px-5">
         <View className="flex-row items-center px-1 pb-2">
           {model.historyHeaders.map((header, index) => (
             <Text
@@ -267,8 +262,7 @@ function ExerciseDetailViewContent({ model, onClose, theme }) {
                 ) : (
                   <View className="gap-4">
                     <Text className="text-[22px] font-semibold" style={{ color: resolvedTheme.text }}>{model.progressTitle || 'Progress'}</Text>
-                    <View className="overflow-hidden rounded-[28px] border px-4 py-4" style={{ borderColor: resolvedTheme.border, backgroundColor: resolvedTheme.surface }}>
-                      <View className="flex-row items-start justify-between gap-4">
+                    <View className="flex-row items-start justify-between gap-4">
                         <View className="flex-1 gap-2">
                           <Text className="text-[11px] font-semibold uppercase tracking-[1.4px]" style={{ color: resolvedTheme.textSoft }}>
                             {model.progressYAxisLabel || 'VALUE'}
@@ -291,7 +285,6 @@ function ExerciseDetailViewContent({ model, onClose, theme }) {
                       <Text className="mt-4 text-center text-[11px] font-semibold uppercase tracking-[1px]" style={{ color: resolvedTheme.textSoft }}>
                         {model.progressXAxisLabel || 'DATE'}
                       </Text>
-                    </View>
                   </View>
                 )}
               </View>
