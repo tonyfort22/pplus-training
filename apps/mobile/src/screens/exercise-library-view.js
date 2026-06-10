@@ -3,6 +3,24 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { getAppTheme } from '../theme/app-theme.js'
 import { AppButton, AppNoticeCard, AppSearchInput, AppSelectionIndicator, AppSheetHeader, AppSurfaceCard } from '../ui/primitives.js'
+import { Skeleton } from '../ui/skeleton.js'
+
+function ExerciseLibrarySkeletonRows({ theme, selectable = false }) {
+  return (
+    <View>
+      {Array.from({ length: 6 }).map((_, index) => (
+        <View key={`exercise-skeleton-${index + 1}`} className="flex-row items-center py-3" style={{ borderBottomWidth: 1, borderBottomColor: theme.border }}>
+          <Skeleton className="mr-3 h-14 w-14 rounded-[14px]" theme={theme} />
+          <View className="flex-1 gap-2">
+            <Skeleton className="h-5 flex-1 rounded-full" theme={theme} style={{ width: index % 3 === 0 ? '72%' : index % 3 === 1 ? '58%' : '66%' }} />
+            <Skeleton className="h-3 rounded-full" theme={theme} style={{ width: index % 2 === 0 ? '42%' : '34%', opacity: 0.72 }} />
+          </View>
+          <Skeleton className="h-8 w-8 rounded-full" theme={theme} />
+        </View>
+      ))}
+    </View>
+  )
+}
 
 export function ExerciseLibraryView({
   title = 'Exercises',
@@ -79,7 +97,7 @@ export function ExerciseLibraryView({
 
           <View>
             {isLoading ? (
-              <AppNoticeCard theme={resolvedTheme} body="Loading exercises..." />
+              <ExerciseLibrarySkeletonRows theme={resolvedTheme} selectable={selectable} />
             ) : null}
 
             {!isLoading && error ? (

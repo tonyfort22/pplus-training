@@ -39,11 +39,12 @@ import { getProgramEditViewModel } from './src/train/program-edit-view-models.js
 import { getTrainingCalendarModel } from './src/train/training-calendar-models.js';
 import { getWorkoutSheetModel } from './src/train/workout-sheet-models.js';
 import { getWorkoutEditViewModel, createEmptyWorkoutEditDraftModel } from './src/train/workout-edit-view-models.js';
+import { createEmptyGroupEditDraftModel, getGroupEditViewModel } from './src/groups/group-edit-view-models.js';
 import { getActiveWorkoutViewModel } from './src/train/active-workout-view-models.js';
 import { getExerciseDetailViewModel } from './src/train/exercise-detail-view-models.js';
 import { getAnalyticsViewModel, getPlaceholderSurfaceModel, getProgressSurfaceModel } from './src/progress/index.js';
 import { getAppRenderModel } from './src/screens/app-render-models.js';
-import { getPlaceholderSections, getProgressSections } from './src/screens/surface-sections.js';
+import { getGroupsSections, getPlaceholderSections, getProgressSections } from './src/screens/surface-sections.js';
 import { getGenericSectionRenderPlan, getSessionSectionRenderPlan } from './src/screens/render-plans.js';
 import { getSessionRenderModel } from './src/screens/session-render-models.js';
 import { getSessionSections } from './src/screens/session-sections.js';
@@ -53,6 +54,7 @@ import { ProgramEditView } from './src/screens/program-edit-view.js';
 import { TrainingCalendarSheet } from './src/screens/training-calendar-sheet.js';
 import { WorkoutSheet } from './src/screens/workout-sheet.js';
 import { WorkoutEditView } from './src/screens/workout-edit-view.js';
+import { GroupEditView } from './src/screens/group-edit-view.js';
 import { ActiveWorkoutView } from './src/screens/active-workout-view.js';
 import { CoachAthletesSheet } from './src/screens/coach-athletes-sheet.js';
 import { InviteAthleteView } from './src/screens/invite-athlete-view.js';
@@ -201,6 +203,28 @@ function createMobileWorkoutClient({ env = process.env, fetchImpl = globalThis.f
   });
 }
 
+function createMobileGroupsClient({ env = process.env, fetchImpl = globalThis.fetch, accessToken = null } = {}) {
+  const url = env.EXPO_PUBLIC_SUPABASE_URL;
+  const anonKey = env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !anonKey) {
+    return null;
+  }
+
+  return data.groups.createSupabaseRestGroupRepository({
+    url,
+    anonKey,
+    accessToken,
+    fetchImpl,
+  });
+}
+
+function normalizeGroupAthleteIdForPersistence(athleteId) {
+  const value = String(athleteId || '').trim();
+  const prefixedValue = value.startsWith('coach-athlete-') ? value.slice('coach-athlete-'.length) : value;
+  return prefixedValue || null;
+}
+
 function createEmptySessionState() {
   return {
     id: null,
@@ -332,12 +356,16 @@ function AppShellContent() {
   const [selectedProgramPreview, setSelectedProgramPreview] = useState(null);
   const [workoutSheetReturnSurface, setWorkoutSheetReturnSurface] = useState(null);
   const [isTrainingCalendarOpen, setIsTrainingCalendarOpen] = useState(false);
+  const [trainingCalendarReturnSurface, setTrainingCalendarReturnSurface] = useState(null);
   const [isWorkoutSheetOpen, setIsWorkoutSheetOpen] = useState(false);
   const [selectedProgramWorkoutPreview, setSelectedProgramWorkoutPreview] = useState(null);
   const [selectedWorkoutSessionPreview, setSelectedWorkoutSessionPreview] = useState(null);
   const [persistedCreatedWorkoutRows, setPersistedCreatedWorkoutRows] = useState([]);
   const [workoutEditReturnSurface, setWorkoutEditReturnSurface] = useState(null);
   const [workoutEditDraftModel, setWorkoutEditDraftModel] = useState(null);
+  const [isGroupEditViewOpen, setIsGroupEditViewOpen] = useState(false);
+  const [selectedGroupEditModel, setSelectedGroupEditModel] = useState(null);
+  const [groupEditDraftModel, setGroupEditDraftModel] = useState(null);
   const [isDeleteWorkoutModalOpen, setIsDeleteWorkoutModalOpen] = useState(false);
   const [isDeletingWorkout, setIsDeletingWorkout] = useState(false);
   const [deleteWorkoutErrorMessage, setDeleteWorkoutErrorMessage] = useState('');
@@ -371,6 +399,7 @@ function AppShellContent() {
   const exerciseDetailClient = useMemo(() => createMobileExerciseDetailClient(), []);
   const exerciseLibraryClient = useMemo(() => createMobileExerciseLibraryClient(), []);
   const programSheetClient = useMemo(() => createMobileProgramClient({ accessToken: authSession?.accessToken }), [authSession?.accessToken]);
+  const groupEditClient = useMemo(() => createMobileGroupsClient({ accessToken: authSession?.accessToken }), [authSession?.accessToken]);
   const activeWorkoutExerciseIds = useMemo(() => new Set((session?.exercises || []).map((exercise) => exercise.exerciseId || exercise.id)), [session]);
   const coachAthleteOptions = useMemo(() => {
     if (!bootstrapState.coachAthletes?.length) {
@@ -402,6 +431,7 @@ function AppShellContent() {
       avatarUrl: athlete.avatarUrl ?? null,
     }))
   }, [bootstrapState.coachAthletes]);
+  const isCoachAthletesLoading = bootstrapState.status === 'loading'
   const selectedCoachAthlete = useMemo(() => {
     return coachAthleteOptions.find((athlete) => athlete.id === selectedCoachAthleteId) || null;
   }, [coachAthleteOptions, selectedCoachAthleteId]);
@@ -828,6 +858,7 @@ function AppShellContent() {
   );
   const workoutSheetModel = useMemo(() => getWorkoutSheetModel({ workoutModel: effectiveWorkoutSheetModel, session: workoutSheetSession, programWorkout: resolvedWorkoutSheetProgramWorkout, selectedDayId: selectedCalendarDayId }), [effectiveWorkoutSheetModel, resolvedWorkoutSheetProgramWorkout, selectedCalendarDayId, workoutSheetSession]);
   const workoutEditViewModel = useMemo(() => getWorkoutEditViewModel({ workoutSheetModel, workoutDraftModel: workoutEditDraftModel }), [workoutEditDraftModel, workoutSheetModel]);
+  const groupEditViewModel = useMemo(() => getGroupEditViewModel({ group: selectedGroupEditModel, groupDraftModel: groupEditDraftModel, availableAthletes: coachAthletesList }), [coachAthletesList, groupEditDraftModel, selectedGroupEditModel]);
   const activeWorkoutViewModel = useMemo(() => getActiveWorkoutViewModel({ session, elapsedSeconds }), [elapsedSeconds, session]);
   const canFinishActiveWorkout = useMemo(() => canFinishWorkoutSession(session), [session]);
   const selectedExercise = useMemo(() => {
@@ -853,11 +884,7 @@ function AppShellContent() {
   }, [session, trainState.completedSessions]);
   const exerciseDetailViewModel = useMemo(() => getExerciseDetailViewModel({ exercise: selectedExercise, sessions: progressSessions }), [progressSessions, selectedExercise]);
   const calendarModel = useMemo(() => getCalendarSurfaceModel(trainState, selectedCalendarDayId), [trainState, selectedCalendarDayId]);
-  const teamPlaceholder = useMemo(
-    () => getPlaceholderSurfaceModel('Team', 'This surface will hold coach context, team relationships, and collaboration later.'),
-    []
-  );
-  const teamSections = useMemo(() => getPlaceholderSections(teamPlaceholder), [teamPlaceholder]);
+  const teamSections = useMemo(() => getGroupsSections(effectiveBootstrapState.coachGroups || []), [effectiveBootstrapState.coachGroups]);
   const teamRenderPlan = useMemo(() => getGenericSectionRenderPlan(teamSections), [teamSections]);
   const inboxPlaceholder = useMemo(
     () => getPlaceholderSurfaceModel('Inbox', 'This surface will hold communication, reminders, and support flows later.'),
@@ -958,12 +985,8 @@ function AppShellContent() {
     [bootstrapSurfaceModel]
   );
   const coachPlaceholderModel = useMemo(() => {
-    if (!isCoachBootstrapState || activeTab === 'train' || activeTab === 'progress') {
+    if (!isCoachBootstrapState || activeTab === 'train' || activeTab === 'progress' || activeTab === 'team') {
       return null;
-    }
-
-    if (activeTab === 'team') {
-      return getPlaceholderSurfaceModel('Programs', 'This placeholder will become the coach programming surface for templates, assigned plans, and scheduling control.');
     }
 
     return getPlaceholderSurfaceModel('Inbox', 'This placeholder will become the coach communication hub for athlete follow-up, reminders, and support.');
@@ -1776,6 +1799,22 @@ function AppShellContent() {
       return;
     }
 
+    if (targetKey === 'create-group') {
+      setSelectedGroupEditModel(null);
+      setGroupEditDraftModel(createEmptyGroupEditDraftModel());
+      setIsGroupEditViewOpen(true);
+      return;
+    }
+
+    if (targetKey === 'group') {
+      const requestedGroupId = payload?.groupId || payload?.id || null;
+      const selectedGroup = (effectiveBootstrapState.coachGroups || []).find((group) => group.id === requestedGroupId) || null;
+      setGroupEditDraftModel(null);
+      setSelectedGroupEditModel(selectedGroup);
+      setIsGroupEditViewOpen(true);
+      return;
+    }
+
     if (targetKey === 'workout') {
       const {
         requestedCalendarDayId,
@@ -1901,6 +1940,21 @@ function AppShellContent() {
     }
   }
 
+  function handleOpenProgramSheetTrainingCalendar() {
+    setIsProgramSheetOpen(false);
+    setTrainingCalendarReturnSurface('program-sheet');
+    setIsTrainingCalendarOpen(true);
+  }
+
+  function handleCloseTrainingCalendar() {
+    setIsTrainingCalendarOpen(false);
+
+    if (trainingCalendarReturnSurface === 'program-sheet') {
+      setIsProgramSheetOpen(true);
+      setTrainingCalendarReturnSurface(null);
+    }
+  }
+
   function handleOpenProgramEditView() {
     orchestrateOpenProgramEditView({
       setIsProgramSheetOpen,
@@ -1938,6 +1992,41 @@ function AppShellContent() {
       setWorkoutEditReturnSurface,
       setWorkoutEditDraftModel,
     });
+  }
+
+  function handleCloseGroupEditView() {
+    setIsGroupEditViewOpen(false);
+    setSelectedGroupEditModel(null);
+    setGroupEditDraftModel(null);
+  }
+
+  async function handleSaveGroupEdit(draft = {}) {
+    const athleteIds = (draft.athleteIds || draft.athletes?.map((athlete) => athlete.id) || []).map(normalizeGroupAthleteIdForPersistence).filter(Boolean);
+
+    if (!groupEditClient) {
+      handleCloseGroupEditView();
+      return;
+    }
+
+    try {
+      if (selectedGroupEditModel?.id || draft.groupId) {
+        await groupEditClient.updateGroup({
+          groupId: selectedGroupEditModel?.id || draft.groupId,
+          name: draft.groupName,
+          athleteIds,
+        })
+      } else {
+        await groupEditClient.createGroup({
+          coachId: effectiveBootstrapState.coachProfile?.id,
+          name: draft.groupName,
+          athleteIds,
+        })
+      }
+      await refreshAuthSession();
+      handleCloseGroupEditView();
+    } catch (error) {
+      console.error('Failed to save group', error);
+    }
   }
 
   function handleTabPress(nextTab) {
@@ -2151,7 +2240,10 @@ function AppShellContent() {
           onProfileHeaderPress: () => {
             setIsProfileViewOpen(true);
           },
-          onUtilityHeaderPress: () => setIsTrainingCalendarOpen(true),
+          onUtilityHeaderPress: () => {
+            setTrainingCalendarReturnSurface(null);
+            setIsTrainingCalendarOpen(true);
+          },
           onActionTarget: handleTrainNavigation,
           renderTrainSurface: ({ trainRenderModel, sessionRenderModel, styles }) =>
             renderTrainSurface({
@@ -2204,6 +2296,7 @@ function AppShellContent() {
           onClose: handleCloseProgramSheet,
           onEditProgram: handleOpenProgramEditView,
           onOpenWorkoutDetail: handleOpenProgramSheetWorkout,
+          onOpenTrainingCalendar: handleOpenProgramSheetTrainingCalendar,
           model: programSheetModel,
           theme: appTheme,
         })}
@@ -2221,6 +2314,7 @@ function AppShellContent() {
         onClose={() => setIsCoachAthletesSheetOpen(false)}
         athletes={coachAthletesList}
         selectedAthleteId={selectedCoachAthleteId}
+        isLoading={isCoachAthletesLoading}
         onActionTarget={handleTrainNavigation}
         theme={appTheme}
       />
@@ -2254,7 +2348,7 @@ function AppShellContent() {
         />
         <TrainingCalendarSheet
           isVisible={isTrainingCalendarOpen}
-          onClose={() => setIsTrainingCalendarOpen(false)}
+          onClose={handleCloseTrainingCalendar}
           model={trainingCalendarModel}
           theme={appTheme}
         />
@@ -2286,6 +2380,15 @@ function AppShellContent() {
         isDeleteWorkoutModalOpen={isDeleteWorkoutModalOpen}
         isDeletingWorkout={isDeletingWorkout}
         deleteWorkoutErrorMessage={deleteWorkoutErrorMessage}
+        theme={appTheme}
+      />
+      <GroupEditView
+        isVisible={isGroupEditViewOpen}
+        model={groupEditViewModel}
+        onClose={handleCloseGroupEditView}
+        onSave={handleSaveGroupEdit}
+        onAddAthletes={() => {}}
+        onDeleteGroup={handleCloseGroupEditView}
         theme={appTheme}
       />
 
@@ -2324,7 +2427,7 @@ function AppShellContent() {
           theme={appTheme}
           onClose={handleCloseExerciseDetail}
         />
-        <ProfileView isVisible={isProfileViewOpen} onClose={() => setIsProfileViewOpen(false)} onSignOut={handleProfileSignOut} athleteProfile={profileViewProfile} onSaveProfile={handleSaveProfile} isSavingProfile={isProfileSaving} saveNotice={profileSaveNotice} role={isCoachBootstrapState ? 'coach' : 'athlete'} onOpenAthletes={() => setIsCoachAthletesSheetOpen(true)} onOpenExerciseDetail={(exercise) => handleOpenExerciseDetail(exercise, 'profile-view')} onOpenProgramDetail={(program) => handleOpenProgramDetail(program, 'profile-view')} themePreference={appThemePreference} onChangeThemePreference={handleThemePreferenceChange} weightUnitPreference={profileViewProfile?.weightUnitPreference || 'lb'} distanceUnitPreference={profileViewProfile?.distanceUnitPreference || 'km'} onChangeWeightUnitPreference={(nextWeightUnitPreference) => handleUnitsPreferenceChange({ weightUnitPreference: nextWeightUnitPreference })} onChangeDistanceUnitPreference={(nextDistanceUnitPreference) => handleUnitsPreferenceChange({ distanceUnitPreference: nextDistanceUnitPreference })} theme={appTheme} />
+        <ProfileView isVisible={isProfileViewOpen} onClose={() => setIsProfileViewOpen(false)} onSignOut={handleProfileSignOut} athleteProfile={profileViewProfile} onSaveProfile={handleSaveProfile} isSavingProfile={isProfileSaving} saveNotice={profileSaveNotice} role={isCoachBootstrapState ? 'coach' : 'athlete'} athletes={coachAthletesList} selectedAthleteId={selectedCoachAthleteId} isAthletesLoading={isCoachAthletesLoading} onAthleteActionTarget={handleTrainNavigation} onOpenExerciseDetail={(exercise) => handleOpenExerciseDetail(exercise, 'profile-view')} onOpenProgramDetail={(program) => handleOpenProgramDetail(program, 'profile-view')} themePreference={appThemePreference} onChangeThemePreference={handleThemePreferenceChange} weightUnitPreference={profileViewProfile?.weightUnitPreference || 'lb'} distanceUnitPreference={profileViewProfile?.distanceUnitPreference || 'km'} onChangeWeightUnitPreference={(nextWeightUnitPreference) => handleUnitsPreferenceChange({ weightUnitPreference: nextWeightUnitPreference })} onChangeDistanceUnitPreference={(nextDistanceUnitPreference) => handleUnitsPreferenceChange({ distanceUnitPreference: nextDistanceUnitPreference })} theme={appTheme} />
         <StatusBar style={appThemePreference === 'light' ? 'dark' : 'light'} />
       </SafeAreaView>
     </SafeAreaProvider>

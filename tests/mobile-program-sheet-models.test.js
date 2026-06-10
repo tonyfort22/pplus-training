@@ -58,7 +58,7 @@ test('getProgramSheetModel builds the shared program sheet from a real nested pr
             date: '2026-05-19',
             name: 'Tuesday',
             status: 'training',
-            workouts: [{ id: 'pw-1', nameSnapshot: 'Speed Accelerator A', status: 'completed' }],
+            workouts: [{ id: 'pw-1', nameSnapshot: 'Speed Accelerator A', status: 'completed', elapsedSeconds: 3630 }],
           },
           {
             id: 'day-2',
@@ -88,7 +88,7 @@ test('getProgramSheetModel builds the shared program sheet from a real nested pr
             date: '2026-05-26',
             name: 'Tuesday',
             status: 'training',
-            workouts: [{ id: 'pw-3', nameSnapshot: 'Phase 4 Edge Work A', status: 'scheduled' }],
+            workouts: [{ id: 'pw-3', nameSnapshot: 'Phase 4 Edge Work A', status: 'scheduled', estimatedDurationMinutes: 64 }],
           },
         ],
       },
@@ -113,12 +113,19 @@ test('getProgramSheetModel builds the shared program sheet from a real nested pr
   assert.equal(model.weeks[0].entries[1].programWorkoutId, 'pw-1')
   assert.equal(model.weeks[0].entries[1].programDayId, 'day-1')
   assert.equal(model.weeks[0].entries[1].status, 'done')
+  assert.equal(model.weeks[0].entries[1].durationLabel, '1h 1m')
   assert.equal(model.weeks[0].entries[2].programWorkoutId, 'pw-2')
   assert.equal(model.weeks[0].entries[2].programDayId, 'day-2')
   assert.equal(model.weeks[0].entries[2].status, 'upcoming')
+  assert.equal(model.weeks[0].entries[2].durationLabel, '')
   assert.equal(model.weeks[0].entries[3].workoutLabel, 'Rest Day')
   assert.equal(model.weeks[0].entries[3].durationLabel, 'Rest Day')
   assert.equal(model.weeks[0].entries[3].status, 'rest')
+  assert.equal(model.weeks[1].entries[1].programWorkoutId, 'pw-3')
+  assert.equal(model.weeks[1].entries[1].durationLabel, 'Est. 1h 4m')
+  assert.equal(model.weeks[1].entries[6].workoutLabel, 'Program End')
+  assert.equal(model.weeks[1].entries[6].durationLabel, 'Program End')
+  assert.equal(model.weeks[1].entries[6].isProgramEnd, true)
 })
 
 test('getProgramSheetModel supports a thin program preview while the full parent program is still hydrating', () => {

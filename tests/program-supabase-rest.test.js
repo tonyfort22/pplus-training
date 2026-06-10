@@ -213,6 +213,20 @@ test('createSupabaseRestProgramRepository fetches an assigned program with neste
         ])
       }
 
+      if (parsed.pathname.endsWith('/program_workout_exercises')) {
+        return json([
+          { id: 'pwe-1', program_workout_id: 'pw-1', exercise_id: 'ex-1', name_snapshot: 'Sprint Starts', sort_order: 1, notes: null, default_rest_seconds: 90 },
+          { id: 'pwe-2', program_workout_id: 'pw-1', exercise_id: 'ex-2', name_snapshot: 'Lateral Bounds', sort_order: 2, notes: null, default_rest_seconds: 60 },
+        ])
+      }
+
+      if (parsed.pathname.endsWith('/program_workout_sets')) {
+        return json([
+          { id: 'set-1', program_workout_exercise_id: 'pwe-1', sort_order: 1, set_type: 'straight', target_reps: 5, target_load: null, target_load_unit: null, target_duration_seconds: null, target_distance: null, target_distance_unit: null, target_rpe: 7, target_rir: null, target_rest_seconds: 90, notes: null },
+          { id: 'set-2', program_workout_exercise_id: 'pwe-2', sort_order: 1, set_type: 'straight', target_reps: 8, target_load: null, target_load_unit: null, target_duration_seconds: null, target_distance: null, target_distance_unit: null, target_rpe: 8, target_rir: null, target_rest_seconds: 60, notes: null },
+        ])
+      }
+
       if (parsed.pathname.endsWith('/workout_sessions')) {
         return json([
           {
@@ -237,6 +251,9 @@ test('createSupabaseRestProgramRepository fetches an assigned program with neste
   assert.equal(program.weeks[0].days.length, 3)
   assert.equal(program.weeks[0].days[0].workouts.length, 1)
   assert.equal(program.weeks[0].days[0].workouts[0].nameSnapshot, 'Phase 3 Speed Accelerator A')
+  assert.equal(program.weeks[0].days[0].workouts[0].exercises.length, 2)
+  assert.equal(program.weeks[0].days[0].workouts[0].exercises[0].sets.length, 1)
+  assert.equal(program.weeks[0].days[0].workouts[0].exercises[0].sets[0].targetReps, 5)
   assert.equal(program.weeks[0].days[0].workouts[0].status, 'completed')
   assert.equal(program.weeks[0].days[1].workouts[0].status, 'missed')
   assert.equal(program.weeks[0].days[2].workouts[0].status, 'scheduled')
@@ -301,6 +318,14 @@ test('createSupabaseRestProgramRepository falls back to legacy assigned-program 
       }
 
       if (parsed.pathname.endsWith('/workout_sessions')) {
+        return json([])
+      }
+
+      if (parsed.pathname.endsWith('/program_workout_exercises')) {
+        return json([])
+      }
+
+      if (parsed.pathname.endsWith('/program_workout_sets')) {
         return json([])
       }
 
@@ -371,6 +396,18 @@ test('createSupabaseRestProgramRepository fetches a program by id with nested we
         return json([])
       }
 
+      if (parsed.pathname.endsWith('/program_workout_exercises')) {
+        return json([
+          { id: 'pwe-1', program_workout_id: 'pw-1', exercise_id: 'ex-1', name_snapshot: 'Sprint Starts', sort_order: 1, notes: null, default_rest_seconds: 90 },
+        ])
+      }
+
+      if (parsed.pathname.endsWith('/program_workout_sets')) {
+        return json([
+          { id: 'set-1', program_workout_exercise_id: 'pwe-1', sort_order: 1, set_type: 'timed', target_reps: null, target_load: null, target_load_unit: null, target_duration_seconds: 30, target_distance: null, target_distance_unit: null, target_rpe: 7, target_rir: null, target_rest_seconds: 90, notes: null },
+        ])
+      }
+
       throw new Error(`Unexpected request: ${parsed.pathname}`)
     },
   })
@@ -382,6 +419,8 @@ test('createSupabaseRestProgramRepository fetches a program by id with nested we
   assert.equal(program.weeksCount, 1)
   assert.equal(program.workoutsCount, 1)
   assert.equal(program.weeks[0].days[0].workouts[0].nameSnapshot, 'Phase 3 Speed Accelerator A')
+  assert.equal(program.weeks[0].days[0].workouts[0].exercises.length, 1)
+  assert.equal(program.weeks[0].days[0].workouts[0].exercises[0].sets[0].targetDurationSeconds, 30)
 })
 
 test('createSupabaseRestProgramRepository can create a cloned planned set row for workout edit add-set actions', async () => {
@@ -441,7 +480,14 @@ test('createSupabaseRestProgramRepository can create a cloned planned set row fo
     effort: '9',
     load: '0',
     reps: '1',
+    targetReps: 1,
+    targetLoad: 0,
     targetLoadUnit: 'lb',
+    targetDurationSeconds: null,
+    targetDistance: null,
+    targetDistanceUnit: null,
+    targetRpe: 9,
+    targetRir: null,
     prescribedRestSeconds: 30,
     notes: '',
   })

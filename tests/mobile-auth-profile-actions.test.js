@@ -221,6 +221,54 @@ test('mobile auth/profile actions save athlete profile drafts and publish the su
   ])
 })
 
+test('mobile auth/profile actions save coach profile drafts through the coach updater and publish the success notice', async () => {
+  const setterLog = createSetterLog()
+  let coachUpdates = null
+
+  const result = await orchestrateSaveProfile({
+    profileDraft: {
+      coachId: 'coach-1',
+      displayName: 'Anthony Fortugno',
+      firstName: 'Anthony',
+      lastName: 'Fortugno',
+      phoneNumber: '(514) 915-2722',
+      avatarUrl: 'https://example.com/avatar.jpg',
+      avatarAsset: null,
+    },
+    isCoachBootstrapState: true,
+    updateCoachProfile: async (updates) => {
+      coachUpdates = updates
+      return { id: 'coach-1', firstName: 'Anthony', lastName: 'Fortugno', phoneNumber: '(514) 915-2722' }
+    },
+    updateAthleteProfile: async () => {
+      throw new Error('updateAthleteProfile should not run for coach profile saves')
+    },
+    setAuthErrorMessage: setterLog.setter('error'),
+    setAuthNoticeMessage: setterLog.setter('notice'),
+    setProfileSaveNotice: setterLog.setter('profileNotice'),
+    setIsProfileSaving: setterLog.setter('saving'),
+  })
+
+  assert.deepEqual(result, { id: 'coach-1', firstName: 'Anthony', lastName: 'Fortugno', phoneNumber: '(514) 915-2722' })
+  assert.deepEqual(coachUpdates, {
+    coachId: 'coach-1',
+    displayName: 'Anthony Fortugno',
+    firstName: 'Anthony',
+    lastName: 'Fortugno',
+    phoneNumber: '(514) 915-2722',
+    avatarUrl: 'https://example.com/avatar.jpg',
+    avatarAsset: null,
+  })
+  assert.deepEqual(setterLog.calls, [
+    ['error', ''],
+    ['notice', ''],
+    ['profileNotice', ''],
+    ['saving', true],
+    ['profileNotice', 'Profile updated.'],
+    ['saving', false],
+  ])
+})
+
 test('mobile auth/profile actions rethrow profile save failures so the profile screen can block fake avatar success copy', async () => {
   const setterLog = createSetterLog()
   const saveError = new Error('Avatar upload failed.')

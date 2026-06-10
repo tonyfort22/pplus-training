@@ -26,9 +26,9 @@ test('getTrainingCalendarModel hydrates real weeks and workout states from the a
           endDate: '2026-04-11',
           days: [
             { id: 'day-sun', date: '2026-04-05', name: 'Rest Day', workouts: [] },
-            { id: 'day-mon', date: '2026-04-06', workouts: [{ id: 'pw-mon', nameSnapshot: 'Lower A', status: 'completed' }] },
-            { id: 'day-tue', date: '2026-04-07', workouts: [{ id: 'pw-tue', nameSnapshot: 'Upper B', status: 'missed' }] },
-            { id: 'day-wed', date: '2026-04-08', workouts: [{ id: 'pw-wed', nameSnapshot: 'Lower B', status: 'scheduled' }] },
+            { id: 'day-mon', date: '2026-04-06', workouts: [{ id: 'pw-mon', nameSnapshot: 'Lower A', status: 'completed', elapsedSeconds: 3630 }] },
+            { id: 'day-tue', date: '2026-04-07', workouts: [{ id: 'pw-tue', nameSnapshot: 'Upper B', status: 'missed', estimatedDurationMinutes: 64 }] },
+            { id: 'day-wed', date: '2026-04-08', workouts: [{ id: 'pw-wed', nameSnapshot: 'Lower B', status: 'scheduled', exercises: [{ id: 'ex-1', sets: [{ id: 'set-1' }, { id: 'set-2' }, { id: 'set-3' }] }] }] },
             { id: 'day-thu', date: '2026-04-09', workouts: [] },
             { id: 'day-fri', date: '2026-04-10', workouts: [] },
             { id: 'day-sat', date: '2026-04-11', workouts: [] },
@@ -46,11 +46,25 @@ test('getTrainingCalendarModel hydrates real weeks and workout states from the a
   assert.equal(model.weeks[0].days[0].type, 'rest')
   assert.equal(model.weeks[0].days[1].workoutLabel, 'Lower A')
   assert.equal(model.weeks[0].days[1].status, 'done')
+  assert.equal(model.weeks[0].days[1].durationLabel, '1h 1m')
   assert.equal(model.weeks[0].days[2].status, 'missed')
+  assert.equal(model.weeks[0].days[2].durationLabel, 'Est. 1h 4m')
   assert.equal(model.weeks[0].days[3].status, 'upcoming')
+  assert.equal(model.weeks[0].days[3].durationLabel, 'Est. 21 min')
 })
 
-test('mobile training calendar screen matches the calendar reference structure', () => {
+test('mobile training calendar screen uses the shared sheet shell with an inline close title row', () => {
+  const sheetSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/training-calendar-sheet.js'), 'utf8')
+  const primitivesSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/ui/primitives.js'), 'utf8')
+
+  assert.match(primitivesSource, /export function AppSheetHeader\(\{ theme, title, onBack, rightAction = null, leftIcon = null \}\)/)
+  assert.match(primitivesSource, /leftIcon \|\| <ChevronLeft/)
+  assert.match(sheetSource, /AppSheetHeader[\s\S]*title=\{model\.title \|\| 'Training Calendar'\}[\s\S]*onBack=\{onClose\}[\s\S]*leftIcon=\{<X/)
+  assert.doesNotMatch(sheetSource, /text-\[34px\] font-bold/)
+  assert.doesNotMatch(sheetSource, /mb-7 flex-row items-center justify-between[\s\S]*<X color=\{resolvedTheme\.icon\}/)
+})
+
+test('mobile training calendar screen matches the SPOTR-style weekly calendar layout', () => {
   const sheetSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/training-calendar-sheet.js'), 'utf8')
   const modelSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/train/training-calendar-models.js'), 'utf8')
 
@@ -59,20 +73,25 @@ test('mobile training calendar screen matches the calendar reference structure',
   assert.match(sheetSource, /WeekBadge/)
   assert.match(sheetSource, /TrainingCalendarDayRow/)
   assert.match(sheetSource, /Rest Day/)
-  assert.match(sheetSource, /Check/)
   assert.match(sheetSource, /X/)
   assert.match(sheetSource, /Modal/)
-  assert.doesNotMatch(sheetSource, /AppSheetHeader/)
-  assert.match(sheetSource, /onPress=\{onClose\}/)
-  assert.match(sheetSource, /containerClassName="h-10 w-10 rounded-\[14px\] overflow-hidden"/)
-  assert.match(sheetSource, /text-\[34px\] font-bold/)
-  assert.match(sheetSource, /Schedule/)
-  assert.match(sheetSource, /rounded-3xl overflow-hidden/)
-  assert.match(sheetSource, /contentClassName="gap-3\.5 px-\[18px\] py-\[18px\]"/)
-  assert.match(sheetSource, /text-2xl font-bold/)
-  assert.match(sheetSource, /w-12 shrink-0 pr-2/)
-  assert.match(sheetSource, /h-px flex-1/)
-  assert.match(sheetSource, /AppStatusIconBadge/)
+  assert.match(sheetSource, /AppSheetHeader/)
+  assert.match(sheetSource, /onBack=\{onClose\}/)
+  assert.doesNotMatch(sheetSource, />Schedule<|Schedule\}/)
+  assert.doesNotMatch(sheetSource, /day\.durationLabel/)
+  assert.doesNotMatch(sheetSource, /durationLabel: getWorkoutDurationLabel/)
+  assert.doesNotMatch(sheetSource, /day\.statusLabel \|\| 'Scheduled'/)
+  assert.doesNotMatch(sheetSource, /<Text className="text-\[14px\]" style=\{\{ color: theme\.textSoft \}\}>\{day\.statusLabel \|\| 'Scheduled'\}<\/Text>/)
+  assert.match(sheetSource, /function WeekBadge[\s\S]*backgroundColor: theme\.accentSurface[\s\S]*color: theme\.accentText/)
+  assert.match(sheetSource, /function TrainingCalendarWeekSection[\s\S]*week\.dateRangeLabel[\s\S]*<WeekBadge label=\{week\.weekLabel\}/)
+  assert.doesNotMatch(sheetSource, /function TrainingCalendarWeekSection[\s\S]*<AppSurfaceCard theme=\{theme\} contentClassName="gap-3\.5 px-\[18px\] py-\[18px\]"/)
+  assert.match(sheetSource, /day\.dateNumber/)
+  assert.match(sheetSource, /text-\[11px\] font-semibold uppercase/)
+  assert.match(sheetSource, /text-\[15px\] font-semibold/)
+  assert.match(sheetSource, /function TrainingCalendarRestDay[\s\S]*h-px flex-1[\s\S]*Rest Day[\s\S]*h-px flex-1/)
+  assert.match(sheetSource, /function TrainingCalendarWorkoutCard[\s\S]*flex-row items-center justify-between[\s\S]*TrainingCalendarStatusBadge/)
+  assert.match(sheetSource, /<TrainingCalendarStatusBadge status=\{day\.status\} theme=\{theme\} \/>/)
+  assert.match(sheetSource, /AppStatusIconBadge status=\{resolvedStatus\} theme=\{theme\} size="xs"/)
   assert.match(sheetSource, /useSafeAreaInsets/)
   assert.match(sheetSource, /SafeAreaProvider/)
   assert.match(sheetSource, /function TrainingCalendarSheetContent\(\{ onClose, model, theme \}\)/)

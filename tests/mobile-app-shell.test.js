@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { getGroupsSections } from '../apps/mobile/src/screens/surface-sections.js'
 
 function extractFunctionBlock(source, signature) {
  const start = source.indexOf(signature)
@@ -109,6 +110,74 @@ test('mobile app shell renders bottom navigation from grouped shell tab view ite
  assert.match(appSource, /const bottomTabViewItems = useMemo\(\(\) => getBottomTabViewItems\(bottomTabModels\), \[bottomTabModels\]\);/)
  assert.match(appSource, /renderAppShell\(\{[\s\S]*bottomTabs: bottomTabViewItems,[\s\S]*\}\)/)
  assert.doesNotMatch(appSource, /renderAppShell\(\{[\s\S]*bottomTabs: bottomTabModels,[\s\S]*\}\)/)
+})
+
+test('mobile app shell replaces the third tab placeholder with the Groups view', () => {
+ const appSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/App.js'),
+   'utf8'
+ )
+ const sectionsSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/screens/surface-sections.js'),
+   'utf8'
+ )
+ const rendererSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/screens/renderers.js'),
+   'utf8'
+ )
+ const renderPlanSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/screens/render-plans.js'),
+   'utf8'
+ )
+
+ assert.match(appSource, /import \{ getGroupsSections, getPlaceholderSections, getProgressSections \} from '\.\/src\/screens\/surface-sections\.js';/)
+ assert.match(appSource, /const teamSections = useMemo\(\(\) => getGroupsSections\(effectiveBootstrapState\.coachGroups \|\| \[\]\), \[effectiveBootstrapState\.coachGroups\]\);/)
+ assert.doesNotMatch(appSource, /getPlaceholderSurfaceModel\('Team'/)
+ assert.doesNotMatch(appSource, /coach context, team relationships, and collaboration later/)
+ assert.match(appSource, /if \(!isCoachBootstrapState \|\| activeTab === 'train' \|\| activeTab === 'progress' \|\| activeTab === 'team'\) \{[\s\S]*return null;[\s\S]*\}/)
+ assert.match(sectionsSource, /export function getGroupsSections\(groups = \[\]\)/)
+ assert.match(sectionsSource, /title: 'Groups'/)
+ assert.doesNotMatch(sectionsSource, /Group 1[\s\S]*4 athletes/)
+ assert.doesNotMatch(sectionsSource, /Group 5[\s\S]*3 athletes/)
+ assert.match(sectionsSource, /group\.athleteCountLabel/)
+ assert.match(sectionsSource, /Create a group[\s\S]*A regroupment of athletes/)
+ assert.match(sectionsSource, /const rows = groups\.map\(\(group\) => \(\{[\s\S]*targetKey: 'group'/)
+ assert.match(sectionsSource, /type: 'body-list',[\s\S]*rows,/)
+ assert.match(sectionsSource, /type: 'create-workout-card',[\s\S]*targetKey: 'create-group'/)
+ assert.match(renderPlanSource, /if \(section\.type === 'section-heading'\) \{[\s\S]*type: 'section-heading',[\s\S]*title: section\.title,[\s\S]*\}/)
+ assert.match(rendererSource, /section\.type === 'section-heading'[\s\S]*styles\.sectionHeadingWrap/)
+ assert.match(rendererSource, /section\.type === 'body-list'[\s\S]*styles\.theme\.accent[\s\S]*ChevronRight/)
+ assert.match(rendererSource, /section\.type === 'create-workout-card'[\s\S]*<CreateWorkoutCard/)
+})
+
+test('mobile Groups sections render real coach athlete_groups with live athlete counts', () => {
+ const sections = getGroupsSections([
+   { id: 'group-speed', name: 'Speed Group', athleteCountLabel: '2 athletes' },
+   { id: 'group-edge', name: 'Edge Group', athleteCountLabel: '1 athlete' },
+ ])
+ const listSection = sections.find((section) => section.type === 'body-list')
+
+ assert.equal(sections[0].title, 'Groups')
+ assert.equal(listSection.rows.length, 2)
+ assert.deepEqual(
+   listSection.rows.map((row) => ({ id: row.id, title: row.title, body: row.body, payload: row.actionPayload })),
+   [
+     { id: 'group-speed', title: 'Speed Group', body: '2 athletes', payload: { groupId: 'group-speed' } },
+     { id: 'group-edge', title: 'Edge Group', body: '1 athlete', payload: { groupId: 'group-edge' } },
+   ]
+ )
+ assert.equal(sections.some((section) => section.title === 'Create a group'), true)
+})
+
+test('mobile Groups sections use the shared empty state card when no athlete_groups are returned', () => {
+ const sections = getGroupsSections([])
+
+ assert.equal(sections[0].title, 'Groups')
+ assert.equal(sections.some((section) => section.type === 'body-list'), false)
+ assert.equal(sections[1].type, 'empty-state-card')
+ assert.equal(sections[1].title, 'No groups yet')
+ assert.equal(sections[1].body, 'Create a group to organize athletes.')
+ assert.equal(sections.some((section) => section.title === 'Create a group'), true)
 })
 
 test('mobile app shell can hydrate a selected program into the shared program sheet from the profile programs list', () => {
@@ -428,7 +497,7 @@ test('mobile app shell closes the active workout cleanly without reopening the w
  assert.doesNotMatch(closeHandler, /setIsWorkoutSheetOpen\(true\)/)
 })
 
-test('mobile app shell opens coach athletes inside a dedicated sheet from profile and bottom-right quick access instead of routing the whole shell to a progress tab screen', () => {
+test('mobile app shell opens coach athletes from profile inside profile shell while bottom-right quick access keeps the dedicated sheet', () => {
  const appSource = readFileSync(
    resolve(process.cwd(), 'apps/mobile/App.js'),
    'utf8'
@@ -447,7 +516,15 @@ test('mobile app shell opens coach athletes inside a dedicated sheet from profil
  assert.match(appSource, /<CoachAthletesSheet[\s\S]*isVisible=\{isCoachAthletesSheetOpen\}/)
  assert.match(appSource, /<CoachAthletesSheet[\s\S]*athletes=\{coachAthletesList\}/)
  assert.match(appSource, /<CoachAthletesSheet[\s\S]*selectedAthleteId=\{selectedCoachAthleteId\}/)
- assert.match(appSource, /<ProfileView isVisible=\{isProfileViewOpen\}[\s\S]*onOpenAthletes=\{\(\) => setIsCoachAthletesSheetOpen\(true\)\}/)
+ assert.match(appSource, /const isCoachAthletesLoading = bootstrapState\.status === 'loading'/)
+ assert.match(appSource, /<CoachAthletesSheet[\s\S]*isLoading=\{isCoachAthletesLoading\}/)
+ assert.match(appSource, /<ProfileView isVisible=\{isProfileViewOpen\}[\s\S]*athletes=\{coachAthletesList\}[\s\S]*selectedAthleteId=\{selectedCoachAthleteId\}[\s\S]*isAthletesLoading=\{isCoachAthletesLoading\}[\s\S]*onAthleteActionTarget=\{handleTrainNavigation\}/)
+ assert.doesNotMatch(appSource, /<ProfileView[\s\S]*onOpenAthletes=\{\(\) => setIsCoachAthletesSheetOpen\(true\)\}/)
+ assert.match(sheetSource, /export function CoachAthletesSheetContent\(/)
+ assert.match(sheetSource, /function CoachAthleteSkeletonRows\({ theme }\)/)
+ assert.match(sheetSource, /isLoading = false/)
+ assert.match(sheetSource, /const shouldShowSkeleton = isLoading \|\| isInitialSkeletonVisible/)
+ assert.match(sheetSource, /shouldShowSkeleton \? \([\s\S]*<CoachAthleteSkeletonRows theme=\{resolvedTheme\} \/>/)
  assert.match(sheetSource, /export function CoachAthletesSheet\(/)
  assert.match(sheetSource, /Modal/)
  assert.match(sheetSource, /Athletes/)
@@ -460,9 +537,35 @@ test('mobile app shell opens coach athletes inside a dedicated sheet from profil
   assert.match(sheetSource, /leftIcon=\{<Send/)
   assert.match(sheetSource, /theme=\{resolvedTheme\}[\s\S]*label="Invite athlete"[\s\S]*onPress=\{\(\) => onActionTarget\?\.\('coach-athlete-invite'\)\}/)
   assert.match(sheetSource, /Search by name/)
+  assert.match(sheetSource, /Keyboard/)
+  assert.match(sheetSource, /keyboardWillChangeFrame/)
+  assert.match(sheetSource, /keyboardDidShow/)
+  assert.match(sheetSource, /keyboardBottomOffset/)
+  assert.match(sheetSource, /const \[isSearchFocused, setIsSearchFocused\] = useState\(false\)/)
+  assert.match(sheetSource, /const shouldCompactBottomActions = isSearchFocused \|\| keyboardHeight > 0/)
+  assert.match(sheetSource, /!shouldCompactBottomActions \? \([\s\S]*label="Invite athlete"/)
+  assert.match(sheetSource, /bottom: keyboardBottomOffset/)
+  assert.match(sheetSource, /const compactBottomTrayPadding = shouldCompactBottomActions \? 14 : 0/)
+  assert.match(sheetSource, /const compactTopTrayPadding = shouldCompactBottomActions \? 10 : 0/)
+  assert.match(sheetSource, /paddingTop: compactTopTrayPadding/)
+  assert.match(sheetSource, /paddingBottom: safeBottom \+ compactBottomTrayPadding/)
+  assert.match(sheetSource, /const bottomControlsHeight = shouldCompactBottomActions \? 98 : 144/)
+  assert.match(sheetSource, /onFocus=\{\(\) => setIsSearchFocused\(true\)\}/)
+  assert.match(sheetSource, /onBlur=\{\(\) => setIsSearchFocused\(false\)\}/)
+  assert.doesNotMatch(sheetSource, /contentContainerStyle=\{\{ paddingBottom: 188 \}\}/)
+
+  const primitivesSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/ui/primitives.js'), 'utf8')
+  assert.match(primitivesSource, /export function AppSearchInput\(\{ theme, value, onChangeText, placeholder = 'Search', onFocus, onBlur \}\)/)
+  assert.match(primitivesSource, /child\.props\.onFocus\?\.\(event\)/)
+  assert.match(primitivesSource, /onFocus\?\.\(event\)/)
+  assert.match(primitivesSource, /onBlur\?\.\(event\)/)
+
   assert.match(sheetSource, /Check/)
   assert.match(sheetSource, /ChevronRight/)
   assert.match(sheetSource, /Image/)
+  assert.match(sheetSource, /<View className="flex-1 px-5"/)
+  assert.doesNotMatch(sheetSource, /function CoachAthleteRow[\s\S]*<View className="px-5">/)
+  assert.doesNotMatch(sheetSource, /function CoachAthleteRow[\s\S]*<\/AppListRow>[\s\S]*<\/View>/)
 assert.doesNotMatch(sheetSource, /renderGenericSections/)
  assert.doesNotMatch(sheetSource, /<Text className="text-\[16px\] font-semibold text-white">Back<\/Text>/)
  assert.doesNotMatch(appSource, /Tony Fortugno/)
@@ -541,7 +644,7 @@ test('mobile coach progress keeps the built analytics view instead of replacing 
    'utf8'
  )
 
- assert.match(appSource, /if \(!isCoachBootstrapState \|\| activeTab === 'train' \|\| activeTab === 'progress'\) \{[\s\S]*return null;[\s\S]*\}/)
+ assert.match(appSource, /if \(!isCoachBootstrapState \|\| activeTab === 'train' \|\| activeTab === 'progress' \|\| activeTab === 'team'\) \{[\s\S]*return null;[\s\S]*\}/)
  assert.doesNotMatch(appSource, /if \(activeTab === 'progress'\) \{[\s\S]*getPlaceholderSurfaceModel\('Athletes'/)
  assert.doesNotMatch(appSource, /if \(activeTab === 'progress' && coachAthleteOptions\.length\) \{[\s\S]*type: 'coach-athletes'/)
  assert.match(renderModelsSource, /if \(activeTab === 'progress'\) \{[\s\S]*type: 'analytics'/)
@@ -759,9 +862,23 @@ test('mobile assigned-program review can drill into a scheduled workout and retu
  assert.match(appSource, /function handleCloseWorkoutSheet\(\) \{[\s\S]*setIsWorkoutSheetOpen\(false\);[\s\S]*if \(workoutSheetReturnSurface === 'program-sheet'\) \{[\s\S]*setIsProgramSheetOpen\(true\);[\s\S]*setWorkoutSheetReturnSurface\(null\);[\s\S]*\}[\s\S]*\}/)
  assert.match(appSource, /renderProgramSheet\(\{[\s\S]*onOpenWorkoutDetail: handleOpenProgramSheetWorkout,[\s\S]*model: programSheetModel,[\s\S]*theme: appTheme,[\s\S]*\}\)/)
  assert.match(appSource, /<WorkoutSheet[\s\S]*onClose=\{handleCloseWorkoutSheet\}/)
- assert.match(programSheetSource, /function ProgramSheetWeekCard\(\{ week, theme, onOpenWorkoutDetail \}\)/)
+ assert.match(programSheetSource, /function ProgramSheetWeekCard\(\{ week, theme, onOpenWorkoutDetail, onOpenTrainingCalendar \}\)/)
  assert.match(programSheetSource, /<Pressable[\s\S]*onPress=\{\(\) => onOpenWorkoutDetail\?\.\(entry\)\}/)
- assert.match(programSheetSource, /export function renderProgramSheet\(\{ isVisible, onClose, onEditProgram, onOpenWorkoutDetail, model, theme \}\)/)
+ assert.match(programSheetSource, /export function renderProgramSheet\(\{ isVisible, onClose, onEditProgram, onOpenWorkoutDetail, onOpenTrainingCalendar, model, theme \}\)/)
+})
+
+test('mobile program details week cards open the shared Training Calendar view and return cleanly', () => {
+ const appSource = readFileSync(resolve(process.cwd(), 'apps/mobile/App.js'), 'utf8')
+ const programSheetSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/program-sheet.js'), 'utf8')
+
+ assert.match(appSource, /const \[trainingCalendarReturnSurface, setTrainingCalendarReturnSurface\] = useState\(null\);/)
+ assert.match(appSource, /function handleOpenProgramSheetTrainingCalendar\(\) \{[\s\S]*setIsProgramSheetOpen\(false\);[\s\S]*setTrainingCalendarReturnSurface\('program-sheet'\);[\s\S]*setIsTrainingCalendarOpen\(true\);[\s\S]*\}/)
+ assert.match(appSource, /function handleCloseTrainingCalendar\(\) \{[\s\S]*setIsTrainingCalendarOpen\(false\);[\s\S]*if \(trainingCalendarReturnSurface === 'program-sheet'\) \{[\s\S]*setIsProgramSheetOpen\(true\);[\s\S]*setTrainingCalendarReturnSurface\(null\);[\s\S]*\}[\s\S]*\}/)
+ assert.match(appSource, /renderProgramSheet\(\{[\s\S]*onOpenTrainingCalendar: handleOpenProgramSheetTrainingCalendar,[\s\S]*model: programSheetModel,[\s\S]*theme: appTheme,[\s\S]*\}\)/)
+ assert.match(appSource, /<TrainingCalendarSheet[\s\S]*onClose=\{handleCloseTrainingCalendar\}/)
+ assert.match(programSheetSource, /function ProgramSheetWeekCard\(\{ week, theme, onOpenWorkoutDetail, onOpenTrainingCalendar \}\)/)
+ assert.match(programSheetSource, /<AppSurfaceCard[\s\S]*onPress=\{onOpenTrainingCalendar\}[\s\S]*\{week\.dateRangeLabel\}/)
+ assert.match(programSheetSource, /<ProgramSheetWeekCard key=\{week\.id\} week=\{week\} theme=\{resolvedTheme\} onOpenWorkoutDetail=\{onOpenWorkoutDetail\} onOpenTrainingCalendar=\{onOpenTrainingCalendar\} \/>/)
 })
 
 test('mobile coach train home does not render a duplicate Athlete Workspace card when program and workout cards already cover that path', () => {

@@ -48,11 +48,6 @@ function GlassActionSurface({ children, className = '', style, theme }) {
         style,
       ]}
     >
-      <View
-        pointerEvents="none"
-        className="absolute inset-x-0 top-0 h-[1px]"
-        style={{ backgroundColor: theme.buttonHighlight }}
-      />
       {children}
     </View>
   )

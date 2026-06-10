@@ -50,6 +50,9 @@ test('mobile workout sheet matches the workout preview reference structure and u
   assert.match(modelSource, /Workout in progress/)
   assert.match(sheetSource, /model\.resumeNotice/)
   assert.match(sheetSource, /WorkoutSheetExerciseBlock/)
+  assert.match(sheetSource, /import \{ Image, Modal, Pressable, ScrollView, Text, View \} from 'react-native';/)
+  assert.match(sheetSource, /exercise\.thumbnailUrl \? \([\s\S]*<Image source=\{\{ uri: exercise\.thumbnailUrl \}\}/)
+  assert.match(sheetSource, /\) : \([\s\S]*<WorkoutThumbnailIcon icon=\{exercise\.thumbnailIcon \|\| 'dumbbell'\} theme=\{theme\} \/>/)
 
   assert.match(sheetSource, /from '\.\.\/theme\/app-theme\.js'/)
   assert.match(sheetSource, /from '\.\.\/ui\/primitives\.js'/)

@@ -78,6 +78,8 @@ assert.match(viewSource, /import \{ useEffect, useRef, useState \} from 'react'/
 assert.match(viewSource, /Add Exercise/)
   assert.match(viewSource, /AppOutlinedActionButton/)
   assert.match(viewSource, /AppDangerPillButton/)
+  assert.doesNotMatch(viewSource, /className="absolute inset-x-0 top-0 h-\[1px\]"/)
+  assert.doesNotMatch(viewSource, /style=\{\{ backgroundColor: theme\.buttonHighlight \}\}/)
   assert.match(viewSource, /Search or create/)
  assert.match(viewSource, /Exercises/)
  assert.match(viewSource, /Chat/)

@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Info } from 'lucide-react'
 
-import Avatar from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -75,7 +74,12 @@ function readFileAsDataUrl(file) {
 
 function ProfilePhotoUploader({ previewSrc = '', profileName = '', onAvatarChange }) {
   const fileInputRef = useRef(null)
-  const hasPreview = Boolean(previewSrc)
+  const [hasPreviewError, setHasPreviewError] = useState(false)
+  const canRenderPreview = Boolean(previewSrc) && !hasPreviewError
+
+  useEffect(() => {
+    setHasPreviewError(false)
+  }, [previewSrc])
 
   async function handleAvatarFileChange(event) {
     const file = event.target.files?.[0]
@@ -91,14 +95,15 @@ function ProfilePhotoUploader({ previewSrc = '', profileName = '', onAvatarChang
 
   return (
     <div className="relative flex flex-col items-center justify-center justify-self-start gap-4 px-0 py-1 text-center">
-      {hasPreview ? (
-        <Avatar
+      {canRenderPreview ? (
+        <img
           alt={profileName || 'Coach avatar'}
           className="admin-settings-profile-avatar h-48 w-48 rounded-full border border-[var(--admin-shell-control-border)] bg-[var(--admin-shell-avatar-bg)] text-xl font-semibold text-[var(--admin-shell-avatar-text)] object-cover"
           src={previewSrc}
+          onError={() => setHasPreviewError(true)}
         />
       ) : (
-        <div className="flex h-48 w-48 items-center justify-center rounded-full border border-dashed border-[var(--admin-shell-control-border)] bg-[var(--admin-shell-avatar-bg)] text-[var(--admin-shell-avatar-text)]">
+        <div className="flex h-48 w-48 items-center justify-center rounded-full border border-dashed border-[var(--admin-shell-control-border)] bg-[var(--admin-shell-avatar-bg)] text-[var(--admin-shell-avatar-text)]" aria-label={profileName ? `Avatar fallback for ${profileName}` : 'Coach avatar fallback'}>
           <svg viewBox="0 0 24 24" aria-hidden="true" className="h-12 w-12">
             <circle cx="12" cy="8" r="3.25" fill="none" stroke="currentColor" strokeWidth="1.6" />
             <path

@@ -28,6 +28,21 @@ function createBootstrapFetchStub({ includeWorkout = true, role = 'athlete' } = 
       return json(role === 'coach' ? [] : [{ id: 'ath-1', user_id: 'user-1', first_name: 'Tony', last_name: 'F', date_of_birth: '2011-01-01', sport: 'Hockey', position: 'Forward', handedness: 'Left', gender: 'Male', height_cm: 180, weight_kg: 77, avatar_url: 'https://cdn.example.com/avatar-tony.png', status: 'active' }])
     }
 
+    if (table === 'athlete_groups') {
+      return json(role === 'coach' ? [
+        { id: 'group-speed', coach_id: 'coach-1', name: 'Speed Group', description: 'Acceleration work', access_level: 'private', status: 'active', created_at: '2026-05-01T00:00:00.000Z', updated_at: '2026-05-02T00:00:00.000Z' },
+        { id: 'group-edge', coach_id: 'coach-1', name: 'Edge Group', description: '', access_level: 'private', status: 'active', created_at: '2026-05-03T00:00:00.000Z', updated_at: '2026-05-04T00:00:00.000Z' },
+      ] : [])
+    }
+
+    if (table === 'athlete_group_memberships') {
+      return json(role === 'coach' ? [
+        { id: 'membership-1', athlete_group_id: 'group-speed', athlete_id: 'ath-1' },
+        { id: 'membership-2', athlete_group_id: 'group-speed', athlete_id: 'ath-2' },
+        { id: 'membership-3', athlete_group_id: 'group-edge', athlete_id: 'ath-2' },
+      ] : [])
+    }
+
     if (table === 'program_days') {
       if (parsedUrl.searchParams.get('program_week_id')) {
         return json(includeWorkout ? [{ id: 'day-1', program_week_id: 'week-1', day_index: 2, date: '2026-04-21', name: 'Lower A', notes: '', status: 'training' }] : [])
@@ -355,11 +370,20 @@ test('createMobileAppBootstrap resolves authenticated coach state and skips athl
   assert.equal(bootstrap.coachAthletes[0].id, 'ath-1')
   assert.equal(bootstrap.coachAthletes[0].firstName, 'Thomas')
   assert.equal(bootstrap.coachAthletes[1].id, 'ath-2')
+  assert.equal(bootstrap.coachGroups.length, 2)
+  assert.equal(bootstrap.coachGroups[0].id, 'group-speed')
+  assert.equal(bootstrap.coachGroups[0].name, 'Speed Group')
+  assert.equal(bootstrap.coachGroups[0].athleteCount, 2)
+  assert.equal(bootstrap.coachGroups[0].athleteCountLabel, '2 athletes')
+  assert.equal(bootstrap.coachGroups[1].athleteCountLabel, '1 athlete')
   assert.equal(bootstrap.athleteProfile, null)
   assert.equal(bootstrap.trainState, null)
   assert.equal(bootstrap.sessionStore, null)
   assert.equal(calls.some((call) => call.table === 'coach_profiles'), true)
   assert.equal(calls.some((call) => call.table === 'athlete_profiles' && call.query.includes('coach_id=eq.coach-1')), true)
+  assert.equal(calls.some((call) => call.table === 'athlete_groups'), true)
+  assert.equal(calls.some((call) => call.table === 'athlete_groups' && call.query.includes('coach_id=')), false)
+  assert.equal(calls.some((call) => call.table === 'athlete_group_memberships'), true)
   assert.equal(calls.some((call) => call.table === 'program_days'), false)
 })
 

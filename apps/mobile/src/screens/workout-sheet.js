@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUp, ArrowUpDown, Clock3, Dumbbell, X, Zap } from 'lucide-react-native';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Image, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getAppTheme } from '../theme/app-theme.js';
 import { AppButton, AppSurfaceCard } from '../ui/primitives.js';
@@ -47,7 +47,11 @@ function WorkoutSheetExerciseBlock({ exercise, onOpenExerciseDetail, theme }) {
           containerClassName="h-12 w-12 rounded-[14px] overflow-hidden"
           contentClassName="h-full items-center justify-center"
         >
-          <WorkoutThumbnailIcon icon={exercise.thumbnailIcon} theme={theme} />
+          {exercise.thumbnailUrl ? (
+            <Image source={{ uri: exercise.thumbnailUrl }} className="h-full w-full" resizeMode="cover" />
+          ) : (
+            <WorkoutThumbnailIcon icon={exercise.thumbnailIcon || 'dumbbell'} theme={theme} />
+          )}
         </AppSurfaceCard>
         <Pressable onPress={() => onOpenExerciseDetail?.(exercise)}>
           <Text className="flex-1 text-[22px] font-semibold leading-[28px]" style={{ color: theme.text }}>{exercise.name}</Text>

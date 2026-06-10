@@ -96,7 +96,14 @@ function mapProgramWorkoutSetRow(row) {
     reps: row.target_reps == null ? '' : String(row.target_reps),
     load: row.target_load == null ? '' : String(row.target_load),
     effort: row.target_rpe == null ? '' : String(row.target_rpe),
+    targetReps: row.target_reps ?? null,
+    targetLoad: row.target_load ?? null,
     targetLoadUnit: row.target_load_unit ?? null,
+    targetDurationSeconds: row.target_duration_seconds ?? null,
+    targetDistance: row.target_distance ?? null,
+    targetDistanceUnit: row.target_distance_unit ?? null,
+    targetRpe: row.target_rpe ?? null,
+    targetRir: row.target_rir ?? null,
     prescribedRestSeconds: row.target_rest_seconds ?? null,
     notes: row.notes ?? '',
   }
@@ -124,6 +131,34 @@ function mapProgramWorkoutRowsWithDerivedStatus(workoutRows = [], workoutSession
       }),
     }
   })
+}
+
+function attachProgramWorkoutExercises(workouts = [], exerciseRows = [], setRows = []) {
+  const setsByExerciseId = new Map()
+  for (const row of Array.isArray(setRows) ? setRows : []) {
+    const set = mapProgramWorkoutSetRow(row)
+    if (!set?.programWorkoutExerciseId) continue
+    const list = setsByExerciseId.get(set.programWorkoutExerciseId) || []
+    list.push(set)
+    setsByExerciseId.set(set.programWorkoutExerciseId, list)
+  }
+
+  const exercisesByWorkoutId = new Map()
+  for (const row of Array.isArray(exerciseRows) ? exerciseRows : []) {
+    const exercise = mapProgramWorkoutExerciseRow(row)
+    if (!exercise?.programWorkoutId) continue
+    const list = exercisesByWorkoutId.get(exercise.programWorkoutId) || []
+    list.push({
+      ...exercise,
+      sets: setsByExerciseId.get(exercise.id) || [],
+    })
+    exercisesByWorkoutId.set(exercise.programWorkoutId, list)
+  }
+
+  return workouts.map((workout) => ({
+    ...workout,
+    exercises: exercisesByWorkoutId.get(workout.id) || workout.exercises || [],
+  }))
 }
 
 function formatLocalIsoDate(date = new Date()) {
@@ -289,11 +324,38 @@ export function createSupabaseRestProgramRepository(config) {
         })
       : []
 
+    const exerciseRows = workoutIds.length > 0
+      ? await request({
+          table: 'program_workout_exercises',
+          query: {
+            select: 'id,program_workout_id,exercise_id,name_snapshot,sort_order,notes,default_rest_seconds',
+            program_workout_id: `in.(${workoutIds.join(',')})`,
+            order: 'sort_order.asc',
+          },
+        })
+      : []
+
+    const exerciseIds = Array.isArray(exerciseRows) ? exerciseRows.map((row) => row.id).filter(Boolean) : []
+    const setRows = exerciseIds.length > 0
+      ? await request({
+          table: 'program_workout_sets',
+          query: {
+            select: 'id,program_workout_exercise_id,sort_order,set_type,target_reps,target_load,target_load_unit,target_duration_seconds,target_distance,target_distance_unit,target_rpe,target_rir,target_rest_seconds,notes',
+            program_workout_exercise_id: `in.(${exerciseIds.join(',')})`,
+            order: 'sort_order.asc',
+          },
+        })
+      : []
+
     const workoutSessions = Array.isArray(workoutSessionRows)
       ? workoutSessionRows.map(mapWorkoutSessionStatusRow).filter(Boolean)
       : []
 
-    const workouts = mapProgramWorkoutRowsWithDerivedStatus(workoutRows, workoutSessions, daysById, todayIsoDate)
+    const workouts = attachProgramWorkoutExercises(
+      mapProgramWorkoutRowsWithDerivedStatus(workoutRows, workoutSessions, daysById, todayIsoDate),
+      exerciseRows,
+      setRows,
+    )
     const workoutsByDayId = new Map()
     for (const workout of workouts) {
       const list = workoutsByDayId.get(workout.programDayId) || []

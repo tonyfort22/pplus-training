@@ -16,7 +16,7 @@ test('getProgramEditViewModel builds the program edit surface with date sheets, 
         startDate: '2026-04-05',
         endDate: '2026-04-11',
         days: [
-          { id: 'day-sun', date: '2026-04-05', workouts: [{ id: 'pw-sun', nameSnapshot: 'Upper A' }] },
+          { id: 'day-sun', date: '2026-04-05', workouts: [{ id: 'pw-sun', nameSnapshot: 'Upper A', estimatedDurationMinutes: 63 }] },
           { id: 'day-mon', date: '2026-04-06', workouts: [{ id: 'pw-mon', nameSnapshot: 'Lower A' }] },
           { id: 'day-tue', date: '2026-04-07', workouts: [] },
           { id: 'day-wed', date: '2026-04-08', workouts: [{ id: 'pw-wed', nameSnapshot: 'Upper B' }] },
@@ -34,6 +34,7 @@ test('getProgramEditViewModel builds the program edit surface with date sheets, 
   assert.equal(model.splitDays.length, 7)
   assert.deepEqual(model.splitDays.map((day) => day.dayLabel), ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'])
   assert.equal(model.splitDays[0].routineLabel, 'Upper A')
+  assert.equal(model.splitDays[0].durationLabel, 'Est. 1h 3m')
   assert.equal(model.splitDays[2].actionLabel, '+ Add')
   assert.equal(model.splitDays[6].actionLabel, '+ Add')
   assert.equal(model.startDateSheet.title, 'Program Start Date')
@@ -67,6 +68,8 @@ test('getProgramEditViewModel builds the program edit surface with date sheets, 
   assert.equal(model.addExerciseSheet.searchPlaceholder, 'Search or Create Exercises')
   assert.equal(model.addExerciseSheet.addButtonLabel, 'Add')
   assert.equal(model.addExerciseSheet.exercises.length >= 3, true)
+  assert.equal(model.helperNote, 'The training split repeats until the end date. Use a 7-day split to keep weekdays fixed.')
+  assert.equal(model.endProgramLabel, 'End Program')
 })
 
 test('mobile app shell opens a dedicated Program Edit View from the current program sheet edit button', () => {
@@ -96,7 +99,7 @@ test('mobile app shell opens a dedicated Program Edit View from the current prog
   assert.match(programEditRender, /onClose=\{handleCloseProgramEditView\}/)
   assert.match(programEditRender, /onSave=\{handleCloseProgramEditView\}/)
   assert.doesNotMatch(programEditRender, /onClose=\{\(\) => \{[\s\S]*setIsProgramEditViewOpen\(false\);[\s\S]*setIsProgramSheetOpen\(true\);[\s\S]*\}\}/)
-  assert.match(sheetSource, /export function renderProgramSheet\(\{ isVisible, onClose, onEditProgram, onOpenWorkoutDetail, model, theme \}\)/)
+  assert.match(sheetSource, /export function renderProgramSheet\(\{ isVisible, onClose, onEditProgram, onOpenWorkoutDetail, onOpenTrainingCalendar, model, theme \}\)/)
   assert.match(sheetSource, /<Pressable onPress=\{onEditProgram\}>/)
   assert.match(editViewSource, /useState/)
   assert.match(editViewSource, /isCreateWorkoutViewOpen/)
@@ -117,6 +120,27 @@ test('mobile app shell opens a dedicated Program Edit View from the current prog
   assert.match(sharedPickerSource, /label=\{`\$\{sheet\.addButtonLabel\} \$\{selectedExerciseIds\.length\}`\}/)
   assert.match(sharedPickerSource, /Image source=\{\{ uri: exercise\.thumbnailUrl \}\}/)
   assert.doesNotMatch(editViewSource, /AppSegmentedControl/)
+  assert.doesNotMatch(editViewSource, /day\.durationLabel \? <Text/)
+  assert.doesNotMatch(editViewSource, /day\.durationLabel[\s\S]*<Pressable className=\"h-9 w-9 items-center justify-center rounded-full\"/)
+  assert.match(editViewSource, /containerClassName=\"relative flex-1 rounded-\[20px\]\"/)
+  assert.match(editViewSource, /contentClassName=\"min-h-\[54px\] justify-center px-4 py-3 pr-12\"/)
+  assert.match(editViewSource, /style=\{\{ overflow: 'visible' \}\}/)
+  assert.match(editViewSource, /position: 'absolute'/)
+  assert.match(editViewSource, /right: -10/)
+  assert.match(editViewSource, /top: -10/)
+  assert.match(editViewSource, /width: 36/)
+  assert.match(editViewSource, /height: 36/)
+  assert.match(editViewSource, /borderRadius: 18/)
+  assert.match(editViewSource, /borderWidth: 1\.5/)
+  assert.match(editViewSource, /borderColor: theme\.dangerBorder/)
+  assert.match(editViewSource, /backgroundColor: theme\.dangerSurface/)
+  assert.match(editViewSource, /CircleMinus color=\{theme\.dangerText\} size=\{20\} strokeWidth=\{2\.6\}/)
+  assert.match(editViewSource, /className=\"text-\[12px\] font-semibold uppercase\"/)
+  assert.match(editViewSource, /className=\"text-\[14px\] font-semibold\"/)
+  assert.match(editViewSource, /label=\{model\.endProgramLabel\}/)
+  assert.match(editViewSource, /tone=\"danger\"/)
+  assert.doesNotMatch(editViewSource, /label=\{model\.endProgramLabel\}[\s\S]{0,160}leftIcon=/)
+  assert.doesNotMatch(editViewSource, /borderTopColor: resolvedTheme\.divider/)
   assert.match(editViewSource, /TextInput/)
   assert.match(editViewSource, /backgroundColor: 'transparent'/)
   assert.match(editViewSource, /outlineStyle: 'none'/)
@@ -138,8 +162,9 @@ test('mobile app shell opens a dedicated Program Edit View from the current prog
   assert.match(editViewSource, /END_DATE_WHEEL_FADE_STOPS\.map/)
   assert.match(editViewSource, /backgroundColor: theme\.surfaceElevated/)
   assert.doesNotMatch(editViewSource, /-mt-\[216px\]/)
-  assert.match(editViewSource, /onPress=\{\(\) => setIsStartDateSheetOpen\(true\)\}/)
-  assert.match(editViewSource, /onPress=\{\(\) => setIsEndDateSheetOpen\(true\)\}/)
+  assert.doesNotMatch(editViewSource, /onPress=\{\(\) => setIsStartDateSheetOpen\(true\)\}/)
+  assert.doesNotMatch(editViewSource, /onPress=\{\(\) => setIsEndDateSheetOpen\(true\)\}/)
+  assert.match(editViewSource, /<View className=\"gap-3\.5\" style=\{\{ paddingHorizontal: 12 \}\}>[\s\S]*\{model\.trainingSplitLabel\}/)
   assert.match(editViewSource, /sheet\.title/)
   assert.match(editViewSource, /sheet\.doneLabel/)
   assert.match(editViewSource, /function ProgramDateOptionSheet\(\{ isVisible, theme, sheet, onSelectOption, onClose \}\)/)

@@ -1,5 +1,39 @@
 import { createMetricCardModel } from '../ui/card-models.js'
 
+export function getGroupsSections(groups = []) {
+  const rows = groups.map((group) => ({
+    id: group.id,
+    title: group.name || group.title || 'Untitled group',
+    body: group.athleteCountLabel || `${group.athleteCount || 0} ${(group.athleteCount || 0) === 1 ? 'athlete' : 'athletes'}`,
+    targetKey: 'group',
+    actionPayload: { groupId: group.id },
+  }))
+
+  return [
+    {
+      type: 'section-heading',
+      title: 'Groups',
+    },
+    ...(rows.length
+      ? [{
+          type: 'body-list',
+          rows,
+        }]
+      : [{
+          type: 'empty-state-card',
+          title: 'No groups yet',
+          body: 'Create a group to organize athletes.',
+        }]),
+    {
+      type: 'create-workout-card',
+      title: 'Create a group',
+      subtitle: 'A regroupment of athletes',
+      targetKey: 'create-group',
+      actionPayload: null,
+    },
+  ]
+}
+
 export function getProgressSections(progressModel) {
   return [
     {
