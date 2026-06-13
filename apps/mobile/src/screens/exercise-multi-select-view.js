@@ -1,5 +1,6 @@
-import { Image, Modal, Pressable, ScrollView, Text, View } from 'react-native'
-import { Info } from 'lucide-react-native'
+import { useEffect, useState } from 'react'
+import { Image, Keyboard, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native'
+import { Dumbbell, Info } from 'lucide-react-native'
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { getAppTheme } from '../theme/app-theme.js'
 import { AppButton, AppSearchInput, AppSelectionIndicator, AppSheetHeader } from '../ui/primitives.js'
@@ -7,17 +8,45 @@ import { AppButton, AppSearchInput, AppSelectionIndicator, AppSheetHeader } from
 function ExerciseMultiSelectContent({ theme, sheet, selectedExerciseIds, onToggleExercise, searchQuery, onSearchChange, onAddExercises, onClose }) {
   const insets = useSafeAreaInsets()
   const resolvedTheme = theme || getAppTheme('dark')
+  const [isSearchFocused, setIsSearchFocused] = useState(false)
+  const [keyboardHeight, setKeyboardHeight] = useState(0)
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillChangeFrame' : 'keyboardDidShow'
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide'
+    const showSubscription = Keyboard.addListener(showEvent, (event) => {
+      setKeyboardHeight(Math.max(0, event.endCoordinates?.height || 0))
+    })
+    const hideSubscription = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0)
+      setIsSearchFocused(false)
+    })
+
+    return () => {
+      showSubscription.remove()
+      hideSubscription.remove()
+    }
+  }, [])
+
   const filteredExercises = (sheet?.exercises || []).filter((exercise) => {
     const query = String(searchQuery || '').trim().toLowerCase()
     if (!query) return true
     return String(exercise.name || '').toLowerCase().includes(query)
   })
+  const safeBottom = Math.max(insets.bottom, 20)
+  const keyboardBottomOffset = Math.max(keyboardHeight - insets.bottom, 0)
+  const bottomControlsHeight = isSearchFocused || keyboardHeight > 0 ? 86 : 96
+  const scrollBottomPadding = bottomControlsHeight + safeBottom + keyboardBottomOffset
+  const canSubmitEmptySelection = Boolean(sheet?.allowEmptySelection)
+  const actionLabel = selectedExerciseIds.length > 0
+    ? `${sheet.addButtonLabel} ${selectedExerciseIds.length}`
+    : (sheet.emptySelectionLabel || `${sheet.addButtonLabel} ${selectedExerciseIds.length}`)
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: resolvedTheme.background }}>
-      <View className="flex-1 px-5" style={{ paddingTop: Math.max(insets.top, 16), paddingBottom: Math.max(insets.bottom, 20) }}>
+      <View className="flex-1 px-5" style={{ paddingTop: Math.max(insets.top, 16), paddingBottom: safeBottom }}>
         <AppSheetHeader theme={resolvedTheme} title={sheet.title} onBack={onClose} rightAction={<View className="w-11" />} />
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 112 }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: scrollBottomPadding }}>
           <View>
             {filteredExercises.map((exercise) => (
               <Pressable
@@ -30,7 +59,7 @@ function ExerciseMultiSelectContent({ theme, sheet, selectedExerciseIds, onToggl
                   {exercise.thumbnailUrl ? (
                     <Image source={{ uri: exercise.thumbnailUrl }} className="h-full w-full" resizeMode="cover" />
                   ) : (
-                    <Text className="text-[18px] font-semibold" style={{ color: resolvedTheme.iconMuted }}>🏋️</Text>
+                    <Dumbbell color={resolvedTheme.iconMuted} size={22} strokeWidth={2.2} />
                   )}
                 </View>
                 <Text className="flex-1 text-[17px]" style={{ color: resolvedTheme.text }}>{exercise.name}</Text>
@@ -46,12 +75,19 @@ function ExerciseMultiSelectContent({ theme, sheet, selectedExerciseIds, onToggl
           </View>
         </ScrollView>
       </View>
-      <View className="absolute inset-x-0 bottom-0 px-5" style={{ paddingBottom: Math.max(insets.bottom, 20), backgroundColor: resolvedTheme.background }}>
-        <View className="flex-row items-center gap-3 pt-3" style={{ borderTopWidth: 1, borderTopColor: resolvedTheme.border }}>
+      <View className="absolute inset-x-0 px-5" style={{ bottom: keyboardBottomOffset, paddingBottom: safeBottom, backgroundColor: resolvedTheme.background }}>
+        <View className="flex-row items-center gap-3 py-3" style={{ borderTopWidth: 1, borderTopColor: resolvedTheme.border }}>
           <View className="flex-1">
-            <AppSearchInput theme={resolvedTheme} value={searchQuery} onChangeText={onSearchChange} placeholder={sheet.searchPlaceholder} />
+            <AppSearchInput
+              theme={resolvedTheme}
+              value={searchQuery}
+              onChangeText={onSearchChange}
+              placeholder={sheet.searchPlaceholder}
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setIsSearchFocused(false)}
+            />
           </View>
-          <AppButton theme={resolvedTheme} label={`${sheet.addButtonLabel} ${selectedExerciseIds.length}`} onPress={onAddExercises} disabled={selectedExerciseIds.length === 0} />
+          <AppButton theme={resolvedTheme} label={actionLabel} onPress={onAddExercises} disabled={selectedExerciseIds.length === 0 && !canSubmitEmptySelection} />
         </View>
       </View>
     </SafeAreaView>

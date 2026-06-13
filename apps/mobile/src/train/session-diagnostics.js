@@ -43,13 +43,17 @@ export function logResolvedIncomingSession({
   currentSession = null,
   nextSession = null,
   isActiveWorkoutViewOpen = false,
+  isStartingWorkout = false,
   resolvedSession = null,
 } = {}) {
   logger.info?.('[session-sync] resolved', {
+    isActiveWorkoutViewOpen,
+    isStartingWorkout,
     shouldPreserveCurrentSession: shouldPreserveIncomingSession({
       currentSession,
       nextSession,
       isActiveWorkoutViewOpen,
+      isStartingWorkout,
     }),
     currentSession: getSessionDebugSummary(currentSession),
     incomingSession: getSessionDebugSummary(nextSession),

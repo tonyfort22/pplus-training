@@ -7,11 +7,14 @@ import {
 } from '../apps/mobile/src/train/index.js'
 import {
   appendSessionExercises,
+  advanceSessionAfterRestTimerExpiry,
   completeWorkoutSet,
   finishWorkoutSession,
   discardWorkoutSession,
   moveSessionExercise,
   removeSessionExercise,
+  createSessionSuperset,
+  removeSessionSuperset,
 } from '../packages/core/src/index.js'
 import {
   createSupabaseMobileDataClient,
@@ -223,6 +226,38 @@ test('moveSessionExercise reorders live session exercises and resequences sort o
   assert.equal(movedSession.exercises[0].sortOrder, 1)
   assert.equal(movedSession.exercises[1].sortOrder, 2)
   assert.equal(moveSessionExercise(session, session.exercises[0].id, 'up'), session)
+})
+
+test('removeSessionSuperset clears the selected live superset group', () => {
+  const session = createDemoProgramWorkout()
+  const linkedSession = createSessionSuperset(session, session.exercises[0].id, session.exercises[1].id)
+  const nextSession = removeSessionSuperset(linkedSession, session.exercises[0].id)
+
+  assert.equal(nextSession.exercises[0].supersetGroupId, null)
+  assert.equal(nextSession.exercises[0].supersetOrder, null)
+  assert.equal(nextSession.exercises[1].supersetGroupId, null)
+  assert.equal(nextSession.exercises[1].supersetOrder, null)
+  assert.equal(removeSessionSuperset(session, session.exercises[0].id), session)
+  assert.equal(removeSessionSuperset(linkedSession, 'missing-exercise'), linkedSession)
+})
+
+test('createSessionSuperset links two live session exercises without changing exercise order', () => {
+  const session = createDemoProgramWorkout()
+  const sourceExerciseId = session.exercises[0].id
+  const targetExerciseId = session.exercises[1].id
+
+  const nextSession = createSessionSuperset(session, sourceExerciseId, targetExerciseId)
+
+  assert.equal(nextSession.exercises[0].id, sourceExerciseId)
+  assert.equal(nextSession.exercises[1].id, targetExerciseId)
+  assert.equal(nextSession.exercises[0].sortOrder, session.exercises[0].sortOrder)
+  assert.equal(nextSession.exercises[1].sortOrder, session.exercises[1].sortOrder)
+  assert.match(nextSession.exercises[0].supersetGroupId, /^local-superset-/)
+  assert.equal(nextSession.exercises[1].supersetGroupId, nextSession.exercises[0].supersetGroupId)
+  assert.equal(nextSession.exercises[0].supersetOrder, 1)
+  assert.equal(nextSession.exercises[1].supersetOrder, 2)
+  assert.equal(createSessionSuperset(session, sourceExerciseId, 'missing-exercise'), session)
+  assert.equal(createSessionSuperset(session, sourceExerciseId, sourceExerciseId), session)
 })
 
 test('createTrainSessionStore persists appended local exercises with seeded default sets through the remote mobile data client', async () => {
@@ -1065,6 +1100,14 @@ test('createSupabaseRestSessionDb falls back to legacy workout_sessions columns 
       ])
     }
 
+    if (table === 'workout_session_exercises' && (method === 'POST' || method === 'PATCH') && Object.prototype.hasOwnProperty.call(body || {}, 'superset_group_id')) {
+      return json({ message: "Could not find the 'superset_group_id' column of 'workout_session_exercises' in the schema cache" }, 400)
+    }
+
+    if (table === 'workout_session_exercises' && method === 'GET' && select.includes('superset_group_id')) {
+      return json({ message: "Could not find the 'superset_group_id' column of 'workout_session_exercises' in the schema cache" }, 400)
+    }
+
     if (table === 'workout_session_exercises' && (method === 'POST' || method === 'PATCH')) {
       return json([
         {
@@ -1207,6 +1250,8 @@ test('createSupabaseRestSessionDb falls back to legacy workout_sessions columns 
         status: 'not_started',
         notes: '',
         defaultRestSeconds: 60,
+        supersetGroupId: 'local-superset-legacy-1',
+        supersetOrder: 1,
         sets: [
           {
             id: 'pws-1',
@@ -1226,6 +1271,8 @@ test('createSupabaseRestSessionDb falls back to legacy workout_sessions columns 
   const resumed = await db.getWorkoutSessionById('ws-legacy-1')
 
   assert.equal(created.id, 'ws-legacy-1')
+  assert.equal(created.exercises[0]?.supersetGroupId, 'local-superset-legacy-1')
+  assert.equal(created.exercises[0]?.supersetOrder, 1)
   assert.equal(resumed.id, 'ws-legacy-1')
   assert.equal(resumed.settings.defaultRestSeconds, null)
   assert.equal(resumed.settings.autoProgressEnabled, false)
@@ -1235,6 +1282,10 @@ test('createSupabaseRestSessionDb falls back to legacy workout_sessions columns 
   assert.equal(calls.some((call) => call.table === 'workout_sessions' && call.method === 'POST' && Object.prototype.hasOwnProperty.call(call.body || {}, 'adjust_effort_after_set')), true)
   assert.equal(calls.some((call) => call.table === 'workout_sessions' && call.method === 'POST' && !Object.prototype.hasOwnProperty.call(call.body || {}, 'adjust_effort_after_set')), true)
   assert.equal(calls.some((call) => call.table === 'workout_sessions' && call.method === 'GET' && call.select === 'id,athlete_id,coach_id,program_id,program_day_id,program_workout_id,workout_template_id,name_snapshot,status,started_at,completed_at,elapsed_seconds,notes,perceived_difficulty,total_exercises_count,completed_exercises_count,total_sets_count,completed_sets_count'), true)
+  assert.equal(calls.some((call) => call.table === 'workout_session_exercises' && call.method === 'GET' && call.select.includes('superset_group_id')), true)
+  assert.equal(calls.some((call) => call.table === 'workout_session_exercises' && call.method === 'GET' && call.select === 'id,workout_session_id,program_workout_exercise_id,exercise_id,name_snapshot,sort_order,status,notes,default_rest_seconds'), true)
+  assert.equal(calls.some((call) => call.table === 'workout_session_exercises' && (call.method === 'POST' || call.method === 'PATCH') && Object.prototype.hasOwnProperty.call(call.body || {}, 'superset_group_id')), true)
+  assert.equal(calls.some((call) => call.table === 'workout_session_exercises' && (call.method === 'POST' || call.method === 'PATCH') && !Object.prototype.hasOwnProperty.call(call.body || {}, 'superset_group_id')), true)
 })
 
 test('createTrainSessionStore persists and resumes through the remote mobile data client when Supabase config exists', async () => {
@@ -1573,6 +1624,44 @@ test('createTrainSessionStore persists per-exercise rest-time changes through th
   assert.equal(resumedSession.exercises[0]?.defaultRestSeconds ?? 120, 120)
 })
 
+test('createTrainSessionStore persists live superset groups through workout_session_exercises', async () => {
+  const { fetchImpl, calls } = createRemoteFetchStub()
+  const store = createTrainSessionStore({
+    programWorkout: createDemoProgramWorkout(),
+    env: {
+      EXPO_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
+    },
+    fetchImpl,
+  })
+
+  const started = await store.startSession({ startedAt: '2026-04-21T20:00:00.000Z' })
+  const twoExerciseSession = appendSessionExercises(started.session, [
+    {
+      id: 'exercise-row',
+      name: 'Bent Over Row',
+      defaultRestSeconds: 90,
+      sets: [{ id: 'row-set-1', targetReps: 8, targetLoad: 80 }],
+    },
+  ])
+  const linkedSession = createSessionSuperset(twoExerciseSession, twoExerciseSession.exercises[0].id, twoExerciseSession.exercises[1].id)
+  const savedSession = await store.saveSession(linkedSession)
+  const resumedSession = await store.resumeSession(savedSession.id)
+  const supersetGroupId = savedSession.exercises[0].supersetGroupId
+
+  assert.match(supersetGroupId, /^local-superset-/)
+  assert.equal(savedSession.exercises[1].supersetGroupId, supersetGroupId)
+  assert.equal(savedSession.exercises[0].supersetOrder, 1)
+  assert.equal(savedSession.exercises[1].supersetOrder, 2)
+  const persistedSupersetCalls = calls.filter((call) => call.table === 'workout_session_exercises'
+    && (call.method === 'PATCH' || call.method === 'POST')
+    && call.body?.superset_group_id === supersetGroupId)
+  assert.equal(persistedSupersetCalls.some((call) => call.body?.superset_order === 1), true)
+  assert.equal(persistedSupersetCalls.some((call) => call.body?.superset_order === 2), true)
+  assert.equal(resumedSession.exercises[0]?.supersetGroupId, supersetGroupId)
+  assert.equal(resumedSession.exercises[1]?.supersetOrder, 2)
+})
+
 test('createTrainSessionStore keeps workout settings stable across legacy remote save and resume using local session settings storage', async () => {
   const programWorkout = {
     id: 'pw-settings-1',
@@ -1674,4 +1763,56 @@ test('createTrainSessionStore keeps workout settings stable across legacy remote
   assert.equal(resumed.settings.keepAwake, true)
   assert.equal(resumed.settings.autoProgressEnabled, false)
   assert.equal(resumed.settings.adjustEffortAfterSet, false)
+})
+
+
+test('completeWorkoutSet uses workout default rest and advanceSessionAfterRestTimerExpiry targets the next set only when auto-progress is enabled', () => {
+  const session = {
+    status: 'in_progress',
+    settings: { defaultRestSeconds: 90, autoProgressEnabled: true },
+    exercises: [
+      {
+        id: 'exercise-1',
+        sets: [
+          { id: 'set-1', isCompleted: false },
+          { id: 'set-2', isCompleted: false },
+        ],
+      },
+      {
+        id: 'exercise-2',
+        sets: [
+          { id: 'set-3', isCompleted: false },
+        ],
+      },
+    ],
+  }
+
+  const completed = completeWorkoutSet({ session, exerciseId: 'exercise-1', setId: 'set-1' })
+  assert.equal(completed.activeRestTimer.remainingSeconds, 90)
+
+  const advanced = advanceSessionAfterRestTimerExpiry(completed)
+  assert.equal(advanced.activeRestTimer, null)
+  assert.deepEqual(advanced.activeSetTarget, { exerciseId: 'exercise-1', setId: 'set-2', isCompleted: false })
+})
+
+test('advanceSessionAfterRestTimerExpiry clears the timer without target when auto-progress is disabled', () => {
+  const session = {
+    status: 'in_progress',
+    settings: { autoProgressEnabled: false },
+    activeRestTimer: { exerciseId: 'exercise-1', setId: 'set-1', remainingSeconds: 1, isRunning: true },
+    activeSetTarget: { exerciseId: 'old', setId: 'old-set' },
+    exercises: [
+      {
+        id: 'exercise-1',
+        sets: [
+          { id: 'set-1', isCompleted: true },
+          { id: 'set-2', isCompleted: false },
+        ],
+      },
+    ],
+  }
+
+  const advanced = advanceSessionAfterRestTimerExpiry(session)
+  assert.equal(advanced.activeRestTimer, null)
+  assert.equal(advanced.activeSetTarget, null)
 })

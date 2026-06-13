@@ -6,8 +6,39 @@ function toNullableNumber(value) {
   return Number.isFinite(nextNumber) ? nextNumber : null;
 }
 
+function normalizeProgramWorkoutAsWorkoutSheetModel(programWorkout = null) {
+  if (!programWorkout?.id || !Array.isArray(programWorkout?.exercises)) return null;
+
+  return {
+    title: programWorkout.nameSnapshot || programWorkout.name || 'Workout',
+    workoutNotes: programWorkout.notes || '',
+    programWorkoutId: programWorkout.programWorkoutId || programWorkout.id,
+    exercises: programWorkout.exercises.map((exercise) => ({
+      id: exercise.id,
+      exerciseId: exercise.exerciseId || exercise.id || null,
+      programWorkoutExerciseId: exercise.programWorkoutExerciseId || exercise.id || null,
+      programWorkoutId: programWorkout.programWorkoutId || programWorkout.id,
+      sortOrder: exercise.sortOrder,
+      name: exercise.nameSnapshot || exercise.name || 'Exercise',
+      nameSnapshot: exercise.nameSnapshot || exercise.name || 'Exercise',
+      defaultRestSeconds: exercise.defaultRestSeconds ?? null,
+      sets: (exercise.sets || []).map((set, setIndex) => ({
+        id: set.id || `${exercise.id}-set-${setIndex + 1}`,
+        programWorkoutSetId: set.programWorkoutSetId || set.id || null,
+        sortOrder: set.sortOrder ?? setIndex + 1,
+        setType: set.setType || 'straight',
+        reps: set.actualReps ?? set.prescribedReps ?? set.targetReps ?? null,
+        load: set.actualLoad ?? set.prescribedLoad ?? set.targetLoad ?? null,
+        targetLoadUnit: set.targetLoadUnit ?? set.prescribedLoadUnit ?? 'lb',
+        effort: set.actualRpe ?? set.prescribedRpe ?? set.targetRpe ?? null,
+        prescribedRestSeconds: set.prescribedRestSeconds ?? set.targetRestSeconds ?? exercise.defaultRestSeconds ?? null,
+      })),
+    })),
+  };
+}
+
 function createOptimisticSessionFromWorkoutSheetModel({ workoutSheetModel = null, targetProgramWorkoutId = null, startedAt = new Date().toISOString() } = {}) {
-  if (!targetProgramWorkoutId || !Array.isArray(workoutSheetModel?.exercises)) return null;
+  if (!targetProgramWorkoutId || !Array.isArray(workoutSheetModel?.exercises) || workoutSheetModel.exercises.length === 0) return null;
 
   const exercises = workoutSheetModel.exercises.map((exercise, exerciseIndex) => ({
     id: exercise.id || `${targetProgramWorkoutId}-exercise-${exerciseIndex + 1}`,
@@ -87,13 +118,39 @@ export function hasRichSessionStructure(value) {
   return Array.isArray(value?.exercises) && value.exercises.length > 0;
 }
 
-export function shouldPreserveIncomingSession({ currentSession = null, nextSession = null, isActiveWorkoutViewOpen = false } = {}) {
+export function isEmptyPlannedSessionShell(value) {
   return (
-    isActiveWorkoutViewOpen
-    && currentSession?.status === 'in_progress'
-    && hasRichSessionStructure(currentSession)
-    && isSameSessionLineage(currentSession, nextSession)
-    && !hasRichSessionStructure(nextSession)
+    value?.status === 'planned'
+    && !value?.id
+    && !value?.programWorkoutId
+    && !hasRichSessionStructure(value)
+  );
+}
+
+export function hasSupersetMetadata(value) {
+  return Array.isArray(value?.exercises) && value.exercises.some((exercise) => Boolean(exercise?.supersetGroupId));
+}
+
+export function shouldPreserveIncomingSession({ currentSession = null, nextSession = null, isActiveWorkoutViewOpen = false, isStartingWorkout = false } = {}) {
+  const isProtectedActiveWorkoutState = isActiveWorkoutViewOpen || isStartingWorkout;
+  if (!isProtectedActiveWorkoutState || currentSession?.status !== 'in_progress') {
+    return false;
+  }
+
+  if (isEmptyPlannedSessionShell(nextSession) && hasRichSessionStructure(currentSession)) {
+    return true;
+  }
+
+  if (isSameSessionLineage(currentSession, nextSession) && hasSupersetMetadata(currentSession) && !hasSupersetMetadata(nextSession)) {
+    return true;
+  }
+
+  return (
+    isSameSessionLineage(currentSession, nextSession)
+    && (
+      !hasRichSessionStructure(nextSession)
+      || nextSession?.status === 'planned'
+    )
   );
 }
 
@@ -120,11 +177,21 @@ export function createWorkoutSheetProgramWorkoutPreview({ workoutPreview = null,
   };
 }
 
-export function resolveIncomingSession({ currentSession = null, nextSession = null, isActiveWorkoutViewOpen = false } = {}) {
+export function shouldIgnoreIncomingSession({ nextSession = null, ignoredSessionIds = null } = {}) {
+  if (!nextSession?.id || !ignoredSessionIds || typeof ignoredSessionIds.has !== 'function') return false;
+  return ignoredSessionIds.has(nextSession.id);
+}
+
+export function resolveIncomingSession({ currentSession = null, nextSession = null, isActiveWorkoutViewOpen = false, isStartingWorkout = false, ignoredSessionIds = null } = {}) {
+  if (shouldIgnoreIncomingSession({ nextSession, ignoredSessionIds })) {
+    return currentSession;
+  }
+
   const shouldPreserveCurrentSession = shouldPreserveIncomingSession({
     currentSession,
     nextSession,
     isActiveWorkoutViewOpen,
+    isStartingWorkout,
   });
 
   return shouldPreserveCurrentSession ? currentSession : nextSession;
@@ -146,31 +213,66 @@ export function buildStartWorkoutPlan({
   storedSessionId = null,
   selectedWorkoutSessionPreview = null,
   workoutSheetModel = null,
+  programWorkout = null,
   selectedProgramWorkoutId = null,
   startedAt = new Date().toISOString(),
 } = {}) {
-  const targetProgramWorkoutId = selectedProgramWorkoutId || workoutSheetModel?.programWorkoutId || selectedWorkoutSessionPreview?.programWorkoutId || null;
+  const programWorkoutId = programWorkout?.programWorkoutId || programWorkout?.id || null;
+  const targetProgramWorkoutId = selectedProgramWorkoutId || workoutSheetModel?.programWorkoutId || selectedWorkoutSessionPreview?.programWorkoutId || programWorkoutId || null;
   const currentSessionProgramWorkoutId = session?.programWorkoutId || session?.id || null;
   const shouldResumeStoredSession = Boolean(
     storedSessionId
     && session?.status === 'in_progress'
     && currentSessionProgramWorkoutId === targetProgramWorkoutId
   );
+  const shouldCloneSelectedSessionPreview = Boolean(
+    selectedWorkoutSessionPreview?.programWorkoutId === targetProgramWorkoutId
+    && hasRichSessionStructure(selectedWorkoutSessionPreview)
+  );
+  const buildOptimisticWorkoutSession = ({ allowSelectedPreview = true } = {}) => {
+    if (allowSelectedPreview && shouldCloneSelectedSessionPreview) {
+      return {
+        ...selectedWorkoutSessionPreview,
+        status: 'in_progress',
+        startedAt,
+        completedAt: null,
+        discardedAt: null,
+        elapsedSeconds: 0,
+        completedExercisesCount: 0,
+        completedSetsCount: 0,
+        activeRestTimer: null,
+        exercises: (selectedWorkoutSessionPreview.exercises || []).map((exercise) => ({
+          ...exercise,
+          status: 'not_started',
+          sets: (exercise.sets || []).map((set) => ({
+            ...set,
+            actualReps: null,
+            actualLoad: null,
+            actualRpe: null,
+            completedAt: null,
+            isCompleted: false,
+          })),
+        })),
+      };
+    }
+
+    const optimisticFromSheet = createOptimisticSessionFromWorkoutSheetModel({
+      workoutSheetModel,
+      targetProgramWorkoutId,
+      startedAt,
+    });
+    if (optimisticFromSheet) return optimisticFromSheet;
+
+    const programWorkoutSheetModel = normalizeProgramWorkoutAsWorkoutSheetModel(programWorkout);
+    return createOptimisticSessionFromWorkoutSheetModel({
+      workoutSheetModel: programWorkoutSheetModel,
+      targetProgramWorkoutId,
+      startedAt,
+    });
+  };
   const optimisticSession = shouldResumeStoredSession
-    ? null
-    : (selectedWorkoutSessionPreview?.programWorkoutId === targetProgramWorkoutId
-      ? {
-          ...selectedWorkoutSessionPreview,
-          startedAt,
-          elapsedSeconds: 0,
-          completedAt: null,
-          activeRestTimer: null,
-        }
-      : createOptimisticSessionFromWorkoutSheetModel({
-          workoutSheetModel,
-          targetProgramWorkoutId,
-          startedAt,
-        }));
+    ? (hasRichSessionStructure(session) ? null : buildOptimisticWorkoutSession({ allowSelectedPreview: false }))
+    : buildOptimisticWorkoutSession();
 
   return {
     targetProgramWorkoutId,

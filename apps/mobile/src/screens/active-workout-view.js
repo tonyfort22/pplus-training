@@ -2,9 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { Image, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native'
 import { Swipeable } from 'react-native-gesture-handler'
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Check, Clock3, Dumbbell, Link2, Mic, Settings, Trash2, X, ArrowUp, ArrowDown } from 'lucide-react-native'
+import { Check, ChevronRight, Clock3, Dumbbell, Link2, Mic, Settings, Trash2, X, ArrowUp, ArrowDown } from 'lucide-react-native'
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake'
 import { getAppTheme } from '../theme/app-theme.js'
 import { AppButton, AppDangerPillButton, AppOutlinedActionButton, AppSearchInput, AppSegmentedControl, AppSelectionIndicator, AppSurfaceCard } from '../ui/primitives.js'
+import { ExerciseMultiSelectView } from './exercise-multi-select-view.js'
+
+const ACTIVE_WORKOUT_KEEP_AWAKE_TAG = 'PPLUSActiveWorkout'
 
 function ActiveWorkoutCellInput({ value, onChangeText, widthClass, theme }) {
   const [isFocused, setIsFocused] = useState(false)
@@ -98,7 +102,7 @@ function SwipeableActiveWorkoutExerciseRow({ children, onDelete, theme }) {
       renderRightActions={renderRightActions}
       rightThreshold={48}
     >
-      <View className="w-full overflow-hidden rounded-[24px]">
+      <View className="w-full">
         {children}
       </View>
     </Swipeable>
@@ -107,20 +111,28 @@ function SwipeableActiveWorkoutExerciseRow({ children, onDelete, theme }) {
 
 function ActiveWorkoutSetRow({ set, theme, onCompleteSet, exerciseId, onSetValueChange }) {
   const isCompleted = Boolean(set.isCompleted)
+  const isActiveTarget = Boolean(set.isActiveTarget)
+  const cells = Array.isArray(set.cells) ? set.cells : []
 
   return (
     <View
       className="min-h-[54px] flex-row items-center rounded-[16px] px-2"
       style={{
-        backgroundColor: isCompleted ? theme.accentSurface : theme.background,
+        backgroundColor: isCompleted ? theme.accentSurface : (isActiveTarget ? theme.surface : theme.background),
         borderWidth: 1,
-        borderColor: isCompleted ? theme.accentBorder : 'transparent',
+        borderColor: isCompleted || isActiveTarget ? theme.accentBorder : 'transparent',
       }}
     >
       <Text className="w-14 text-center text-[15px] font-medium" style={{ color: theme.text }}>{set.setNumber}</Text>
-      <ActiveWorkoutCellInput value={set.effort} widthClass="flex-1" theme={theme} onChangeText={(nextValue) => onSetValueChange?.(exerciseId, set.id, 'effort', nextValue)} />
-      <ActiveWorkoutCellInput value={set.load} widthClass="flex-1" theme={theme} onChangeText={(nextValue) => onSetValueChange?.(exerciseId, set.id, 'load', nextValue)} />
-      <ActiveWorkoutCellInput value={set.reps} widthClass="flex-1" theme={theme} onChangeText={(nextValue) => onSetValueChange?.(exerciseId, set.id, 'reps', nextValue)} />
+      {cells.map((cell) => (
+        <ActiveWorkoutCellInput
+          key={cell.key}
+          value={cell.value}
+          widthClass="flex-1"
+          theme={theme}
+          onChangeText={(nextValue) => onSetValueChange?.(exerciseId, set.id, cell.key, nextValue)}
+        />
+      ))}
       <Pressable
         className="ml-1 h-9 w-16 items-center justify-center rounded-[12px]"
         onPress={() => onCompleteSet?.(exerciseId, set.id)}
@@ -136,12 +148,18 @@ function ActiveWorkoutSetRow({ set, theme, onCompleteSet, exerciseId, onSetValue
   )
 }
 
-function ActiveWorkoutExerciseControls({ exercise, addSetLabel, theme, onAddSet, onOpenExerciseRestTimer }) {
+function ActiveWorkoutExerciseControls({ exercise, addSetLabel, theme, onAddSet, onOpenSupersetPicker, onOpenExerciseRestTimer, supersetTargetOptions }) {
+  const canCreateSuperset = Array.isArray(supersetTargetOptions) && supersetTargetOptions.length > 0
+
   return (
     <View className="flex-row items-center justify-between gap-3">
       <GlassActionSurface className="h-11 w-11" theme={theme}>
-        <Pressable className="h-11 w-11 items-center justify-center" onPress={() => {}}>
-          <Link2 color={theme.accentText} size={18} strokeWidth={2.2} />
+        <Pressable
+          className="h-11 w-11 items-center justify-center"
+          disabled={!canCreateSuperset}
+          onPress={() => onOpenSupersetPicker?.(exercise.id)}
+        >
+          <Link2 color={canCreateSuperset ? theme.accentText : theme.iconMuted} size={18} strokeWidth={2.2} />
         </Pressable>
       </GlassActionSurface>
 
@@ -164,13 +182,61 @@ function ActiveWorkoutExerciseControls({ exercise, addSetLabel, theme, onAddSet,
   )
 }
 
-function ActiveWorkoutExerciseBlock({ exercise, exerciseIndex, totalExercises, theme, addSetLabel, onAddSet, onDeleteSet, onDeleteExercise, onMoveExercise, onOpenExerciseDetail, onCompleteSet, onSetValueChange, onOpenExerciseRestTimer }) {
+function getSupersetGroupTargetOptions(exercises, exerciseId) {
+  const currentExercises = Array.isArray(exercises) ? exercises : []
+  const exerciseIndex = currentExercises.findIndex((exercise) => exercise.id === exerciseId)
+  if (exerciseIndex < 0 || currentExercises.length < 2) return []
+
+  const sourceExercise = currentExercises[exerciseIndex]
+  const optionsById = new Map()
+  function addOption(exercise, positionLabel) {
+    if (!exercise || exercise.id === exerciseId || optionsById.has(exercise.id)) return
+    optionsById.set(exercise.id, {
+      id: exercise.id,
+      title: exercise.title || exercise.name || 'Exercise',
+      thumbnailUrl: exercise.thumbnailUrl ?? null,
+      positionLabel,
+    })
+  }
+
+  currentExercises.forEach((exercise) => {
+    if (sourceExercise?.supersetGroupId && exercise.supersetGroupId === sourceExercise.supersetGroupId) {
+      addOption(exercise, 'Linked')
+    }
+  })
+  addOption(currentExercises[exerciseIndex - 1], 'Previous')
+  addOption(currentExercises[exerciseIndex + 1], 'Next')
+
+  return Array.from(optionsById.values())
+}
+
+function buildActiveWorkoutExerciseRenderGroups(exercises) {
+  const groups = []
+  exercises.forEach((exercise, exerciseIndex) => {
+    const currentGroupId = exercise.supersetGroupId
+    const previousGroup = groups[groups.length - 1]
+    if (currentGroupId && previousGroup?.supersetGroupId === currentGroupId) {
+      previousGroup.exercises.push(exercise)
+      return
+    }
+
+    groups.push({
+      id: currentGroupId || exercise.id,
+      supersetGroupId: currentGroupId || null,
+      startIndex: exerciseIndex,
+      exercises: [exercise],
+    })
+  })
+  return groups
+}
+
+function ActiveWorkoutExerciseBlock({ exercise, exerciseIndex, totalExercises, theme, addSetLabel, onAddSet, onDeleteSet, onDeleteExercise, onMoveExercise, onOpenExerciseDetail, onCompleteSet, onSetValueChange, onOpenSupersetPicker, onOpenExerciseRestTimer, isSupersetLinked, supersetTargetOptions }) {
   const canMoveExerciseUp = exerciseIndex > 0
   const canMoveExerciseDown = exerciseIndex < totalExercises - 1
 
   return (
     <SwipeableActiveWorkoutExerciseRow onDelete={() => onDeleteExercise?.(exercise.id)} theme={theme}>
-      <AppSurfaceCard theme={theme} containerClassName="rounded-[24px] overflow-hidden" contentClassName="gap-5 px-5 py-5">
+      <AppSurfaceCard theme={theme} containerClassName={`${isSupersetLinked ? 'ml-3 ' : ''}rounded-[24px] overflow-hidden`.trim()} contentClassName="gap-5 px-5 py-5">
         <View className="flex-row items-start gap-3">
           <AppSurfaceCard
             theme={theme}
@@ -212,9 +278,9 @@ function ActiveWorkoutExerciseBlock({ exercise, exerciseIndex, totalExercises, t
 
         <View className="flex-row items-center pb-3" style={{ borderBottomWidth: 1, borderBottomColor: theme.border }}>
           <Text className="w-14 text-center text-[11px] font-semibold uppercase tracking-[1px]" style={{ color: theme.textSoft }}>#</Text>
-          <Text className="flex-1 text-center text-[11px] font-semibold uppercase tracking-[1px]" style={{ color: theme.textSoft }}>EFFORT</Text>
-          <Text className="flex-1 text-center text-[11px] font-semibold uppercase tracking-[1px]" style={{ color: theme.textSoft }}>LB</Text>
-          <Text className="flex-1 text-center text-[11px] font-semibold uppercase tracking-[1px]" style={{ color: theme.textSoft }}>REPS</Text>
+          {(exercise.columns || []).map((column) => (
+            <Text key={column.key} className="flex-1 text-center text-[11px] font-semibold uppercase tracking-[1px]" style={{ color: theme.textSoft }}>{column.label}</Text>
+          ))}
           <Text className="w-16 text-center text-[11px] font-semibold uppercase tracking-[1px]" style={{ color: theme.textSoft }}>DONE</Text>
         </View>
 
@@ -226,7 +292,7 @@ function ActiveWorkoutExerciseBlock({ exercise, exerciseIndex, totalExercises, t
           ))}
         </View>
 
-        <ActiveWorkoutExerciseControls exercise={exercise} addSetLabel={addSetLabel} theme={theme} onAddSet={onAddSet} onOpenExerciseRestTimer={onOpenExerciseRestTimer} />
+        <ActiveWorkoutExerciseControls exercise={exercise} addSetLabel={addSetLabel} theme={theme} onAddSet={onAddSet} onOpenSupersetPicker={onOpenSupersetPicker} onOpenExerciseRestTimer={onOpenExerciseRestTimer} supersetTargetOptions={supersetTargetOptions} />
       </AppSurfaceCard>
     </SwipeableActiveWorkoutExerciseRow>
   )
@@ -331,18 +397,18 @@ function ActiveWorkoutRestTimerSheet({
 
 function WorkoutSettingsToggle({ isEnabled, onPress, theme }) {
   return (
-    <View className="flex-row items-center gap-2 rounded-[14px] p-1" style={{ backgroundColor: theme.background }}>
+    <View className="w-[132px] flex-row items-center rounded-[16px] p-1" style={{ backgroundColor: theme.background, borderWidth: 1, borderColor: theme.border }}>
       <Pressable
-        className="flex-1 items-center rounded-[12px] px-3 py-2.5"
+        className="flex-1 items-center rounded-[12px] px-3 py-2"
         onPress={() => onPress(false)}
-        style={{ backgroundColor: !isEnabled ? theme.accentSurface : 'transparent' }}
+        style={{ backgroundColor: !isEnabled ? theme.accentSurface : 'transparent', borderWidth: !isEnabled ? 1 : 0, borderColor: !isEnabled ? theme.accentBorder : 'transparent' }}
       >
         <Text className="text-[13px] font-semibold" style={{ color: !isEnabled ? theme.accentText : theme.textSoft }}>Off</Text>
       </Pressable>
       <Pressable
-        className="flex-1 items-center rounded-[12px] px-3 py-2.5"
+        className="flex-1 items-center rounded-[12px] px-3 py-2"
         onPress={() => onPress(true)}
-        style={{ backgroundColor: isEnabled ? theme.accentSurface : 'transparent' }}
+        style={{ backgroundColor: isEnabled ? theme.accentSurface : 'transparent', borderWidth: isEnabled ? 1 : 0, borderColor: isEnabled ? theme.accentBorder : 'transparent' }}
       >
         <Text className="text-[13px] font-semibold" style={{ color: isEnabled ? theme.accentText : theme.textSoft }}>On</Text>
       </Pressable>
@@ -391,35 +457,107 @@ function ActiveWorkoutEffortAdjustmentSheet({
   )
 }
 
-function ActiveWorkoutSettingsSheet({ isVisible, title, settings, theme, onCloseWorkoutSettings, onUpdateWorkoutSettings }) {
+function ActiveWorkoutSettingsSheet({ isVisible, title, settings, theme, onCloseWorkoutSettings, onOpenDefaultRestTime, onUpdateWorkoutSettings }) {
   if (!isVisible || !settings) return null
 
   return (
     <View className="absolute inset-0 justify-end" pointerEvents="box-none">
-      <Pressable className="absolute inset-0" onPress={onCloseWorkoutSettings} style={{ backgroundColor: 'rgba(0, 0, 0, 0.42)' }} />
-      <View className="px-5 pb-6" pointerEvents="box-none">
-        <AppSurfaceCard theme={theme} containerClassName="rounded-[28px] overflow-hidden" contentClassName="gap-5 px-5 py-5">
-          <View className="items-center gap-2">
+      <Pressable className="absolute inset-0" onPress={onCloseWorkoutSettings} style={{ backgroundColor: 'rgba(0, 0, 0, 0.52)' }} />
+      <View className="w-full" pointerEvents="box-none">
+        <AppSurfaceCard theme={theme} containerClassName="w-full rounded-b-none rounded-t-[28px] overflow-hidden" contentClassName="px-5 pb-8 pt-5">
+          <View className="items-center gap-3">
             <View className="h-1.5 w-14 rounded-full" style={{ backgroundColor: theme.border }} />
-            <Text className="text-[18px] font-semibold" style={{ color: theme.text }}>{title || 'Workout Settings'}</Text>
+            <Text className="text-center text-[20px] font-bold" style={{ color: theme.text }}>{title || 'Workout Settings'}</Text>
           </View>
 
-          <View className="gap-3">
-            <Text className="text-[15px] font-semibold" style={{ color: theme.text }}>Default Rest Time</Text>
-            <View className="flex-row items-center justify-between rounded-[18px] px-4 py-4" style={{ backgroundColor: theme.background }}>
-              <Pressable onPress={() => onUpdateWorkoutSettings?.({ defaultRestSeconds: Math.max(0, (settings.defaultRestSeconds ?? 0) - 15) })}>
+          <View className="mt-5 h-px w-full" style={{ backgroundColor: theme.border }} />
+
+          <Pressable className="flex-row items-center justify-between py-4" onPress={onOpenDefaultRestTime}>
+            <Text className="text-[16px] font-semibold" style={{ color: theme.text }}>Default Rest Time</Text>
+            <View className="flex-row items-center gap-2">
+              <Text className="text-[15px] font-semibold" style={{ color: theme.textSoft }}>{settings.defaultRestClockLabel}</Text>
+              <ChevronRight color={theme.iconMuted} size={18} strokeWidth={2.4} />
+            </View>
+          </Pressable>
+
+          <View className="h-px w-full" style={{ backgroundColor: theme.border }} />
+
+          <View className="py-4">
+            <View className="flex-row items-center justify-between gap-4">
+              <Text className="flex-1 text-[16px] font-semibold" style={{ color: theme.text }}>Auto-Progress</Text>
+              <WorkoutSettingsToggle isEnabled={settings.autoProgressEnabled} onPress={(nextValue) => onUpdateWorkoutSettings?.({ autoProgressEnabled: nextValue })} theme={theme} />
+            </View>
+            <Text className="mt-2 text-[13px] leading-[18px]" style={{ color: theme.textSoft }}>Move to the next set automatically after the rest timer ends.</Text>
+          </View>
+
+          <View className="h-px w-full" style={{ backgroundColor: theme.border }} />
+
+          <View className="py-4">
+            <View className="flex-row items-center justify-between gap-4">
+              <Text className="flex-1 text-[16px] font-semibold" style={{ color: theme.text }}>Keep Awake</Text>
+              <WorkoutSettingsToggle isEnabled={settings.keepAwake} onPress={(nextValue) => onUpdateWorkoutSettings?.({ keepAwake: nextValue })} theme={theme} />
+            </View>
+            <Text className="mt-2 text-[13px] leading-[18px]" style={{ color: theme.textSoft }}>Keep your screen on while this workout is active.</Text>
+          </View>
+
+          <View className="h-px w-full" style={{ backgroundColor: theme.border }} />
+
+          <View className="pt-4">
+            <View className="flex-row items-center justify-between gap-4">
+              <Text className="flex-1 text-[16px] font-semibold" style={{ color: theme.text }}>Adjust Effort After Set</Text>
+              <WorkoutSettingsToggle isEnabled={settings.adjustEffortAfterSet} onPress={(nextValue) => onUpdateWorkoutSettings?.({ adjustEffortAfterSet: nextValue })} theme={theme} />
+            </View>
+            <Text className="mt-2 text-[13px] leading-[18px]" style={{ color: theme.textSoft }}>Ask for effort after each completed set.</Text>
+          </View>
+        </AppSurfaceCard>
+      </View>
+    </View>
+  )
+}
+
+function ActiveWorkoutDefaultRestTimeSheet({ isVisible, settings, theme, onCloseDefaultRestTime, onUpdateWorkoutSettings }) {
+  if (!isVisible || !settings) return null
+
+  const currentSeconds = Math.max(0, Number(settings.defaultRestSeconds ?? 0) || 0)
+
+  function updateDefaultRestTime(delta) {
+    onUpdateWorkoutSettings?.({ defaultRestSeconds: Math.max(0, currentSeconds + delta) })
+  }
+
+  return (
+    <View className="absolute inset-0 justify-end" pointerEvents="box-none">
+      <Pressable className="absolute inset-0" onPress={onCloseDefaultRestTime} style={{ backgroundColor: 'rgba(0, 0, 0, 0.56)' }} />
+      <View pointerEvents="box-none">
+        <AppSurfaceCard theme={theme} containerClassName="w-full rounded-b-none rounded-t-[28px] overflow-hidden" contentClassName="gap-5 px-5 pb-8 pt-5">
+          <View className="items-center gap-3">
+            <View className="h-1.5 w-14 rounded-full" style={{ backgroundColor: theme.border }} />
+            <View className="w-full flex-row items-center justify-center">
+              <Pressable className="absolute left-0 h-10 w-10 items-center justify-center rounded-[14px]" onPress={onCloseDefaultRestTime} style={{ backgroundColor: theme.background }}>
+                <ChevronRight color={theme.iconMuted} size={18} strokeWidth={2.2} style={{ transform: [{ rotate: '180deg' }] }} />
+              </Pressable>
+              <Text className="text-center text-[20px] font-bold" style={{ color: theme.text }}>Default Rest Time</Text>
+            </View>
+          </View>
+
+          <View className="items-center justify-center gap-4 py-3">
+            <Text className="text-[44px] font-bold tracking-[1px]" style={{ color: theme.text }}>{formatUtilityClock(currentSeconds)}</Text>
+            <View className="w-full flex-row items-center justify-between px-8">
+              <Pressable onPress={() => updateDefaultRestTime(-15)}>
                 <Text className="text-[15px] font-semibold" style={{ color: theme.accentText }}>-15s</Text>
               </Pressable>
-              <Text className="text-[20px] font-bold" style={{ color: theme.text }}>{settings.defaultRestClockLabel}</Text>
-              <Pressable onPress={() => onUpdateWorkoutSettings?.({ defaultRestSeconds: Math.max(0, (settings.defaultRestSeconds ?? 0) + 15) })}>
+              <Pressable onPress={() => updateDefaultRestTime(15)}>
                 <Text className="text-[15px] font-semibold" style={{ color: theme.accentText }}>+15s</Text>
               </Pressable>
             </View>
           </View>
 
-          <View className="gap-2">
-            <Text className="text-[15px] font-semibold" style={{ color: theme.text }}>Adjust Effort After Set</Text>
-            <WorkoutSettingsToggle isEnabled={settings.adjustEffortAfterSet} onPress={(nextValue) => onUpdateWorkoutSettings?.({ adjustEffortAfterSet: nextValue })} theme={theme} />
+          <View className="gap-3">
+            {[60, 90, 120, 180].map((seconds) => (
+              <Pressable key={seconds} className="flex-row items-center justify-between rounded-[18px] px-4 py-4" onPress={() => onUpdateWorkoutSettings?.({ defaultRestSeconds: seconds })} style={{ borderWidth: 1, borderColor: currentSeconds === seconds ? theme.accentBorder : theme.border, backgroundColor: currentSeconds === seconds ? theme.accentSurface : theme.background }}>
+                <Text className="text-[16px] font-semibold" style={{ color: theme.text }}>{formatUtilityClock(seconds)}</Text>
+                {currentSeconds === seconds ? <Check color={theme.accentText} size={18} strokeWidth={2.4} /> : null}
+              </Pressable>
+            ))}
           </View>
         </AppSurfaceCard>
       </View>
@@ -660,12 +798,13 @@ function ActiveWorkoutFloatingTools({ theme, timerChipLabel, onOpenRestTimer }) 
   )
 }
 
-function ActiveWorkoutViewContent({ model, theme, onClose, onFinish, onDiscard, canFinishWorkout = true, onAddSet, onDeleteSet, onDeleteExercise, onMoveExercise, onOpenExerciseDetail, onWorkoutNotesChange, onExerciseRestTimeChange, onRemoveExerciseRestTime, onAddExercises, availableExercises, isLoadingAvailableExercises, availableExercisesError, onCompleteSet, onAdjustRestTimer, onDismissRestTimer, onSetValueChange, postSetEffortAdjustment, onPostSetEffortChange, onClosePostSetEffortAdjustment, onUpdateWorkoutSettings }) {
+function ActiveWorkoutViewContent({ model, theme, onClose, onFinish, onDiscard, canFinishWorkout = true, onAddSet, onDeleteSet, onDeleteExercise, onMoveExercise, onOpenExerciseDetail, onWorkoutNotesChange, onExerciseRestTimeChange, onRemoveExerciseRestTime, onCreateSuperset, onRemoveSuperset, onAddExercises, availableExercises, isLoadingAvailableExercises, availableExercisesError, onCompleteSet, onAdjustRestTimer, onDismissRestTimer, onSetValueChange, postSetEffortAdjustment, onPostSetEffortChange, onClosePostSetEffortAdjustment, onUpdateWorkoutSettings }) {
   const resolvedTheme = theme || getAppTheme('dark')
   const insets = useSafeAreaInsets()
   const sessionDifficultyDefault = 7
   const [isRestTimerSheetOpen, setIsRestTimerSheetOpen] = useState(false)
   const [isWorkoutSettingsSheetOpen, setIsWorkoutSettingsSheetOpen] = useState(false)
+  const [isDefaultRestTimeSheetOpen, setIsDefaultRestTimeSheetOpen] = useState(false)
   const [isExerciseRestTimerSheetOpen, setIsExerciseRestTimerSheetOpen] = useState(false)
   const [selectedExerciseRestTimerId, setSelectedExerciseRestTimerId] = useState(null)
   const [isFinishWorkoutSheetOpen, setIsFinishWorkoutSheetOpen] = useState(false)
@@ -673,6 +812,9 @@ function ActiveWorkoutViewContent({ model, theme, onClose, onFinish, onDiscard, 
   const [isEmptyWorkoutSheetOpen, setIsEmptyWorkoutSheetOpen] = useState(false)
   const [isDiscardWorkoutSheetOpen, setIsDiscardWorkoutSheetOpen] = useState(false)
   const [isAddExerciseSheetOpen, setIsAddExerciseSheetOpen] = useState(false)
+  const [selectedSupersetSourceExerciseId, setSelectedSupersetSourceExerciseId] = useState(null)
+  const [selectedSupersetTargetExerciseIds, setSelectedSupersetTargetExerciseIds] = useState([])
+  const [supersetSearchQuery, setSupersetSearchQuery] = useState('')
   const [selectedAddExerciseIds, setSelectedAddExerciseIds] = useState([])
   const [addExerciseSearchQuery, setAddExerciseSearchQuery] = useState('')
   const [addExerciseTab, setAddExerciseTab] = useState('exercises')
@@ -682,6 +824,16 @@ function ActiveWorkoutViewContent({ model, theme, onClose, onFinish, onDiscard, 
   const [restTimerMode, setRestTimerMode] = useState('timer')
   const [isStopwatchRunning, setIsStopwatchRunning] = useState(false)
   const [stopwatchElapsedSeconds, setStopwatchElapsedSeconds] = useState(0)
+
+  useEffect(() => {
+    if (!model?.workoutSettings?.keepAwake) {
+      deactivateKeepAwake(ACTIVE_WORKOUT_KEEP_AWAKE_TAG)
+      return undefined
+    }
+
+    activateKeepAwakeAsync(ACTIVE_WORKOUT_KEEP_AWAKE_TAG).catch(() => {})
+    return () => deactivateKeepAwake(ACTIVE_WORKOUT_KEEP_AWAKE_TAG)
+  }, [model?.workoutSettings?.keepAwake])
 
   useEffect(() => {
     if (!model?.restTimer && !isStopwatchRunning) {
@@ -728,6 +880,26 @@ function ActiveWorkoutViewContent({ model, theme, onClose, onFinish, onDiscard, 
     ? stopwatchClockLabel
     : (model.restTimer?.clockLabel || null)
   const selectedExerciseRestTimer = model.exercises.find((exercise) => exercise.id === selectedExerciseRestTimerId) || null
+  const selectedSupersetSourceExercise = model.exercises.find((exercise) => exercise.id === selectedSupersetSourceExerciseId) || null
+  const selectedSupersetTargetOptions = selectedSupersetSourceExercise ? getSupersetGroupTargetOptions(model.exercises, selectedSupersetSourceExercise.id) : []
+  const linkedTargetIds = selectedSupersetSourceExercise?.supersetGroupId
+    ? model.exercises
+      .filter((exercise) => exercise.id !== selectedSupersetSourceExercise.id && exercise.supersetGroupId === selectedSupersetSourceExercise.supersetGroupId)
+      .map((exercise) => exercise.id)
+    : []
+  const hasLinkedSupersetTarget = linkedTargetIds.length > 0
+  const supersetTargetSheet = selectedSupersetSourceExercise ? {
+    title: 'Superset With',
+    searchPlaceholder: 'Search exercises',
+    addButtonLabel: 'Link',
+    emptySelectionLabel: 'Remove link',
+    allowEmptySelection: hasLinkedSupersetTarget,
+    exercises: selectedSupersetTargetOptions.map((targetOption) => ({
+      id: targetOption.id,
+      name: `${targetOption.positionLabel} · ${targetOption.title}`,
+      thumbnailUrl: targetOption.thumbnailUrl ?? null,
+    })),
+  } : null
 
   function onOpenRestTimer() {
     setIsRestTimerSheetOpen(true)
@@ -743,6 +915,14 @@ function ActiveWorkoutViewContent({ model, theme, onClose, onFinish, onDiscard, 
 
   function onCloseWorkoutSettings() {
     setIsWorkoutSettingsSheetOpen(false)
+  }
+
+  function onOpenDefaultRestTime() {
+    setIsDefaultRestTimeSheetOpen(true)
+  }
+
+  function onCloseDefaultRestTime() {
+    setIsDefaultRestTimeSheetOpen(false)
   }
 
   function onOpenExerciseRestTimer(exerciseId) {
@@ -806,6 +986,42 @@ function ActiveWorkoutViewContent({ model, theme, onClose, onFinish, onDiscard, 
 
   function onOpenAddExercise() {
     setIsAddExerciseSheetOpen(true)
+  }
+
+  function onOpenSupersetPicker(exerciseId) {
+    const sourceExercise = model.exercises.find((exercise) => exercise.id === exerciseId) || null
+    const currentLinkedTargetIds = sourceExercise?.supersetGroupId
+      ? model.exercises
+        .filter((exercise) => exercise.id !== exerciseId && exercise.supersetGroupId === sourceExercise.supersetGroupId)
+        .map((exercise) => exercise.id)
+      : []
+    setSelectedSupersetSourceExerciseId(exerciseId)
+    setSelectedSupersetTargetExerciseIds(currentLinkedTargetIds.slice(0, 1))
+  }
+
+  function onCloseSupersetPicker() {
+    setSelectedSupersetSourceExerciseId(null)
+    setSelectedSupersetTargetExerciseIds([])
+    setSupersetSearchQuery('')
+  }
+
+  function onToggleSupersetTarget(targetExerciseId) {
+    setSelectedSupersetTargetExerciseIds((currentValue) => currentValue.includes(targetExerciseId) ? [] : [targetExerciseId])
+  }
+
+  function onConfirmSupersetTarget() {
+    const targetExerciseId = selectedSupersetTargetExerciseIds[0]
+    if (!selectedSupersetSourceExercise?.id) return
+
+    if (!targetExerciseId && hasLinkedSupersetTarget) {
+      onRemoveSuperset?.(selectedSupersetSourceExercise.id)
+      onCloseSupersetPicker()
+      return
+    }
+
+    if (!targetExerciseId) return
+    onCreateSuperset?.(selectedSupersetSourceExercise.id, targetExerciseId)
+    onCloseSupersetPicker()
   }
 
   function onCloseAddExercise() {
@@ -929,9 +1145,21 @@ function ActiveWorkoutViewContent({ model, theme, onClose, onFinish, onDiscard, 
             </View>
 
             <View className="gap-5">
-              {model.exercises.map((exercise, exerciseIndex) => (
-                <ActiveWorkoutExerciseBlock key={exercise.id} exercise={exercise} exerciseIndex={exerciseIndex} totalExercises={model.exercises.length} theme={resolvedTheme} addSetLabel={model.addSetLabel} onAddSet={onAddSet} onDeleteSet={onDeleteSet} onDeleteExercise={onDeleteExercise} onMoveExercise={onMoveExercise} onOpenExerciseDetail={onOpenExerciseDetail} onCompleteSet={onCompleteSet} onSetValueChange={onSetValueChange} onOpenExerciseRestTimer={onOpenExerciseRestTimer} />
-              ))}
+              {buildActiveWorkoutExerciseRenderGroups(model.exercises).map((group) => {
+                const isSupersetGroup = Boolean(group.supersetGroupId && group.exercises.length > 1)
+                const renderedExercises = group.exercises.map((exercise, exerciseGroupIndex) => (
+                  <ActiveWorkoutExerciseBlock key={exercise.id} exercise={exercise} exerciseIndex={group.startIndex + exerciseGroupIndex} totalExercises={model.exercises.length} theme={resolvedTheme} addSetLabel={model.addSetLabel} onAddSet={onAddSet} onDeleteSet={onDeleteSet} onDeleteExercise={onDeleteExercise} onMoveExercise={onMoveExercise} onOpenExerciseDetail={onOpenExerciseDetail} onCompleteSet={onCompleteSet} onSetValueChange={onSetValueChange} onOpenSupersetPicker={onOpenSupersetPicker} onOpenExerciseRestTimer={onOpenExerciseRestTimer} isSupersetLinked={isSupersetGroup} supersetTargetOptions={getSupersetGroupTargetOptions(model.exercises, exercise.id)} />
+                ))
+
+                if (!isSupersetGroup) return <View key={group.id}>{renderedExercises}</View>
+
+                return (
+                  <View key={`superset-${group.supersetGroupId}`} className="relative gap-5">
+                    <View className="absolute left-0 top-0 bottom-0 w-[4px] rounded-full" style={{ backgroundColor: resolvedTheme.accentText }} />
+                    {renderedExercises}
+                  </View>
+                )
+              })}
             </View>
 
             <View className="gap-4 pt-2">
@@ -981,6 +1209,14 @@ function ActiveWorkoutViewContent({ model, theme, onClose, onFinish, onDiscard, 
         settings={model.workoutSettings}
         theme={resolvedTheme}
         onCloseWorkoutSettings={onCloseWorkoutSettings}
+        onOpenDefaultRestTime={onOpenDefaultRestTime}
+        onUpdateWorkoutSettings={onUpdateWorkoutSettings}
+      />
+      <ActiveWorkoutDefaultRestTimeSheet
+        isVisible={isDefaultRestTimeSheetOpen}
+        settings={model.workoutSettings}
+        theme={resolvedTheme}
+        onCloseDefaultRestTime={onCloseDefaultRestTime}
         onUpdateWorkoutSettings={onUpdateWorkoutSettings}
       />
       <ActiveWorkoutExerciseRestTimerSheet
@@ -1012,6 +1248,17 @@ function ActiveWorkoutViewContent({ model, theme, onClose, onFinish, onDiscard, 
         onCloseDiscardWorkout={onCloseDiscardWorkout}
         onConfirmDiscardWorkout={onConfirmDiscardWorkout}
       />
+      <ExerciseMultiSelectView
+        isVisible={Boolean(selectedSupersetSourceExercise)}
+        theme={resolvedTheme}
+        sheet={supersetTargetSheet}
+        selectedExerciseIds={selectedSupersetTargetExerciseIds}
+        onToggleExercise={onToggleSupersetTarget}
+        searchQuery={supersetSearchQuery}
+        onSearchChange={setSupersetSearchQuery}
+        onAddExercises={onConfirmSupersetTarget}
+        onClose={onCloseSupersetPicker}
+      />
       <ActiveWorkoutAddExerciseSheet
         isVisible={isAddExerciseSheetOpen}
         theme={resolvedTheme}
@@ -1031,11 +1278,11 @@ function ActiveWorkoutViewContent({ model, theme, onClose, onFinish, onDiscard, 
   )
 }
 
-export function ActiveWorkoutView({ isVisible, model, theme, onClose, onFinish, onDiscard, canFinishWorkout = true, onAddSet, onDeleteSet, onDeleteExercise, onMoveExercise, onOpenExerciseDetail, onWorkoutNotesChange, onExerciseRestTimeChange, onRemoveExerciseRestTime, onAddExercises, availableExercises, isLoadingAvailableExercises, availableExercisesError, onCompleteSet, onAdjustRestTimer, onDismissRestTimer, onSetValueChange, postSetEffortAdjustment, onPostSetEffortChange, onClosePostSetEffortAdjustment, onUpdateWorkoutSettings }) {
+export function ActiveWorkoutView({ isVisible, model, theme, onClose, onFinish, onDiscard, canFinishWorkout = true, onAddSet, onDeleteSet, onDeleteExercise, onMoveExercise, onOpenExerciseDetail, onWorkoutNotesChange, onExerciseRestTimeChange, onRemoveExerciseRestTime, onCreateSuperset, onRemoveSuperset, onAddExercises, availableExercises, isLoadingAvailableExercises, availableExercisesError, onCompleteSet, onAdjustRestTimer, onDismissRestTimer, onSetValueChange, postSetEffortAdjustment, onPostSetEffortChange, onClosePostSetEffortAdjustment, onUpdateWorkoutSettings }) {
   return (
     <Modal visible={isVisible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaProvider>
-        <ActiveWorkoutViewContent model={model} theme={theme} onClose={onClose} onFinish={onFinish} onDiscard={onDiscard} canFinishWorkout={canFinishWorkout} onAddSet={onAddSet} onDeleteSet={onDeleteSet} onDeleteExercise={onDeleteExercise} onMoveExercise={onMoveExercise} onOpenExerciseDetail={onOpenExerciseDetail} onWorkoutNotesChange={onWorkoutNotesChange} onExerciseRestTimeChange={onExerciseRestTimeChange} onRemoveExerciseRestTime={onRemoveExerciseRestTime} onAddExercises={onAddExercises} availableExercises={availableExercises} isLoadingAvailableExercises={isLoadingAvailableExercises} availableExercisesError={availableExercisesError} onCompleteSet={onCompleteSet} onAdjustRestTimer={onAdjustRestTimer} onDismissRestTimer={onDismissRestTimer} onSetValueChange={onSetValueChange} postSetEffortAdjustment={postSetEffortAdjustment} onPostSetEffortChange={onPostSetEffortChange} onClosePostSetEffortAdjustment={onClosePostSetEffortAdjustment} onUpdateWorkoutSettings={onUpdateWorkoutSettings} />
+        <ActiveWorkoutViewContent model={model} theme={theme} onClose={onClose} onFinish={onFinish} onDiscard={onDiscard} canFinishWorkout={canFinishWorkout} onAddSet={onAddSet} onDeleteSet={onDeleteSet} onDeleteExercise={onDeleteExercise} onMoveExercise={onMoveExercise} onOpenExerciseDetail={onOpenExerciseDetail} onWorkoutNotesChange={onWorkoutNotesChange} onExerciseRestTimeChange={onExerciseRestTimeChange} onRemoveExerciseRestTime={onRemoveExerciseRestTime} onCreateSuperset={onCreateSuperset} onRemoveSuperset={onRemoveSuperset} onAddExercises={onAddExercises} availableExercises={availableExercises} isLoadingAvailableExercises={isLoadingAvailableExercises} availableExercisesError={availableExercisesError} onCompleteSet={onCompleteSet} onAdjustRestTimer={onAdjustRestTimer} onDismissRestTimer={onDismissRestTimer} onSetValueChange={onSetValueChange} postSetEffortAdjustment={postSetEffortAdjustment} onPostSetEffortChange={onPostSetEffortChange} onClosePostSetEffortAdjustment={onClosePostSetEffortAdjustment} onUpdateWorkoutSettings={onUpdateWorkoutSettings} />
       </SafeAreaProvider>
     </Modal>
   )

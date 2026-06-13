@@ -111,7 +111,9 @@ test('mobile workout edit view matches the edit reference structure and uses Nat
 
   assert.match(sharedPickerSource, /export function ExerciseMultiSelectView\(/)
   assert.match(sharedPickerSource, /selectedExerciseIds\.includes\(exercise\.id\)/)
-  assert.match(sharedPickerSource, /label=\{`\$\{sheet\.addButtonLabel\} \$\{selectedExerciseIds\.length\}`\}/)
+  assert.match(sharedPickerSource, /const actionLabel = selectedExerciseIds\.length > 0/)
+  assert.match(sharedPickerSource, /sheet\.emptySelectionLabel/)
+  assert.match(sharedPickerSource, /disabled=\{selectedExerciseIds\.length === 0 && !canSubmitEmptySelection\}/)
   assert.match(sharedPickerSource, /placeholder=\{sheet\.searchPlaceholder\}/)
   assert.match(sharedPickerSource, /sheet\.title/)
 })

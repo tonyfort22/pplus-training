@@ -50,7 +50,7 @@ test('getBottomTabViewItems keeps stable grouped shell tabs', () => {
     tabs: [
       { key: 'train', label: 'Train' },
       { key: 'progress', label: 'Progress' },
-      { key: 'team', label: 'Team' },
+      { key: 'team', label: 'Groups' },
       { key: 'inbox', label: 'Inbox' },
     ],
     activeKey: 'progress',
@@ -68,5 +68,6 @@ test('getBottomTabViewItems keeps stable grouped shell tabs', () => {
     ]
   )
   assert.equal(viewItems.tabs[1].icon, '📊')
+  assert.equal(viewItems.tabs[2].label, 'Groups')
   assert.equal(viewItems.tabs[3].icon, '🪪')
 })

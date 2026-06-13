@@ -321,6 +321,27 @@ test('createSessionRepository can fall back to the SQL adapter when db only expo
   assert.ok(calls.some((call) => call.sql.includes('insert into workout_sessions')))
 })
 
+test('createSessionRepository SQL adapter strips coach-athlete UI ids before query params', async () => {
+  const calls = []
+  const db = {
+    async query(sql, params = []) {
+      calls.push({ sql, params })
+      if (sql.includes("status = 'in_progress'")) return []
+      if (sql.includes("status = 'completed'")) return []
+      throw new Error(`Unexpected SQL: ${sql}`)
+    },
+  }
+
+  const repository = createSessionRepository(db)
+  await repository.getInProgressSessionByAthleteId('coach-athlete-f8a72b19-c5c6-4da1-8793-27d80635a444')
+  await repository.getCompletedSessionsByAthleteId('coach-athlete-f8a72b19-c5c6-4da1-8793-27d80635a444')
+
+  assert.deepEqual(calls.map((call) => call.params[0]), [
+    'f8a72b19-c5c6-4da1-8793-27d80635a444',
+    'f8a72b19-c5c6-4da1-8793-27d80635a444',
+  ])
+})
+
 test('getSessionById delegates to db.getWorkoutSessionById when available', async () => {
   const db = {
     async getWorkoutSessionById(sessionId) {

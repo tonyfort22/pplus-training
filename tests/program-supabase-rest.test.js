@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { createSupabaseRestProgramRepository } from '../packages/data/src/programs/index.js'
+import { createProgramRepository, createSupabaseRestProgramRepository } from '../packages/data/src/programs/index.js'
 
 function json(payload, status = 200) {
   return {
@@ -136,6 +136,80 @@ test('createSupabaseRestProgramRepository lists only one athlete\'s programs whe
     },
   ])
   assert.equal(calls.length, 3)
+})
+
+test('createSupabaseRestProgramRepository strips coach-athlete UI ids before athlete-scoped REST filters', async () => {
+  const calls = []
+  const repo = createSupabaseRestProgramRepository({
+    url: 'https://example.supabase.co',
+    anonKey: 'anon-key',
+    accessToken: 'user-token',
+    fetchImpl: async (url, options = {}) => {
+      const parsed = new URL(url)
+      calls.push({ url: parsed.toString(), method: options.method || 'GET' })
+
+      if (parsed.pathname.endsWith('/programs')) {
+        assert.equal(parsed.searchParams.get('athlete_id'), 'eq.f8a72b19-c5c6-4da1-8793-27d80635a444')
+        return json([
+          {
+            id: 'prog-1',
+            athlete_id: 'f8a72b19-c5c6-4da1-8793-27d80635a444',
+            coach_id: 'coach-1',
+            name: 'Training Program',
+            description: null,
+            start_date: '2026-05-18',
+            end_date: '2026-07-27',
+            status: 'active',
+          },
+        ])
+      }
+
+      if (parsed.pathname.endsWith('/program_weeks')) {
+        return json([{ id: 'week-1', program_id: 'prog-1' }])
+      }
+
+      if (parsed.pathname.endsWith('/program_days')) {
+        return json([])
+      }
+
+      if (parsed.pathname.endsWith('/program_workouts')) {
+        return json([{ id: 'pw-1', program_id: 'prog-1' }])
+      }
+
+      if (parsed.pathname.endsWith('/workout_sessions')) {
+        return json([])
+      }
+
+      throw new Error(`Unexpected request: ${parsed.pathname}`)
+    },
+  })
+
+  await repo.listProgramsForAthlete('coach-athlete-f8a72b19-c5c6-4da1-8793-27d80635a444')
+  await repo.getAssignedProgramForAthlete('coach-athlete-f8a72b19-c5c6-4da1-8793-27d80635a444')
+
+  assert.equal(calls.some((call) => /coach-athlete-/.test(call.url)), false)
+})
+
+test('createProgramRepository strips coach-athlete UI ids before delegating athlete-scoped calls', async () => {
+  const calls = []
+  const repository = createProgramRepository({
+    async getAssignedProgramForAthlete(athleteId) {
+      calls.push(['getAssignedProgramForAthlete', athleteId])
+      return null
+    },
+    async createProgramWorkout(input) {
+      calls.push(['createProgramWorkout', input.athleteId])
+      return { id: 'pw-1', athleteId: input.athleteId }
+    },
+  })
+
+  await repository.getAssignedProgramForAthlete('coach-athlete-f8a72b19-c5c6-4da1-8793-27d80635a444')
+  await repository.createProgramWorkout({ athleteId: 'coach-athlete-f8a72b19-c5c6-4da1-8793-27d80635a444' })
+
+  assert.deepEqual(calls, [
+    ['getAssignedProgramForAthlete', 'f8a72b19-c5c6-4da1-8793-27d80635a444'],
+    ['createProgramWorkout', 'f8a72b19-c5c6-4da1-8793-27d80635a444'],
+  ])
 })
 
 test('createSupabaseRestProgramRepository fetches an assigned program with nested weeks, days, workouts, and derived workout checkbox states', async () => {

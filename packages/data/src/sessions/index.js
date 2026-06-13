@@ -28,11 +28,18 @@ function requireFetch(fetchImpl) {
   return fetchImpl;
 }
 
+function normalizeCoachAthleteProfileId(athleteId) {
+  const value = String(athleteId || '').trim();
+  return value.startsWith('coach-athlete-') ? value.slice('coach-athlete-'.length) : value;
+}
+
 const PROGRAM_WORKOUT_SELECT = 'id,athlete_id,coach_id,program_id,program_day_id,workout_template_id,name_snapshot,notes,status,sort_order,default_rest_seconds,auto_progress_enabled,adjust_effort_after_set';
 const PROGRAM_WORKOUT_SETTINGS_LEGACY_SELECT = 'id,athlete_id,coach_id,program_id,program_day_id,workout_template_id,name_snapshot,notes,status,sort_order';
 const PROGRAM_WORKOUT_NOTES_LEGACY_SELECT = 'id,athlete_id,coach_id,program_id,program_day_id,workout_template_id,name_snapshot,status,sort_order';
 const WORKOUT_SESSION_SELECT = 'id,athlete_id,coach_id,program_id,program_day_id,program_workout_id,workout_template_id,name_snapshot,status,started_at,completed_at,elapsed_seconds,notes,perceived_difficulty,default_rest_seconds,auto_progress_enabled,keep_awake,adjust_effort_after_set,total_exercises_count,completed_exercises_count,total_sets_count,completed_sets_count';
 const WORKOUT_SESSION_LEGACY_SELECT = 'id,athlete_id,coach_id,program_id,program_day_id,program_workout_id,workout_template_id,name_snapshot,status,started_at,completed_at,elapsed_seconds,notes,perceived_difficulty,total_exercises_count,completed_exercises_count,total_sets_count,completed_sets_count';
+const WORKOUT_SESSION_EXERCISE_SELECT = 'id,workout_session_id,program_workout_exercise_id,exercise_id,name_snapshot,sort_order,status,notes,default_rest_seconds,superset_group_id,superset_order';
+const WORKOUT_SESSION_EXERCISE_LEGACY_SELECT = 'id,workout_session_id,program_workout_exercise_id,exercise_id,name_snapshot,sort_order,status,notes,default_rest_seconds';
 
 function isMissingProgramWorkoutSettingsColumnError(error) {
   const message = String(error?.message || '');
@@ -57,6 +64,14 @@ function isMissingWorkoutSessionSettingsColumnError(error) {
     || message.includes("Could not find the 'auto_progress_enabled' column of 'workout_sessions'")
     || message.includes("Could not find the 'keep_awake' column of 'workout_sessions'")
     || message.includes("Could not find the 'adjust_effort_after_set' column of 'workout_sessions'");
+}
+
+function isMissingWorkoutSessionExerciseSupersetColumnError(error) {
+  const message = String(error?.message || '');
+  return message.includes('workout_session_exercises.superset_group_id does not exist')
+    || message.includes('workout_session_exercises.superset_order does not exist')
+    || message.includes("Could not find the 'superset_group_id' column of 'workout_session_exercises'")
+    || message.includes("Could not find the 'superset_order' column of 'workout_session_exercises'");
 }
 
 function mapProgramWorkoutRow(row) {
@@ -147,6 +162,8 @@ function mapWorkoutSessionExerciseRow(row) {
     status: row.status || 'not_started',
     notes: row.notes || '',
     defaultRestSeconds: row.default_rest_seconds ?? null,
+    supersetGroupId: row.superset_group_id ?? null,
+    supersetOrder: row.superset_order ?? null,
   };
 }
 
@@ -316,6 +333,8 @@ function mergeExerciseAnalyticsMetadata(exercises = [], { sourceExercises = [], 
 
     return {
       ...exercise,
+      supersetGroupId: exercise?.supersetGroupId ?? sourceExercise?.supersetGroupId ?? null,
+      supersetOrder: exercise?.supersetOrder ?? sourceExercise?.supersetOrder ?? null,
       fatigueMultiplier: exercise?.fatigueMultiplier ?? sourceExercise?.fatigueMultiplier ?? null,
       axialFatigueMultiplier: exercise?.axialFatigueMultiplier ?? sourceExercise?.axialFatigueMultiplier ?? null,
       skillFatigueMultiplier: exercise?.skillFatigueMultiplier ?? sourceExercise?.skillFatigueMultiplier ?? null,
@@ -389,7 +408,16 @@ function toSessionExerciseRowInput(sessionId, exercise) {
     status: exercise.status || 'not_started',
     notes: exercise.notes || '',
     default_rest_seconds: exercise.defaultRestSeconds ?? null,
+    superset_group_id: exercise.supersetGroupId ?? null,
+    superset_order: exercise.supersetOrder ?? null,
   };
+}
+
+function toLegacySessionExerciseRowInput(sessionId, exercise) {
+  const input = toSessionExerciseRowInput(sessionId, exercise);
+  delete input.superset_group_id;
+  delete input.superset_order;
+  return input;
 }
 
 function toSessionSetRowInput(workoutSessionExerciseId, set) {
@@ -508,36 +536,56 @@ async function saveSupabaseSessionChildren({ request, sessionId, exercises = [] 
   const savedExerciseRows = [];
   const savedSetRows = [];
 
+  async function persistWorkoutSessionExerciseRow({ method, exercise, exerciseId = null }) {
+    const fullBody = toSessionExerciseRowInput(sessionId, exercise);
+    try {
+      return await request({
+        method,
+        table: 'workout_session_exercises',
+        query: {
+          ...(exerciseId ? { id: `eq.${exerciseId}` } : {}),
+          select: '*',
+        },
+        body: fullBody,
+      });
+    } catch (error) {
+      if (!isMissingWorkoutSessionExerciseSupersetColumnError(error)) {
+        throw error;
+      }
+
+      return request({
+        method,
+        table: 'workout_session_exercises',
+        query: {
+          ...(exerciseId ? { id: `eq.${exerciseId}` } : {}),
+          select: '*',
+        },
+        body: toLegacySessionExerciseRowInput(sessionId, exercise),
+      });
+    }
+  }
+
   for (const exercise of exercises) {
-    const exerciseInput = toSessionExerciseRowInput(sessionId, exercise);
     let savedExerciseRow;
 
     if (exercise.id && !isLocalSessionEntityId(exercise.id)) {
-      const exerciseRows = await request({
+      const exerciseRows = await persistWorkoutSessionExerciseRow({
         method: 'PATCH',
-        table: 'workout_session_exercises',
-        query: {
-          id: `eq.${exercise.id}`,
-          select: '*',
-        },
-        body: exerciseInput,
+        exercise,
+        exerciseId: exercise.id,
       });
       savedExerciseRow = exerciseRows?.[0] || null;
       if (!savedExerciseRow) {
-        const insertedExerciseRows = await request({
+        const insertedExerciseRows = await persistWorkoutSessionExerciseRow({
           method: 'POST',
-          table: 'workout_session_exercises',
-          query: { select: '*' },
-          body: exerciseInput,
+          exercise,
         });
         savedExerciseRow = insertedExerciseRows?.[0] || null;
       }
     } else {
-      const exerciseRows = await request({
+      const exerciseRows = await persistWorkoutSessionExerciseRow({
         method: 'POST',
-        table: 'workout_session_exercises',
-        query: { select: '*' },
-        body: exerciseInput,
+        exercise,
       });
       savedExerciseRow = exerciseRows?.[0] || null;
     }
@@ -714,6 +762,30 @@ export function createSupabaseRestSessionDb(config) {
     }
   }
 
+  async function requestWorkoutSessionExerciseRows(query = {}) {
+    try {
+      return await request({
+        table: 'workout_session_exercises',
+        query: {
+          ...query,
+          select: WORKOUT_SESSION_EXERCISE_SELECT,
+        },
+      });
+    } catch (error) {
+      if (!isMissingWorkoutSessionExerciseSupersetColumnError(error)) {
+        throw error;
+      }
+
+      return request({
+        table: 'workout_session_exercises',
+        query: {
+          ...query,
+          select: WORKOUT_SESSION_EXERCISE_LEGACY_SELECT,
+        },
+      });
+    }
+  }
+
   async function persistWorkoutSessionRow({ method, session, sessionId = null }) {
     const fullBody = toSessionRowInput(session);
     try {
@@ -758,10 +830,11 @@ export function createSupabaseRestSessionDb(config) {
       return this.getWorkoutSessionById(sessionRow.id);
     },
     async getInProgressSessionByAthleteId(athleteId) {
-      if (!athleteId) return null;
+      const resolvedAthleteId = normalizeCoachAthleteProfileId(athleteId);
+      if (!resolvedAthleteId) return null;
 
       const sessionRows = await requestWorkoutSessionRows({
-        athlete_id: `eq.${athleteId}`,
+        athlete_id: `eq.${resolvedAthleteId}`,
         status: 'eq.in_progress',
         order: 'started_at.desc',
         limit: '1',
@@ -771,10 +844,11 @@ export function createSupabaseRestSessionDb(config) {
       return this.getWorkoutSessionById(sessionRow.id);
     },
     async getCompletedSessionsByAthleteId(athleteId, { limit = 50 } = {}) {
-      if (!athleteId) return [];
+      const resolvedAthleteId = normalizeCoachAthleteProfileId(athleteId);
+      if (!resolvedAthleteId) return [];
 
       const sessionRows = await requestWorkoutSessionRows({
-        athlete_id: `eq.${athleteId}`,
+        athlete_id: `eq.${resolvedAthleteId}`,
         status: 'eq.completed',
         order: 'completed_at.desc,started_at.desc',
         limit: String(limit),
@@ -814,7 +888,8 @@ export function createSupabaseRestSessionDb(config) {
       return { success: true, workoutSessionExerciseId }
     },
     async listProgramWorkoutsForAthlete(athleteId, { onDate = null } = {}) {
-      if (!athleteId) return [];
+      const resolvedAthleteId = normalizeCoachAthleteProfileId(athleteId);
+      if (!resolvedAthleteId) return [];
 
       let dayIds = null;
       if (onDate) {
@@ -830,7 +905,7 @@ export function createSupabaseRestSessionDb(config) {
       }
 
       const workoutRows = await requestProgramWorkoutRows({
-        athlete_id: `eq.${athleteId}`,
+        athlete_id: `eq.${resolvedAthleteId}`,
         ...(dayIds ? { program_day_id: `in.(${dayIds.join(',')})` } : {}),
         order: 'sort_order.asc',
       });
@@ -1048,13 +1123,9 @@ export function createSupabaseRestSessionDb(config) {
       const sessionRow = sessionRows?.[0];
       if (!sessionRow) return null;
 
-      const exerciseRows = await request({
-        table: 'workout_session_exercises',
-        query: {
-          workout_session_id: `eq.${sessionId}`,
-          select: 'id,workout_session_id,program_workout_exercise_id,exercise_id,name_snapshot,sort_order,status,notes,default_rest_seconds',
-          order: 'sort_order.asc',
-        },
+      const exerciseRows = await requestWorkoutSessionExerciseRows({
+        workout_session_id: `eq.${sessionId}`,
+        order: 'sort_order.asc',
       });
 
       const exerciseIds = exerciseRows.map((row) => row.id).filter(Boolean);
@@ -1138,6 +1209,8 @@ export function createSessionDbAdapter(db) {
       return this.getWorkoutSessionById(sessionRow.id);
     },
     async getInProgressSessionByAthleteId(athleteId) {
+      const resolvedAthleteId = normalizeCoachAthleteProfileId(athleteId);
+      if (!resolvedAthleteId) return null;
       const sessionRows = await query(
         `select id, athlete_id, coach_id, program_id, program_day_id, program_workout_id, workout_template_id,
                 name_snapshot, status, started_at, completed_at, elapsed_seconds, notes, perceived_difficulty,
@@ -1147,13 +1220,15 @@ export function createSessionDbAdapter(db) {
            and status = 'in_progress'
          order by started_at desc nulls last, id desc
          limit 1`,
-        [athleteId]
+        [resolvedAthleteId]
       );
       const sessionRow = sessionRows[0];
       if (!sessionRow?.id) return null;
       return this.getWorkoutSessionById(sessionRow.id);
     },
     async getCompletedSessionsByAthleteId(athleteId, { limit = 50 } = {}) {
+      const resolvedAthleteId = normalizeCoachAthleteProfileId(athleteId);
+      if (!resolvedAthleteId) return [];
       const sessionRows = await query(
         `select id
          from workout_sessions
@@ -1161,7 +1236,7 @@ export function createSessionDbAdapter(db) {
            and status = 'completed'
          order by completed_at desc nulls last, started_at desc nulls last, id desc
          limit $2`,
-        [athleteId, limit]
+        [resolvedAthleteId, limit]
       );
       if (!sessionRows.length) return [];
       const hydratedSessions = await Promise.all(sessionRows.map((row) => this.getWorkoutSessionById(row.id)));
@@ -1240,8 +1315,8 @@ export function createSessionDbAdapter(db) {
         const exerciseRows = await query(
           `insert into workout_session_exercises (
               workout_session_id, program_workout_exercise_id, exercise_id, name_snapshot, sort_order,
-              status, notes, default_rest_seconds
-           ) values ($1, $2, $3, $4, $5, $6, $7, $8)
+              status, notes, default_rest_seconds, superset_group_id, superset_order
+           ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
            returning id`,
           [
             sessionId,
@@ -1252,6 +1327,8 @@ export function createSessionDbAdapter(db) {
             exercise.status || 'not_started',
             exercise.notes || '',
             exercise.defaultRestSeconds ?? null,
+            exercise.supersetGroupId ?? null,
+            exercise.supersetOrder ?? null,
           ]
         );
         const workoutSessionExerciseId = exerciseRows[0]?.id;
@@ -1336,7 +1413,7 @@ export function createSessionDbAdapter(db) {
 
       const exerciseRows = await query(
         `select id, workout_session_id, program_workout_exercise_id, exercise_id, name_snapshot, sort_order,
-                status, notes, default_rest_seconds
+                status, notes, default_rest_seconds, superset_group_id, superset_order
          from workout_session_exercises
          where workout_session_id = $1
          order by sort_order asc`,
