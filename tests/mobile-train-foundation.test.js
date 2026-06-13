@@ -17,6 +17,11 @@ test('train navigation matches the athlete app structure', () => {
   )
 
   assert.deepEqual(
+    mobileTabs.map((tab) => tab.label),
+    ['Train', 'Progress', 'Groups', 'Athletes']
+  )
+
+  assert.deepEqual(
     trainTabs.map((tab) => tab.key),
     ['today', 'program', 'calendar', 'workout', 'session']
   )

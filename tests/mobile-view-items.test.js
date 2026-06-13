@@ -14,7 +14,7 @@ import { getGenericSectionViewItems, getSessionViewItems } from '../apps/mobile/
 const bottomTabs = [
   { key: 'train', label: 'Train', isActive: true },
   { key: 'progress', label: 'Progress', isActive: false },
-  { key: 'team', label: 'Team', isActive: false },
+  { key: 'team', label: 'Groups', isActive: false },
   { key: 'inbox', label: 'Athletes', isActive: false },
 ]
 
@@ -26,6 +26,7 @@ test('getBottomTabViewItems returns one four-option bottom bar for shell renderi
   assert.equal(items.tabs[0].icon, '🏋️')
   assert.equal(items.tabs[1].icon, '📊')
   assert.equal(items.tabs[2].icon, '👥')
+  assert.equal(items.tabs[2].label, 'Groups')
   assert.equal(items.tabs[3].label, 'Athletes')
   assert.equal(items.tabs[3].icon, '🪪')
 })

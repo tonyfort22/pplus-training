@@ -152,9 +152,9 @@ function WorkoutSheetContent({ model, theme, onClose, onStartWorkout, onEditWork
   )
 }
 
-export function WorkoutSheet({ isVisible, model, theme, onClose, onStartWorkout, onEditWorkout, onOpenExerciseDetail, isStartingWorkout = false }) {
+export function WorkoutSheet({ isVisible, model, theme, onClose, onStartWorkout, onEditWorkout, onOpenExerciseDetail, onDismiss, isStartingWorkout = false }) {
   return (
-    <Modal visible={isVisible} animationType="slide" onRequestClose={onClose}>
+    <Modal visible={isVisible} animationType="slide" onRequestClose={onClose} onDismiss={onDismiss}>
       <SafeAreaProvider>
         <WorkoutSheetContent
           model={model}
