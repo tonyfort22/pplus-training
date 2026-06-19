@@ -100,6 +100,7 @@ const PROGRAM_WORKOUT_EXERCISE_SELECT = [
   'sort_order',
   'notes',
   'default_rest_seconds',
+  'exercises(thumbnail_url)',
   'created_at',
   'updated_at',
 ].join(',')
@@ -153,6 +154,7 @@ const WORKOUT_TEMPLATE_EXERCISE_SELECT = [
   'sort_order',
   'notes',
   'default_rest_seconds',
+  'exercises(thumbnail_url)',
 ].join(',')
 
 const WORKOUT_TEMPLATE_SET_SELECT = [
@@ -274,8 +276,9 @@ function buildWorkoutTemplateTrainingSections({ blocks = [], exercises = [], set
         id: exercise.id ?? `template-exercise-0-${exerciseIndex}`,
         title: exercise.name_snapshot ?? 'Exercise',
         exerciseId: exercise.exercise_id ?? '',
-        isExpanded: exerciseIndex === 0,
-        showInstruction: Boolean(exercise.notes),
+        thumbnailUrl: exercise.exercises?.thumbnail_url ?? '',
+        isExpanded: false,
+        showInstruction: false,
         instruction: exercise.notes ?? '',
         sets: (setsByExerciseId.get(exercise.id) ?? []).map((setRow, setIndex) => ({
           id: setRow.id ?? `template-set-0-${exerciseIndex}-${setIndex}`,
@@ -301,15 +304,16 @@ function buildWorkoutTemplateTrainingSections({ blocks = [], exercises = [], set
       id: block.id ?? `template-section-${blockIndex}`,
       label: block.block_code ?? block.title ?? `Section ${blockIndex + 1}`,
       isExpanded: true,
-      showInstruction: Boolean(block.instructions),
+      showInstruction: false,
       instruction: block.instructions ?? '',
       draftExerciseQuery: '',
       exercises: blockExercises.map((exercise, exerciseIndex) => ({
         id: exercise.id ?? `template-exercise-${blockIndex}-${exerciseIndex}`,
         title: exercise.name_snapshot ?? 'Exercise',
         exerciseId: exercise.exercise_id ?? '',
-        isExpanded: exerciseIndex === 0,
-        showInstruction: Boolean(exercise.notes),
+        thumbnailUrl: exercise.exercises?.thumbnail_url ?? '',
+        isExpanded: false,
+        showInstruction: false,
         instruction: exercise.notes ?? '',
         sets: (setsByExerciseId.get(exercise.id) ?? []).map((setRow, setIndex) => ({
           id: setRow.id ?? `template-set-${blockIndex}-${exerciseIndex}-${setIndex}`,

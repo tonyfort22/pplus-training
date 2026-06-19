@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Bot, Check, CheckCircle2, ChevronDown, Plus, Search, Sparkles } from 'lucide-react'
 
+import { ADMIN_AI_BUTTON_CLASS_NAME, ADMIN_AI_BUTTON_STYLE } from '@/components/admin/ui/ai-button-style'
 import ExerciseEditorDialog from '@/components/admin/exercise-editor-dialog'
 import Alert from '@/components/ui/alert'
 import Badge from '@/components/ui/badge'
@@ -1819,7 +1820,8 @@ export default function AiWorkoutDraftSheet({
           <Button
             type="button"
             variant="outline"
-            className="rounded-[12px] min-h-[40px] border-[#3BE0AF]/40 bg-[#3BE0AF]/10 text-[#06B686] hover:bg-[#3BE0AF]/15 hover:text-[#06B686]"
+            className={`rounded-[12px] min-h-[40px] ${ADMIN_AI_BUTTON_CLASS_NAME}`}
+            style={ADMIN_AI_BUTTON_STYLE}
             onClick={handleReviseDraft}
             disabled={isRevisingDraft}
           >
@@ -1830,7 +1832,8 @@ export default function AiWorkoutDraftSheet({
             <Button
               type="button"
               variant="outline"
-              className="rounded-[12px] min-h-[40px] border-[#3BE0AF]/40 bg-[#3BE0AF]/10 text-[#06B686] hover:bg-[#3BE0AF]/15 hover:text-[#06B686]"
+              className={`rounded-[12px] min-h-[40px] ${ADMIN_AI_BUTTON_CLASS_NAME}`}
+              style={ADMIN_AI_BUTTON_STYLE}
               onClick={handleAcceptAllRemaining}
               disabled={isAccepting || isAcceptingDraft || hasBlockingAcceptIssue}
               title={acceptAllBlockedTitle}
