@@ -13,6 +13,7 @@ import {
   Footprints,
   House,
   MessageCircle,
+  Mic,
   Search,
   Settings,
   Users,
@@ -52,6 +53,7 @@ import {
 } from '@/components/ui/sidebar'
 import { adminBottomNavigation, adminNavigation, findAdminRoute } from './admin-navigation'
 import AdminThemeToggle from './admin-theme-toggle'
+import { ADMIN_AI_BUTTON_CLASS_NAME } from './ui/ai-button-style'
 import AthletesListView from './athletes-list-view'
 import DashboardOverview from './dashboard-overview'
 import ExercisesLibraryView from './exercises-library-view'
@@ -216,6 +218,18 @@ function AccountAvatar({ profile, className = '', fallbackClassName = '' }) {
     />
   ) : (
     <span className={fallbackClassName}>{getAccountInitials(profile)}</span>
+  )
+}
+
+function AdminFloatingMicButton() {
+  return (
+    <button
+      type="button"
+      aria-label="Record admin voice command"
+      className={`admin-dashboard-floating-mic-button fixed bottom-[40px] right-[40px] z-50 h-14 w-14 rounded-[16px] ${ADMIN_AI_BUTTON_CLASS_NAME} inline-flex items-center justify-center transition`}
+    >
+      <Mic className="size-5" aria-hidden="true" />
+    </button>
   )
 }
 
@@ -822,6 +836,7 @@ export default function AdminShell({ currentPath = '', contentOverride = null })
             )}
           </main>
         </div>
+        <AdminFloatingMicButton />
       </SidebarInset>
     </SidebarProvider>
   )

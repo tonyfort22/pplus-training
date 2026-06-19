@@ -1,7 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Bot } from 'lucide-react'
 
+import { ADMIN_AI_BUTTON_CLASS_NAME, ADMIN_AI_BUTTON_STYLE } from '@/components/admin/ui/ai-button-style'
+import WorkoutTrainingAiEditor from '@/components/admin/workout-training-ai-editor'
 import WorkoutTrainingBuilder from '@/components/admin/workout-training-builder'
 import { Button } from '@/components/ui/button'
 import CompactFileUpload from '@/components/ui/compact-file-upload'
@@ -58,12 +61,14 @@ export default function WorkoutEditorDialog({
   showTrainingTab = true,
   primaryActionLabel,
   onPrimaryAction,
+  onEditWithAi = () => {},
   focusAreaOptions = [],
   statusOptions = [],
   saveDisclaimer = '',
   errorMessage = '',
 }) {
   const [activeTab, setActiveTab] = useState('details')
+  const [isAiEditorOpen, setIsAiEditorOpen] = useState(false)
 
   useEffect(() => {
     if (!open || !showTrainingTab) {
@@ -186,8 +191,27 @@ export default function WorkoutEditorDialog({
 
         <SheetFooter className="shrink-0 border-t border-[color:var(--admin-dashboard-card-border)] px-6 py-5 sm:flex-row sm:justify-end gap-3">
           <Button type="button" variant="outline" className="rounded-[12px] min-h-[40px]" onClick={() => onOpenChange(false)}>Cancel</Button>
+          {showTrainingTab && activeTab === 'training' ? (
+            <Button
+              type="button"
+              variant="outline"
+              className={`rounded-[12px] min-h-[40px] ${ADMIN_AI_BUTTON_CLASS_NAME}`}
+              style={ADMIN_AI_BUTTON_STYLE}
+              onClick={() => setIsAiEditorOpen(true)}
+            >
+              <Bot className="size-4" aria-hidden="true" />
+              Edit with AI
+            </Button>
+          ) : null}
           <Button type="button" className="rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]" onClick={onPrimaryAction} disabled={!onPrimaryAction}>{primaryActionLabel}</Button>
         </SheetFooter>
+        <WorkoutTrainingAiEditor
+          open={isAiEditorOpen}
+          onOpenChange={setIsAiEditorOpen}
+          workoutDetails={detailsValues}
+          trainingSections={trainingSections}
+          onApplyTrainingSections={onTrainingSectionsChange}
+        />
       </SheetContent>
     </Sheet>
   )

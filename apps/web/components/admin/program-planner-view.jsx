@@ -8,6 +8,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { ArrowLeft, ArrowRight, ChevronDown, GripVertical, LoaderCircle, MoreHorizontal, Plus, Sparkles, Trash2, Upload } from 'lucide-react'
 
 import AiWorkoutDraftSheet from '@/components/admin/ai-workout-draft-sheet'
+import { ADMIN_AI_BUTTON_CLASS_NAME, ADMIN_AI_BUTTON_STYLE } from '@/components/admin/ui/ai-button-style'
 import WorkoutTrainingBuilder from '@/components/admin/workout-training-builder'
 import Badge from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -622,7 +623,8 @@ function DayLane({ day, weekId, weekLabel, onAddWorkout, onImportAiWorkout, onOp
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                className="program-planner-icon-button rounded-full border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-muted)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-shell-primary-button-bg)]"
+                className={`program-planner-icon-button rounded-full ${ADMIN_AI_BUTTON_CLASS_NAME}`}
+                style={ADMIN_AI_BUTTON_STYLE}
                 onClick={() => onImportAiWorkout(day.id)}
               >
                 <Sparkles className="h-4 w-4" />
@@ -1560,7 +1562,8 @@ export default function ProgramPlannerView({ program, enableLocalAiImportPersist
               </Button>
               <Button
                 type="button"
-                className="min-h-[40px] rounded-[12px] bg-[var(--admin-shell-primary-button-bg)] text-[var(--admin-shell-primary-button-text)] hover:bg-[var(--admin-shell-primary-button-bg)] disabled:cursor-not-allowed disabled:opacity-60"
+                className={`min-h-[40px] rounded-[12px] ${ADMIN_AI_BUTTON_CLASS_NAME} disabled:cursor-not-allowed disabled:opacity-60`}
+                style={ADMIN_AI_BUTTON_STYLE}
                 onClick={handleCreateAiWorkoutDrafts}
                 disabled={!canReviewAiWorkoutDraft}
                 title={!aiWorkoutImportFiles.length ? 'Choose a PDF before reviewing the AI draft.' : aiWorkoutImportNotice || undefined}

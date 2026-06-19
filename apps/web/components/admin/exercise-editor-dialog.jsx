@@ -2,6 +2,7 @@
 
 import { Bot, ChevronDown, Upload } from 'lucide-react'
 
+import { ADMIN_AI_BUTTON_CLASS_NAME, ADMIN_AI_BUTTON_STYLE } from '@/components/admin/ui/ai-button-style'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
@@ -177,6 +178,7 @@ export default function ExerciseEditorDialog({
   onThumbnailFileChange = () => {},
   onVideoFileChange = () => {},
   onPrimaryAction = null,
+  onEditWithAi = () => {},
 }) {
   function updateField(field, value) {
     onValuesChange((current) => ({
@@ -221,7 +223,8 @@ export default function ExerciseEditorDialog({
                     <InputGroupButton
                       type="button"
                       size="sm"
-                      className="h-8 rounded-[10px] border border-[#3BE0AF]/40 bg-[#3BE0AF]/10 px-3 text-sm font-medium text-[#06B686] hover:bg-[#3BE0AF]/15 hover:text-[#06B686] disabled:cursor-not-allowed disabled:border-[#3BE0AF]/25 disabled:bg-[#3BE0AF]/5 disabled:text-[#06B686]/55 disabled:opacity-100"
+                      className={`h-8 rounded-[10px] px-3 text-sm font-medium ${ADMIN_AI_BUTTON_CLASS_NAME}`}
+                      style={ADMIN_AI_BUTTON_STYLE}
                       onClick={onGenerateYoutubeMedia}
                       disabled={isSaving || isGeneratingYoutubeMedia || !values.youtubeLink?.trim()}
                     >
@@ -370,6 +373,17 @@ export default function ExerciseEditorDialog({
             disabled={isSaving}
           >
             Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className={`rounded-[12px] min-h-[40px] ${ADMIN_AI_BUTTON_CLASS_NAME}`}
+            style={ADMIN_AI_BUTTON_STYLE}
+            onClick={onEditWithAi}
+            disabled={isSaving}
+          >
+            <Bot className="size-4" aria-hidden="true" />
+            Edit with AI
           </Button>
           <Button
             type="button"
