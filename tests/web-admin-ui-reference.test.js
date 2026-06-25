@@ -286,6 +286,8 @@ test('admin navigation uses real nested routes driven by shared config', () => {
   assert.match(adminShellSource, /aria-label="Toggle sidebar"/)
   assert.match(adminShellSource, /<SidebarTrigger/)
   assert.match(adminShellSource, /admin-dashboard-sidebar-trigger/)
+  assert.match(adminShellSource, /function SidebarBrandLogo\(\) \{[\s\S]*<Link[\s\S]*href="\/"[\s\S]*aria-label="Go to PPLUS home"[\s\S]*admin-dashboard-sidebar-logo/)
+  assert.match(adminShellSource, /function SidebarBrandLogo\(\) \{[\s\S]*<Link[\s\S]*href="\/"[\s\S]*aria-label="Go to PPLUS home"[\s\S]*logo_pplus_mark_green\.svg/)
   assert.match(sheetSource, /data-\[side=right\]:sm:max-w-\[var\(--container-lg\)\]/)
   assert.match(sheetSource, /data-\[side=left\]:sm:max-w-\[var\(--container-lg\)\]/)
   assert.doesNotMatch(sheetSource, /data-\[side=right\]:sm:max-w-sm/)

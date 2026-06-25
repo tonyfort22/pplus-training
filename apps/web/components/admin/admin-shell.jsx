@@ -400,7 +400,11 @@ function SidebarBrandLogo() {
   const isCollapsed = state === 'collapsed'
 
   return (
-    <div className="flex items-center justify-start px-3 py-[14px] group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
+    <Link
+      href="/"
+      aria-label="Go to PPLUS home"
+      className="flex items-center justify-start px-3 py-[14px] group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2"
+    >
       {isCollapsed ? (
         <img className="h-6 w-auto" src="/admin/logo_pplus_mark_green.svg" alt="P+" />
       ) : (
@@ -409,7 +413,7 @@ function SidebarBrandLogo() {
           <img className="admin-dashboard-sidebar-logo admin-dashboard-sidebar-logo-light h-5 w-auto" src="/admin/logo_ppht_light_mode.svg" alt="PPLUS Training" />
         </>
       )}
-    </div>
+    </Link>
   )
 }
 
