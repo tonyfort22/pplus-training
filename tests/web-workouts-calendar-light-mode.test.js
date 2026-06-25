@@ -8,6 +8,7 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const calendarViewPath = resolve(repoRoot, 'apps/web/components/admin/workouts-calendar-view.jsx')
 const calendarRepositoryPath = resolve(repoRoot, 'apps/web/lib/workout-calendar-repository.js')
 const calendarRoutePath = resolve(repoRoot, 'apps/web/app/api/admin/workout-calendar/route.js')
+const calendarRouteHandlersPath = resolve(repoRoot, 'apps/web/lib/workout-calendar-route-handlers.js')
 
 function extractFunction(source, name) {
   const start = source.indexOf(`function ${name}`)
@@ -20,13 +21,15 @@ test('workout calendar reads program_workouts joined to program_days.date and la
   const calendarSource = readFileSync(calendarViewPath, 'utf8')
   const repositorySource = readFileSync(calendarRepositoryPath, 'utf8')
   const routeSource = readFileSync(calendarRoutePath, 'utf8')
+  const routeHandlersSource = readFileSync(calendarRouteHandlersPath, 'utf8')
   const mapperSource = extractFunction(calendarSource, 'mapAssignmentRowToCalendarEvent')
 
   assert.match(repositorySource, /restUrl: `\$\{supabaseUrl\.replace\(\/\\\/\$\/, ''\)\}\/rest\/v1\/program_workouts`/)
   assert.match(repositorySource, /'program_days\(date\)'/)
   assert.match(mapperSource, /const resolvedScheduledDate = row\.program_days\?\.date \?\? row\.scheduled_date \?\? null/)
   assert.match(mapperSource, /title: row\.name_snapshot \|\| row\.workout_templates\?\.name \|\| 'Workout'/)
-  assert.match(routeSource, /athlete_id: body\.athlete_id \?\? null/)
+  assert.match(routeSource, /createWorkoutCalendarRouteHandlers/)
+  assert.match(routeHandlersSource, /athlete_id: body\.athlete_id \?\? null/)
 })
 
 test('workout calendar admin chrome uses light-mode foundation tokens instead of hard-coded dark shell colors', () => {

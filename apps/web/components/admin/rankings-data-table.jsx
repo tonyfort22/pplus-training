@@ -170,7 +170,7 @@ export default function RankingsDataTable({ searchQuery = '' }) {
         id: 'select',
         header: ({ table }) => (
           <Checkbox
-            className="admin-shell-rankings-checkbox-input"
+            className="admin-shell-athletes-checkbox-input admin-shell-rankings-checkbox-input"
             checked={table.getIsAllPageRowsSelected()}
             onChange={(event) => table.toggleAllPageRowsSelected(event.target.checked)}
             aria-label="Select all"
@@ -178,7 +178,7 @@ export default function RankingsDataTable({ searchQuery = '' }) {
         ),
         cell: ({ row }) => (
           <Checkbox
-            className="admin-shell-rankings-checkbox-input"
+            className="admin-shell-athletes-checkbox-input admin-shell-rankings-checkbox-input"
             checked={row.getIsSelected()}
             onChange={(event) => row.toggleSelected(event.target.checked)}
             aria-label="Select row"

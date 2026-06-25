@@ -35,7 +35,7 @@ test('athlete invites admin view uses light-mode admin table tokens and safe inv
   assert.match(invitesSource, /admin-shell-invites-pagination-bar/)
   assert.match(invitesSource, /admin-shell-invites-example-pagination-button-active/)
   assert.match(invitesSource, /inviteDialogMode === 'resend'/)
-  assert.match(invitesSource, /<DropdownMenuItem disabled=\{!canCancel\} onSelect=\{onCancelInvite\}>Cancel invite<\/DropdownMenuItem>/)
+  assert.match(invitesSource, /<DropdownMenuItem[\s\S]*disabled=\{!canCancel\}[\s\S]*onCancelInvite\(\)[\s\S]*Cancel invite[\s\S]*<\/DropdownMenuItem>/)
   assert.match(invitesSource, /method: 'PATCH'/)
   assert.match(invitesSource, /handleOpenCancelInviteDialog\(invite\)/)
   assert.match(invitesSource, /handleConfirmCancelInvite\(\)/)

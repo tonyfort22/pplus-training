@@ -12,15 +12,25 @@ function source(relativePath) {
   return readFileSync(path, 'utf8')
 }
 
+function routeHasMethod(routeSource, method) {
+  return routeSource.includes(`export async function ${method}(`) || routeSource.includes(`export const ${method} = handlers.${method}`)
+}
+
+function assertRouteHasMethod(routeSource, method, label) {
+  assert.equal(routeHasMethod(routeSource, method), true, `${label} should export ${method}`)
+}
+
 test('admin dashboard CRUD workflow matrix has no fake row actions for requested surfaces', () => {
   const athletesTable = source('apps/web/components/admin/athletes-data-table.jsx')
   const athletesRoute = source('apps/web/app/api/admin/athletes/route.js')
+  const athleteRouteHandlers = source('apps/web/lib/admin-athlete-route-handlers.js')
   const athleteRepository = source('apps/web/lib/admin-athlete-repository.js')
 
-  assert.match(athletesRoute, /export async function GET\(\)/)
-  assert.match(athletesRoute, /export async function POST\(request\)/)
-  assert.match(athletesRoute, /export async function PATCH\(request\)/)
-  assert.match(athletesRoute, /export async function DELETE\(request\)/)
+  assertRouteHasMethod(athletesRoute, 'GET', 'athletes route')
+  assertRouteHasMethod(athletesRoute, 'POST', 'athletes route')
+  assertRouteHasMethod(athletesRoute, 'PATCH', 'athletes route')
+  assertRouteHasMethod(athletesRoute, 'DELETE', 'athletes route')
+  assert.match(athleteRouteHandlers, /createAdminAthleteRouteHandlers/)
   assert.match(athleteRepository, /async deleteAthlete\(\{ athleteId \}\)/)
   assert.match(athletesTable, /method: athleteDialogMode === 'edit' \? 'PATCH' : 'POST'/)
   assert.match(athletesTable, /method: 'DELETE'/)
@@ -28,27 +38,28 @@ test('admin dashboard CRUD workflow matrix has no fake row actions for requested
 
   const invitesTable = source('apps/web/components/admin/invites-data-table.jsx')
   const invitesRoute = source('apps/web/app/api/admin/invites/route.js')
+  const inviteRouteHandlers = source('apps/web/lib/admin-invite-route-handlers.js')
   const inviteRepository = source('apps/web/lib/admin-invite-repository.js')
 
-  assert.match(invitesRoute, /export async function GET\(\)/)
-  assert.match(invitesRoute, /export async function POST\(request\)/)
-  assert.match(invitesRoute, /if \(body\?\.action === 'resend'\)/)
-  assert.match(invitesRoute, /const inviteRows = await inviteRepository\.listInvitesByIds\(\{ inviteIds: body\.inviteIds \}\)/)
-  assert.match(invitesRoute, /athleteRepository\.sendAthleteInvite\(\{[\s\S]*athleteId: invite\.athleteProfileId,[\s\S]*inviteeEmail: invite\.email/)
-  assert.match(invitesRoute, /return json\(\{ result: \{ resentInvites, skippedInvites \} \}\)/)
+  assertRouteHasMethod(invitesRoute, 'GET', 'invites route')
+  assertRouteHasMethod(invitesRoute, 'POST', 'invites route')
+  assert.match(inviteRouteHandlers, /if \(body\?\.action === 'resend'\)/)
+  assert.match(inviteRouteHandlers, /const inviteRows = await inviteRepository\.listInvitesByIds\(\{ inviteIds: body\.inviteIds \}\)/)
+  assert.match(inviteRouteHandlers, /athleteRepository\.sendAthleteInvite\(\{[\s\S]*athleteId: invite\.athleteProfileId,[\s\S]*inviteeEmail: invite\.email/)
+  assert.match(inviteRouteHandlers, /return json\(\{ result: \{ resentInvites, skippedInvites \} \}\)/)
   assert.match(inviteRepository, /async listInvitesByIds\(\{ inviteIds = \[\] \}\)/)
-  assert.match(invitesRoute, /export async function PATCH\(request\)/)
+  assertRouteHasMethod(invitesRoute, 'PATCH', 'invites route')
   assert.match(inviteRepository, /async cancelInvite\(\{ inviteId \}\)/)
-  assert.match(invitesTable, /<DropdownMenuItem disabled=\{!canCancel\} onSelect=\{onCancelInvite\}>Cancel invite<\/DropdownMenuItem>/)
+  assert.match(invitesTable, /<DropdownMenuItem[\s\S]*disabled=\{!canCancel\}[\s\S]*onCancelInvite\(\)[\s\S]*Cancel invite[\s\S]*<\/DropdownMenuItem>/)
   assert.doesNotMatch(invitesTable, /Cancel unavailable/)
 
   const groupsTable = source('apps/web/components/admin/groups-data-table.jsx')
   const groupsRoute = source('apps/web/app/api/admin/groups/route.js')
   const groupRepository = source('apps/web/lib/admin-group-repository.js')
 
-  assert.match(groupsRoute, /export async function GET\(\)/)
-  assert.match(groupsRoute, /export async function POST\(request\)/)
-  assert.match(groupsRoute, /export async function PATCH\(request\)/)
+  assertRouteHasMethod(groupsRoute, 'GET', 'groups route')
+  assertRouteHasMethod(groupsRoute, 'POST', 'groups route')
+  assertRouteHasMethod(groupsRoute, 'PATCH', 'groups route')
   assert.match(groupRepository, /createGroup\(\{/)
   assert.match(groupRepository, /updateGroup\(\{/)
   assert.match(groupRepository, /archiveGroup\(\{/)
@@ -62,7 +73,7 @@ test('admin dashboard CRUD workflow matrix has no fake row actions for requested
   const rankingsRoute = source('apps/web/app/api/admin/rankings/route.js')
   const rankingRepository = source('apps/web/lib/admin-ranking-repository.js')
 
-  assert.match(rankingsRoute, /export async function GET\(\)/)
+  assertRouteHasMethod(rankingsRoute, 'GET', 'rankings route')
   assert.match(rankingRepository, /source: 'athlete_workout_progress'/)
   assert.match(rankingsTable, /navigateTo\(`\/admin\/athletes\?athlete=\$\{encodeURIComponent\(athleteId\)\}`\)/)
   assert.match(rankingsTable, /navigateTo\('\/admin\/programs'\)/)
@@ -74,9 +85,9 @@ test('admin programs workouts exercises settings surfaces expose persisted creat
   const programsRoute = source('apps/web/app/api/admin/programs/route.js')
   const programRepository = source('apps/web/lib/admin-program-repository.js')
 
-  assert.match(programsRoute, /export async function GET\(\)/)
-  assert.match(programsRoute, /export async function POST\(request\)/)
-  assert.match(programsRoute, /export async function PATCH\(request\)/)
+  assertRouteHasMethod(programsRoute, 'GET', 'programs route')
+  assertRouteHasMethod(programsRoute, 'POST', 'programs route')
+  assertRouteHasMethod(programsRoute, 'PATCH', 'programs route')
   assert.match(programRepository, /async createProgram\(\{/)
   assert.match(programRepository, /async updateProgram\(\{/)
   assert.match(programsTable, /method: isEditingProgram \|\| isAssigningProgram \? 'PATCH' : 'POST'/)
@@ -103,10 +114,10 @@ test('admin programs workouts exercises settings surfaces expose persisted creat
   const workoutsCalendar = source('apps/web/components/admin/workouts-calendar-view.jsx')
   const workoutCalendarRoute = source('apps/web/app/api/admin/workout-calendar/route.js')
 
-  assert.match(workoutCalendarRoute, /export async function GET\(request\)/)
-  assert.match(workoutCalendarRoute, /export async function POST\(request\)/)
-  assert.match(workoutCalendarRoute, /export async function PATCH\(request\)/)
-  assert.match(workoutCalendarRoute, /export async function DELETE\(request\)/)
+  assertRouteHasMethod(workoutCalendarRoute, 'GET', 'workout calendar route')
+  assertRouteHasMethod(workoutCalendarRoute, 'POST', 'workout calendar route')
+  assertRouteHasMethod(workoutCalendarRoute, 'PATCH', 'workout calendar route')
+  assertRouteHasMethod(workoutCalendarRoute, 'DELETE', 'workout calendar route')
   assert.match(workoutsCalendar, /method: 'POST'/)
   assert.match(workoutsCalendar, /method: 'PATCH'/)
   assert.match(workoutsCalendar, /method: 'DELETE'/)
@@ -116,11 +127,11 @@ test('admin programs workouts exercises settings surfaces expose persisted creat
   const exerciseDetailRoute = source('apps/web/app/api/admin/exercises/[exerciseId]/route.js')
   const exerciseRepository = source('apps/web/lib/admin-exercise-repository.js')
 
-  assert.match(exercisesRoute, /export async function GET\(\)/)
-  assert.match(exercisesRoute, /export async function POST\(request\)/)
-  assert.match(exerciseDetailRoute, /export async function GET\(request, context\)/)
-  assert.match(exerciseDetailRoute, /export async function PATCH\(request, context\)/)
-  assert.match(exerciseDetailRoute, /export async function DELETE\(request, context\)/)
+  assertRouteHasMethod(exercisesRoute, 'GET', 'exercises route')
+  assertRouteHasMethod(exercisesRoute, 'POST', 'exercises route')
+  assertRouteHasMethod(exerciseDetailRoute, 'GET', 'exercise detail route')
+  assertRouteHasMethod(exerciseDetailRoute, 'PATCH', 'exercise detail route')
+  assertRouteHasMethod(exerciseDetailRoute, 'DELETE', 'exercise detail route')
   assert.match(exerciseRepository, /async createExercise\(input = \{\}\)/)
   assert.match(exerciseRepository, /async updateExercise\(exerciseId, input = \{\}\)/)
   assert.match(exerciseRepository, /normalizeDirectExerciseVideoUrl\(input, client\.config\.baseUrl\)/)
