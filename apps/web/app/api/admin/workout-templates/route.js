@@ -1,18 +1,7 @@
 import { cookies } from 'next/headers'
 
 import { PPLUS_ADMIN_ACCESS_TOKEN_COOKIE } from '@/lib/admin-auth-cookies'
-import { createProgramWorkoutRepository } from '@/lib/program-workout-repository'
-
-function json(payload, init = {}) {
-  return Response.json(payload, init)
-}
-
-function handleRouteError(error) {
-  return json(
-    { error: error?.message || 'Unknown admin workout templates route error' },
-    { status: error?.status || 500 },
-  )
-}
+import { createAdminWorkoutTemplateRouteHandlers } from '@/lib/admin-workout-template-route-handlers'
 
 async function requireAdminAccessToken() {
   const cookieStore = await cookies()
@@ -25,64 +14,20 @@ async function requireAdminAccessToken() {
   return accessToken
 }
 
+const handlers = createAdminWorkoutTemplateRouteHandlers({ requireAdminAccessToken })
+
 export async function GET() {
-  try {
-    await requireAdminAccessToken()
-    const repository = createProgramWorkoutRepository()
-    const workoutTemplates = await repository.listWorkoutTemplates()
-    return json({ workoutTemplates })
-  } catch (error) {
-    return handleRouteError(error)
-  }
+  return handlers.GET()
 }
 
 export async function POST(request) {
-  try {
-    await requireAdminAccessToken()
-    const repository = createProgramWorkoutRepository()
-    const body = await request.json()
-    const workoutTemplate = await repository.createWorkoutTemplate(body ?? {})
-    return json({ workoutTemplate }, { status: 201 })
-  } catch (error) {
-    return handleRouteError(error)
-  }
+  return handlers.POST(request)
 }
 
 export async function PATCH(request) {
-  try {
-    await requireAdminAccessToken()
-    const repository = createProgramWorkoutRepository()
-    const body = await request.json()
-    if (body?.action === 'assign-workout-templates-to-program') {
-      const assignment = await repository.assignWorkoutTemplatesToProgram({
-        programId: body?.programId,
-        workoutTemplateIds: body?.workoutTemplateIds,
-      })
-      return json(assignment)
-    }
-    if (body?.action === 'archive-workout-templates') {
-      const archiveResult = await repository.archiveWorkoutTemplates({
-        workoutTemplateIds: body?.workoutTemplateIds,
-      })
-      return json(archiveResult)
-    }
-    const workoutTemplate = await repository.updateWorkoutTemplate(body?.id, body ?? {})
-    return json({ workoutTemplate })
-  } catch (error) {
-    return handleRouteError(error)
-  }
+  return handlers.PATCH(request)
 }
 
 export async function DELETE(request) {
-  try {
-    await requireAdminAccessToken()
-    const repository = createProgramWorkoutRepository()
-    const body = await request.json()
-    const deleteResult = await repository.deleteWorkoutTemplates({
-      workoutTemplateIds: body?.workoutTemplateIds ?? [body?.id].filter(Boolean),
-    })
-    return json(deleteResult)
-  } catch (error) {
-    return handleRouteError(error)
-  }
+  return handlers.DELETE(request)
 }

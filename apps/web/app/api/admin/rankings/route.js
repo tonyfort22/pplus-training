@@ -1,22 +1,5 @@
-import { createAdminRankingRepository } from '@/lib/admin-ranking-repository'
+import { createAdminRankingRouteHandlers } from '@/lib/admin-ranking-route-handlers'
 
-function json(payload, init = {}) {
-  return Response.json(payload, init)
-}
+const handlers = createAdminRankingRouteHandlers()
 
-function handleRouteError(error) {
-  return json(
-    { error: error?.message || 'Unknown admin rankings route error' },
-    { status: error?.status || 500 },
-  )
-}
-
-export async function GET() {
-  try {
-    const repository = createAdminRankingRepository()
-    const rankingPayload = await repository.listRankings()
-    return json(rankingPayload)
-  } catch (error) {
-    return handleRouteError(error)
-  }
-}
+export const GET = handlers.GET

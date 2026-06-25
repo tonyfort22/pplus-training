@@ -1,4 +1,4 @@
-import { programPlannerSeed } from './program-planner-data'
+import { programPlannerSeed } from './program-planner-data.js'
 
 const fixedDayDefinitions = [
   { id: 'day-1', label: 'Day 1' },
@@ -22,15 +22,30 @@ function cloneSection(section = {}) {
   }
 }
 
+function cloneProgramBlock(programBlock = {}) {
+  return {
+    id: programBlock.id ?? '',
+    title: programBlock.title ?? '',
+    description: programBlock.description ?? '',
+  }
+}
+
 function cloneWorkout(workout = {}) {
   return {
     id: workout.id ?? '',
+    programWorkoutId: workout.programWorkoutId ?? workout.program_workout_id ?? workout.id ?? '',
+    programDayId: workout.programDayId ?? workout.program_day_id ?? null,
     title: workout.title ?? '',
     source: workout.source ?? 'manual',
     sourceFileName: workout.sourceFileName ?? '',
     blockLabel: workout.blockLabel ?? 'Main Work',
+    blockBgColor: workout.blockBgColor ?? null,
+    blockTextColor: workout.blockTextColor ?? null,
     duration: workout.duration ?? '0 min',
+    status: workout.status ?? 'scheduled',
+    focusArea: workout.focusArea ?? 'main-work',
     coachNote: workout.coachNote ?? '',
+    programBlocks: Array.isArray(workout.programBlocks) ? workout.programBlocks.map(cloneProgramBlock) : [],
     sections: Array.isArray(workout.sections) ? workout.sections.map(cloneSection) : [],
   }
 }

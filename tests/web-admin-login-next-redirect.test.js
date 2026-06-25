@@ -10,13 +10,40 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const loginPagePath = resolve(repoRoot, 'apps/web/app/admin/login/page.jsx')
 const loginFormPath = resolve(repoRoot, 'apps/web/components/admin/admin-login-form.jsx')
 
-test('normalizeAdminNextPath only accepts internal admin paths', () => {
-  assert.equal(normalizeAdminNextPath('/admin/settings/account?athleteId=123'), '/admin/settings/account?athleteId=123')
-  assert.equal(normalizeAdminNextPath('/admin'), '/admin')
-  assert.equal(normalizeAdminNextPath('https://evil.test/admin'), '/admin')
-  assert.equal(normalizeAdminNextPath('//evil.test/admin'), '/admin')
-  assert.equal(normalizeAdminNextPath('/support'), '/admin')
-  assert.equal(normalizeAdminNextPath(''), '/admin')
+test('normalizeAdminNextPath allows internal admin destinations with query strings and hashes', () => {
+  const allowedDestinations = new Map([
+    ['/admin', '/admin'],
+    ['/admin/settings/account?athleteId=123', '/admin/settings/account?athleteId=123'],
+    ['/admin/programs/program-123?tab=training&week=2', '/admin/programs/program-123?tab=training&week=2'],
+    ['/admin/support#conversation-123', '/admin/support#conversation-123'],
+    [' /admin/workouts/calendar?view=week#day-2 ', '/admin/workouts/calendar?view=week#day-2'],
+  ])
+
+  for (const [input, expected] of allowedDestinations) {
+    assert.equal(normalizeAdminNextPath(input), expected, `expected ${input} to normalize to ${expected}`)
+  }
+})
+
+test('normalizeAdminNextPath rejects external or non-admin destinations', () => {
+  const rejectedDestinations = [
+    '',
+    null,
+    undefined,
+    '/support',
+    '/faq',
+    '/admin.evil/path',
+    '/admin/../support',
+    '/admin/%2e%2e/support',
+    'https://evil.test/admin',
+    'http://evil.test/admin',
+    '//evil.test/admin',
+    'javascript:alert(1)',
+    'mailto:test@example.com',
+  ]
+
+  for (const input of rejectedDestinations) {
+    assert.equal(normalizeAdminNextPath(input), '/admin', `expected ${input} to fall back to /admin`)
+  }
 })
 
 test('login page passes safe next redirect into AdminLoginForm', () => {

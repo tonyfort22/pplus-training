@@ -5,16 +5,61 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const landingPagePath = resolve(repoRoot, 'apps/web/app/page.jsx')
+const faqPagePath = resolve(repoRoot, 'apps/web/app/faq/page.jsx')
+const supportPagePath = resolve(repoRoot, 'apps/web/app/support/page.jsx')
 const landingSectionsPath = resolve(repoRoot, 'apps/web/app/landing-sections.jsx')
 const cssPath = resolve(repoRoot, 'apps/web/app/globals.css')
 
 const cssSource = () => readFileSync(cssPath, 'utf8')
+
+function cssRuleFor(selector) {
+  const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const match = cssSource().match(new RegExp(`${escapedSelector}\\s*\\{([^}]*)\\}`))
+  return match?.[1] || ''
+}
 
 function lightRuleFor(selector) {
   const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const match = cssSource().match(new RegExp(`html\\[data-public-theme='light'\\] ${escapedSelector}\\s*\\{([^}]*)\\}`))
   return match?.[1] || ''
 }
+
+test('public pages share the same dark/light theme shell contract', () => {
+  const landingSource = readFileSync(landingPagePath, 'utf8')
+  const faqSource = readFileSync(faqPagePath, 'utf8')
+  const supportSource = readFileSync(supportPagePath, 'utf8')
+
+  assert.match(landingSource, /<main className="landing-page">/)
+  assert.match(faqSource, /<main className="landing-page faq-page">/)
+  assert.match(supportSource, /<main className="landing-page support-page support-template-page">/)
+  assert.match(landingSource, /<LandingHeader language=\{language\} currentPath="\/" copy=\{copy\} \/>/)
+  assert.match(faqSource, /<LandingHeader language=\{language\} currentPath="\/faq" copy=\{copy\} \/>/)
+  assert.match(supportSource, /<LandingHeader language=\{language\} currentPath=\{currentPath\} copy=\{copy\} \/>/)
+  assert.match(landingSource, /<LandingFooter language=\{language\} copy=\{copy\} \/>/)
+  assert.match(faqSource, /<LandingFooter language=\{language\} copy=\{copy\} \/>/)
+  assert.match(supportSource, /<LandingFooter language=\{language\} copy=\{copy\} \/>/)
+})
+
+test('public dark theme remains the default when no public theme attribute is set', () => {
+  const css = cssSource()
+  const landingPageRule = cssRuleFor('.landing-page')
+  const headerScrolledRule = cssRuleFor('.landing-header--scrolled')
+  const mobileSheetRule = cssRuleFor('.landing-mobile-menu-sheet')
+
+  assert.match(css, /:root\s*\{[^}]*--landing-bg:\s*#08111f;/)
+  assert.match(css, /:root\s*\{[^}]*--landing-surface:\s*#0d1727;/)
+  assert.match(css, /:root\s*\{[^}]*--landing-copy:\s*#92a3ba;/)
+  assert.match(css, /:root\s*\{[^}]*--landing-copy-soft:\s*#6f7f97;/)
+  assert.match(css, /:root\s*\{[^}]*--landing-ink:\s*#f8fbff;/)
+  assert.match(css, /:root\s*\{[^}]*--landing-accent:\s*#39e5b4;/)
+  assert.match(css, /body\s*\{[^}]*background:\s*radial-gradient\(circle at top center, rgba\(27, 210, 255, 0\.08\), transparent 28%\), #08111f;/)
+  assert.match(css, /body\s*\{[^}]*color:\s*var\(--landing-ink\);/)
+  assert.match(landingPageRule, /background:\s*linear-gradient\(180deg, #08111f 0%, #091220 100%\);/)
+  assert.match(headerScrolledRule, /background:\s*rgba\(8, 17, 31, 0\.86\);/)
+  assert.match(mobileSheetRule, /background:\s*#08111f;/)
+  assert.doesNotMatch(css, /html\[data-public-theme='dark'\]/)
+})
 
 test('public light theme exposes a shared light surface for Home, FAQ, and Support', () => {
   const css = cssSource()

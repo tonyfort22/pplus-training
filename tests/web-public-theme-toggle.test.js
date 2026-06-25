@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const themeTogglePath = resolve(repoRoot, 'apps/web/components/public-theme-toggle.jsx')
 const landingSectionsPath = resolve(repoRoot, 'apps/web/app/landing-sections.jsx')
+const layoutPath = resolve(repoRoot, 'apps/web/app/layout.jsx')
 const cssPath = resolve(repoRoot, 'apps/web/app/globals.css')
 
 test('public footer renders a dark/light toggle beside the copyright row', () => {
@@ -14,12 +15,19 @@ test('public footer renders a dark/light toggle beside the copyright row', () =>
 
   const toggleSource = readFileSync(themeTogglePath, 'utf8')
   const sectionsSource = readFileSync(landingSectionsPath, 'utf8')
+  const layoutSource = readFileSync(layoutPath, 'utf8')
   const cssSource = readFileSync(cssPath, 'utf8')
 
   assert.match(toggleSource, /'use client'/)
   assert.match(toggleSource, /export default function PublicThemeToggle/)
   assert.match(toggleSource, /const STORAGE_KEY = 'pplus-public-theme'/)
-  assert.match(toggleSource, /document\.documentElement\.dataset\.publicTheme = nextTheme/)
+  assert.match(toggleSource, /export function PublicThemeHydrator\(\)/)
+  assert.match(toggleSource, /import \{ usePathname \} from 'next\/navigation'/)
+  assert.match(toggleSource, /function readSavedTheme\(\) \{[\s\S]*localStorage\?\.getItem\(STORAGE_KEY\)/)
+  assert.match(toggleSource, /function applyPublicTheme\(nextTheme\) \{[\s\S]*document\.documentElement\.dataset\.publicTheme = normalizedTheme/)
+  assert.match(toggleSource, /const pathname = usePathname\(\)/)
+  assert.match(toggleSource, /useEffect\(\(\) => \{\s*applyPublicTheme\(readSavedTheme\(\)\)\s*\}, \[pathname\]\)/)
+  assert.match(layoutSource, /<html lang="en" data-theme="dark" data-public-theme="dark" suppressHydrationWarning>/)
   assert.match(toggleSource, /localStorage\.setItem\(STORAGE_KEY, nextTheme\)/)
   assert.match(toggleSource, /aria-label=\{`Switch to \$\{theme === 'dark' \? 'light' : 'dark'\} mode`\}/)
   assert.match(toggleSource, /className="public-theme-toggle"/)
@@ -35,7 +43,8 @@ test('public footer renders a dark/light toggle beside the copyright row', () =>
   assert.doesNotMatch(toggleSource, /Dark<\/button>/)
   assert.doesNotMatch(toggleSource, /Light<\/button>/)
 
-  assert.match(sectionsSource, /import PublicThemeToggle from '\.\.\/components\/public-theme-toggle'/)
+  assert.match(sectionsSource, /import PublicThemeToggle, \{ PublicThemeHydrator \} from '\.\.\/components\/public-theme-toggle'/)
+  assert.match(sectionsSource, /<LandingHeaderScrollFrame>\s*<PublicThemeHydrator \/>/)
   assert.match(sectionsSource, /<div className="landing-shell landing-footer-meta">\s*<p>\{footerCopy\.copyright\}<\/p>\s*<PublicThemeToggle \/>\s*<\/div>/)
 
   assert.match(cssSource, /\.landing-footer-meta\s*\{[^}]*display:\s*flex;[^}]*justify-content:\s*space-between;[^}]*align-items:\s*center;/)

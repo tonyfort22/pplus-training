@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const programsDataTablePath = resolve(repoRoot, 'apps/web/components/admin/programs-data-table.jsx')
 const adminProgramRepositoryPath = resolve(repoRoot, 'apps/web/lib/admin-program-repository.js')
+const adminProgramRouteHandlersPath = resolve(repoRoot, 'apps/web/lib/admin-program-route-handlers.js')
 
 test('programs library surface uses admin light-mode tokens instead of dark-coded colors', () => {
   const programsSource = readFileSync(programsDataTablePath, 'utf8')
@@ -71,7 +72,7 @@ test('programs library row action dropdown matches requested action order and ha
 
 test('programs library archive action is confirmed and persisted through the admin route', () => {
   const programsSource = readFileSync(programsDataTablePath, 'utf8')
-  const routeSource = readFileSync(resolve(repoRoot, 'apps/web/app/api/admin/programs/route.js'), 'utf8')
+  const routeSource = readFileSync(adminProgramRouteHandlersPath, 'utf8')
   const repositorySource = readFileSync(adminProgramRepositoryPath, 'utf8')
 
   assert.match(programsSource, /const \[isArchiveProgramDialogOpen, setIsArchiveProgramDialogOpen\] = useState\(false\)/)
@@ -93,7 +94,7 @@ test('programs library archive action is confirmed and persisted through the adm
 
 test('programs library duplicate workflow has a dedicated sheet and persisted duplicate route', () => {
   const programsSource = readFileSync(programsDataTablePath, 'utf8')
-  const routeSource = readFileSync(resolve(repoRoot, 'apps/web/app/api/admin/programs/route.js'), 'utf8')
+  const routeSource = readFileSync(adminProgramRouteHandlersPath, 'utf8')
   const repositorySource = readFileSync(adminProgramRepositoryPath, 'utf8')
 
   assert.match(programsSource, /const \[duplicateCopyOptions, setDuplicateCopyOptions\] = useState\(createDuplicateCopyOptions\(\)\)/)
@@ -113,7 +114,7 @@ test('programs library duplicate workflow has a dedicated sheet and persisted du
 
 test('programs library assign-to-athletes action has a dedicated assignment sheet design and persisted workflow', () => {
   const programsSource = readFileSync(programsDataTablePath, 'utf8')
-  const routeSource = readFileSync(resolve(repoRoot, 'apps/web/app/api/admin/programs/route.js'), 'utf8')
+  const routeSource = readFileSync(adminProgramRouteHandlersPath, 'utf8')
   const repositorySource = readFileSync(adminProgramRepositoryPath, 'utf8')
 
   assert.match(programsSource, /function openAssignProgramDialog\(programId\) \{[\s\S]*setProgramDialogMode\('assign'\)[\s\S]*setActiveProgramDialogTab\('athletes'\)[\s\S]*setSelectedProgramId\(programId\)/)
@@ -158,7 +159,7 @@ test('programs library export action opens a dedicated non-mutating export sheet
 
 test('programs library delete bulk action is confirmed and persisted through one admin route workflow', () => {
   const programsSource = readFileSync(programsDataTablePath, 'utf8')
-  const routeSource = readFileSync(resolve(repoRoot, 'apps/web/app/api/admin/programs/route.js'), 'utf8')
+  const routeSource = readFileSync(adminProgramRouteHandlersPath, 'utf8')
   const repositorySource = readFileSync(adminProgramRepositoryPath, 'utf8')
 
   assert.match(programsSource, /const \[isDeleteProgramDialogOpen, setIsDeleteProgramDialogOpen\] = useState\(false\)/)

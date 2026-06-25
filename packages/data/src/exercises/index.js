@@ -5,13 +5,32 @@ function requireFetch(fetchImpl) {
   return fetchImpl
 }
 
-function mapExerciseRow(row) {
+function normalizeDirectSupabaseMp4Url(value, baseUrl = '') {
+  if (typeof value !== 'string' || !value.trim()) return null
+
+  let parsedUrl = null
+  try {
+    parsedUrl = new URL(value.trim())
+  } catch {
+    return null
+  }
+
+  const configuredHost = baseUrl ? new URL(baseUrl).host : ''
+  const isConfiguredSupabaseHost = configuredHost ? parsedUrl.host === configuredHost : false
+  const isSupabaseProjectHost = parsedUrl.hostname.endsWith('.supabase.co')
+  const isExerciseVideoStorageUrl = parsedUrl.pathname.includes('/storage/v1/object/public/exercise-videos/')
+  const isMp4Url = parsedUrl.pathname.toLowerCase().endsWith('.mp4')
+
+  return isExerciseVideoStorageUrl && isMp4Url && (isConfiguredSupabaseHost || isSupabaseProjectHost) ? parsedUrl.toString() : null
+}
+
+function mapExerciseRow(row, baseUrl = '') {
   if (!row) return null
   return {
     id: row.id,
     name: row.name ?? '',
     thumbnailUrl: row.thumbnail_url ?? null,
-    videoUrl: row.video_url ?? null,
+    videoUrl: normalizeDirectSupabaseMp4Url(row.video_url, baseUrl),
     stimulusType: row.stimulus_type ?? null,
     movementPattern: row.movement_pattern ?? null,
   }
@@ -119,7 +138,7 @@ export function createSupabaseRestExerciseRepository(config) {
   }
 
   async function resolveExerciseWithLinkedDefaults(row) {
-    const exercise = mapExerciseRow(row)
+    const exercise = mapExerciseRow(row, baseUrl)
     if (!exercise?.id) return exercise
     const linkedTemplate = await getLatestLinkedExerciseTemplate(exercise.id)
     if (!linkedTemplate) return exercise
@@ -140,7 +159,7 @@ export function createSupabaseRestExerciseRepository(config) {
         },
       })
 
-      return Array.isArray(rows) ? rows.map(mapExerciseRow).filter(Boolean) : []
+      return Array.isArray(rows) ? rows.map((row) => mapExerciseRow(row, baseUrl)).filter(Boolean) : []
     },
     async getExerciseById(exerciseId) {
       if (!exerciseId) return null

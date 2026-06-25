@@ -5,6 +5,7 @@ import { Info } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useToast } from '@/hooks/use-toast'
 
 const ADMIN_PROFILE_SEED = {
   avatarUrl: '',
@@ -141,6 +142,7 @@ function getProfileDisplayName(profileDraft = ADMIN_PROFILE_SEED) {
 }
 
 function AdminSettingsProfileView() {
+  const { toastManager } = useToast()
   const [profileDraft, setProfileDraft] = useState(ADMIN_PROFILE_SEED)
   const [isLoadingProfile, setIsLoadingProfile] = useState(true)
   const [isSavingProfile, setIsSavingProfile] = useState(false)
@@ -231,6 +233,11 @@ function AdminSettingsProfileView() {
         window.dispatchEvent(new CustomEvent('pplus-admin-profile-updated', { detail: payload.profile }))
       }
       setNotice('Profile updated.')
+      toastManager.show({
+        title: 'Profile saved',
+        description: 'Your profile changes are live.',
+        variant: 'success',
+      })
     } catch (error) {
       setErrorMessage(error?.message || 'Unable to save profile.')
     } finally {
@@ -241,14 +248,14 @@ function AdminSettingsProfileView() {
   const profileStatusMessage = errorMessage || notice || (isLoadingProfile ? 'Loading your connected coach profile.' : '')
 
   return (
-    <form className="grid w-full gap-6" onSubmit={handleSaveProfile} aria-describedby="admin-profile-status-notice">
+    <form className="admin-settings-profile-form grid w-full gap-6" onSubmit={handleSaveProfile} aria-describedby="admin-profile-status-notice">
       <ProfilePhotoUploader previewSrc={profileDraft.avatarUrl} profileName={getProfileDisplayName(profileDraft)} onAvatarChange={handleAvatarChange} />
 
       <div className="grid w-full gap-4 md:grid-cols-2">
         <SettingsProfileField htmlFor="admin-profile-first-name" label="First name">
           <Input
             id="admin-profile-first-name"
-            className={settingsProfileFieldInputClassName}
+            className={`admin-settings-profile-first-name ${settingsProfileFieldInputClassName}`}
             value={profileDraft.firstName}
             placeholder="First name"
             onChange={(event) => handleDraftChange('firstName', event.target.value)}
@@ -257,7 +264,7 @@ function AdminSettingsProfileView() {
         <SettingsProfileField htmlFor="admin-profile-last-name" label="Last name">
           <Input
             id="admin-profile-last-name"
-            className={settingsProfileFieldInputClassName}
+            className={`admin-settings-profile-last-name ${settingsProfileFieldInputClassName}`}
             value={profileDraft.lastName}
             placeholder="Last name"
             onChange={(event) => handleDraftChange('lastName', event.target.value)}
@@ -267,7 +274,7 @@ function AdminSettingsProfileView() {
           <Input
             id="admin-profile-phone"
             type="tel"
-            className={settingsProfileFieldInputClassName}
+            className={`admin-settings-profile-phone ${settingsProfileFieldInputClassName}`}
             value={profileDraft.phone}
             placeholder="Phone number"
             onChange={(event) => handleDraftChange('phone', event.target.value)}
@@ -283,7 +290,7 @@ function AdminSettingsProfileView() {
       ) : null}
 
       <div>
-        <Button type="submit" disabled={isLoadingProfile || isSavingProfile} className="admin-shell-athletes-create-submit min-h-[40px] rounded-[12px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] disabled:cursor-not-allowed disabled:opacity-60">
+        <Button type="submit" disabled={isLoadingProfile || isSavingProfile} className="admin-settings-profile-submit admin-shell-athletes-create-submit min-h-[40px] rounded-[12px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] disabled:cursor-not-allowed disabled:opacity-60">
           {isSavingProfile ? 'Saving...' : 'Save changes'}
         </Button>
       </div>
@@ -292,6 +299,7 @@ function AdminSettingsProfileView() {
 }
 
 function AdminSettingsAccountView() {
+  const { toastManager } = useToast()
   const [accountDraft, setAccountDraft] = useState(ADMIN_ACCOUNT_SEED)
   const [isLoadingAccount, setIsLoadingAccount] = useState(true)
   const [isSavingAccount, setIsSavingAccount] = useState(false)
@@ -364,6 +372,11 @@ function AdminSettingsAccountView() {
         confirmPassword: '',
       })
       setNotice('Account updated.')
+      toastManager.show({
+        title: 'Account saved',
+        description: 'Your account changes are saved.',
+        variant: 'success',
+      })
     } catch (error) {
       setErrorMessage(error?.message || 'Unable to save account.')
     } finally {
@@ -372,15 +385,22 @@ function AdminSettingsAccountView() {
   }
 
   const accountStatusMessage = errorMessage || notice || (isLoadingAccount ? 'Loading your authenticated account.' : '')
+  const hasAccountError = Boolean(errorMessage)
+  const accountStatusClassName = hasAccountError
+    ? 'flex w-full items-start gap-2 rounded-[14px] border border-[#ef4444]/40 bg-[#ef4444]/10 px-4 py-3 text-sm leading-6 text-[#b91c1c] dark:text-[#fecaca]'
+    : 'flex w-full items-start gap-2 rounded-[14px] border border-[var(--admin-shell-accent)]/30 bg-[var(--admin-shell-accent)]/10 px-4 py-3 text-sm leading-6 text-[var(--admin-shell-text)]'
+  const accountStatusIconClassName = hasAccountError
+    ? 'mt-0.5 h-4 w-4 shrink-0 text-[#ef4444]'
+    : 'mt-0.5 h-4 w-4 shrink-0 text-[#06b486]'
 
   return (
-    <form className="grid w-full gap-6" onSubmit={handleSaveAccount} aria-describedby={accountStatusMessage ? 'admin-account-status-notice' : undefined}>
+    <form className="admin-settings-account-form grid w-full gap-6" onSubmit={handleSaveAccount} aria-describedby={accountStatusMessage ? 'admin-account-status-notice' : undefined}>
       <div className="grid w-full gap-4">
         <SettingsField htmlFor="admin-account-email" label="Email">
           <Input
             id="admin-account-email"
             type="email"
-            className={settingsFieldInputClassName}
+            className={`admin-settings-account-email ${settingsFieldInputClassName}`}
             value={accountDraft.email}
             placeholder="admin@email.com"
             onChange={(event) => handleAccountDraftChange('email', event.target.value)}
@@ -393,7 +413,7 @@ function AdminSettingsAccountView() {
           <Input
             id="admin-account-current-password"
             type="password"
-            className={settingsFieldInputClassName}
+            className={`admin-settings-account-current-password ${settingsFieldInputClassName}`}
             value={accountDraft.currentPassword}
             placeholder="Current password"
             onChange={(event) => handleAccountDraftChange('currentPassword', event.target.value)}
@@ -403,7 +423,7 @@ function AdminSettingsAccountView() {
           <Input
             id="admin-account-new-password"
             type="password"
-            className={settingsFieldInputClassName}
+            className={`admin-settings-account-new-password ${settingsFieldInputClassName}`}
             value={accountDraft.password}
             placeholder="New password"
             onChange={(event) => handleAccountDraftChange('password', event.target.value)}
@@ -413,7 +433,7 @@ function AdminSettingsAccountView() {
           <Input
             id="admin-account-confirm-password"
             type="password"
-            className={settingsFieldInputClassName}
+            className={`admin-settings-account-confirm-password ${settingsFieldInputClassName}`}
             value={accountDraft.confirmPassword}
             placeholder="Confirm password"
             onChange={(event) => handleAccountDraftChange('confirmPassword', event.target.value)}
@@ -422,14 +442,14 @@ function AdminSettingsAccountView() {
       </div>
 
       {accountStatusMessage ? (
-        <div id="admin-account-status-notice" className="flex w-full items-start gap-2 rounded-[14px] border border-[var(--admin-shell-accent)]/30 bg-[var(--admin-shell-accent)]/10 px-4 py-3 text-sm leading-6 text-[var(--admin-shell-text)]">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#06b486]" />
+        <div id="admin-account-status-notice" role={hasAccountError ? 'alert' : 'status'} aria-label={hasAccountError ? 'Account validation error' : 'Account status'} className={accountStatusClassName}>
+          <Info className={accountStatusIconClassName} />
           <span>{accountStatusMessage}</span>
         </div>
       ) : null}
 
       <div>
-        <Button type="submit" disabled={isLoadingAccount || isSavingAccount} className="admin-shell-athletes-create-submit min-h-[40px] rounded-[12px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] disabled:cursor-not-allowed disabled:opacity-60">
+        <Button type="submit" disabled={isLoadingAccount || isSavingAccount} className="admin-settings-account-submit admin-shell-athletes-create-submit min-h-[40px] rounded-[12px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] disabled:cursor-not-allowed disabled:opacity-60">
           {isSavingAccount ? 'Saving...' : 'Save changes'}
         </Button>
       </div>
@@ -441,9 +461,9 @@ export default function AdminSettingsView({ currentPath = '/admin/settings' }) {
   const activeTab = getActiveSettingsTab(currentPath)
 
   return (
-    <section className="grid gap-6">
-      <div className="admin-shell-workspace-header">
-        <h1 className="admin-shell-athletes-page-title">{activeTab === 'account' ? 'Account' : 'Profile'}</h1>
+    <section className="admin-settings-shell grid gap-6">
+      <div className="admin-settings-header admin-shell-workspace-header">
+        <h1 className="admin-settings-title admin-shell-athletes-page-title">{activeTab === 'account' ? 'Account' : 'Profile'}</h1>
         <p className="admin-shell-workspace-description">{activeTab === 'profile' ? 'Edit the approved coach profile fields: avatar, name, and phone.' : 'Update the current admin sign-in email or set a new password.'}</p>
       </div>
 

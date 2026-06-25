@@ -52,11 +52,11 @@ function RankCell({ rank, badgeSrc = '' }) {
 
 function NameCell({ name, ageLabel, avatarUrl = '' }) {
   return (
-    <div className="admin-shell-athletes-name-cell">
-      <Avatar alt={name} className="admin-shell-athletes-avatar" initials={getInitials(name)} src={avatarUrl || undefined} />
-      <div className="admin-shell-athletes-name-copy">
-        <span className="admin-shell-athletes-name-text">{name}</span>
-        <span className="admin-shell-athletes-name-meta">{ageLabel}</span>
+    <div className="admin-shell-rankings-name-cell">
+      <Avatar alt={name} className="admin-shell-rankings-avatar" initials={getInitials(name)} src={avatarUrl || undefined} />
+      <div className="admin-shell-rankings-name-copy">
+        <span className="admin-shell-rankings-name-text">{name}</span>
+        <span className="admin-shell-rankings-name-meta">{ageLabel}</span>
       </div>
     </div>
   )
@@ -64,12 +64,12 @@ function NameCell({ name, ageLabel, avatarUrl = '' }) {
 
 function WorkoutsCell({ workoutsCompleted, workoutsTarget, workoutsPercentage }) {
   return (
-    <div className="admin-shell-athletes-workouts-cell">
-      <div className="admin-shell-athletes-workouts-header">
-        <span className="admin-shell-athletes-workouts-label">{workoutsCompleted}/{workoutsTarget}</span>
-        <span className="admin-shell-athletes-workouts-percent">{workoutsPercentage}%</span>
+    <div className="admin-shell-rankings-workouts-cell">
+      <div className="admin-shell-rankings-workouts-header">
+        <span className="admin-shell-rankings-workouts-label">{workoutsCompleted}/{workoutsTarget}</span>
+        <span className="admin-shell-rankings-workouts-percent">{workoutsPercentage}%</span>
       </div>
-      <Progress className="admin-shell-athletes-workouts-progress" value={workoutsPercentage} />
+      <Progress className="admin-shell-rankings-workouts-progress" value={workoutsPercentage} />
     </div>
   )
 }
@@ -97,9 +97,9 @@ function RowActionsCell({ athleteId = '' }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button type="button" className="admin-shell-athletes-row-menu" aria-label="Open menu">
+        <button type="button" className="admin-shell-rankings-row-menu" aria-label="Open menu">
           <span className="sr-only">Open menu</span>
-          <MoreHorizontal className="admin-shell-athletes-row-menu-icon" aria-hidden="true" />
+          <MoreHorizontal className="admin-shell-rankings-row-menu-icon" aria-hidden="true" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
@@ -170,7 +170,7 @@ export default function RankingsDataTable({ searchQuery = '' }) {
         id: 'select',
         header: ({ table }) => (
           <Checkbox
-            className="admin-shell-athletes-checkbox-input"
+            className="admin-shell-rankings-checkbox-input"
             checked={table.getIsAllPageRowsSelected()}
             onChange={(event) => table.toggleAllPageRowsSelected(event.target.checked)}
             aria-label="Select all"
@@ -178,7 +178,7 @@ export default function RankingsDataTable({ searchQuery = '' }) {
         ),
         cell: ({ row }) => (
           <Checkbox
-            className="admin-shell-athletes-checkbox-input"
+            className="admin-shell-rankings-checkbox-input"
             checked={row.getIsSelected()}
             onChange={(event) => row.toggleSelected(event.target.checked)}
             aria-label="Select row"
@@ -203,7 +203,7 @@ export default function RankingsDataTable({ searchQuery = '' }) {
         accessorKey: 'program',
         header: 'Program',
         meta: { label: 'Program' },
-        cell: ({ row }) => <span className="admin-shell-athletes-program-cell">{row.original.program}</span>,
+        cell: ({ row }) => <span className="admin-shell-rankings-program-cell">{row.original.program}</span>,
       },
       {
         accessorKey: 'workoutsPercentage',
@@ -221,7 +221,7 @@ export default function RankingsDataTable({ searchQuery = '' }) {
         accessorKey: 'lastActive',
         header: 'Last active',
         meta: { label: 'Last active' },
-        cell: ({ row }) => <span className="admin-shell-athletes-last-active-cell">{row.original.lastActive}</span>,
+        cell: ({ row }) => <span className="admin-shell-rankings-last-active-cell">{row.original.lastActive}</span>,
       },
       {
         accessorKey: 'status',
@@ -271,13 +271,13 @@ export default function RankingsDataTable({ searchQuery = '' }) {
   const skeletonRows = Array.from({ length: pagination.pageSize }, (_, rowIndex) => rowIndex)
 
   return (
-    <div className="admin-shell-athletes-table-example">
-      <div className="admin-shell-athletes-example-controls flex items-center justify-between gap-3">
+    <div className="admin-shell-rankings-table-example admin-shell-athletes-table-example">
+      <div className="admin-shell-rankings-example-controls admin-shell-athletes-example-controls flex items-center justify-between gap-3">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button type="button" className="admin-shell-athletes-example-columns-button">
+            <button type="button" className="admin-shell-rankings-example-columns-button">
               Columns
-              <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
+              <ChevronDown className="admin-shell-rankings-example-columns-icon" aria-hidden="true" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -288,6 +288,7 @@ export default function RankingsDataTable({ searchQuery = '' }) {
                 <DropdownMenuCheckboxItem
                   key={column.id}
                   className="capitalize"
+                  checkIconClassName="text-[var(--admin-shell-primary-button-bg)]"
                   checked={column.getIsVisible()}
                   onCheckedChange={(value) => column.toggleVisibility(!!value)}
                 >
@@ -298,15 +299,15 @@ export default function RankingsDataTable({ searchQuery = '' }) {
         </DropdownMenu>
       </div>
 
-      <div className="admin-shell-athletes-table-shell">
-        <Table className="admin-shell-athletes-table">
+      <div className="admin-shell-rankings-table-shell admin-shell-athletes-table-shell">
+        <Table className="admin-shell-rankings-table admin-shell-athletes-table">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <TableHead
                     key={header.id}
-                    className={header.column.id === 'actions' ? 'admin-shell-athletes-actions-cell' : ''}
+                    className={header.column.id === 'actions' ? 'admin-shell-rankings-actions-cell' : ''}
                   >
                     {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
@@ -317,7 +318,7 @@ export default function RankingsDataTable({ searchQuery = '' }) {
           <TableBody>
             {loading ? (
               skeletonRows.map((rowIndex) => (
-                <TableRow key={`skeleton-${rowIndex}`} className={rowIndex % 2 === 0 ? 'admin-shell-athletes-row-even' : 'admin-shell-athletes-row-odd'}>
+                <TableRow key={`skeleton-${rowIndex}`} className={rowIndex % 2 === 0 ? 'admin-shell-rankings-row-even admin-shell-athletes-row-even' : 'admin-shell-rankings-row-odd admin-shell-athletes-row-odd'}>
                   <TableCell><Skeleton className="h-4 w-4 rounded-[4px]" /></TableCell>
                   <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
                   <TableCell>
@@ -338,7 +339,7 @@ export default function RankingsDataTable({ searchQuery = '' }) {
                   </TableCell>
                   <TableCell><Skeleton className="h-4 w-[88px]" /></TableCell>
                   <TableCell><Skeleton className="h-8 w-[132px] rounded-full" /></TableCell>
-                  <TableCell className="admin-shell-athletes-actions-cell"><Skeleton className="ml-auto h-8 w-8 rounded-full" /></TableCell>
+                  <TableCell className="admin-shell-rankings-actions-cell"><Skeleton className="ml-auto h-8 w-8 rounded-full" /></TableCell>
                 </TableRow>
               ))
             ) : table.getRowModel().rows?.length ? (
@@ -346,12 +347,12 @@ export default function RankingsDataTable({ searchQuery = '' }) {
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() ? 'selected' : undefined}
-                  className={index % 2 === 0 ? 'admin-shell-athletes-row-even' : 'admin-shell-athletes-row-odd'}
+                  className={index % 2 === 0 ? 'admin-shell-rankings-row-even admin-shell-athletes-row-even' : 'admin-shell-rankings-row-odd admin-shell-athletes-row-odd'}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}
-                      className={cell.column.id === 'actions' ? 'admin-shell-athletes-actions-cell' : ''}
+                      className={cell.column.id === 'actions' ? 'admin-shell-rankings-actions-cell' : ''}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
@@ -359,8 +360,8 @@ export default function RankingsDataTable({ searchQuery = '' }) {
                 </TableRow>
               ))
             ) : (
-              <TableRow className="admin-shell-athletes-row-even">
-                <TableCell colSpan={columns.length} className="admin-shell-athletes-empty-state py-10 text-center">
+              <TableRow className="admin-shell-rankings-row-even admin-shell-athletes-row-even">
+                <TableCell colSpan={columns.length} className="admin-shell-rankings-empty-state admin-shell-athletes-empty-state py-10 text-center">
                   {emptyStateMessage}
                 </TableCell>
               </TableRow>
@@ -369,7 +370,7 @@ export default function RankingsDataTable({ searchQuery = '' }) {
         </Table>
       </div>
 
-      <div className="admin-shell-athletes-pagination-bar flex items-center justify-end gap-3 py-4 text-sm">
+      <div className="admin-shell-rankings-pagination-bar admin-shell-athletes-pagination-bar flex items-center justify-end gap-3 py-4 text-sm">
         <span>Rows per page</span>
         <Select value={String(pagination.pageSize)} onValueChange={(value) => table.setPageSize(Number(value))}>
           <SelectTrigger className="h-9 w-[76px] rounded-[10px] px-3 text-sm">
@@ -385,7 +386,7 @@ export default function RankingsDataTable({ searchQuery = '' }) {
         <button
           type="button"
           aria-label="Go to previous page"
-          className="admin-shell-athletes-example-pagination-button"
+          className="admin-shell-rankings-example-pagination-button"
           onClick={() => table.previousPage()}
           disabled={!table.getCanPreviousPage()}
         >
@@ -395,7 +396,7 @@ export default function RankingsDataTable({ searchQuery = '' }) {
           <button
             key={`page-${pageNumber}`}
             type="button"
-            className={`admin-shell-athletes-example-pagination-button ${pagination.pageIndex === pageNumber ? 'admin-shell-athletes-example-pagination-button-active' : ''}`}
+            className={`admin-shell-rankings-example-pagination-button ${pagination.pageIndex === pageNumber ? 'admin-shell-rankings-example-pagination-button-active' : ''}`}
             onClick={() => table.setPageIndex(pageNumber)}
           >
             {pageNumber + 1}
@@ -404,7 +405,7 @@ export default function RankingsDataTable({ searchQuery = '' }) {
         <button
           type="button"
           aria-label="Go to next page"
-          className="admin-shell-athletes-example-pagination-button"
+          className="admin-shell-rankings-example-pagination-button"
           onClick={() => table.nextPage()}
           disabled={!table.getCanNextPage()}
         >

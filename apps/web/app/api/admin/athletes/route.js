@@ -1,57 +1,8 @@
-import { createAdminAthleteRepository } from '@/lib/admin-athlete-repository'
+import { createAdminAthleteRouteHandlers } from '@/lib/admin-athlete-route-handlers'
 
-function json(payload, init = {}) {
-  return Response.json(payload, init)
-}
+const handlers = createAdminAthleteRouteHandlers()
 
-function handleRouteError(error) {
-  return json(
-    { error: error?.message || 'Unknown admin athletes route error' },
-    { status: error?.status || 500 },
-  )
-}
-
-export async function GET() {
-  try {
-    const repository = createAdminAthleteRepository()
-    const athletes = await repository.listAthletes()
-    return json({ athletes })
-  } catch (error) {
-    return handleRouteError(error)
-  }
-}
-
-export async function POST(request) {
-  try {
-    const repository = createAdminAthleteRepository()
-    const body = await request.json()
-    const athlete = await repository.createAthlete(body ?? {})
-    return json({ athlete }, { status: 201 })
-  } catch (error) {
-    return handleRouteError(error)
-  }
-}
-
-export async function PATCH(request) {
-  try {
-    const repository = createAdminAthleteRepository()
-    const body = await request.json()
-    const athlete = await repository.updateAthlete(body ?? {})
-    return json({ athlete })
-  } catch (error) {
-    return handleRouteError(error)
-  }
-}
-
-export async function DELETE(request) {
-  try {
-    const repository = createAdminAthleteRepository()
-    const body = await request.json()
-    const result = Array.isArray(body?.athleteIds)
-      ? await repository.deleteAthletes({ athleteIds: body.athleteIds })
-      : await repository.deleteAthlete(body ?? {})
-    return json({ result })
-  } catch (error) {
-    return handleRouteError(error)
-  }
-}
+export const GET = handlers.GET
+export const POST = handlers.POST
+export const PATCH = handlers.PATCH
+export const DELETE = handlers.DELETE

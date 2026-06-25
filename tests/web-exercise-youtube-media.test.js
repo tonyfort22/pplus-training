@@ -11,6 +11,7 @@ const youtubeMediaProviderPath = resolve(repoRoot, 'apps/web/lib/youtube-media-p
 const youtubeMediaRoutePath = resolve(repoRoot, 'apps/web/app/api/admin/exercise-youtube-media/route.js')
 const exerciseEditorDialogPath = resolve(repoRoot, 'apps/web/components/admin/exercise-editor-dialog.jsx')
 const exercisesDataTablePath = resolve(repoRoot, 'apps/web/components/admin/exercises-data-table.jsx')
+const pageTestManifestPath = resolve(repoRoot, 'apps/web/testing/page-test-manifest.js')
 
 function source(path) {
   assert.equal(existsSync(path), true, `${path} should exist`)
@@ -89,4 +90,23 @@ test('exercise editor button triggers YouTube media generation and shows progres
   assert.match(tableSource, /thumbnailName: payload\.thumbnailName/)
   assert.match(tableSource, /onGenerateYoutubeMedia=\{handleGenerateExerciseYoutubeMedia\}/)
   assert.match(tableSource, /isGeneratingYoutubeMedia=\{isGeneratingExerciseYoutubeMedia\}/)
+})
+
+test('remaining YouTube helper API route is explicitly classified as legacy/helper', async () => {
+  if (!existsSync(youtubeMediaRoutePath)) {
+    return
+  }
+
+  const { getWebApiRouteClassifications, WEB_API_ROUTE_CLASSES, WEB_ROUTE_AREAS, WEB_ROUTE_AUTH_STATES } = await import(
+    `${pageTestManifestPath}?t=${Date.now()}`
+  )
+  const classifications = getWebApiRouteClassifications()
+  const youtubeHelperRoute = classifications.find((route) => route.path === '/api/admin/exercise-youtube-media')
+
+  assert.ok(youtubeHelperRoute, 'present YouTube helper route must be classified')
+  assert.equal(youtubeHelperRoute.classification, WEB_API_ROUTE_CLASSES.LEGACY_HELPER)
+  assert.equal(youtubeHelperRoute.area, WEB_ROUTE_AREAS.ADMIN_PRODUCT)
+  assert.equal(youtubeHelperRoute.authState, WEB_ROUTE_AUTH_STATES.PROTECTED)
+  assert.equal(youtubeHelperRoute.sourceFile, 'apps/web/app/api/admin/exercise-youtube-media/route.js')
+  assert.deepEqual(youtubeHelperRoute.existingTestFiles, ['tests/web-exercise-youtube-media.test.js'])
 })

@@ -23,6 +23,7 @@ Mobile-first training platform for hockey athletes and coaches.
 - `docs/build-roadmap-v1.md`
 - `docs/product-map-v1.md`
 - `docs/app-structure-v1.md`
+- `docs/web-local-gate.md` — run the full web gate locally before PR handoff
 
 ## Backend foundation
 - `infra/supabase/schema-v1.sql`

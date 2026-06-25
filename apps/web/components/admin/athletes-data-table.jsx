@@ -8,10 +8,18 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from '@tanstack/react-table'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { BookOpen, ChevronDown, Download, MoreHorizontal, Plus, Send, Trash2, UsersRound } from 'lucide-react'
 import { parseAsJson, useQueryState } from 'nuqs'
 
 import { Filters, createFilter } from '@/components/reui/filters'
+import {
+  BULK_EXPORT_FIELD_GROUPS,
+  DEFAULT_BULK_EXPORT_FIELDS,
+  buildBulkExportCsv,
+  downloadBulkExportFile,
+  getBulkExportFileName,
+} from '@/lib/admin-athlete-export'
 import { useToast } from '@/hooks/use-toast'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import Avatar from '@/components/ui/avatar'
@@ -59,278 +67,17 @@ const ATHLETE_TABLE_COLUMN_WIDTHS = {
   actions: '52px',
 }
 
-const BULK_EXPORT_FIELD_GROUPS = [
-  {
-    id: 'athlete-profile',
-    label: 'Athlete profile',
-    description: 'Core athlete profile table fields.',
-    fields: [
-      'id',
-      'user_id',
-      'coach_id',
-      'first_name',
-      'last_name',
-      'date_of_birth',
-      'sport',
-      'position',
-      'handedness',
-      'gender',
-      'height_cm',
-      'weight_kg',
-      'avatar_url',
-      'units_preference',
-      'weight_unit_preference',
-      'distance_unit_preference',
-      'theme_preference',
-      'status',
-      'created_at',
-      'updated_at',
-    ],
-  },
-  {
-    id: 'invitation',
-    label: 'Invitation',
-    description: 'Athlete invitation and email delivery fields.',
-    fields: [
-      'id',
-      'coach_id',
-      'invitee_email',
-      'expires_at',
-      'used_at',
-      'revoked_at',
-      'sent_at',
-      'athlete_profile_id',
-      'created_by_user_id',
-      'created_at',
-      'updated_at',
-    ],
-  },
-  {
-    id: 'current-program',
-    label: 'Current program',
-    description: 'Latest assigned program fields for the athlete.',
-    fields: [
-      'id',
-      'athlete_id',
-      'coach_id',
-      'name',
-      'description',
-      'start_date',
-      'end_date',
-      'status',
-      'created_at',
-      'updated_at',
-    ],
-  },
-  {
-    id: 'planned-workouts',
-    label: 'Planned workouts',
-    description: 'Program workout rows attached to the athlete.',
-    fields: [
-      'id',
-      'athlete_id',
-      'coach_id',
-      'program_id',
-      'program_phase_id',
-      'program_day_id',
-      'workout_template_id',
-      'name_snapshot',
-      'notes',
-      'import_source',
-      'import_source_file_name',
-      'bg_color',
-      'text_color',
-      'status',
-      'sort_order',
-      'scheduled_date',
-      'scheduled_start_time',
-      'scheduled_end_time',
-      'created_at',
-      'updated_at',
-    ],
-  },
-  {
-    id: 'workout-sessions',
-    label: 'Workout sessions',
-    description: 'Completed and in-progress workout session fields.',
-    fields: [
-      'id',
-      'athlete_id',
-      'coach_id',
-      'program_id',
-      'program_day_id',
-      'program_workout_id',
-      'workout_template_id',
-      'name_snapshot',
-      'status',
-      'started_at',
-      'completed_at',
-      'elapsed_seconds',
-      'notes',
-      'perceived_difficulty',
-      'total_exercises_count',
-      'completed_exercises_count',
-      'total_sets_count',
-      'completed_sets_count',
-      'created_at',
-      'updated_at',
-    ],
-  },
-  {
-    id: 'load-summaries',
-    label: 'Load summaries',
-    description: 'Computed training load summary fields.',
-    fields: [
-      'id',
-      'athlete_id',
-      'workout_session_id',
-      'completed_sets',
-      'completed_reps',
-      'volume_load',
-      'effort_adjusted_load',
-      'session_difficulty',
-      'log_date',
-      'created_at',
-    ],
-  },
-  {
-    id: 'groups',
-    label: 'Groups',
-    description: 'Group and membership fields connected to the athlete.',
-    fields: [
-      'athlete_group_id',
-      'group_name',
-      'group_description',
-      'access_level',
-      'group_status',
-      'created_by_user_id',
-      'archived_at',
-      'group_created_at',
-      'group_updated_at',
-      'membership_id',
-      'added_by_user_id',
-      'membership_created_at',
-      'membership_updated_at',
-    ],
-  },
-]
+function buildAthleteDetailQueryString(searchParams, athleteId) {
+  const nextSearchParams = new URLSearchParams(searchParams?.toString() || '')
 
-const DEFAULT_BULK_EXPORT_FIELDS = BULK_EXPORT_FIELD_GROUPS.map((fieldGroup) => fieldGroup.id)
-
-function getBulkExportFieldValue(athlete, groupId, fieldName) {
-  if (groupId === 'athlete-profile') {
-    const profileFields = {
-      id: athlete.id,
-      user_id: athlete.userId,
-      coach_id: athlete.coachId,
-      first_name: athlete.firstName,
-      last_name: athlete.lastName,
-      date_of_birth: athlete.dateOfBirth,
-      sport: athlete.sport,
-      position: athlete.position,
-      handedness: athlete.handedness,
-      gender: athlete.gender,
-      height_cm: athlete.heightCm,
-      weight_kg: athlete.weightKg,
-      avatar_url: athlete.avatarUrl,
-      units_preference: athlete.unitsPreference,
-      weight_unit_preference: athlete.weightUnitPreference,
-      distance_unit_preference: athlete.distanceUnitPreference,
-      theme_preference: athlete.themePreference,
-      status: athlete.status,
-      created_at: athlete.createdAt,
-      updated_at: athlete.updatedAt,
-    }
-    return profileFields[fieldName]
+  if (athleteId) {
+    nextSearchParams.set('athleteId', athleteId)
+  } else {
+    nextSearchParams.delete('athleteId')
   }
 
-  if (groupId === 'invitation') {
-    const invitationFields = {
-      invitee_email: athlete.inviteeEmail,
-      athlete_profile_id: athlete.id,
-      sent_at: athlete.hasInvite ? 'stored invitation' : '',
-    }
-    return invitationFields[fieldName]
-  }
-
-  if (groupId === 'current-program') {
-    const currentProgramFields = {
-      athlete_id: athlete.id,
-      name: athlete.program,
-      status: athlete.program && athlete.program !== '-' ? 'Assigned' : '',
-    }
-    return currentProgramFields[fieldName]
-  }
-
-  if (groupId === 'planned-workouts') {
-    const plannedWorkoutFields = {
-      athlete_id: athlete.id,
-      status: athlete.workoutsTarget > 0 ? 'Planned' : '',
-      name_snapshot: athlete.program,
-    }
-    return plannedWorkoutFields[fieldName]
-  }
-
-  if (groupId === 'workout-sessions') {
-    const workoutSessionFields = {
-      athlete_id: athlete.id,
-      status: athlete.workoutsCompleted > 0 ? 'Completed sessions' : '',
-      completed_sets_count: athlete.workoutsCompleted,
-    }
-    return workoutSessionFields[fieldName]
-  }
-
-  if (groupId === 'load-summaries') {
-    const loadSummaryFields = {
-      athlete_id: athlete.id,
-      completed_sets: athlete.workoutsCompleted,
-    }
-    return loadSummaryFields[fieldName]
-  }
-
-  return ''
-}
-
-function formatBulkExportCsvValue(value) {
-  if (value === null || value === undefined) return ''
-  const stringValue = String(value)
-  if (/[",\n\r]/.test(stringValue)) {
-    return `"${stringValue.replace(/"/g, '""')}"`
-  }
-  return stringValue
-}
-
-function buildBulkExportCsv(athletesToExport, selectedFieldGroupIds) {
-  const selectedGroups = BULK_EXPORT_FIELD_GROUPS.filter((fieldGroup) => selectedFieldGroupIds.includes(fieldGroup.id))
-  const exportColumns = selectedGroups.flatMap((fieldGroup) => (
-    fieldGroup.fields.map((fieldName) => ({
-      groupId: fieldGroup.id,
-      fieldName,
-      header: `${fieldGroup.id}.${fieldName}`,
-    }))
-  ))
-  const headers = ['export_row', 'athlete_name', ...exportColumns.map((column) => column.header)]
-  const rows = athletesToExport.map((athlete, index) => [
-    index + 1,
-    athlete.name,
-    ...exportColumns.map((column) => getBulkExportFieldValue(athlete, column.groupId, column.fieldName)),
-  ])
-
-  return [headers, ...rows]
-    .map((row) => row.map(formatBulkExportCsvValue).join(','))
-    .join('\n')
-}
-
-function downloadBulkExportFile({ content, fileName, mimeType }) {
-  const blob = new Blob([content], { type: mimeType })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = fileName
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  URL.revokeObjectURL(url)
+  const queryString = nextSearchParams.toString()
+  return queryString ? `?${queryString}` : ''
 }
 
 function getInitials(name) {
@@ -457,15 +204,20 @@ function formatCreateAthletePositionLabel(value) {
   return 'Forward'
 }
 
-function NameCell({ name, avatarUrl = '', dateOfBirth = null }) {
+function NameCell({ name, avatarUrl = '', dateOfBirth = null, onOpenAthleteDetail = () => {} }) {
   return (
-    <div className="admin-shell-athletes-name-cell">
+    <button
+      type="button"
+      className="admin-shell-athletes-name-cell w-full text-left"
+      aria-label={`Open athlete detail for ${name}`}
+      onClick={() => onOpenAthleteDetail()}
+    >
       <Avatar alt={name} className="admin-shell-athletes-avatar" initials={getInitials(name)} src={avatarUrl || undefined} />
       <div className="admin-shell-athletes-name-copy">
         <span className="admin-shell-athletes-name-text">{name}</span>
         <span className="admin-shell-athletes-name-meta">{formatAthleteDateOfBirthSummary(dateOfBirth)}</span>
       </div>
-    </div>
+    </button>
   )
 }
 
@@ -864,13 +616,16 @@ function athleteMatchesFilters(athlete, filters) {
 }
 
 export function AthletesDataTable({ searchQuery = '' }) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { toastManager } = useToast()
   const [athletes, setAthletes] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
   const [athleteFilters, setAthleteFilters] = useQueryState(
-    'filters',
+    'athleteFilters',
     parseAsJson((value) => (Array.isArray(value) ? value : [])).withDefault([]),
   )
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false)
@@ -998,7 +753,17 @@ export function AthletesDataTable({ searchQuery = '' }) {
         accessorKey: 'name',
         header: 'Name',
         meta: { label: 'Name' },
-        cell: ({ row }) => <NameCell name={row.original.name} avatarUrl={row.original.avatarUrl} dateOfBirth={row.original.dateOfBirth} />,
+        cell: ({ row }) => (
+          <NameCell
+            name={row.original.name}
+            avatarUrl={row.original.avatarUrl}
+            dateOfBirth={row.original.dateOfBirth}
+            onOpenAthleteDetail={() => {
+              const nextQueryString = buildAthleteDetailQueryString(searchParams, row.original.id)
+              router.replace(`${pathname}${nextQueryString}`, { scroll: false })
+            }}
+          />
+        ),
       },
       {
         accessorKey: 'program',
@@ -1054,7 +819,7 @@ export function AthletesDataTable({ searchQuery = '' }) {
         enableHiding: false,
       },
     ],
-    [openRowActionMenuId],
+    [openRowActionMenuId, pathname, router, searchParams],
   )
 
   const filteredAthletes = useMemo(() => {
@@ -1454,6 +1219,7 @@ export function AthletesDataTable({ searchQuery = '' }) {
   }))
   const selectedExportActiveCount = selectedAthletes.filter((athlete) => athlete.status === 'Active').length
   const selectedExportInactiveCount = selectedAthleteCount - selectedExportActiveCount
+  const bulkExportFileName = getBulkExportFileName()
   const bulkInviteSendDisabled = selectedInviteAthletes.length === 0
     || isSendingBulkInvites
     || selectedBulkInvitePayloads.some((payload) => payload.needsEmail && !payload.inviteeEmail)
@@ -1566,12 +1332,10 @@ export function AthletesDataTable({ searchQuery = '' }) {
     setIsExportingAthletes(true)
 
     try {
-      const timestamp = new Date().toISOString().slice(0, 10)
-
       const csv = buildBulkExportCsv(selectedAthletes, bulkExportFields)
       downloadBulkExportFile({
         content: csv,
-        fileName: `pplus-athletes-export-${timestamp}.csv`,
+        fileName: bulkExportFileName,
         mimeType: 'text/csv;charset=utf-8',
       })
 
@@ -1799,8 +1563,9 @@ export function AthletesDataTable({ searchQuery = '' }) {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="admin-shell-athletes-example-columns-button"
+                  className="admin-shell-athletes-example-columns-button disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={selectedAthleteCount === 0}
+                  aria-disabled={selectedAthleteCount === 0}
                   aria-label="Bulk actions"
                 >
                   {selectedAthleteCount > 0 ? `Bulk actions (${selectedAthleteCount})` : 'Bulk actions'}
@@ -2109,41 +1874,28 @@ export function AthletesDataTable({ searchQuery = '' }) {
           <SheetHeader className="shrink-0 border-b border-[var(--admin-dashboard-card-border)] px-6 py-5">
             <SheetTitle className="text-[var(--admin-dashboard-card-text)]">Export athletes</SheetTitle>
             <SheetDescription className="text-[var(--admin-dashboard-card-muted)]">
-              Choose what to include for {selectedAthleteCount} selected athletes.
+              Review the selected athletes before downloading a CSV export.
             </SheetDescription>
           </SheetHeader>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             <div className="grid gap-5">
-              <section className="grid gap-3 rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-4">
-                <div className="grid gap-1">
-                  <h3 className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">Export summary</h3>
-                  <p className="text-sm text-[var(--admin-dashboard-card-muted)]">Review the selected roster before choosing export options.</p>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-3 py-3">
-                    <p className="text-lg font-semibold text-[var(--admin-dashboard-card-text)]">{selectedAthleteCount}</p>
-                    <p className="text-xs text-[var(--admin-dashboard-card-muted)]">Selected</p>
+              <section className="rounded-[20px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-4">
+                <div className="grid gap-4">
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--admin-dashboard-card-muted)]">Selected athletes</div>
+                    <div className="mt-1 text-3xl font-semibold text-[var(--admin-dashboard-card-text)]">{selectedAthleteCount}</div>
                   </div>
-                  <div className="rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-3 py-3">
-                    <p className="text-lg font-semibold text-[var(--admin-dashboard-card-text)]">{selectedExportActiveCount}</p>
-                    <p className="text-xs text-[var(--admin-dashboard-card-muted)]">Active</p>
+                  <div className="grid gap-3 text-sm">
+                    <div className="flex items-center justify-between gap-3 rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-4 py-3">
+                      <span className="text-[var(--admin-dashboard-card-muted)]">Format</span>
+                      <span className="font-medium text-[var(--admin-dashboard-card-text)]">CSV</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-4 py-3">
+                      <span className="text-[var(--admin-dashboard-card-muted)]">Filename</span>
+                      <span className="truncate font-medium text-[var(--admin-dashboard-card-text)]">{bulkExportFileName}</span>
+                    </div>
                   </div>
-                  <div className="rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-3 py-3">
-                    <p className="text-lg font-semibold text-[var(--admin-dashboard-card-text)]">{selectedExportInactiveCount}</p>
-                    <p className="text-xs text-[var(--admin-dashboard-card-muted)]">Inactive</p>
-                  </div>
-                </div>
-              </section>
-
-              <section className="grid gap-3">
-                <div className="grid gap-1">
-                  <h3 className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">Export format</h3>
-                  <p className="text-sm text-[var(--admin-dashboard-card-muted)]">This export downloads as a CSV file.</p>
-                </div>
-                <div className="rounded-[14px] border border-[var(--admin-shell-primary-button-bg)] bg-[#3BE0AF]/10 px-4 py-3 text-left">
-                  <span className="block text-sm font-semibold text-[var(--admin-dashboard-card-text)]">CSV</span>
-                  <span className="mt-1 block text-xs text-[var(--admin-dashboard-card-muted)]">Spreadsheet-friendly athlete rows</span>
                 </div>
               </section>
 
@@ -2178,9 +1930,9 @@ export function AthletesDataTable({ searchQuery = '' }) {
                         </span>
                       </AccordionTrigger>
                       <AccordionContent className="px-3 pb-3 pt-0">
-                        <div className="flex flex-wrap gap-2 pl-8">
+                        <div className="grid grid-cols-1 gap-2 pl-8 sm:grid-cols-2">
                           {fieldGroup.fields.map((fieldName) => (
-                            <span key={fieldName} className="rounded-full border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-2.5 py-1 text-xs font-medium text-[var(--admin-dashboard-card-muted)]">
+                            <span key={fieldName} className="rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-3 py-2 text-xs font-medium text-[var(--admin-dashboard-card-muted)]">
                               {fieldName}
                             </span>
                           ))}
@@ -2191,24 +1943,20 @@ export function AthletesDataTable({ searchQuery = '' }) {
                 </Accordion>
               </section>
 
-              <section className="rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] p-4">
+              <section className="grid gap-3">
                 <div className="grid gap-1">
                   <h3 className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">Selected athletes preview</h3>
-                  <p className="text-sm text-[var(--admin-dashboard-card-muted)]">First rows that will be included.</p>
+                  <p className="text-sm text-[var(--admin-dashboard-card-muted)]">Rows that will be included.</p>
                 </div>
-                <div className="mt-4 grid gap-2">
-                  {selectedAthletes.slice(0, 3).map((athlete) => (
-                    <div key={athlete.id} className="flex items-center justify-between gap-3 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-3 py-2">
+                <div className="grid max-h-[360px] gap-2 overflow-y-auto pr-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                  {selectedAthletes.map((athlete) => (
+                    <div key={athlete.id} className="flex items-center justify-between gap-3 rounded-[16px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-3 py-3">
                       <span className="truncate text-sm font-medium text-[var(--admin-dashboard-card-text)]">{athlete.name}</span>
                       <span className="shrink-0 text-xs text-[var(--admin-dashboard-card-muted)]">{athlete.program || athlete.status || '-'}</span>
                     </div>
                   ))}
-                  {selectedAthleteCount > 3 ? (
-                    <p className="text-xs font-medium text-[var(--admin-shell-primary-button-bg)]">+ {selectedAthleteCount - 3} more</p>
-                  ) : null}
                 </div>
               </section>
-
             </div>
           </div>
 
@@ -2227,7 +1975,7 @@ export function AthletesDataTable({ searchQuery = '' }) {
               disabled={bulkExportDisabled}
               onClick={handleBulkExportSubmit}
             >
-              {isExportingAthletes ? 'Exporting...' : 'Export athletes'}
+              {isExportingAthletes ? 'Preparing CSV...' : 'Download CSV'}
             </Button>
           </SheetFooter>
         </SheetContent>

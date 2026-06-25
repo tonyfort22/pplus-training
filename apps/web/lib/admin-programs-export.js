@@ -27,8 +27,8 @@ function joinList(values = []) {
   return Array.isArray(values) ? values.filter(Boolean).join('; ') : ''
 }
 
-export function buildProgramsExportCsv(selectedPrograms = []) {
-  const rows = selectedPrograms.map((program) => [
+export function buildProgramsExportRows(selectedPrograms = []) {
+  return selectedPrograms.map((program) => [
     program.id,
     program.athleteId,
     joinList(program.assignedAthleteIds),
@@ -47,6 +47,10 @@ export function buildProgramsExportCsv(selectedPrograms = []) {
     program.description,
     program.status,
   ])
+}
+
+export function buildProgramsExportCsv(selectedPrograms = []) {
+  const rows = buildProgramsExportRows(selectedPrograms)
 
   return [programExportColumns, ...rows].map((row) => row.map(escapeCsvValue).join(',')).join('\n')
 }

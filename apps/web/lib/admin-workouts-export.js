@@ -24,8 +24,8 @@ export function escapeCsvValue(value) {
   return `"${normalizedValue.replace(/"/g, '""')}"`
 }
 
-export function buildWorkoutsExportCsv(selectedWorkouts = []) {
-  const rows = selectedWorkouts.map((workout) => [
+export function buildWorkoutsExportRows(selectedWorkouts = []) {
+  return selectedWorkouts.map((workout) => [
     workout.id,
     workout.coachId,
     workout.name,
@@ -45,6 +45,10 @@ export function buildWorkoutsExportCsv(selectedWorkouts = []) {
     workout.updatedAt,
     workout.status,
   ])
+}
+
+export function buildWorkoutsExportCsv(selectedWorkouts = []) {
+  const rows = buildWorkoutsExportRows(selectedWorkouts)
 
   return [workoutExportColumns, ...rows].map((row) => row.map(escapeCsvValue).join(',')).join('\n')
 }

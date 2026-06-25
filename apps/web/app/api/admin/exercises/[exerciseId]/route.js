@@ -1,51 +1,7 @@
-import { createAdminExerciseRepository } from '@/lib/admin-exercise-repository'
+import { createAdminExerciseRouteHandlers } from '@/lib/admin-exercise-route-handlers'
 
-function json(payload, init = {}) {
-  return Response.json(payload, init)
-}
+const handlers = createAdminExerciseRouteHandlers()
 
-function handleRouteError(error) {
-  return json(
-    { error: error?.message || 'Unknown admin exercise route error' },
-    { status: error?.status || 500 },
-  )
-}
-
-async function getExerciseIdFromContext(context) {
-  const params = await context?.params
-  return params?.exerciseId
-}
-
-export async function GET(request, context) {
-  try {
-    const repository = createAdminExerciseRepository()
-    const exerciseId = await getExerciseIdFromContext(context)
-    const exercise = await repository.getExercise(exerciseId)
-    return json({ exercise })
-  } catch (error) {
-    return handleRouteError(error)
-  }
-}
-
-export async function PATCH(request, context) {
-  try {
-    const repository = createAdminExerciseRepository()
-    const payload = await request.json()
-    const exerciseId = await getExerciseIdFromContext(context)
-    const exercise = await repository.updateExercise(exerciseId, payload)
-    return json({ exercise })
-  } catch (error) {
-    return handleRouteError(error)
-  }
-}
-
-export async function DELETE(request, context) {
-  try {
-    const repository = createAdminExerciseRepository()
-    const exerciseId = await getExerciseIdFromContext(context)
-    const result = await repository.deleteExercise(exerciseId)
-    return json({ result })
-  } catch (error) {
-    return handleRouteError(error)
-  }
-}
+export const GET = handlers.GET
+export const PATCH = handlers.PATCH
+export const DELETE = handlers.DELETE

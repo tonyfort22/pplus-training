@@ -1,48 +1,15 @@
 import { NextResponse } from 'next/server'
-import { PPLUS_ADMIN_ACCESS_TOKEN_COOKIE } from './lib/admin-auth-cookies.js'
-
-const PUBLIC_ADMIN_PATHS = [
-  '/admin/login',
-  '/admin/forgot-password',
-  '/admin/reset-password',
-  '/admin/support',
-  '/admin/support/reference',
-]
-
-const PUBLIC_ASSET_EXTENSIONS = [
-  '.svg',
-  '.png',
-  '.jpg',
-  '.jpeg',
-  '.webp',
-  '.ico',
-]
-
-function isPublicAssetPath(pathname) {
-  return PUBLIC_ASSET_EXTENSIONS.some((extension) => pathname.endsWith(extension))
-}
-
-function isPublicAdminPath(pathname) {
-  return PUBLIC_ADMIN_PATHS.includes(pathname)
-}
+import {
+  getAdminProtectedLoginRedirectUrl,
+  shouldBypassAdminAuth,
+} from './lib/admin-route-protection.js'
 
 export function middleware(request) {
-  const { pathname, search } = request.nextUrl
-
-  if (!pathname.startsWith('/admin') || pathname.startsWith('/api/') || isPublicAdminPath(pathname) || isPublicAssetPath(pathname)) {
+  if (shouldBypassAdminAuth(request)) {
     return NextResponse.next()
   }
 
-  const accessToken = request.cookies.get(PPLUS_ADMIN_ACCESS_TOKEN_COOKIE)?.value
-  if (accessToken) {
-    return NextResponse.next()
-  }
-
-  const redirectUrl = request.nextUrl.clone()
-  redirectUrl.pathname = '/admin/login'
-  redirectUrl.search = ''
-  redirectUrl.searchParams.set('next', pathname + search)
-  return NextResponse.redirect(redirectUrl)
+  return NextResponse.redirect(getAdminProtectedLoginRedirectUrl(request))
 }
 
 export const config = {

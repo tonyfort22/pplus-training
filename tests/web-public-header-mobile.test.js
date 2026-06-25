@@ -9,13 +9,33 @@ const landingSectionsPath = resolve(repoRoot, 'apps/web/app/landing-sections.jsx
 const headerScrollFramePath = resolve(repoRoot, 'apps/web/app/landing-header-scroll-frame.jsx')
 const cssPath = resolve(repoRoot, 'apps/web/app/globals.css')
 
+function extractLandingHeaderSource(source) {
+  const start = source.indexOf('export function LandingHeader')
+  const end = source.indexOf('\nexport function LandingFooter')
+
+  assert.notEqual(start, -1, 'LandingHeader export should exist')
+  assert.notEqual(end, -1, 'LandingFooter export should follow LandingHeader')
+
+  return source.slice(start, end)
+}
+
+function extractMobileDrawerSource(headerSource) {
+  const start = headerSource.indexOf('<div className="landing-header-mobile landing-shell">')
+  const end = headerSource.indexOf('</LandingHeaderScrollFrame>')
+
+  assert.notEqual(start, -1, 'mobile header shell should exist')
+  assert.notEqual(end, -1, 'LandingHeaderScrollFrame should wrap the mobile shell')
+
+  return headerSource.slice(start, end)
+}
+
 test('public landing header renders a shadcn Sheet mobile drawer with the same localized nav actions', () => {
   const source = readFileSync(landingSectionsPath, 'utf8')
 
   assert.match(source, /import \{ Menu, X \} from 'lucide-react'/, 'mobile header should use the Menu and X icons')
   assert.match(source, /from '@\/components\/ui\/sheet'/, 'mobile header should use the existing shadcn Sheet component')
   assert.match(source, /import LandingHeaderScrollFrame from '\.\/landing-header-scroll-frame'/, 'header should delegate scroll threshold state to a tiny client frame')
-  assert.match(source, /<LandingHeaderScrollFrame>\s*<div className="landing-header-desktop landing-shell landing-header-inner">/, 'desktop header should stay isolated from the mobile structure inside the scroll frame')
+  assert.match(source, /<LandingHeaderScrollFrame>\s*<PublicThemeHydrator \/>\s*<div className="landing-header-desktop landing-shell landing-header-inner">/, 'desktop header should stay isolated from the mobile structure inside the scroll frame after the public theme hydrator')
   assert.match(source, /<div className="landing-header-mobile landing-shell">/, 'mobile header should have its own compact shell')
   assert.match(source, /<SheetTrigger asChild>/, 'mobile menu button should be the Sheet trigger')
   assert.match(source, /className="landing-mobile-menu-button"/, 'mobile trigger should have a dedicated tap-target class')
@@ -31,6 +51,22 @@ test('public landing header renders a shadcn Sheet mobile drawer with the same l
   assert.doesNotMatch(source, /landing-mobile-menu-close[^>]*>Close<\/button>/, 'mobile drawer close button should not render text')
   assert.match(source, /landing-mobile-menu-switcher-row[\s\S]*<PublicLanguageSwitcher language=\{language\} currentPath=\{currentPath\} \/>[\s\S]*<PublicThemeToggle \/>/, 'mobile drawer should place language first, then theme, on one row')
   assert.match(source, /landing-mobile-store-link[\s\S]*Download on the App Store/, 'mobile drawer should keep the App Store CTA')
+})
+
+test('public mobile drawer contract stays scoped to public navigation and closes after every action', () => {
+  const source = readFileSync(landingSectionsPath, 'utf8')
+  const headerSource = extractLandingHeaderSource(source)
+  const mobileDrawerSource = extractMobileDrawerSource(headerSource)
+
+  assert.match(mobileDrawerSource, /<Sheet>\s*<SheetTrigger asChild>/, 'mobile drawer should use the Sheet trigger, not a custom disclosure')
+  assert.match(mobileDrawerSource, /<button className="landing-mobile-menu-button" type="button" aria-label="Open navigation menu">/, 'drawer trigger should keep an accessible open label')
+  assert.match(mobileDrawerSource, /<SheetContent side="right" className="landing-mobile-menu-sheet" showCloseButton=\{false\}>/, 'public drawer should opt out of the default Sheet close control and own its public styling')
+  assert.match(mobileDrawerSource, /<SheetClose asChild>\s*<button className="landing-mobile-menu-close" type="button" aria-label="Close navigation menu">/, 'drawer should provide a visible accessible close button')
+  assert.match(mobileDrawerSource, /<nav className="landing-mobile-menu-nav" aria-label="Mobile primary">\s*\{navItems\.map\(\(item\) => \(\s*<SheetClose key=\{item\.key\} asChild>\s*<a className="landing-mobile-menu-link" href=\{item\.href\}>\{item\.label\}<\/a>\s*<\/SheetClose>\s*\)\)\}/, 'every mobile nav item should come from the shared nav contract and close the drawer')
+  assert.match(mobileDrawerSource, /<PublicLanguageSwitcher language=\{language\} currentPath=\{currentPath\} \/>/, 'drawer should expose the public language switcher with the active path')
+  assert.match(mobileDrawerSource, /<PublicThemeToggle \/>/, 'drawer should expose the public theme toggle')
+  assert.match(mobileDrawerSource, /<SheetClose asChild>\s*<a className="landing-store-link landing-mobile-store-link" href=\{APP_STORE_DOWNLOAD_URL\}/, 'mobile App Store CTA should close the drawer after tapping')
+  assert.doesNotMatch(mobileDrawerSource, /\/admin|Sign In|landing-signin-link/, 'mobile drawer should not expose admin auth navigation')
 })
 
 test('public landing header floats only after the 20px scroll threshold', () => {

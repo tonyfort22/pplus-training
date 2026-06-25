@@ -77,7 +77,12 @@ function DropdownSelectField({ id, value, options = [], placeholder, onValueChan
   )
 }
 
-function ExerciseGeneratedMediaPreview({ values, onThumbnailFileChange = () => {}, isSaving = false }) {
+function ExerciseGeneratedMediaPreview({
+  values,
+  onThumbnailFileChange = () => {},
+  onVideoFileChange = () => {},
+  isSaving = false,
+}) {
   const hasThumbnail = Boolean(values.thumbnailUrl)
   const hasVideo = Boolean(values.videoUrl)
   const hasGeneratedMedia = hasThumbnail || hasVideo
@@ -88,7 +93,7 @@ function ExerciseGeneratedMediaPreview({ values, onThumbnailFileChange = () => {
     <Accordion
       type="single"
       collapsible
-      className="overflow-hidden rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)]"
+      className="admin-shell-exercises-media-preview overflow-hidden rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)]"
     >
       <AccordionItem value="medias-preview">
         <AccordionTrigger className="px-4 py-4">
@@ -152,6 +157,31 @@ function ExerciseGeneratedMediaPreview({ values, onThumbnailFileChange = () => {
                 </MediaPlayerVideo>
                 <MediaPlayerControls videoUrl={values.videoUrl} />
               </MediaPlayer>
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 py-3 text-xs text-[var(--admin-dashboard-card-muted)]">
+                <span className="truncate" title={values.videoName || values.videoUrl}>
+                  {values.videoName || 'Generated MP4'}
+                </span>
+                <input
+                  id="exercise-video-mp4-upload"
+                  type="file"
+                  accept="video/mp4"
+                  className="sr-only"
+                  disabled={isSaving}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0]
+                    if (file) onVideoFileChange(file)
+                    event.target.value = ''
+                  }}
+                />
+                <label
+                  htmlFor="exercise-video-mp4-upload"
+                  aria-disabled={isSaving}
+                  className="inline-flex h-8 cursor-pointer items-center justify-center gap-2 rounded-[10px] border border-[var(--admin-dashboard-card-border)] px-3 text-xs font-medium text-[var(--admin-dashboard-card-text)] transition-colors hover:border-[var(--admin-shell-accent)] hover:text-[var(--admin-shell-accent)] aria-disabled:pointer-events-none aria-disabled:cursor-not-allowed aria-disabled:opacity-60"
+                >
+                  <Upload className="size-3.5" aria-hidden="true" />
+                  Replace MP4
+                </label>
+              </div>
             </div>
           ) : null}
         </AccordionContent>
@@ -235,7 +265,23 @@ export default function ExerciseEditorDialog({
                 </InputGroup>
               </div>
 
-              <ExerciseGeneratedMediaPreview values={values} onThumbnailFileChange={onThumbnailFileChange} isSaving={isSaving} />
+              <div className="grid gap-2">
+                <FieldLabel htmlFor="exercise-video-url">MP4 media URL</FieldLabel>
+                <FieldInput
+                  id="exercise-video-url"
+                  value={values.videoUrl || ''}
+                  onChange={(value) => updateField('videoUrl', value)}
+                  placeholder="https://example.supabase.co/storage/v1/object/public/exercise-videos/example.mp4"
+                  disabled={isSaving}
+                />
+              </div>
+
+              <ExerciseGeneratedMediaPreview
+                values={values}
+                onThumbnailFileChange={onThumbnailFileChange}
+                onVideoFileChange={onVideoFileChange}
+                isSaving={isSaving}
+              />
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="grid gap-2">

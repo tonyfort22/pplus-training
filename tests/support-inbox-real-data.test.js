@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const repositoryPath = resolve(repoRoot, 'apps/web/lib/support-inbox-repository.js')
+const supportInboxRouteHandlersPath = resolve(repoRoot, 'apps/web/lib/support-inbox-route-handlers.js')
 const routePath = resolve(repoRoot, 'apps/web/app/api/admin/support/conversations/route.js')
 const messagesRoutePath = resolve(repoRoot, 'apps/web/app/api/admin/support/conversations/[conversationId]/messages/route.js')
 const publicRequesterMessagesRoutePath = resolve(repoRoot, 'apps/web/app/api/support/conversations/[conversationId]/messages/route.js')
@@ -73,14 +74,88 @@ test('support inbox repository lists conversations from Supabase REST', async ()
   ])
 })
 
-test('admin support conversations API route uses the support inbox repository', () => {
+test('admin support conversation list route handler returns conversations from the repository with search passthrough', async () => {
+  assert.ok(existsSync(supportInboxRouteHandlersPath), 'support inbox route handler seam should exist')
+  const { createAdminSupportConversationRouteHandlers } = await import(`${supportInboxRouteHandlersPath}?cacheBust=${Date.now()}`)
+  const calls = []
+  const handlers = createAdminSupportConversationRouteHandlers({
+    createRepository: () => ({
+      async listConversations(options) {
+        calls.push(['listConversations', options])
+        return [
+          {
+            id: 'conversation-1',
+            supportRequestId: 'support-request-1',
+            subject: 'Program access question',
+            status: 'open',
+            priority: 'high',
+            requesterName: 'Ann Smith',
+            requesterEmail: 'ann@example.com',
+            requesterRole: 'athlete',
+            requesterAvatarUrl: null,
+            lastMessagePreview: 'Can you confirm my next block?',
+            lastMessageAt: '2026-05-29T15:40:00.000Z',
+            createdAt: '2026-05-29T15:00:00.000Z',
+            updatedAt: '2026-05-29T15:40:00.000Z',
+          },
+        ]
+      },
+    }),
+  })
+
+  const response = await handlers.GET(new Request('https://pplus.example.com/api/admin/support/conversations?search=ann%40example.com'))
+  const payload = await response.json()
+
+  assert.equal(response.status, 200)
+  assert.deepEqual(calls, [['listConversations', { search: 'ann@example.com' }]])
+  assert.deepEqual(payload, {
+    conversations: [
+      {
+        id: 'conversation-1',
+        supportRequestId: 'support-request-1',
+        subject: 'Program access question',
+        status: 'open',
+        priority: 'high',
+        requesterName: 'Ann Smith',
+        requesterEmail: 'ann@example.com',
+        requesterRole: 'athlete',
+        requesterAvatarUrl: null,
+        lastMessagePreview: 'Can you confirm my next block?',
+        lastMessageAt: '2026-05-29T15:40:00.000Z',
+        createdAt: '2026-05-29T15:00:00.000Z',
+        updatedAt: '2026-05-29T15:40:00.000Z',
+      },
+    ],
+  })
+})
+
+test('admin support conversation list route handler preserves repository error status and message', async () => {
+  assert.ok(existsSync(supportInboxRouteHandlersPath), 'support inbox route handler seam should exist')
+  const { createAdminSupportConversationRouteHandlers } = await import(`${supportInboxRouteHandlersPath}?cacheBust=${Date.now()}`)
+  const unavailableError = new Error('Support inbox persistence unavailable until web Supabase env is configured.')
+  unavailableError.status = 503
+  const handlers = createAdminSupportConversationRouteHandlers({
+    createRepository: () => ({
+      async listConversations() {
+        throw unavailableError
+      },
+    }),
+  })
+
+  const response = await handlers.GET(new Request('https://pplus.example.com/api/admin/support/conversations'))
+
+  assert.equal(response.status, 503)
+  assert.deepEqual(await response.json(), { error: 'Support inbox persistence unavailable until web Supabase env is configured.' })
+})
+
+test('admin support conversations API route delegates to the testable conversation list handler', () => {
   assert.ok(existsSync(routePath), 'admin support conversations API route should exist')
   const source = readFileSync(routePath, 'utf8')
 
-  assert.match(source, /import \{ createSupportInboxRepository \} from '@\/lib\/support-inbox-repository'/)
-  assert.match(source, /export async function GET\(request\)/)
-  assert.match(source, /repository\.listConversations\(\{ search: searchParams\.get\('search'\) \|\| '' \}\)/)
-  assert.match(source, /conversations/)
+  assert.match(source, /import \{ getAdminSupportConversations \} from '@\/lib\/support-inbox-route-handlers'/)
+  assert.match(source, /export \{ getAdminSupportConversations as GET \}/)
+  assert.doesNotMatch(source, /createSupportInboxRepository/, 'route file should delegate instead of owning repository construction')
+  assert.doesNotMatch(source, /listConversations/, 'route file should delegate instead of owning list query logic')
 })
 
 test('support inbox repository lists messages for one conversation from Supabase REST', async () => {
@@ -186,16 +261,147 @@ test('support inbox repository creates admin replies and updates conversation pr
   await assert.rejects(() => repository.createAdminReply('conversation-1', '   '), /Reply body is required/)
 })
 
-test('admin support messages API route creates admin replies for a selected conversation', () => {
+test('admin support message route handler loads messages for a selected conversation', async () => {
+  const { createAdminSupportConversationMessageRouteHandlers } = await import(`${supportInboxRouteHandlersPath}?cacheBust=${Date.now()}`)
+  const calls = []
+  const handlers = createAdminSupportConversationMessageRouteHandlers({
+    createRepository: () => ({
+      async listConversationMessages(conversationId) {
+        calls.push(['listConversationMessages', conversationId])
+        return [
+          {
+            id: 'message-1',
+            conversationId,
+            senderType: 'requester',
+            senderName: 'Ann Smith',
+            senderAvatarUrl: null,
+            body: 'Can you confirm my next block?',
+            attachments: [],
+            deliveredAt: null,
+            deliveryStatus: null,
+            deliveryError: null,
+            createdAt: '2026-05-29T15:40:00.000Z',
+            updatedAt: '2026-05-29T15:40:00.000Z',
+          },
+        ]
+      },
+    }),
+  })
+
+  const response = await handlers.GET(
+    new Request('https://pplus.example.com/api/admin/support/conversations/conversation-1/messages'),
+    { params: Promise.resolve({ conversationId: 'conversation-1' }) },
+  )
+
+  assert.equal(response.status, 200)
+  assert.deepEqual(calls, [['listConversationMessages', 'conversation-1']])
+  assert.deepEqual(await response.json(), {
+    messages: [
+      {
+        id: 'message-1',
+        conversationId: 'conversation-1',
+        senderType: 'requester',
+        senderName: 'Ann Smith',
+        senderAvatarUrl: null,
+        body: 'Can you confirm my next block?',
+        attachments: [],
+        deliveredAt: null,
+        deliveryStatus: null,
+        deliveryError: null,
+        createdAt: '2026-05-29T15:40:00.000Z',
+        updatedAt: '2026-05-29T15:40:00.000Z',
+      },
+    ],
+  })
+})
+
+test('admin support message route handler creates admin replies through an injected repository without accidental real sends', async () => {
+  const { createAdminSupportConversationMessageRouteHandlers } = await import(`${supportInboxRouteHandlersPath}?cacheBust=${Date.now()}`)
+  const previousLoopsKey = process.env.LOOPS_API_KEY
+  const previousReplyTemplate = process.env.LOOPS_SUPPORT_REPLY_TRANSACTIONAL_ID
+  const previousGenericTemplate = process.env.LOOPS_SUPPORT_TRANSACTIONAL_ID
+  const previousFetch = globalThis.fetch
+  const calls = []
+  try {
+    process.env.LOOPS_API_KEY = 'real-env-key-must-not-be-used'
+    process.env.LOOPS_SUPPORT_REPLY_TRANSACTIONAL_ID = 'real-template-must-not-be-used'
+    delete process.env.LOOPS_SUPPORT_TRANSACTIONAL_ID
+    globalThis.fetch = async () => {
+      throw new Error('Route handler test must not reach global fetch or Loops')
+    }
+    const handlers = createAdminSupportConversationMessageRouteHandlers({
+      createRepository: (config) => ({
+        async createAdminReply(conversationId, body) {
+          calls.push(['createAdminReply', config, conversationId, body])
+          return {
+            id: 'message-admin-1',
+            conversationId,
+            senderType: 'admin',
+            senderName: 'PPLUS Support',
+            senderAvatarUrl: null,
+            body,
+            attachments: [],
+            deliveredAt: null,
+            deliveryStatus: 'skipped',
+            deliveryError: 'test_injected_repository',
+            createdAt: '2026-05-29T22:30:00.000Z',
+            updatedAt: '2026-05-29T22:30:00.000Z',
+          }
+        },
+      }),
+    })
+
+    const response = await handlers.POST(
+      new Request('https://pplus.example.com/api/admin/support/conversations/conversation-1/messages', {
+        method: 'POST',
+        body: JSON.stringify({ body: 'Thanks, we are checking this now.' }),
+      }),
+      { params: Promise.resolve({ conversationId: 'conversation-1' }) },
+    )
+
+    assert.equal(response.status, 201)
+    assert.equal(calls.length, 1)
+    assert.deepEqual(calls[0], [
+      'createAdminReply',
+      { appBaseUrl: 'https://pplus.example.com' },
+      'conversation-1',
+      'Thanks, we are checking this now.',
+    ])
+    assert.deepEqual(await response.json(), {
+      message: {
+        id: 'message-admin-1',
+        conversationId: 'conversation-1',
+        senderType: 'admin',
+        senderName: 'PPLUS Support',
+        senderAvatarUrl: null,
+        body: 'Thanks, we are checking this now.',
+        attachments: [],
+        deliveredAt: null,
+        deliveryStatus: 'skipped',
+        deliveryError: 'test_injected_repository',
+        createdAt: '2026-05-29T22:30:00.000Z',
+        updatedAt: '2026-05-29T22:30:00.000Z',
+      },
+    })
+  } finally {
+    globalThis.fetch = previousFetch
+    if (previousLoopsKey === undefined) delete process.env.LOOPS_API_KEY
+    else process.env.LOOPS_API_KEY = previousLoopsKey
+    if (previousReplyTemplate === undefined) delete process.env.LOOPS_SUPPORT_REPLY_TRANSACTIONAL_ID
+    else process.env.LOOPS_SUPPORT_REPLY_TRANSACTIONAL_ID = previousReplyTemplate
+    if (previousGenericTemplate === undefined) delete process.env.LOOPS_SUPPORT_TRANSACTIONAL_ID
+    else process.env.LOOPS_SUPPORT_TRANSACTIONAL_ID = previousGenericTemplate
+  }
+})
+
+test('admin support messages API route delegates to the testable message route handlers', () => {
   assert.ok(existsSync(messagesRoutePath), 'admin support messages API route should exist')
   const source = readFileSync(messagesRoutePath, 'utf8')
 
-  assert.match(source, /export async function POST\(request, \{ params \}\)/)
-  assert.match(source, /const requestOrigin = new URL\(request\.url\)\.origin/)
-  assert.match(source, /createSupportInboxRepository\(\{ appBaseUrl: requestOrigin \}\)/)
-  assert.match(source, /repository\.createAdminReply\(conversationId, body\?\.body\)/)
-  assert.match(source, /\{ message \}/)
-  assert.match(source, /\{ status: 201 \}/)
+  assert.match(source, /import \{ getAdminSupportConversationMessages, postAdminSupportConversationMessage \} from '@\/lib\/support-inbox-route-handlers'/)
+  assert.match(source, /export \{ getAdminSupportConversationMessages as GET, postAdminSupportConversationMessage as POST \}/)
+  assert.doesNotMatch(source, /createSupportInboxRepository/, 'message route file should delegate instead of constructing the live repository directly')
+  assert.doesNotMatch(source, /createAdminReply/, 'message route file should not own reply sending logic')
 })
 
 test('support conversation thread enables composer and posts admin replies to the messages API', () => {
@@ -211,13 +417,13 @@ test('support conversation thread enables composer and posts admin replies to th
   assert.doesNotMatch(source, /placeholder="Reply persistence is next"|disabled \/>/, 'real support reply composer should not be disabled')
 })
 
-test('admin support messages API route loads messages for a selected conversation', () => {
+test('admin support messages API route exports delegated GET and POST handlers for selected conversations', () => {
   assert.ok(existsSync(messagesRoutePath), 'admin support messages API route should exist')
   const source = readFileSync(messagesRoutePath, 'utf8')
 
-  assert.match(source, /export async function GET\([^,]+, \{ params \}\)/)
-  assert.match(source, /repository\.listConversationMessages\(conversationId\)/)
-  assert.match(source, /messages/)
+  assert.match(source, /getAdminSupportConversationMessages as GET/)
+  assert.match(source, /postAdminSupportConversationMessage as POST/)
+  assert.doesNotMatch(source, /repository\.listConversationMessages|repository\.createAdminReply/, 'selected conversation message route should stay thin')
 })
 
 test('public support messages API route saves requester replies and notifies admin', () => {

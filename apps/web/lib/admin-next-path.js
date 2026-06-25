@@ -13,7 +13,7 @@ export function normalizeAdminNextPath(value) {
     if (parsed.pathname !== '/admin' && !parsed.pathname.startsWith('/admin/')) {
       return '/admin'
     }
-    return `${parsed.pathname}${parsed.search}`
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`
   } catch {
     return '/admin'
   }

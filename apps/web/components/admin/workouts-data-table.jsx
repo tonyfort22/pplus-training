@@ -148,7 +148,7 @@ function WorkoutNameCell({ workout }) {
   return (
     <div className="admin-shell-athletes-name-cell">
       <div className="admin-shell-athletes-name-copy">
-        <span className="admin-shell-athletes-name-text">{workout?.name ?? 'Workout'}</span>
+        <span className="admin-shell-athletes-name-text admin-shell-workouts-name-text">{workout?.name ?? 'Workout'}</span>
         <span className="admin-shell-athletes-name-meta">{exerciseCountLabel}</span>
         <span className="admin-shell-athletes-name-meta">{setCountLabel}</span>
       </div>
@@ -166,7 +166,7 @@ function RowActionsCell({
   return (
     <DropdownMenu open={isOpen} onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>
-        <button type="button" className="admin-shell-athletes-row-menu" aria-label="Open menu">
+        <button type="button" className="admin-shell-athletes-row-menu admin-shell-workouts-row-menu" aria-label="Open menu">
           <span className="sr-only">Open menu</span>
           <MoreHorizontal className="admin-shell-athletes-row-menu-icon" aria-hidden="true" />
         </button>
@@ -470,7 +470,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [workoutFilters, setWorkoutFilters] = useQueryState(
-    'filters',
+    'workoutFilters',
     parseAsJson((value) => (Array.isArray(value) ? value : [])).withDefault([]),
   )
   const [isCreateWorkoutDialogOpen, setIsCreateWorkoutDialogOpen] = useState(false)
@@ -590,6 +590,15 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
     document.getElementById('workout-import-pdf-upload')?.click()
   }
 
+  function handleAiWorkoutImportDialogOpenChange(isOpen) {
+    if (isWorkoutAiProcessing && !isOpen) return
+
+    setIsAiWorkoutImportDialogOpen(isOpen)
+    if (!isOpen) {
+      setAiWorkoutImportError('')
+    }
+  }
+
   async function handleGenerateWorkoutImportDraft() {
     if (workoutImportFiles.length === 0 || isWorkoutAiProcessing) return
 
@@ -634,6 +643,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
     workoutAiProcessingAbortRef.current?.abort()
     workoutAiProcessingAbortRef.current = null
     setIsWorkoutAiProcessing(false)
+    setAiWorkoutImportError('')
   }
 
   function handleAcceptAiWorkoutDraft(acceptedDraft) {
@@ -1138,7 +1148,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
   const skeletonRows = Array.from({ length: pagination.pageSize }, (_, rowIndex) => rowIndex)
 
   return (
-    <div className="admin-shell-athletes-table-example">
+    <div className="admin-shell-athletes-table-example admin-shell-workouts-table-example">
       <div className="flex flex-col gap-3">
         <div className="flex w-full flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 flex-1 flex-wrap items-center justify-start gap-2">
@@ -1150,7 +1160,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
                 <Button
                   type="button"
                   variant="outline"
-                  className="admin-shell-athletes-filter-trigger rounded-[12px] min-h-[40px] shadow-none"
+                  className="admin-shell-athletes-filter-trigger admin-shell-workouts-filter-trigger rounded-[12px] min-h-[40px] shadow-none"
                 >
                   <Plus className="size-4" />
                   Add filter
@@ -1166,7 +1176,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="admin-shell-athletes-example-columns-button"
+                  className="admin-shell-athletes-example-columns-button admin-shell-workouts-bulk-actions-button disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label="Workout bulk actions"
                   disabled={selectedWorkoutCount === 0}
                   aria-disabled={selectedWorkoutCount === 0}
@@ -1217,7 +1227,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
             </DropdownMenu>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button type="button" className="admin-shell-athletes-example-columns-button">
+                <button type="button" className="admin-shell-athletes-example-columns-button admin-shell-workouts-columns-button">
                   Columns
                   <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
                 </button>
@@ -1230,6 +1240,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
                     <DropdownMenuCheckboxItem
                       key={column.id}
                       className="capitalize"
+                      checkIconClassName="text-[var(--admin-shell-primary-button-bg)]"
                       checked={column.getIsVisible()}
                       onCheckedChange={(value) => column.toggleVisibility(!!value)}
                     >
@@ -1252,6 +1263,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
                 id="workout-import-pdf-upload"
                 type="file"
                 accept="application/pdf"
+                multiple
                 className="sr-only"
                 onChange={handleWorkoutImportPdfUpload}
               />
@@ -1259,7 +1271,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
             <Button
               type="button"
               onClick={openCreateWorkoutDialog}
-              className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] md:self-auto"
+              className="admin-shell-athletes-invite-button admin-shell-workouts-create-button self-start rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] md:self-auto"
             >
               Create workout
             </Button>
@@ -1342,7 +1354,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
         errorMessage={workoutEditorMessage}
       />
 
-      <Dialog open={isAiWorkoutImportDialogOpen} onOpenChange={setIsAiWorkoutImportDialogOpen}>
+      <Dialog open={isAiWorkoutImportDialogOpen} onOpenChange={handleAiWorkoutImportDialogOpenChange}>
         <DialogContent className="admin-shell-athletes-invite-dialog border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] text-[var(--admin-dashboard-card-text)] sm:max-w-[760px]">
           {isWorkoutAiProcessing ? (
             <Empty className="min-h-[420px] border-0 bg-transparent p-0">
@@ -1410,8 +1422,11 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
                       type="button"
                       variant="outline"
                       className="rounded-[12px] min-h-[40px] border-[color:var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-shell-text-strong)]"
-                      onClick={() => setWorkoutImportFiles([])}
-                      disabled={workoutImportFiles.length === 0}
+                      onClick={() => {
+                        setWorkoutImportFiles([])
+                        setAiWorkoutImportError('')
+                      }}
+                      disabled={workoutImportFiles.length === 0 || isWorkoutAiProcessing}
                     >
                       <Trash2 className="size-4" aria-hidden="true" />
                       Remove all
@@ -1490,7 +1505,7 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
                 <Button
                   type="button"
                   className="rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]"
-                  disabled={workoutImportFiles.length === 0}
+                  disabled={workoutImportFiles.length === 0 || isWorkoutAiProcessing}
                   onClick={handleGenerateWorkoutImportDraft}
                 >
                   <Bot className="size-4" aria-hidden="true" />
@@ -1719,8 +1734,8 @@ export default function WorkoutsDataTable({ searchQuery = '' }) {
         onConfirm={handleDeleteWorkoutTemplate}
       />
 
-      <div className="admin-shell-athletes-table-shell">
-        <Table className="admin-shell-athletes-table">
+      <div className="admin-shell-athletes-table-shell admin-shell-workouts-table-shell">
+        <Table className="admin-shell-athletes-table admin-shell-workouts-table">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>

@@ -747,7 +747,7 @@ function DraggableWeekEventCard({ event, onOpenEventDialog }) {
       }}
       type="button"
       aria-label="Open event editor"
-      className="grid h-full w-full min-w-0 cursor-grab touch-none select-none gap-1 rounded-[12px] border px-3 py-2 text-left transition-all hover:-translate-y-[1px] hover:opacity-95 active:cursor-grabbing"
+      className="admin-shell-workouts-calendar-event-card grid h-full w-full min-w-0 cursor-grab touch-none select-none gap-1 rounded-[12px] border px-3 py-2 text-left transition-all hover:-translate-y-[1px] hover:opacity-95 active:cursor-grabbing"
       onClick={() => onOpenEventDialog(event.id)}
       {...draggable.listeners}
       {...draggable.attributes}
@@ -814,7 +814,7 @@ function DraggableMonthEventCard({ event, onOpenEventDialog }) {
         transform,
         opacity: draggable.isDragging ? 0.55 : 1,
       }}
-      className="grid min-h-[44px] w-full min-w-0 cursor-grab touch-none select-none gap-1 rounded-[10px] border px-2 py-1.5 text-left text-[11px] leading-[1.25] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#3BE0AF] active:cursor-grabbing"
+      className="admin-shell-workouts-calendar-event-card grid min-h-[44px] w-full min-w-0 cursor-grab touch-none select-none gap-1 rounded-[10px] border px-2 py-1.5 text-left text-[11px] leading-[1.25] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#3BE0AF] active:cursor-grabbing"
       onClick={() => onOpenEventDialog(event.id)}
       {...draggable.listeners}
       {...draggable.attributes}
@@ -851,7 +851,7 @@ function StaticEventCard({ event, onOpenEventDialog }) {
       type="button"
       aria-label="Open event editor"
       data-week-event={event.id}
-      className="grid min-h-[44px] w-full min-w-0 gap-1 rounded-[10px] border px-2 py-1.5 text-left text-[11px] leading-[1.25] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#3BE0AF]"
+      className="admin-shell-workouts-calendar-event-card grid min-h-[44px] w-full min-w-0 gap-1 rounded-[10px] border px-2 py-1.5 text-left text-[11px] leading-[1.25] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#3BE0AF]"
       style={getEventCardStyle(event)}
       onClick={() => onOpenEventDialog(event.id)}
     >
@@ -868,7 +868,7 @@ function renderMonthGrid(selectedDate, scheduledEvents, openEventDialog, openMon
   const cells = createCalendarCells(selectedDate)
 
   return (
-    <div className="overflow-x-auto rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)]">
+    <div className="admin-shell-workouts-calendar-month-grid overflow-x-auto rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)]">
       <div className="min-w-[840px] lg:min-w-[720px]">
         <div className="grid grid-cols-7 divide-x divide-[var(--admin-dashboard-card-border)] border-b border-[var(--admin-dashboard-card-border)]">
           {WEEK_DAYS.map((day) => (
@@ -1070,7 +1070,7 @@ function renderWeekGrid(
   const calendarHeight = WEEK_HOURS.length * WEEK_SLOT_HEIGHT
 
   return (
-    <div className="overflow-x-auto rounded-[24px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)]">
+    <div className="admin-shell-workouts-calendar-week-grid overflow-x-auto rounded-[24px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)]">
       <div className="min-w-[280px] sm:min-w-[560px]">
         <div className="border-b border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-5 py-4">
           <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--admin-dashboard-card-muted)]">{singleDay ? 'Daily schedule' : 'Weekly schedule'}</div>
@@ -1902,6 +1902,15 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
     await moveEventToSlot(event.id, event.startDate, nextHour)
   }
 
+  function changeCalendarView(nextView) {
+    setCurrentView(nextView)
+    setActiveDragEventId(null)
+    setEventConflictMessage('')
+    setAssignmentConflictMessage('')
+    setIsMonthOverflowDialogOpen(false)
+    setMonthOverflowDate(null)
+  }
+
   const shiftDate = (delta) => {
     setSelectedDate((currentDate) => {
       switch (currentView) {
@@ -2038,7 +2047,7 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
                     variant={currentView === 'day' ? 'default' : 'outline'}
                     size="icon"
                     className="rounded-r-none border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] [&_svg]:size-5"
-                    onClick={() => setCurrentView('day')}
+                    onClick={() => changeCalendarView('day')}
                   >
                     <List strokeWidth={1.8} />
                     <span className="sr-only">Day</span>
@@ -2049,7 +2058,7 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
                     variant={currentView === 'week' ? 'default' : 'outline'}
                     size="icon"
                     className="-ml-px rounded-none border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] [&_svg]:size-5"
-                    onClick={() => setCurrentView('week')}
+                    onClick={() => changeCalendarView('week')}
                   >
                     <Columns strokeWidth={1.8} />
                     <span className="sr-only">Week</span>
@@ -2060,7 +2069,7 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
                     variant={currentView === 'month' ? 'default' : 'outline'}
                     size="icon"
                     className="-ml-px rounded-none border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] [&_svg]:size-5"
-                    onClick={() => setCurrentView('month')}
+                    onClick={() => changeCalendarView('month')}
                   >
                     <Grid2x2 strokeWidth={1.8} />
                     <span className="sr-only">Month</span>
@@ -2071,7 +2080,7 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
                     variant={currentView === 'year' ? 'default' : 'outline'}
                     size="icon"
                     className="-ml-px rounded-none border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] [&_svg]:size-5"
-                    onClick={() => setCurrentView('year')}
+                    onClick={() => changeCalendarView('year')}
                   >
                     <Grid3x3 strokeWidth={1.8} />
                     <span className="sr-only">Year</span>
@@ -2082,7 +2091,7 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
                     variant={currentView === 'agenda' ? 'default' : 'outline'}
                     size="icon"
                     className="-ml-px rounded-l-none border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] [&_svg]:size-5"
-                    onClick={() => setCurrentView('agenda')}
+                    onClick={() => changeCalendarView('agenda')}
                   >
                     <CalendarRange strokeWidth={1.8} />
                     <span className="sr-only">Agenda</span>
@@ -2209,7 +2218,7 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenPro
           setEventConflictMessage('')
         }
       }}>
-        <DialogContent pageScrollable className="border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[640px]">
+        <DialogContent pageScrollable className="admin-shell-workouts-calendar-add-dialog border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[640px]">
           <div className="grid gap-4 p-6">
             <DialogHeader>
               <DialogTitle>Add Workout</DialogTitle>

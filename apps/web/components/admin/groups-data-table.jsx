@@ -114,7 +114,7 @@ function GroupAvatarStack({ athletes = [] }) {
 function GroupCell({ name, athletes = [], description = '' }) {
   return (
     <div className="admin-shell-athletes-name-copy gap-2">
-      <span className="admin-shell-athletes-name-text">{name}</span>
+      <span className="admin-shell-athletes-name-text admin-shell-groups-name-text">{name}</span>
       <GroupAvatarStack athletes={athletes} />
       {description ? <span className="line-clamp-2 text-xs text-[var(--admin-dashboard-card-soft)]">{description}</span> : null}
     </div>
@@ -165,9 +165,9 @@ function RowActionsCell({
   return (
     <DropdownMenu open={isOpen} onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>
-        <button type="button" className="admin-shell-athletes-row-menu" aria-label="Open menu">
+        <button type="button" className="admin-shell-athletes-row-menu admin-shell-groups-row-menu" aria-label="Open menu">
           <span className="sr-only">Open menu</span>
-          <MoreHorizontal className="admin-shell-athletes-row-menu-icon" aria-hidden="true" />
+          <MoreHorizontal className="admin-shell-athletes-row-menu-icon admin-shell-groups-row-menu-icon" aria-hidden="true" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
@@ -869,7 +869,7 @@ export default function GroupsDataTable({ searchQuery = '' }) {
           <div className="flex shrink-0 items-center justify-end gap-3">
             <DropdownMenu open={isBulkActionsMenuOpen} onOpenChange={handleBulkActionsMenuOpenChange}>
               <DropdownMenuTrigger asChild>
-                <button type="button" className="admin-shell-athletes-example-columns-button" disabled={selectedGroupCount === 0} aria-label="Group bulk actions">
+                <button type="button" className="admin-shell-athletes-example-columns-button disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50" disabled={selectedGroupCount === 0} aria-disabled={selectedGroupCount === 0} aria-label="Group bulk actions">
                   {selectedGroupCount > 0 ? `Bulk actions (${selectedGroupCount})` : 'Bulk actions'}
                   <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
                 </button>
@@ -931,7 +931,13 @@ export default function GroupsDataTable({ searchQuery = '' }) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {table.getAllColumns().filter((column) => column.getCanHide()).map((column) => (
-                  <DropdownMenuCheckboxItem key={column.id} className="capitalize" checked={column.getIsVisible()} onCheckedChange={(value) => column.toggleVisibility(!!value)}>
+                  <DropdownMenuCheckboxItem
+                    key={column.id}
+                    className="capitalize"
+                    checkIconClassName="text-[var(--admin-shell-primary-button-bg)]"
+                    checked={column.getIsVisible()}
+                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                  >
                     {column.columnDef.meta?.label ?? column.id}
                   </DropdownMenuCheckboxItem>
                 ))}
@@ -1475,7 +1481,7 @@ export default function GroupsDataTable({ searchQuery = '' }) {
       </Sheet>
 
       <Dialog open={isDeleteGroupDialogOpen} onOpenChange={setIsDeleteGroupDialogOpen}>
-        <DialogContent className="admin-shell-athletes-invite-dialog border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] text-[var(--admin-dashboard-card-text)] sm:max-w-[440px]">
+        <DialogContent className="admin-shell-groups-delete-dialog border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] text-[var(--admin-dashboard-card-text)] sm:max-w-[440px]">
           <DialogHeader>
             <DialogTitle>Delete group</DialogTitle>
             <DialogDescription>This group will be permanently deleted.</DialogDescription>
@@ -1487,8 +1493,8 @@ export default function GroupsDataTable({ searchQuery = '' }) {
         </DialogContent>
       </Dialog>
 
-      <div className="admin-shell-athletes-table-shell">
-        <Table className="admin-shell-athletes-table">
+      <div className="admin-shell-athletes-table-shell admin-shell-groups-table-shell">
+        <Table className="admin-shell-athletes-table admin-shell-groups-table">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>

@@ -1,4 +1,4 @@
-import { createAdminAthleteRepository } from './admin-athlete-repository'
+import { createAdminAthleteRepository } from './admin-athlete-repository.js'
 
 const RANKING_SOURCE_DESCRIPTION = 'Rankings are derived from live athlete workout progress: completion percentage first, completed workouts second, then athlete name.'
 

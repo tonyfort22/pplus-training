@@ -116,6 +116,54 @@ test('admin coach profile repository saves approved coach fields and optional av
   })
 })
 
+test('admin coach profile repository stores avatar upload publicUrl instead of the upload response object', async () => {
+  const uploadResponse = Object.freeze({
+    path: 'coach-1/profile.png',
+    publicUrl: 'https://cdn/avatar-public-url.png',
+    payload: Object.freeze({ Key: 'coach-avatars/coach-1/profile.png', bucket: 'coach-avatars' }),
+  })
+  const updateCalls = []
+  const { factory } = createIdentityRepositoryFactory([
+    {
+      async getCurrentUser() {
+        return { id: 'user-1', email: 'coach@example.com' }
+      },
+      async getCoachProfileByUserId() {
+        return { id: 'coach-1', displayName: 'Coach One', firstName: 'Coach', lastName: 'One', phoneNumber: '555-1111', avatarUrl: 'old.jpg' }
+      },
+      async uploadCoachAvatar() {
+        return uploadResponse
+      },
+      async updateCoachProfile(payload) {
+        updateCalls.push(payload)
+        return { id: 'coach-1', displayName: 'Coach One', firstName: 'Coach', lastName: 'One', phoneNumber: '555-1111', avatarUrl: payload.updates.avatarUrl }
+      },
+    },
+  ])
+  const repository = createAdminCoachProfileRepository({
+    supabaseUrl: 'https://example.supabase.co',
+    anonKey: 'anon-key',
+    accessToken: 'admin-access-token',
+    identityRepositoryFactory: factory,
+  })
+
+  const profile = await repository.updateCurrentCoachProfile({
+    firstName: 'Coach',
+    lastName: 'One',
+    phone: '555-1111',
+    avatarUpload: {
+      dataUrl: 'data:image/png;base64,aGVsbG8=',
+      fileName: 'profile.png',
+      contentType: 'image/png',
+    },
+  })
+
+  assert.equal(updateCalls[0].updates.avatarUrl, 'https://cdn/avatar-public-url.png')
+  assert.equal(typeof updateCalls[0].updates.avatarUrl, 'string')
+  assert.notDeepEqual(updateCalls[0].updates.avatarUrl, uploadResponse)
+  assert.equal(profile.avatarUrl, 'https://cdn/avatar-public-url.png')
+})
+
 test('admin coach profile repository rejects missing authenticated admin session', async () => {
   const repository = createAdminCoachProfileRepository({
     supabaseUrl: 'https://example.supabase.co',

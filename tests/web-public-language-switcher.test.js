@@ -9,6 +9,7 @@ const switcherPath = resolve(repoRoot, 'apps/web/components/public-language-swit
 const languagePath = resolve(repoRoot, 'apps/web/lib/i18n/language.js')
 const landingSectionsPath = resolve(repoRoot, 'apps/web/app/landing-sections.jsx')
 const cssPath = resolve(repoRoot, 'apps/web/app/globals.css')
+const publicWorkflowSpecPath = resolve(repoRoot, 'apps/web/e2e/public-support-workflows.spec.js')
 
 test('public header renders an EN/FR segmented language switcher without exposing admin Sign In', () => {
   assert.ok(existsSync(switcherPath), 'expected reusable public language switcher component')
@@ -58,6 +59,37 @@ test('public header renders an EN/FR segmented language switcher without exposin
   assert.doesNotMatch(lightSwitcherRule, /box-shadow:/, 'light-mode language switcher should not have a box shadow')
 })
 
+test('public language switcher link contract stays accessible and route-preserving', () => {
+  const switcherSource = readFileSync(switcherPath, 'utf8')
+
+  assert.match(switcherSource, /<nav className="public-language-switcher" aria-label="Language">/)
+  assert.match(switcherSource, /PUBLIC_LANGUAGES\.map\(\(option\) => \{/)
+  assert.match(switcherSource, /const isActive = option === activeLanguage/)
+  assert.match(switcherSource, /key=\{option\}/)
+  assert.match(switcherSource, /href=\{getLocalizedHref\(currentPath, option\)\}/)
+  assert.match(switcherSource, /aria-current=\{isActive \? 'true' : undefined\}/)
+  assert.match(switcherSource, /onClick=\{\(\) => persistLanguageChoice\(option\)\}/)
+  assert.doesNotMatch(switcherSource, /window\.location\.href[^\n]+onClick/, 'language click should be a normal link, not an imperative navigation handler')
+})
+
+test('public language switcher respects saved preference only when the URL has no explicit lang param', () => {
+  const switcherSource = readFileSync(switcherPath, 'utf8')
+
+  assert.match(switcherSource, /const savedLanguage = localStorage\.getItem\('pplus-public-language'\)/)
+  assert.match(switcherSource, /const hasLanguageParam = new URLSearchParams\(window\.location\.search\)\.has\('lang'\)/)
+  assert.match(switcherSource, /if \(!hasLanguageParam && savedLanguage && normalizePublicLanguage\(savedLanguage\) !== activeLanguage\) \{/)
+  assert.match(switcherSource, /window\.location\.href = getLocalizedHref\(`\$\{window\.location\.pathname\}\$\{window\.location\.search\}\$\{window\.location\.hash\}`, savedLanguage\)/)
+  assert.match(switcherSource, /localStorage\.setItem\('pplus-public-language', activeLanguage\)/)
+})
+
+test('public header passes the current public path into every language switcher instance', () => {
+  const sectionsSource = readFileSync(landingSectionsPath, 'utf8')
+  const switcherUsages = sectionsSource.match(/<PublicLanguageSwitcher language=\{language\} currentPath=\{currentPath\} \/>/g) || []
+
+  assert.equal(switcherUsages.length, 2, 'desktop and mobile header should both preserve currentPath when switching language')
+  assert.doesNotMatch(sectionsSource, /<PublicLanguageSwitcher(?! language=\{language\} currentPath=\{currentPath\})/, 'language switcher should not be mounted without currentPath')
+})
+
 test('localized href helper keeps English clean and appends lang=fr for French routes', async () => {
   const { getLocalizedHref, normalizePublicLanguage } = await import('../apps/web/lib/i18n/language.js')
 
@@ -68,6 +100,23 @@ test('localized href helper keeps English clean and appends lang=fr for French r
   assert.equal(getLocalizedHref('/faq', 'en'), '/faq')
   assert.equal(getLocalizedHref('/faq', 'fr'), '/faq?lang=fr')
   assert.equal(getLocalizedHref('/support?conversationId=abc', 'fr'), '/support?conversationId=abc&lang=fr')
+  assert.equal(getLocalizedHref('/support?conversationId=abc#reply', 'fr'), '/support?conversationId=abc&lang=fr#reply')
   assert.equal(getLocalizedHref('/?lang=en', 'fr'), '/?lang=fr')
   assert.equal(getLocalizedHref('/faq?lang=fr', 'en'), '/faq')
+  assert.equal(getLocalizedHref('/#features', 'fr'), '/?lang=fr#features')
+})
+
+test('public language preference persists across public route navigation in the browser workflow harness', () => {
+  const publicWorkflowSource = readFileSync(publicWorkflowSpecPath, 'utf8')
+
+  assert.match(publicWorkflowSource, /PUBLIC_LANGUAGE_ROUTE_NAVIGATION_WORKFLOW_CHECK/, 'public browser workflow should export a language route navigation check')
+  assert.match(publicWorkflowSource, /id:\s*'public-language-route-navigation'/)
+  assert.match(publicWorkflowSource, /route:\s*'\/'/)
+  assert.match(publicWorkflowSource, /interaction:\s*'language-switch-persists-across-public-navigation'/)
+  assert.match(publicWorkflowSource, /localStorage\.getItem\('pplus-public-language'\)/, 'browser workflow should prove the saved language key survives navigation')
+  assert.match(publicWorkflowSource, /getByRole\('link', \{ name: 'FR' \}\)\.click\(\)/, 'browser workflow should switch to French through the visible language control')
+  assert.match(publicWorkflowSource, /getByRole\('link', \{ name: 'FAQ' \}\)\.click\(\)/, 'browser workflow should navigate through the public FAQ link')
+  assert.match(publicWorkflowSource, /getByRole\('link', \{ name: 'Support' \}\)\.click\(\)/, 'browser workflow should navigate through the public Support link')
+  assert.ok(publicWorkflowSource.includes("await expect(page).toHaveURL(/\\/faq\\?lang=fr$/)"), 'browser workflow should keep lang=fr on FAQ navigation')
+  assert.ok(publicWorkflowSource.includes("await expect(page).toHaveURL(/\\/support\\?lang=fr$/)"), 'browser workflow should keep lang=fr on Support navigation')
 })

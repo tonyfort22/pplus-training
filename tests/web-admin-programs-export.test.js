@@ -5,6 +5,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import {
+  buildProgramsExportRows,
   buildProgramsExportCsv,
   getProgramsExportFileName,
   programExportColumns,
@@ -60,6 +61,90 @@ test('programs export builds quoted CSV with all testing-ready admin columns', (
     '"Program ID","Athlete ID","Assigned athlete IDs","Coach ID","Program type","Program","Athletes","Week count","Duration","Workouts","Exercises","Created date","Created at","Start date","End date","Description","Status"',
     '"program-1","athlete-1","athlete-1; athlete-2","coach-1","Assigned","Power, Speed ""Elite""","Tony Fortugno","10","10 weeks","40","287","2026-04-25","2026-04-25T16:00:00.000Z","2026-05-01","2026-07-10","Phase 1, testing","Active"',
   ].join('\n'))
+})
+
+test('programs export row shape preserves assignment and hidden database identifiers', () => {
+  assert.deepEqual(buildProgramsExportRows([
+    {
+      id: 'program-assigned-1',
+      athleteId: 'athlete-primary-1',
+      athleteIds: ['athlete-primary-1', 'athlete-sibling-1'],
+      assignedAthleteIds: ['athlete-primary-1', 'athlete-sibling-1'],
+      coachId: 'coach-1',
+      programType: 'Assigned',
+      name: 'Assigned speed block',
+      athletesLabel: 'Avery Adams + 1 more',
+      weekCount: 6,
+      duration: '6 weeks',
+      workouts: '18',
+      exercises: '96',
+      createdDate: '2026-06-01',
+      createdAt: '2026-06-01T14:15:00.000Z',
+      startDate: '2026-06-08',
+      endDate: '2026-07-19',
+      description: 'Includes acceleration work',
+      status: 'Active',
+    },
+    {
+      id: 'program-unassigned-1',
+      athleteId: null,
+      athleteIds: [],
+      assignedAthleteIds: [],
+      coachId: 'coach-1',
+      programType: 'Unassigned',
+      name: 'Template shell',
+      athletesLabel: 'Unassigned',
+      weekCount: 4,
+      duration: '4 weeks',
+      workouts: '0',
+      exercises: '0',
+      createdDate: '2026-06-02',
+      createdAt: '2026-06-02T14:15:00.000Z',
+      startDate: '',
+      endDate: '',
+      description: '',
+      status: 'Draft',
+    },
+  ]), [
+    [
+      'program-assigned-1',
+      'athlete-primary-1',
+      'athlete-primary-1; athlete-sibling-1',
+      'coach-1',
+      'Assigned',
+      'Assigned speed block',
+      'Avery Adams + 1 more',
+      6,
+      '6 weeks',
+      '18',
+      '96',
+      '2026-06-01',
+      '2026-06-01T14:15:00.000Z',
+      '2026-06-08',
+      '2026-07-19',
+      'Includes acceleration work',
+      'Active',
+    ],
+    [
+      'program-unassigned-1',
+      null,
+      '',
+      'coach-1',
+      'Unassigned',
+      'Template shell',
+      'Unassigned',
+      4,
+      '4 weeks',
+      '0',
+      '0',
+      '2026-06-02',
+      '2026-06-02T14:15:00.000Z',
+      '',
+      '',
+      '',
+      'Draft',
+    ],
+  ])
 })
 
 test('programs export filename is stable and date-scoped', () => {

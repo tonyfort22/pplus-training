@@ -91,7 +91,6 @@ export const footer = {
   resourceLinks: [
     { label: 'Support', href: '/support' },
     { label: 'FAQ', href: '/faq' },
-    { label: 'Sign In', href: '/admin/login' },
   ],
   copyright: '2026 PPLUS Training. All rights reserved',
 }

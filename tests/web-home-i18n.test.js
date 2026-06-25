@@ -37,7 +37,8 @@ test('home page copy dictionary exposes English and Canadian French landing cont
   assert.equal(french.programs[2].bullets[1], '30+ entraînements')
   assert.equal(french.features.length, english.features.length)
   assert.equal(french.programs.length, english.programs.length)
-  assert.equal(french.footer.resourceLinks.at(-1).label, 'Connexion')
+  assert.deepEqual(french.footer.resourceLinks.map((link) => link.label), ['Support', 'FAQ'])
+  assert.equal(Object.hasOwn(french.nav, 'signIn'), false)
 })
 
 test('home page and shared footer render localized copy from dictionary', () => {

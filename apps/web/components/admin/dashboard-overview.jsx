@@ -210,9 +210,9 @@ function LoadingOverviewState() {
               <Skeleton className="h-4 w-64 max-w-full" />
             </CardHeader>
             <CardContent className="admin-shell-overview-workout-results-content overflow-x-auto">
-              <div className="admin-shell-overview-loading-chart flex h-[320px] min-w-[720px] items-end gap-4 rounded-xl border border-[var(--admin-dashboard-card-border)] p-4">
+              <div className="admin-shell-overview-loading-chart flex h-[320px] min-w-0 items-end gap-3 rounded-xl border border-[var(--admin-dashboard-card-border)] p-4 md:min-w-[720px] md:gap-4">
                 {Array.from({ length: 9 }, (_, index) => (
-                  <Skeleton key={`workout-chart-skeleton-${index}`} className="w-10 rounded-t-lg" style={{ height: `${28 + ((index % 5) * 12)}%` }} />
+                  <Skeleton key={`workout-chart-skeleton-${index}`} className="min-w-0 flex-1 rounded-t-lg md:w-10 md:flex-none" style={{ height: `${28 + ((index % 5) * 12)}%` }} />
                 ))}
               </div>
             </CardContent>
@@ -501,7 +501,7 @@ function TrainingConsistencyPanel({ trainingConsistency }) {
   const hasHeatmapData = trainingConsistency?.heatmapReady && heatmapDates.length > 0
 
   return (
-    <Card className="admin-shell-overview-insight-card">
+    <Card className="admin-shell-overview-insight-card admin-shell-overview-training-consistency-card">
       <CardHeader>
         <div className="admin-shell-overview-performance-title-block">
           <span className="admin-shell-overview-performance-kicker">Training consistency</span>

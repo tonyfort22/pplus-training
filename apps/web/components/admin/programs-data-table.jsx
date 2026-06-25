@@ -10,7 +10,7 @@ import {
   getPaginationRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { Archive, Copy, Download, UserPlus, ChevronDown, CircleAlert, CircleCheckBig, LoaderCircle, MoreHorizontal, Plus, Trash2, X } from 'lucide-react'
+import { Archive, Copy, Download, Pencil, UserPlus, ChevronDown, CircleAlert, CircleCheckBig, LoaderCircle, MoreHorizontal, Plus, Trash2, X } from 'lucide-react'
 
 import { Filters } from '@/components/reui/filters'
 import { useToast } from '@/hooks/use-toast'
@@ -326,11 +326,11 @@ function programMatchesFilters(program, filters) {
 
 function ProgramCell({ programId, name, athletesLabel }) {
   return (
-    <div className="admin-shell-athletes-name-copy">
-      <Link href={`/admin/programs/${programId}`} className="admin-shell-athletes-name-text transition hover:text-[#3BE0AF]">
+    <div className="admin-shell-athletes-name-copy admin-shell-programs-name-copy">
+      <Link href={`/admin/programs/${programId}`} className="admin-shell-athletes-name-text admin-shell-programs-name-text transition hover:text-[#3BE0AF]">
         {name}
       </Link>
-      <span className="admin-shell-athletes-name-meta">{athletesLabel}</span>
+      <span className="admin-shell-athletes-name-meta admin-shell-programs-name-meta">{athletesLabel}</span>
     </div>
   )
 }
@@ -354,6 +354,7 @@ function StatusCell({ status }) {
 function RowActionsCell({
   isOpen = false,
   onOpenChange = () => {},
+  onEditAction = () => {},
   onDuplicateAction = () => {},
   onAssignAction = () => {},
   onExportAction = () => {},
@@ -363,13 +364,17 @@ function RowActionsCell({
   return (
     <DropdownMenu open={isOpen} onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>
-        <button type="button" className="admin-shell-athletes-row-menu" aria-label="Open menu">
+        <button type="button" className="admin-shell-athletes-row-menu admin-shell-programs-row-menu" aria-label="Open menu">
           <span className="sr-only">Open menu</span>
-          <MoreHorizontal className="admin-shell-athletes-row-menu-icon" aria-hidden="true" />
+          <MoreHorizontal className="admin-shell-athletes-row-menu-icon admin-shell-programs-row-menu-icon" aria-hidden="true" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[190px]">
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
+        <DropdownMenuItem onSelect={() => { onEditAction(); onOpenChange(false) }}>
+          <Pencil className="size-4" aria-hidden="true" />
+          Edit
+        </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => { onDuplicateAction(); onOpenChange(false) }}>
           <Copy className="size-4" aria-hidden="true" />
           Duplicate
@@ -404,7 +409,7 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
   const [error, setError] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
   const [programFilters, setProgramFilters] = useQueryState(
-    'filters',
+    'programFilters',
     parseAsJson((value) => (Array.isArray(value) ? value : [])).withDefault([]),
   )
   const [isCreateProgramDialogOpen, setIsCreateProgramDialogOpen] = useState(false)
@@ -923,6 +928,7 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
             onOpenChange={(isOpen) => {
               setOpenRowActionMenuId(isOpen ? row.original.id : null)
             }}
+            onEditAction={() => setPendingRowAction({ type: 'edit', programId: row.original.id })}
             onDuplicateAction={() => setPendingRowAction({ type: 'duplicate', programId: row.original.id })}
             onAssignAction={() => setPendingRowAction({ type: 'assign', programId: row.original.id })}
             onExportAction={() => setPendingRowAction({ type: 'export', programId: row.original.id })}
@@ -1090,7 +1096,7 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
   const skeletonRows = Array.from({ length: pagination.pageSize }, (_, rowIndex) => rowIndex)
 
   return (
-    <div className="admin-shell-athletes-table-example">
+    <div className="admin-shell-athletes-table-example admin-shell-programs-table-example">
       <div className="flex flex-col gap-3">
         <div className="flex w-full flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 flex-1 flex-wrap items-center justify-start gap-2">
@@ -1102,7 +1108,7 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
                 <Button
                   type="button"
                   variant="outline"
-                  className="admin-shell-athletes-filter-trigger rounded-[12px] min-h-[40px] shadow-none"
+                  className="admin-shell-athletes-filter-trigger admin-shell-programs-filter-trigger rounded-[12px] min-h-[40px] shadow-none"
                 >
                   <Plus className="size-4" />
                   Add filter
@@ -1115,7 +1121,7 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="admin-shell-athletes-example-columns-button"
+                  className="admin-shell-athletes-example-columns-button admin-shell-programs-bulk-actions-button disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label="Program bulk actions"
                   disabled={selectedProgramCount === 0}
                   aria-disabled={selectedProgramCount === 0}
@@ -1166,7 +1172,7 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
             </DropdownMenu>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button type="button" className="admin-shell-athletes-example-columns-button">
+                <button type="button" className="admin-shell-athletes-example-columns-button admin-shell-programs-columns-button">
                   Columns
                   <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
                 </button>
@@ -1179,6 +1185,7 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
                     <DropdownMenuCheckboxItem
                       key={column.id}
                       className="capitalize"
+                      checkIconClassName="text-[var(--admin-shell-primary-button-bg)]"
                       checked={column.getIsVisible()}
                       onCheckedChange={(value) => column.toggleVisibility(!!value)}
                     >
@@ -1190,7 +1197,7 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
             <Button
               type="button"
               onClick={openCreateProgramDialog}
-              className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] md:self-auto"
+              className="admin-shell-athletes-invite-button admin-shell-programs-create-button self-start rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] md:self-auto"
             >
               Create a program
             </Button>
@@ -1754,8 +1761,8 @@ export default function ProgramsDataTable({ searchQuery = '' }) {
         </DialogContent>
       </Dialog>
 
-      <div className="admin-shell-athletes-table-shell">
-        <Table className="admin-shell-athletes-table">
+      <div className="admin-shell-athletes-table-shell admin-shell-programs-table-shell">
+        <Table className="admin-shell-athletes-table admin-shell-programs-table">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>

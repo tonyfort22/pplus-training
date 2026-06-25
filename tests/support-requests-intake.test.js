@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const supportFormPath = resolve(repoRoot, 'apps/web/components/ppht-support-fac5db68-f122.jsx')
 const supportRepositoryPath = resolve(repoRoot, 'apps/web/lib/support-requests-repository.js')
+const supportRouteHandlersPath = resolve(repoRoot, 'apps/web/lib/support-request-route-handlers.js')
 const supportNotificationsPath = resolve(repoRoot, 'apps/web/lib/support-request-notifications.js')
 const supportRoutePath = resolve(repoRoot, 'apps/web/app/api/support-requests/route.js')
 const schemaPath = resolve(repoRoot, 'apps/web/lib/form-schema.js')
@@ -234,22 +235,147 @@ test('support request repository creates an inbox conversation and first request
   })
 })
 
+test('public support request intake route handler creates request and marks successful notification', async () => {
+  assert.ok(existsSync(supportRouteHandlersPath), 'support request route handler seam should exist')
+  const { createSupportRequestRouteHandlers } = await import(`${supportRouteHandlersPath}?cacheBust=${Date.now()}`)
+  const calls = []
+  const repository = {
+    async createSupportRequest(payload) {
+      calls.push(['createSupportRequest', payload])
+      return {
+        id: 'support-request-1',
+        supportConversationId: 'conversation-1',
+        firstName: 'Jane',
+        lastName: 'Hockey',
+        email: 'jane@example.com',
+        category: 'technical',
+        description: 'Video will not load',
+      }
+    },
+    async markNotificationSent(supportRequestId) {
+      calls.push(['markNotificationSent', supportRequestId])
+      return { id: supportRequestId }
+    },
+    async markNotificationFailed(supportRequestId, message) {
+      calls.push(['markNotificationFailed', supportRequestId, message])
+      return { id: supportRequestId }
+    },
+  }
+  const notificationSender = {
+    async sendSupportRequestNotification(supportRequest) {
+      calls.push(['sendSupportRequestNotification', supportRequest.id])
+      return { success: true }
+    },
+  }
+  const handlers = createSupportRequestRouteHandlers({
+    createRepository: () => repository,
+    createNotificationSender: (config) => {
+      calls.push(['createNotificationSender', config.appBaseUrl])
+      return notificationSender
+    },
+  })
+
+  const response = await handlers.POST(new Request('https://pplus.example.com/api/support-requests', {
+    method: 'POST',
+    body: JSON.stringify({
+      firstName: 'Jane',
+      lastName: 'Hockey',
+      email: 'jane@example.com',
+      category: 'technical',
+      description: 'Video will not load',
+    }),
+  }))
+  const payload = await response.json()
+
+  assert.equal(response.status, 201)
+  assert.deepEqual(payload, { ok: true, supportRequestId: 'support-request-1', supportConversationId: 'conversation-1' })
+  assert.deepEqual(calls, [
+    ['createNotificationSender', 'https://pplus.example.com'],
+    ['createSupportRequest', {
+      firstName: 'Jane',
+      lastName: 'Hockey',
+      email: 'jane@example.com',
+      category: 'technical',
+      description: 'Video will not load',
+    }],
+    ['sendSupportRequestNotification', 'support-request-1'],
+    ['markNotificationSent', 'support-request-1'],
+  ])
+})
+
+test('public support request intake route handler preserves validation errors and records notification failures without failing intake', async () => {
+  assert.ok(existsSync(supportRouteHandlersPath), 'support request route handler seam should exist')
+  const { createSupportRequestRouteHandlers } = await import(`${supportRouteHandlersPath}?cacheBust=${Date.now()}`)
+
+  const validationError = new Error('Please enter a valid email')
+  validationError.status = 400
+  const failingHandlers = createSupportRequestRouteHandlers({
+    createRepository: () => ({
+      async createSupportRequest() {
+        throw validationError
+      },
+    }),
+    createNotificationSender: () => ({
+      async sendSupportRequestNotification() {
+        throw new Error('should not notify invalid requests')
+      },
+    }),
+  })
+  const failedResponse = await failingHandlers.POST(new Request('https://pplus.example.com/api/support-requests', {
+    method: 'POST',
+    body: JSON.stringify({ email: 'bad' }),
+  }))
+  assert.equal(failedResponse.status, 400)
+  assert.deepEqual(await failedResponse.json(), { error: 'Please enter a valid email' })
+
+  const calls = []
+  const successfulHandlers = createSupportRequestRouteHandlers({
+    createRepository: () => ({
+      async createSupportRequest() {
+        calls.push(['createSupportRequest'])
+        return { id: 'support-request-2', supportConversationId: 'conversation-2' }
+      },
+      async markNotificationSent() {
+        calls.push(['markNotificationSent'])
+      },
+      async markNotificationFailed(supportRequestId, message) {
+        calls.push(['markNotificationFailed', supportRequestId, message])
+      },
+    }),
+    createNotificationSender: () => ({
+      async sendSupportRequestNotification() {
+        calls.push(['sendSupportRequestNotification'])
+        throw new Error('Loops rejected the message')
+      },
+    }),
+  })
+  const response = await successfulHandlers.POST(new Request('https://pplus.example.com/api/support-requests', {
+    method: 'POST',
+    body: JSON.stringify({
+      firstName: 'Alex',
+      lastName: 'Goalie',
+      email: 'alex@example.com',
+      category: 'billing',
+      description: 'Invoice question',
+    }),
+  }))
+
+  assert.equal(response.status, 201)
+  assert.deepEqual(await response.json(), { ok: true, supportRequestId: 'support-request-2', supportConversationId: 'conversation-2' })
+  assert.deepEqual(calls, [
+    ['createSupportRequest'],
+    ['sendSupportRequestNotification'],
+    ['markNotificationFailed', 'support-request-2', 'Loops rejected the message'],
+  ])
+})
+
 test('support API route creates support requests through the repository seam and attempts notification safely', () => {
   assert.ok(existsSync(supportRoutePath), 'support API route should exist')
   const routeSource = readFileSync(supportRoutePath, 'utf8')
-  assert.match(routeSource, /import \{ createSupportRequestsRepository \} from '@\/lib\/support-requests-repository'/)
-  assert.match(routeSource, /import \{ createSupportRequestNotificationSender \} from '@\/lib\/support-request-notifications'/)
-  assert.match(routeSource, /export async function POST\(request\)/)
-  assert.match(routeSource, /const body = await request\.json\(\)/)
-  assert.match(routeSource, /const requestOrigin = new URL\(request\.url\)\.origin/)
-  assert.match(routeSource, /createSupportRequestNotificationSender\(\{ appBaseUrl: requestOrigin \}\)/)
-  assert.match(routeSource, /repository\.createSupportRequest\(body \?\? \{\}\)/)
-  assert.match(routeSource, /notificationSender\.sendSupportRequestNotification\(supportRequest\)/)
-  assert.match(routeSource, /repository\.markNotificationSent\(supportRequest\.id/)
-  assert.match(routeSource, /repository\.markNotificationFailed\(supportRequest\.id/)
-  assert.match(routeSource, /catch \(notificationError\)/)
-  assert.match(routeSource, /supportRequestId: supportRequest\.id/)
-  assert.match(routeSource, /\{ status: 201 \}/)
+  assert.match(routeSource, /import \{ postSupportRequest \} from '@\/lib\/support-request-route-handlers'/)
+  assert.match(routeSource, /export \{ postSupportRequest as POST \}/)
+  assert.doesNotMatch(routeSource, /createSupportRequestsRepository/, 'route file should delegate instead of owning repository construction')
+  assert.doesNotMatch(routeSource, /createSupportRequestNotificationSender/, 'route file should delegate instead of owning notification construction')
 })
 
 test('support notification sender posts internal email through Loops transactional API', async () => {

@@ -1,5 +1,12 @@
-export const adminNavigation = [
-  {
+function freezeNavigationGroup(group) {
+  return Object.freeze({
+    ...group,
+    items: group.items ? Object.freeze(group.items.map((item) => Object.freeze({ ...item }))) : undefined,
+  })
+}
+
+export const adminNavigation = Object.freeze([
+  freezeNavigationGroup({
     id: 'dashboard',
     label: 'Dashboard',
     icon: 'house',
@@ -7,8 +14,8 @@ export const adminNavigation = [
     defaultHref: '/admin/dashboard',
     title: 'Overview',
     description: 'Here is an overview of your platform.',
-  },
-  {
+  }),
+  freezeNavigationGroup({
     id: 'athletes',
     label: 'Athletes',
     icon: 'users',
@@ -46,8 +53,8 @@ export const adminNavigation = [
         description: 'Browse the athlete rankings table reference view.',
       },
     ],
-  },
-  {
+  }),
+  freezeNavigationGroup({
     id: 'programs',
     label: 'Programs',
     icon: 'calendar-range',
@@ -64,8 +71,8 @@ export const adminNavigation = [
         description: 'Browse the programs library table reference view.',
       },
     ],
-  },
-  {
+  }),
+  freezeNavigationGroup({
     id: 'workouts',
     label: 'Workouts',
     icon: 'dumbbell',
@@ -89,8 +96,8 @@ export const adminNavigation = [
         description: 'Review scheduled workouts, calendar alignment, and upcoming workload.',
       },
     ],
-  },
-  {
+  }),
+  freezeNavigationGroup({
     id: 'exercises',
     label: 'Exercises',
     icon: 'footprints',
@@ -107,8 +114,8 @@ export const adminNavigation = [
         description: 'Maintain exercise entries used across the training system.',
       },
     ],
-  },
-  {
+  }),
+  freezeNavigationGroup({
     id: 'support',
     label: 'Support',
     icon: 'message-circle',
@@ -117,11 +124,11 @@ export const adminNavigation = [
     title: 'Support dashboard',
     description: 'Open the support inbox dashboard in a separate window.',
     external: true,
-  },
-]
+  }),
+])
 
-export const adminBottomNavigation = [
-  {
+export const adminBottomNavigation = Object.freeze([
+  freezeNavigationGroup({
     id: 'settings',
     label: 'Settings',
     icon: 'settings',
@@ -145,22 +152,70 @@ export const adminBottomNavigation = [
         description: 'Update admin sign-in email and password credentials.',
       },
     ],
-  },
-]
+  }),
+])
 
 const navigationGroups = [...adminNavigation, ...adminBottomNavigation]
 
+export function normalizeAdminPath(path = '') {
+  const [pathWithoutHash] = String(path || '').split('#')
+  const [pathWithoutQuery] = pathWithoutHash.split('?')
+  const normalizedPath = pathWithoutQuery.trim()
+
+  if (normalizedPath.length > 1 && normalizedPath.endsWith('/')) {
+    return normalizedPath.replace(/\/+$/, '')
+  }
+
+  return normalizedPath
+}
+
+export function isAdminRouteActive(currentPath = '', href = '') {
+  const normalizedCurrentPath = normalizeAdminPath(currentPath)
+  const normalizedHref = normalizeAdminPath(href)
+
+  if (!normalizedCurrentPath || !normalizedHref) {
+    return false
+  }
+
+  return normalizedCurrentPath === normalizedHref || normalizedCurrentPath.startsWith(`${normalizedHref}/`)
+}
+
+export function getAdminRouteState(group, currentPath = '') {
+  const groupHref = group?.href || group?.defaultHref || group?.items?.[0]?.href || '/'
+  const activeItems = group?.items?.filter((item) => isAdminRouteActive(currentPath, item.href)) || []
+  const currentItem = activeItems.at(-1) || (isAdminRouteActive(currentPath, groupHref) ? group?.items?.[0] || group : null)
+  const hasActiveChild = activeItems.length > 0
+  const isActive = Boolean(group?.current || isAdminRouteActive(currentPath, groupHref) || hasActiveChild)
+
+  return {
+    groupHref,
+    hasActiveChild,
+    isActive,
+    currentItem,
+  }
+}
+
+export function getActiveExpandableAdminGroupId(currentPath = '') {
+  return navigationGroups.find((group) => group.items?.length && getAdminRouteState(group, currentPath).isActive)?.id || null
+}
+
+export function getNextExpandedAdminGroupId(currentGroupId = null, toggledGroupId = null, isOpen = false) {
+  return isOpen ? toggledGroupId : currentGroupId === toggledGroupId ? null : currentGroupId
+}
+
 export function findAdminRoute(currentPath = '') {
+  const normalizedCurrentPath = normalizeAdminPath(currentPath)
+
   for (const group of navigationGroups) {
-    if (group.href === currentPath) {
-      const currentItem = group.items?.find((item) => item.href === currentPath) ?? group.items?.[0] ?? group
+    if (normalizeAdminPath(group.href) === normalizedCurrentPath) {
+      const currentItem = group.items?.find((item) => normalizeAdminPath(item.href) === normalizedCurrentPath) ?? group.items?.[0] ?? group
       return {
         currentGroup: group,
         currentItem,
       }
     }
 
-    const itemMatch = group.items?.find((item) => item.href === currentPath)
+    const itemMatch = group.items?.find((item) => normalizeAdminPath(item.href) === normalizedCurrentPath)
     if (itemMatch) {
       return {
         currentGroup: group,

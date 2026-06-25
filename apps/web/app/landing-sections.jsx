@@ -2,7 +2,7 @@ import Image from 'next/image'
 import { Menu, X } from 'lucide-react'
 import { Mail, MapPin, Phone } from 'lucide-react'
 import PublicLanguageSwitcher from '../components/public-language-switcher'
-import PublicThemeToggle from '../components/public-theme-toggle'
+import PublicThemeToggle, { PublicThemeHydrator } from '../components/public-theme-toggle'
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import LandingHeaderScrollFrame from './landing-header-scroll-frame'
 import { DEFAULT_LANGUAGE, getLocalizedHref } from '../lib/i18n/language'
@@ -74,6 +74,7 @@ export function LandingHeader({ language = DEFAULT_LANGUAGE, currentPath = '/', 
 
   return (
     <LandingHeaderScrollFrame>
+      <PublicThemeHydrator />
       <div className="landing-header-desktop landing-shell landing-header-inner">
         <a href={getLocalizedHref('/', language)} className="landing-header-brand" aria-label="PPLUS Training home">
           <LandingLogo className="landing-logo-header" priority />

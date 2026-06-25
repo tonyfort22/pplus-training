@@ -1,5 +1,6 @@
 'use client'
 
+import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 
 const STORAGE_KEY = 'pplus-public-theme'
@@ -9,18 +10,36 @@ function normalizeTheme(value) {
   return THEMES.includes(value) ? value : 'dark'
 }
 
+function readSavedTheme() {
+  return normalizeTheme(window.localStorage?.getItem(STORAGE_KEY))
+}
+
+function applyPublicTheme(nextTheme) {
+  const normalizedTheme = normalizeTheme(nextTheme)
+  document.documentElement.dataset.publicTheme = normalizedTheme
+  return normalizedTheme
+}
+
+export function PublicThemeHydrator() {
+  const pathname = usePathname()
+
+  useEffect(() => {
+    applyPublicTheme(readSavedTheme())
+  }, [pathname])
+
+  return null
+}
+
 export default function PublicThemeToggle() {
   const [theme, setTheme] = useState('dark')
 
   useEffect(() => {
-    const savedTheme = normalizeTheme(window.localStorage?.getItem(STORAGE_KEY))
-    document.documentElement.dataset.publicTheme = savedTheme
+    const savedTheme = applyPublicTheme(readSavedTheme())
     setTheme(savedTheme)
   }, [])
 
   function applyTheme(nextTheme) {
-    nextTheme = normalizeTheme(nextTheme)
-    document.documentElement.dataset.publicTheme = nextTheme
+    nextTheme = applyPublicTheme(nextTheme)
     localStorage.setItem(STORAGE_KEY, nextTheme)
     setTheme(nextTheme)
   }

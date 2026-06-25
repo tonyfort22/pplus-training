@@ -53,7 +53,7 @@ test('workouts table upload button opens cancel-style PDF import dialog with tab
   assert.match(source, /onChange=\{handleWorkoutImportPdfUpload\}/)
   assert.match(source, /<Button[\s\S]*variant="outline"[\s\S]*onClick=\{handleWorkoutImportPdfButtonClick\}[\s\S]*rounded-\[12px\][\s\S]*min-h-\[40px\][\s\S]*border-\[color:var\(--admin-dashboard-card-border\)\][\s\S]*bg-\[var\(--admin-dashboard-control-bg\)\][\s\S]*hover:bg-\[var\(--admin-dashboard-control-hover-bg\)\][\s\S]*<Upload className="size-4" aria-hidden="true" \/>[\s\S]*Upload PDF[\s\S]*<\/Button>/)
 
-  assert.match(source, /<Dialog open=\{isAiWorkoutImportDialogOpen\} onOpenChange=\{setIsAiWorkoutImportDialogOpen\}>/)
+  assert.match(source, /<Dialog open=\{isAiWorkoutImportDialogOpen\} onOpenChange=\{handleAiWorkoutImportDialogOpenChange\}>/)
   assert.match(source, /<DialogTitle>Generate workout with AI<\/DialogTitle>/)
   assert.match(source, /\{isWorkoutAiProcessing \? \(/)
   assert.match(source, /<Empty[\s\S]*className="min-h-\[420px\] border-0 bg-transparent p-0"[\s\S]*>/)
@@ -85,4 +85,19 @@ test('workouts table upload button opens cancel-style PDF import dialog with tab
   assert.match(source, /Cancel/)
   assert.match(source, /Generate with AI/)
   assert.match(source, /Create workout/)
+})
+
+test('workout upload and import controls keep one guarded PDF contract', () => {
+  const source = readFileSync(workoutsDataTablePath, 'utf8')
+
+  assert.match(source, /function handleAiWorkoutImportDialogOpenChange\(isOpen\) \{[\s\S]*if \(isWorkoutAiProcessing && !isOpen\) return[\s\S]*setIsAiWorkoutImportDialogOpen\(isOpen\)[\s\S]*if \(!isOpen\) \{[\s\S]*setAiWorkoutImportError\(''\)[\s\S]*\}/)
+  assert.match(source, /<Dialog open=\{isAiWorkoutImportDialogOpen\} onOpenChange=\{handleAiWorkoutImportDialogOpenChange\}>/)
+  assert.match(source, /<input[\s\S]{0,180}id="workout-import-pdf-upload"[\s\S]{0,120}type="file"[\s\S]{0,120}accept="application\/pdf"[\s\S]{0,120}multiple[\s\S]{0,120}className="sr-only"[\s\S]{0,120}onChange=\{handleWorkoutImportPdfUpload\}/)
+  assert.match(source, /<input[\s\S]{0,180}id="workout-import-dialog-pdf-upload"[\s\S]{0,120}type="file"[\s\S]{0,120}accept="application\/pdf"[\s\S]{0,120}multiple[\s\S]{0,120}className="sr-only"[\s\S]{0,120}onChange=\{handleWorkoutImportPdfUpload\}/)
+  assert.match(source, /<label htmlFor="workout-import-dialog-pdf-upload" className="cursor-pointer">[\s\S]*<Upload className="size-4" aria-hidden="true" \/>[\s\S]*Add files[\s\S]*<\/label>/)
+  assert.match(source, /onClick=\{\(\) => \{[\s\S]*setWorkoutImportFiles\(\[\]\)[\s\S]*setAiWorkoutImportError\(''\)[\s\S]*\}\}[\s\S]*disabled=\{workoutImportFiles\.length === 0 \|\| isWorkoutAiProcessing\}[\s\S]*Remove all/)
+  assert.match(source, /disabled=\{workoutImportFiles\.length === 0 \|\| isWorkoutAiProcessing\}[\s\S]*onClick=\{handleGenerateWorkoutImportDraft\}[\s\S]*<Bot className="size-4" aria-hidden="true" \/>[\s\S]*Generate with AI/)
+  assert.match(source, /workoutAiProcessingAbortRef\.current\?\.abort\(\)[\s\S]*setIsWorkoutAiProcessing\(false\)[\s\S]*setAiWorkoutImportError\(''\)/)
+  assert.doesNotMatch(source, /accept="image\/\*"/)
+  assert.doesNotMatch(source, /onClick=\{\(\) => setWorkoutImportFiles\(\[\]\)\}/)
 })

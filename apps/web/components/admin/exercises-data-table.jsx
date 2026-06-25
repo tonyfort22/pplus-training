@@ -46,11 +46,11 @@ function formatExerciseSetsLabel(totalSetCount = 0) {
 
 function ExerciseCell({ name, thumbnailUrl = '', totalSetCount = 0 }) {
   return (
-    <div className="admin-shell-athletes-name-cell">
-      <Avatar alt={name} className="admin-shell-athletes-avatar" initials={name} src={thumbnailUrl} />
-      <div className="admin-shell-athletes-name-copy">
-        <span className="admin-shell-athletes-name-text">{name}</span>
-        <span className="admin-shell-athletes-name-meta">{formatExerciseSetsLabel(totalSetCount)}</span>
+    <div className="admin-shell-athletes-name-cell admin-shell-exercises-name-cell">
+      <Avatar alt={name} className="admin-shell-athletes-avatar admin-shell-exercises-avatar" initials={name} src={thumbnailUrl} />
+      <div className="admin-shell-athletes-name-copy admin-shell-exercises-name-copy">
+        <span className="admin-shell-athletes-name-text admin-shell-exercises-name-text">{name}</span>
+        <span className="admin-shell-athletes-name-meta admin-shell-exercises-name-meta">{formatExerciseSetsLabel(totalSetCount)}</span>
       </div>
     </div>
   )
@@ -66,7 +66,7 @@ function RowActionsCell({
   return (
     <DropdownMenu open={isOpen} onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>
-        <button type="button" className="admin-shell-athletes-row-menu" aria-label="Open menu">
+        <button type="button" className="admin-shell-athletes-row-menu admin-shell-exercises-row-menu" aria-label="Open menu">
           <span className="sr-only">Open menu</span>
           <MoreHorizontal className="admin-shell-athletes-row-menu-icon" aria-hidden="true" />
         </button>
@@ -278,7 +278,7 @@ export default function ExercisesDataTable({ searchQuery = '' }) {
   const [error, setError] = useState('')
   const [editorMuscleOptions, setEditorMuscleOptions] = useState([])
   const [exerciseFilters, setExerciseFilters] = useQueryState(
-    'filters',
+    'exerciseFilters',
     parseAsJson((value) => (Array.isArray(value) ? value : [])).withDefault([]),
   )
   const [isExerciseEditorOpen, setIsExerciseEditorOpen] = useState(false)
@@ -1022,7 +1022,7 @@ export default function ExercisesDataTable({ searchQuery = '' }) {
                 <Button
                   type="button"
                   variant="outline"
-                  className="admin-shell-athletes-filter-trigger rounded-[12px] min-h-[40px] shadow-none"
+                  className="admin-shell-athletes-filter-trigger admin-shell-exercises-filter-trigger rounded-[12px] min-h-[40px] shadow-none"
                 >
                   <Plus className="size-4" />
                   Add filter
@@ -1038,7 +1038,7 @@ export default function ExercisesDataTable({ searchQuery = '' }) {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="admin-shell-athletes-example-columns-button"
+                  className="admin-shell-athletes-example-columns-button admin-shell-exercises-bulk-actions-button disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
                   aria-label="Exercise bulk actions"
                   disabled={selectedExerciseCount === 0}
                   aria-disabled={selectedExerciseCount === 0}
@@ -1096,7 +1096,7 @@ export default function ExercisesDataTable({ searchQuery = '' }) {
             </DropdownMenu>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button type="button" className="admin-shell-athletes-example-columns-button">
+                <button type="button" className="admin-shell-athletes-example-columns-button admin-shell-exercises-columns-button">
                   Columns
                   <ChevronDown className="admin-shell-athletes-example-columns-icon" aria-hidden="true" />
                 </button>
@@ -1109,6 +1109,7 @@ export default function ExercisesDataTable({ searchQuery = '' }) {
                     <DropdownMenuCheckboxItem
                       key={column.id}
                       className="capitalize"
+                      checkIconClassName="text-[var(--admin-shell-primary-button-bg)]"
                       checked={column.getIsVisible()}
                       onCheckedChange={(value) => column.toggleVisibility(!!value)}
                     >
@@ -1119,7 +1120,7 @@ export default function ExercisesDataTable({ searchQuery = '' }) {
             </DropdownMenu>
             <Button
               type="button"
-              className="admin-shell-athletes-invite-button self-start rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] md:self-auto"
+              className="admin-shell-athletes-invite-button admin-shell-exercises-create-button self-start rounded-[12px] min-h-[40px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)] md:self-auto"
               onClick={openCreateExerciseDialog}
             >
               Create exercise
@@ -1128,8 +1129,8 @@ export default function ExercisesDataTable({ searchQuery = '' }) {
         </div>
       </div>
 
-      <div className="admin-shell-athletes-table-shell">
-        <Table className="admin-shell-athletes-table">
+      <div className="admin-shell-athletes-table-shell admin-shell-exercises-table-shell">
+        <Table className="admin-shell-athletes-table admin-shell-exercises-table">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>

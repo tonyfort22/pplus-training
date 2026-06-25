@@ -169,9 +169,15 @@ function downloadInvitesExportFile({ content, fileName, mimeType }) {
   URL.revokeObjectURL(url)
 }
 
-function RowActionsCell({ onResendInvite = () => {}, onCancelInvite = () => {}, canCancel = false }) {
+function RowActionsCell({
+  isOpen = false,
+  onOpenChange = () => {},
+  onResendInvite = () => {},
+  onCancelInvite = () => {},
+  canCancel = false,
+}) {
   return (
-    <DropdownMenu>
+    <DropdownMenu open={isOpen} onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>
         <button type="button" className="admin-shell-invites-row-menu" aria-label="Open menu">
           <span className="sr-only">Open menu</span>
@@ -180,9 +186,24 @@ function RowActionsCell({ onResendInvite = () => {}, onCancelInvite = () => {}, 
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-        <DropdownMenuItem onSelect={onResendInvite}>Resend invite</DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={() => {
+            onResendInvite()
+            onOpenChange(false)
+          }}
+        >
+          Resend invite
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem disabled={!canCancel} onSelect={onCancelInvite}>Cancel invite</DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={!canCancel}
+          onSelect={() => {
+            onCancelInvite()
+            onOpenChange(false)
+          }}
+        >
+          Cancel invite
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -210,6 +231,7 @@ export default function InvitesDataTable({ searchQuery = '' }) {
   const [isCancelingBulkInvites, setIsCancelingBulkInvites] = useState(false)
   const [isExportingInvites, setIsExportingInvites] = useState(false)
   const [isCancelingInvite, setIsCancelingInvite] = useState(false)
+  const [openRowActionMenuId, setOpenRowActionMenuId] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
   const [rowSelection, setRowSelection] = useState({})
   const [columnFilters, setColumnFilters] = useState([])
@@ -438,6 +460,10 @@ export default function InvitesDataTable({ searchQuery = '' }) {
         header: () => <span className="sr-only">Actions</span>,
         cell: ({ row }) => (
           <RowActionsCell
+            isOpen={openRowActionMenuId === row.original.id}
+            onOpenChange={(isOpen) => {
+              setOpenRowActionMenuId(isOpen ? row.original.id : null)
+            }}
             canCancel={row.original.status === 'Pending' || row.original.status === 'Expired'}
             onResendInvite={() => {
               setInviteDialogMode('resend')
@@ -454,7 +480,7 @@ export default function InvitesDataTable({ searchQuery = '' }) {
         enableHiding: false,
       },
     ],
-    [],
+    [openRowActionMenuId],
   )
 
   const table = useReactTable({
@@ -479,7 +505,7 @@ export default function InvitesDataTable({ searchQuery = '' }) {
     table.getColumn('name')?.setFilterValue(searchQuery)
   }, [searchQuery, table])
 
-  const emptyStateMessage = error || 'No invites found.'
+  const emptyStateMessage = error || (searchQuery ? 'No invites match the current search.' : 'No invites found.')
   const pageSizeOptions = [5, 10, 20, 30]
   const totalRows = table.getFilteredRowModel().rows.length
   const pageStart = totalRows === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1
@@ -760,6 +786,7 @@ export default function InvitesDataTable({ searchQuery = '' }) {
                   <DropdownMenuCheckboxItem
                     key={column.id}
                     className="capitalize"
+                    checkIconClassName="text-[var(--admin-shell-primary-button-bg)]"
                     checked={column.getIsVisible()}
                     onCheckedChange={(value) => column.toggleVisibility(!!value)}
                   >

@@ -38,7 +38,7 @@ export default function WorkoutDeleteDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="admin-shell-athletes-invite-dialog border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] text-[var(--admin-dashboard-card-text)] sm:max-w-[440px]">
+      <DialogContent className="admin-shell-athletes-invite-dialog admin-shell-workouts-delete-dialog border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] text-[var(--admin-dashboard-card-text)] sm:max-w-[440px]">
         <DialogHeader>
           <div className="mb-1 flex h-10 w-10 items-center justify-center rounded-[14px] bg-red-500/10 text-red-500">
             <Trash2 className="size-5" aria-hidden="true" />

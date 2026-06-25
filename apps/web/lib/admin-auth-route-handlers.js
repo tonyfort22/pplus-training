@@ -47,6 +47,12 @@ function requireResetPayload(body) {
     error.status = 400
     throw error
   }
+
+  if (String(body?.password || '').length < 6) {
+    const error = new Error('Password must be at least 6 characters.')
+    error.status = 400
+    throw error
+  }
 }
 
 export function createAdminAuthRouteHandlers(options = {}) {
@@ -67,7 +73,9 @@ export function createAdminAuthRouteHandlers(options = {}) {
         setAdminAuthCookies(response, session, cookieOptions)
         return response
       } catch (error) {
-        return routeErrorResponse(error, 'Unknown admin login route error')
+        const response = routeErrorResponse(error, 'Unknown admin login route error')
+        clearAdminAuthCookies(response, cookieOptions)
+        return response
       }
     },
 
@@ -78,18 +86,25 @@ export function createAdminAuthRouteHandlers(options = {}) {
     },
 
     async forgotPassword(request) {
+      let body
       try {
-        const body = await readJsonBody(request)
+        body = await readJsonBody(request)
         requireEmailPayload(body)
+      } catch (error) {
+        return routeErrorResponse(error, 'Unknown admin forgot password route error')
+      }
+
+      try {
         const repository = createRepository()
         await repository.requestPasswordReset({
           email: body?.email,
           redirectTo: getAdminAuthRedirectUrl(request, '/admin/reset-password'),
         })
-        return json({ success: true, message: SAFE_FORGOT_PASSWORD_MESSAGE })
-      } catch (error) {
-        return routeErrorResponse(error, 'Unknown admin forgot password route error')
+      } catch {
+        // Keep forgot-password non-enumerating: valid email-shaped requests always get the same response.
       }
+
+      return json({ success: true, message: SAFE_FORGOT_PASSWORD_MESSAGE })
     },
 
     async resetPassword(request) {

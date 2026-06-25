@@ -84,8 +84,8 @@ test('admin settings profile and account layouts fill the content width without 
   const accountSource = extractFunction(settingsSource, 'AdminSettingsAccountView')
   const uploaderSource = extractFunction(settingsSource, 'ProfilePhotoUploader')
 
-  assert.match(profileSource, /<form className="grid w-full gap-6"/)
-  assert.match(accountSource, /<form className="grid w-full gap-6"/)
+  assert.match(profileSource, /<form className="admin-settings-profile-form grid w-full gap-6"/)
+  assert.match(accountSource, /<form className="admin-settings-account-form grid w-full gap-6"/)
   assert.doesNotMatch(profileSource, /max-w-3xl/)
   assert.doesNotMatch(accountSource, /max-w-3xl/)
 
@@ -94,7 +94,8 @@ test('admin settings profile and account layouts fill the content width without 
   assert.match(profileSource, /profileStatusMessage \? \(/)
   assert.doesNotMatch(profileSource, /Edit the connected coach profile fields and save changes to Supabase\./)
   assert.match(accountSource, /<div className="grid w-full gap-4">[\s\S]*htmlFor="admin-account-email" label="Email"/)
-  assert.match(accountSource, /id="admin-account-status-notice" className="flex w-full items-start/)
+  assert.match(accountSource, /accountStatusClassName = hasAccountError[\s\S]*flex w-full items-start/)
+  assert.match(accountSource, /id="admin-account-status-notice"[\s\S]*className=\{accountStatusClassName\}/)
 
   assert.doesNotMatch(uploaderSource, /<div className="relative[^"]*rounded-\[20px\]|<div className="relative[^"]*border border-dashed|<div className="relative[^"]*bg-\[var\(--admin-shell-surface\)\]/)
 })

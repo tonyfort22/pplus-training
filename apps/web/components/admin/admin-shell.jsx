@@ -51,7 +51,14 @@ import {
   SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar'
-import { adminBottomNavigation, adminNavigation, findAdminRoute } from './admin-navigation'
+import {
+  adminBottomNavigation,
+  adminNavigation,
+  findAdminRoute,
+  getActiveExpandableAdminGroupId,
+  getAdminRouteState,
+  getNextExpandedAdminGroupId,
+} from './admin-navigation'
 import AdminThemeToggle from './admin-theme-toggle'
 import { ADMIN_AI_BUTTON_CLASS_NAME } from './ui/ai-button-style'
 import AthletesListView from './athletes-list-view'
@@ -233,28 +240,15 @@ function AdminFloatingMicButton() {
   )
 }
 
-function isPathActive(currentPath = '', href = '') {
-  if (!href) return false
-  return currentPath === href || currentPath.startsWith(`${href}/`)
-}
-
 function getGroupState(group, currentPath) {
-  const groupHref = group.href || group.defaultHref || group.items?.[0]?.href || '/'
-  const hasActiveChild = group.items?.some((item) => currentPath === item.href)
-  const isActive = group.current || isPathActive(currentPath, groupHref) || hasActiveChild
-
-  return {
-    groupHref,
-    hasActiveChild,
-    isActive,
-  }
+  return getAdminRouteState(group, currentPath)
 }
 
 function AdminSidebarNavItem({ currentPath = '', group, isExpanded = false, onExpandedChange = () => {} }) {
   const { state } = useSidebar()
   const isCollapsed = state === 'collapsed'
   const Icon = iconMap[group.icon]
-  const { groupHref, isActive } = getGroupState(group, currentPath)
+  const { currentItem, groupHref, isActive } = getGroupState(group, currentPath)
 
   if (group.items?.length) {
     return (
@@ -279,7 +273,7 @@ function AdminSidebarNavItem({ currentPath = '', group, isExpanded = false, onEx
 
           <SidebarMenuSub className="admin-dashboard-sidebar-subnav ml-3 mt-1 pl-3">
             {group.items.map((item) => {
-              const itemCurrent = item.current || currentPath === item.href
+              const itemCurrent = item.current || currentItem?.id === item.id
               return (
                 <SidebarMenuSubItem key={item.id}>
                   <SidebarMenuSubButton
@@ -316,6 +310,23 @@ function AdminSidebarNavItem({ currentPath = '', group, isExpanded = false, onEx
 }
 
 function DashboardShellHeader({ searchQuery = '', onSearchQueryChange = () => {}, accountProfile = accountSwitcher }) {
+  const router = useRouter()
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+  async function handleLogout(event) {
+    event?.preventDefault()
+    setIsLoggingOut(true)
+
+    try {
+      await fetch('/api/admin/auth/logout', {
+        method: 'POST',
+      })
+    } finally {
+      router.replace('/admin/login')
+      router.refresh()
+    }
+  }
+
   return (
     <header className="admin-dashboard-topbar px-6 py-[18px]">
       <div className="flex items-center justify-between gap-4">
@@ -373,6 +384,10 @@ function DashboardShellHeader({ searchQuery = '', onSearchQueryChange = () => {}
                 <Link href={item.href}>{item.label}</Link>
               </DropdownMenuItem>
             ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={handleLogout} disabled={isLoggingOut}>
+              {isLoggingOut ? 'Logging out...' : 'Log out'}
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -560,7 +575,7 @@ function AdminDashboardSidebar({
   selectedAthlete = null,
 }) {
   const topSections = [...adminNavigation, ...adminBottomNavigation]
-  const activeExpandableGroupId = topSections.find((group) => group.items?.length && getGroupState(group, currentPath).isActive)?.id || null
+  const activeExpandableGroupId = getActiveExpandableAdminGroupId(currentPath)
   const [expandedSidebarGroupId, setExpandedSidebarGroupId] = useState(activeExpandableGroupId)
 
   useEffect(() => {
@@ -595,7 +610,7 @@ function AdminDashboardSidebar({
                   currentPath={currentPath}
                   isExpanded={expandedSidebarGroupId === group.id}
                   onExpandedChange={(isOpen) => setExpandedSidebarGroupId((currentGroupId) => (
-                    isOpen ? group.id : currentGroupId === group.id ? null : currentGroupId
+                    getNextExpandedAdminGroupId(currentGroupId, group.id, isOpen)
                   ))}
                 />
               ))}

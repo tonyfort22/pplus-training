@@ -280,6 +280,7 @@ function buildWorkoutTemplateTrainingSections({ blocks = [], exercises = [], set
         isExpanded: false,
         showInstruction: false,
         instruction: exercise.notes ?? '',
+        defaultRestSeconds: exercise.default_rest_seconds ?? null,
         sets: (setsByExerciseId.get(exercise.id) ?? []).map((setRow, setIndex) => ({
           id: setRow.id ?? `template-set-0-${exerciseIndex}-${setIndex}`,
           tempo: setRow.notes ?? '',
@@ -315,6 +316,7 @@ function buildWorkoutTemplateTrainingSections({ blocks = [], exercises = [], set
         isExpanded: false,
         showInstruction: false,
         instruction: exercise.notes ?? '',
+        defaultRestSeconds: exercise.default_rest_seconds ?? null,
         sets: (setsByExerciseId.get(exercise.id) ?? []).map((setRow, setIndex) => ({
           id: setRow.id ?? `template-set-${blockIndex}-${exerciseIndex}-${setIndex}`,
           tempo: setRow.notes ?? '',
@@ -1614,8 +1616,29 @@ export function createProgramWorkoutRepository(config = {}) {
       throw createRepositoryError('Program not found.', 404)
     }
 
+    const templateRows = await request({
+      table: 'workout_templates',
+      query: {
+        select: 'id,name,status',
+        id: `in.${encodeInFilter(normalizedWorkoutTemplateIds)}`,
+      },
+    })
+    const templatesById = new Map((Array.isArray(templateRows) ? templateRows : []).map((template) => [template.id, template]))
+
     const assignedWorkouts = []
+    const skippedWorkouts = []
     for (const workoutTemplateId of normalizedWorkoutTemplateIds) {
+      const template = templatesById.get(workoutTemplateId)
+      if (template?.status === 'archived') {
+        skippedWorkouts.push({
+          id: workoutTemplateId,
+          name: template.name ?? null,
+          status: template.status,
+          reason: 'Archived workout templates cannot be assigned to a program.',
+        })
+        continue
+      }
+
       const assignedWorkout = await createProgramWorkoutFromTemplate({
         workoutTemplateId,
         programId: program.id,
@@ -1628,7 +1651,7 @@ export function createProgramWorkoutRepository(config = {}) {
 
     return {
       assignedWorkouts,
-      skippedWorkouts: [],
+      skippedWorkouts,
     }
   }
 

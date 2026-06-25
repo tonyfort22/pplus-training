@@ -80,7 +80,7 @@ test('web root serves the marketing landing page and admin login lives at /admin
   assert.match(landingContentSource, /featureLinks: features\.map\(\(feature\) => \(\{[\s\S]*label: feature\.title,[\s\S]*href: '\/#features',[\s\S]*\}\)\)/)
   assert.match(landingContentSource, /programLinks: programs\.map\(\(program\) => \(\{[\s\S]*label: program\.title,[\s\S]*href: '\/#programs',[\s\S]*\}\)\)/)
   assert.match(landingContentSource, /\{ label: 'FAQ', href: '\/faq' \}/)
-  assert.match(landingContentSource, /\{ label: 'Sign In', href: '\/admin\/login' \}/, 'admin Sign In should live in the footer Resources column')
+  assert.doesNotMatch(landingContentSource, /\{ label: 'Sign In', href: '\/admin\/login' \}/, 'admin Sign In should not live in public footer resources')
   assert.doesNotMatch(landingContentSource, /#feature-\$\{feature\.slug\}/)
   assert.doesNotMatch(landingContentSource, /href: '#features'|href: '#programs'|href: '#footer'/)
   assert.match(featureShowcaseSource, /export default function LandingFeatureShowcase/)

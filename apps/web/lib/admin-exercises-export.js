@@ -3,7 +3,9 @@ export const exerciseExportColumns = [
   'Exercise name',
   'Description',
   'Primary muscle',
+  'Primary muscle ID',
   'Secondary muscles',
+  'Secondary muscle IDs',
   'Equipment',
   'Movement types',
   'Movement pattern',
@@ -44,6 +46,10 @@ function getSecondaryMuscles(exercise = {}) {
   return Array.isArray(exercise.muscleNames) ? exercise.muscleNames.slice(1).join(', ') : ''
 }
 
+function getSecondaryMuscleIds(exercise = {}) {
+  return Array.isArray(exercise.secondaryMuscleIds) ? exercise.secondaryMuscleIds.filter(Boolean).join(', ') : ''
+}
+
 function getEquipment(exercise = {}) {
   if (Array.isArray(exercise.equipmentNeeded) && exercise.equipmentNeeded.length > 0) {
     return joinValues(exercise.equipmentNeeded)
@@ -52,13 +58,15 @@ function getEquipment(exercise = {}) {
   return exercise.equipment ?? ''
 }
 
-export function buildExercisesExportCsv(selectedExercises = []) {
-  const rows = selectedExercises.map((exercise) => [
+export function buildExercisesExportRows(selectedExercises = []) {
+  return selectedExercises.map((exercise) => [
     exercise.id,
     exercise.name,
     exercise.description,
     getPrimaryMuscle(exercise),
+    exercise.primaryMuscleId,
     getSecondaryMuscles(exercise),
+    getSecondaryMuscleIds(exercise),
     getEquipment(exercise),
     joinValues(exercise.movementTypeValues),
     exercise.movementPattern,
@@ -77,6 +85,10 @@ export function buildExercisesExportCsv(selectedExercises = []) {
     exercise.createdAt,
     exercise.status,
   ])
+}
+
+export function buildExercisesExportCsv(selectedExercises = []) {
+  const rows = buildExercisesExportRows(selectedExercises)
 
   return [exerciseExportColumns, ...rows].map((row) => row.map(escapeCsvValue).join(',')).join('\n')
 }

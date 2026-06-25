@@ -8,7 +8,6 @@ export const publicPageCopy = {
         program: 'Programs',
         faq: 'FAQ',
         support: 'Support',
-        signIn: 'Sign In',
       },
       hero: {
         pill: 'The Best Hockey Training App',
@@ -97,7 +96,6 @@ export const publicPageCopy = {
         resourceLinks: [
           { label: 'Support', href: '/support' },
           { label: 'FAQ', href: '/faq' },
-          { label: 'Sign In', href: '/admin/login' },
         ],
         copyright: '2026 PPLUS Training. All rights reserved',
       },
@@ -227,7 +225,6 @@ export const publicPageCopy = {
         program: 'Programmes',
         faq: 'FAQ',
         support: 'Support',
-        signIn: 'Connexion',
       },
       hero: {
         pill: 'La meilleure app d’entraînement de hockey',
@@ -316,7 +313,6 @@ export const publicPageCopy = {
         resourceLinks: [
           { label: 'Support', href: '/support' },
           { label: 'FAQ', href: '/faq' },
-          { label: 'Connexion', href: '/admin/login' },
         ],
         copyright: '2026 PPLUS Training. Tous droits réservés',
       },

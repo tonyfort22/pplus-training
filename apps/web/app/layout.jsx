@@ -18,7 +18,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" data-theme="dark" suppressHydrationWarning>
+    <html lang="en" data-theme="dark" data-public-theme="dark" suppressHydrationWarning>
       <body className={`${geist.variable} isolate text-base antialiased`}>
         <ToastProvider>
           <TooltipProvider><NuqsAdapter>{children}</NuqsAdapter></TooltipProvider>

@@ -322,9 +322,9 @@ function SupportConversationThread({ conversation }) {
           </Popover>
         </ChatToolbarAddon>
         <ChatToolbarTextarea
+          aria-label="Message composer"
           value={replyText}
           onChange={(event) => setReplyText(event.target.value)}
-          onSubmit={handleSubmitReply}
           className="support-inbox-composer-input"
           placeholder="Type your message..."
         />

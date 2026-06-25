@@ -20,6 +20,10 @@ function serializeCookie(name, value, options = {}) {
     parts.push(`Max-Age=${options.maxAge}`)
   }
 
+  if (options.expires) {
+    parts.push(`Expires=${options.expires}`)
+  }
+
   if (options.secure) {
     parts.push('Secure')
   }
@@ -32,6 +36,7 @@ function appendAdminCookie(response, name, value, options = {}) {
     path: '/',
     secure: isProduction(options),
     maxAge: options.maxAge,
+    expires: options.expires,
   }))
 }
 
@@ -52,10 +57,12 @@ export function clearAdminAuthCookies(response, options = {}) {
   appendAdminCookie(response, PPLUS_ADMIN_ACCESS_TOKEN_COOKIE, '', {
     ...options,
     maxAge: 0,
+    expires: 'Thu, 01 Jan 1970 00:00:00 GMT',
   })
   appendAdminCookie(response, PPLUS_ADMIN_REFRESH_TOKEN_COOKIE, '', {
     ...options,
     maxAge: 0,
+    expires: 'Thu, 01 Jan 1970 00:00:00 GMT',
   })
 
   return response
