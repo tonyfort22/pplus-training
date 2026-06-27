@@ -112,7 +112,15 @@ export function ExerciseLibraryView({
               ? exercises.map((exercise) => {
                 const isSelected = selectable && selectedExerciseIds.includes(exercise.id)
                 return (
-                  <Pressable key={exercise.id} className="flex-row items-center py-3" style={styles.exerciseRow} onPress={() => handleExercisePress(exercise)}>
+                  <Pressable
+                    key={exercise.id}
+                    className="flex-row items-center py-3"
+                    style={styles.exerciseRow}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Open exercise ${exercise.name}`}
+                    testID={`exercise-library-row-${exercise.id}`}
+                    onPress={() => handleExercisePress(exercise)}
+                  >
                     <View className="mr-3 h-14 w-14 items-center justify-center overflow-hidden rounded-[14px]" style={{ borderWidth: 1, borderColor: resolvedTheme.border, backgroundColor: resolvedTheme.surface }}>
                       {exercise.thumbnailUrl ? (
                         <Image source={{ uri: exercise.thumbnailUrl }} className="h-full w-full" resizeMode="cover" />
@@ -144,7 +152,14 @@ export function ExerciseLibraryView({
               placeholder={searchPlaceholder}
             />
             {primaryActionLabel ? (
-              <AppButton theme={resolvedTheme} label={primaryActionLabel} onPress={onPrimaryAction} disabled={primaryActionDisabled} />
+              <AppButton
+                theme={resolvedTheme}
+                label={primaryActionLabel}
+                accessibilityLabel={primaryActionLabel}
+                testID="exercise-library-primary-action-button"
+                onPress={onPrimaryAction}
+                disabled={primaryActionDisabled}
+              />
             ) : null}
           </View>
         </View>

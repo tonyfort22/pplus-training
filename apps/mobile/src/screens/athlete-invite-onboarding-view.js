@@ -461,12 +461,14 @@ function AthleteInviteOnboardingViewContent({
   onPrevious = () => {},
   onClose = () => {},
   isSubmitting = false,
+  completionState = 'idle',
   errorMessage = '',
   noticeMessage = '',
   theme,
 }) {
   const insets = useSafeAreaInsets()
   const resolvedTheme = theme || getAppTheme('dark')
+  const isCompletionSubmitting = isSubmitting || completionState === 'submitting'
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: resolvedTheme.background }}>
@@ -510,23 +512,23 @@ function AthleteInviteOnboardingViewContent({
                 label="Previous"
                 tone="ghost"
                 onPress={onPrevious}
-                disabled={isSubmitting}
+                disabled={isCompletionSubmitting}
                 style={{ minHeight: 56, flex: 1, borderRadius: 999, borderColor: resolvedTheme.accentBorder }}
               />
               <AppButton
                 theme={resolvedTheme}
-                label={isSubmitting && currentStep === 5 ? 'Getting started...' : currentStep === 5 ? 'Get started' : 'Next'}
+                label={isCompletionSubmitting && currentStep === 5 ? 'Getting started...' : currentStep === 5 ? 'Get started' : 'Next'}
                 onPress={onNext}
-                disabled={isSubmitting}
+                disabled={isCompletionSubmitting}
                 style={{ minHeight: 56, flex: 1, borderRadius: 999 }}
               />
             </View>
           ) : (
             <AppButton
               theme={resolvedTheme}
-              label={isSubmitting && currentStep === 4 ? 'Getting started...' : currentStep === 4 ? 'Get started' : 'Next'}
+              label={isCompletionSubmitting && currentStep === 4 ? 'Getting started...' : currentStep === 4 ? 'Get started' : 'Next'}
               onPress={onNext}
-              disabled={isSubmitting}
+              disabled={isCompletionSubmitting}
               style={{ minHeight: 56, borderRadius: 999 }}
             />
           )}
@@ -536,7 +538,7 @@ function AthleteInviteOnboardingViewContent({
   )
 }
 
-export function AthleteInviteOnboardingView({ isVisible, invitationCode, currentStep = 0, values, onChangeField, onAvatarPress, onNext, onPrevious, onClose, isSubmitting = false, errorMessage = '', noticeMessage = '', theme }) {
+export function AthleteInviteOnboardingView({ isVisible, invitationCode, currentStep = 0, values, onChangeField, onAvatarPress, onNext, onPrevious, onClose, isSubmitting = false, completionState = 'idle', errorMessage = '', noticeMessage = '', theme }) {
   void invitationCode
 
   return (
@@ -550,6 +552,7 @@ export function AthleteInviteOnboardingView({ isVisible, invitationCode, current
         onPrevious={onPrevious}
         onClose={onClose}
         isSubmitting={isSubmitting}
+        completionState={completionState}
         errorMessage={errorMessage}
         noticeMessage={noticeMessage}
         theme={theme}

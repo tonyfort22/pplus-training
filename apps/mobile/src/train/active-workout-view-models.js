@@ -60,6 +60,39 @@ function getActiveWorkoutSetCellValue(set, columnKey) {
   return ''
 }
 
+function getActiveWorkoutSetViewModel(set, index, columns, session, exercise) {
+  return {
+    id: set.id,
+    setNumber: index + 1,
+    cells: columns.map((column) => ({
+      key: column.key,
+      value: getActiveWorkoutSetCellValue(set, column.key),
+    })),
+    isCompleted: Boolean(set.isCompleted),
+    isActiveTarget: session.activeSetTarget?.exerciseId === exercise.id && session.activeSetTarget?.setId === set.id,
+  }
+}
+
+function getActiveWorkoutExerciseViewModel(exercise, session) {
+  const columns = getActiveWorkoutExerciseColumns(exercise)
+
+  return {
+    id: exercise.id,
+    exerciseId: exercise.exerciseId ?? exercise.id,
+    title: exercise.nameSnapshot || exercise.name || 'Exercise',
+    name: exercise.nameSnapshot || exercise.name || 'Exercise',
+    videoUrl: exercise.videoUrl ?? null,
+    thumbnailUrl: exercise.thumbnailUrl ?? null,
+    defaultRestSeconds: exercise.defaultRestSeconds ?? null,
+    supersetGroupId: exercise.supersetGroupId ?? null,
+    supersetOrder: exercise.supersetOrder ?? null,
+    isSupersetLinked: Boolean(exercise.supersetGroupId),
+    restLabel: formatClock(exercise.defaultRestSeconds || 0),
+    columns,
+    sets: (exercise.sets || []).map((set, index) => getActiveWorkoutSetViewModel(set, index, columns, session, exercise)),
+  }
+}
+
 export function getActiveWorkoutViewModel({ session, elapsedSeconds = 0 }) {
   if (!session) return null
 
@@ -100,33 +133,6 @@ export function getActiveWorkoutViewModel({ session, elapsedSeconds = 0 }) {
         }
       : null,
     activeSetTarget: session.activeSetTarget ?? null,
-    exercises: (session.exercises || []).map((exercise) => {
-      const columns = getActiveWorkoutExerciseColumns(exercise)
-
-      return {
-        id: exercise.id,
-        exerciseId: exercise.exerciseId ?? exercise.id,
-        title: exercise.nameSnapshot || exercise.name || 'Exercise',
-        name: exercise.nameSnapshot || exercise.name || 'Exercise',
-        videoUrl: exercise.videoUrl ?? null,
-        thumbnailUrl: exercise.thumbnailUrl ?? null,
-        defaultRestSeconds: exercise.defaultRestSeconds ?? null,
-        supersetGroupId: exercise.supersetGroupId ?? null,
-        supersetOrder: exercise.supersetOrder ?? null,
-        isSupersetLinked: Boolean(exercise.supersetGroupId),
-        restLabel: formatClock(exercise.defaultRestSeconds || 0),
-        columns,
-        sets: (exercise.sets || []).map((set, index) => ({
-          id: set.id,
-          setNumber: index + 1,
-          cells: columns.map((column) => ({
-            key: column.key,
-            value: getActiveWorkoutSetCellValue(set, column.key),
-          })),
-          isCompleted: Boolean(set.isCompleted),
-          isActiveTarget: session.activeSetTarget?.exerciseId === exercise.id && session.activeSetTarget?.setId === set.id,
-        })),
-      }
-    }),
+    exercises: (session.exercises || []).map((exercise) => getActiveWorkoutExerciseViewModel(exercise, session)),
   }
 }

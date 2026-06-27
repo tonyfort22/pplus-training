@@ -1,0 +1,17 @@
+appId: host.exp.Exponent
+---
+- stopApp
+- openLink: exp://127.0.0.1:8084
+- extendedWaitUntil:
+    visible: "Viewing athlete"
+    timeout: 60000
+- tapOn: "Open Progress"
+- extendedWaitUntil:
+    visible:
+      id: "analytics-progress-screen"
+    timeout: 10000
+- assertVisible: "ANALYTICS"
+- assertVisible: "Progress"
+- assertVisible: "Strength"
+- assertVisible: "Training Load"
+- assertVisible: "Recovery"

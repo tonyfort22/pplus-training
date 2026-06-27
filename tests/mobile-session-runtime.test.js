@@ -1,5 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import {
   createDemoProgramWorkout,
   createTrainDemoState,
@@ -23,7 +25,37 @@ import {
   resolveCurrentAthleteProfile,
   resolveTrainSessionDb,
 } from '../apps/mobile/src/train/session-runtime.js'
+import {
+  orchestrateDiscardWorkout,
+  orchestrateFinishWorkout,
+} from '../apps/mobile/src/train/active-workout-mutations.js'
 import { createSupabaseRestSessionDb } from '../packages/data/src/sessions/index.js'
+
+test('session runtime source keeps start resume and sync hydration behind named runtime helpers', () => {
+  const source = readFileSync(resolve(process.cwd(), 'apps/mobile/src/train/session-runtime.js'), 'utf8')
+  const ensureWorkoutBlock = source.match(/async function ensureProgramWorkout\([\s\S]*?\n  \}/)?.[0] || ''
+  const hydrationResolverBlock = source.match(/async function resolveSessionHydrationWorkout\([\s\S]*?\n  \}/)?.[0] || ''
+  const rehydrateBlock = source.match(/function rehydrateEmptySessionFromWorkout\(session, programWorkout\) \{[\s\S]*?\n\}/)?.[0] || ''
+  const startSessionBlock = source.match(/async startSession\(options = \{\}\) \{[\s\S]*?\n    \},/)?.[0] || ''
+  const resumeSessionBlock = source.match(/async resumeSession\(sessionId = storedSession\?\.id\) \{[\s\S]*?\n    \},/)?.[0] || ''
+  const syncSessionBlock = source.match(/async function syncCurrentSession\([\s\S]*?\n  \}/)?.[0] || ''
+
+  assert.match(source, /function hasRichWorkoutStructure\(workout\) \{/)
+  assert.match(source, /function hasRichSessionStructure\(session\) \{/)
+  assert.match(source, /function rehydrateEmptySessionFromWorkout\(session, programWorkout\) \{/)
+  assert.match(source, /async function resolveSessionHydrationWorkout\(/)
+  assert.match(ensureWorkoutBlock, /hasRichWorkoutStructure\(resolvedProgramWorkout\)/)
+  assert.match(rehydrateBlock, /createWorkoutSession\(\{\s*programWorkout,/)
+  assert.match(rehydrateBlock, /exercises: rebuiltSession\.exercises/)
+  assert.match(hydrationResolverBlock, /!hasRichSessionStructure\(session\)/)
+  assert.match(hydrationResolverBlock, /!hasRichWorkoutStructure\(fallbackWorkout\)/)
+  assert.match(hydrationResolverBlock, /await ensureProgramWorkout\(\{ programWorkoutId: session\.programWorkoutId \}\)/)
+  assert.match(startSessionBlock, /rehydrateEmptySessionFromWorkout\(result\.session, workout\)/)
+  assert.match(resumeSessionBlock, /resolveSessionHydrationWorkout\(\{/)
+  assert.match(resumeSessionBlock, /rehydrateEmptySessionFromWorkout\(session, workout\)/)
+  assert.match(syncSessionBlock, /resolveSessionHydrationWorkout\(\{/)
+  assert.match(syncSessionBlock, /rehydrateEmptySessionFromWorkout\(existingSession, hydrationWorkout\)/)
+})
 
 function createRemoteFetchStub() {
   const calls = []
@@ -804,6 +836,148 @@ test('createTrainSessionStore triggers completed-session analytics only for comp
 
   await store.saveSession(discardedSession)
   assert.equal(analyticsCalls.length, 1)
+})
+
+test('finish workout workflow persists completed work analytics before closing the active workout', async () => {
+  const analyticsCalls = []
+  const workflowEvents = []
+  const programWorkout = createDemoProgramWorkout()
+  const dataClient = {
+    lastSavedSession: null,
+    async getProgramWorkoutById(programWorkoutId) {
+      return programWorkoutId === programWorkout.id ? programWorkout : null
+    },
+    async insertWorkoutSession(session) {
+      this.lastSavedSession = { ...session, id: session.id || 'ws-finish-persist-1' }
+      return this.lastSavedSession
+    },
+    async saveWorkoutSession(session) {
+      workflowEvents.push(['save-session', session.status])
+      this.lastSavedSession = { ...session, id: session.id || 'ws-finish-persist-1' }
+      return this.lastSavedSession
+    },
+    async getWorkoutSessionById(sessionId) {
+      return sessionId ? { ...(this.lastSavedSession || {}), id: sessionId } : null
+    },
+    async saveCompletedSessionAnalytics(payload) {
+      analyticsCalls.push(payload)
+      workflowEvents.push(['analytics', payload.sessionLoadSummary.completedSets, payload.sessionLoadSummary.volumeLoad])
+      return { success: true, payload }
+    },
+  }
+
+  const store = createTrainSessionStore({ programWorkout, dataClient })
+  const { session } = await store.startSession({ startedAt: '2026-04-21T20:00:00.000Z' })
+  const completedWorkSession = completeWorkoutSet({
+    session,
+    exerciseId: session.exercises[0].id,
+    setId: session.exercises[0].sets[0].id,
+    actuals: { actualLoad: 145, actualReps: 8, actualRpe: 8 },
+    completedAt: '2026-04-21T20:10:00.000Z',
+  })
+
+  await orchestrateFinishWorkout({
+    session: completedWorkSession,
+    elapsedSeconds: 1800,
+    completionPayload: { completedAt: '2026-04-21T20:30:00.000Z', perceivedDifficulty: 7 },
+    persistSessionUpdate: (nextSession) => store.saveSession(nextSession),
+    setPostSetEffortAdjustment: (value) => workflowEvents.push(['clear-effort', value]),
+    setSelectedWorkoutSessionPreview: (value) => workflowEvents.push(['clear-preview', value]),
+    setIsActiveWorkoutViewOpen: (value) => workflowEvents.push(['close-active-workout', value]),
+    setActiveTrainTab: (value) => workflowEvents.push(['set-tab', value]),
+  })
+
+  assert.equal(analyticsCalls.length, 1)
+  assert.equal(analyticsCalls[0].sessionId, completedWorkSession.id)
+  assert.deepEqual(analyticsCalls[0].sessionLoadSummary, {
+    athleteId: programWorkout.athleteId,
+    workoutSessionId: completedWorkSession.id,
+    completedSets: 1,
+    completedReps: 8,
+    volumeLoad: 1160,
+    effortAdjustedLoad: 1276,
+    sessionDifficulty: 7,
+    logDate: '2026-04-21',
+  })
+  assert.equal(analyticsCalls[0].exercisePerformanceSnapshots.length, 1)
+  assert.equal(analyticsCalls[0].exercisePerformanceSnapshots[0].load, 145)
+  assert.equal(analyticsCalls[0].exercisePerformanceSnapshots[0].reps, 8)
+  assert.deepEqual(workflowEvents, [
+    ['save-session', 'completed'],
+    ['analytics', 1, 1160],
+    ['clear-effort', null],
+    ['clear-preview', null],
+    ['close-active-workout', false],
+    ['set-tab', 'session'],
+  ])
+})
+
+test('discard workout workflow does not persist completed work analytics after background discarded-session save', async () => {
+  const analyticsCalls = []
+  const workflowEvents = []
+  const programWorkout = createDemoProgramWorkout()
+  const dataClient = {
+    lastSavedSession: null,
+    async getProgramWorkoutById(programWorkoutId) {
+      return programWorkoutId === programWorkout.id ? programWorkout : null
+    },
+    async insertWorkoutSession(session) {
+      this.lastSavedSession = { ...session, id: session.id || 'ws-discard-persist-1' }
+      return this.lastSavedSession
+    },
+    async saveWorkoutSession(session) {
+      workflowEvents.push(['save-session', session.status])
+      this.lastSavedSession = { ...session, id: session.id || 'ws-discard-persist-1' }
+      return this.lastSavedSession
+    },
+    async getWorkoutSessionById(sessionId) {
+      return sessionId ? { ...(this.lastSavedSession || {}), id: sessionId } : null
+    },
+    clearSession() {
+      workflowEvents.push(['clear-runtime-session'])
+    },
+    async saveCompletedSessionAnalytics(payload) {
+      analyticsCalls.push(payload)
+      workflowEvents.push(['analytics', payload.sessionLoadSummary.completedSets, payload.sessionLoadSummary.volumeLoad])
+      return { success: true, payload }
+    },
+  }
+
+  const store = createTrainSessionStore({ programWorkout, dataClient })
+  const { session } = await store.startSession({ startedAt: '2026-04-21T20:00:00.000Z' })
+  const completedWorkSession = completeWorkoutSet({
+    session,
+    exerciseId: session.exercises[0].id,
+    setId: session.exercises[0].sets[0].id,
+    actuals: { actualLoad: 145, actualReps: 8, actualRpe: 8 },
+    completedAt: '2026-04-21T20:10:00.000Z',
+  })
+
+  await orchestrateDiscardWorkout({
+    session: completedWorkSession,
+    elapsedSeconds: 900,
+    setPostSetEffortAdjustment: (value) => workflowEvents.push(['clear-effort', value]),
+    setIsActiveWorkoutViewOpen: (value) => workflowEvents.push(['close-active-workout', value]),
+    persistSessionUpdateOptimistic: (nextSession) => workflowEvents.push(['optimistic-visible-save', nextSession.status]),
+    persistDiscardedSession: async (discardedSession) => {
+      await store.saveSession(discardedSession)
+      store.clearSession()
+    },
+    clearVisibleSession: () => {
+      workflowEvents.push(['clear-visible-session'])
+    },
+    getNowIsoString: () => '2026-04-21T20:15:00.000Z',
+  })
+
+  assert.deepEqual(analyticsCalls, [])
+  assert.equal(dataClient.lastSavedSession.status, 'discarded')
+  assert.equal(dataClient.lastSavedSession.completedAt, '2026-04-21T20:15:00.000Z')
+  assert.equal(JSON.stringify(workflowEvents), JSON.stringify([
+    ['clear-effort', null],
+    ['close-active-workout', false],
+    ['clear-visible-session'],
+    ['save-session', 'discarded'],
+  ]))
 })
 
 test('resolveTrainSessionDb builds a real Supabase-backed mobile data client when Expo public env vars are present', async () => {

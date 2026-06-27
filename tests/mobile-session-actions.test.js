@@ -1,8 +1,24 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { createDemoProgramWorkout, createTrainDemoState } from '../apps/mobile/src/train/index.js'
 import { getQuickActualUpdatePayload } from '../apps/mobile/src/train/session-actions.js'
 import { updateSessionSetActuals } from '../packages/core/src/index.js'
+
+test('session actions source keeps quick actual updates behind named action helpers', () => {
+  const source = readFileSync(resolve(process.cwd(), 'apps/mobile/src/train/session-actions.js'), 'utf8')
+
+  assert.match(source, /from '\.\.\/\.\.\/\.\.\/\.\.\/packages\/core\/src\/index\.js'/)
+  assert.match(source, /export function resolveQuickActualCurrentValue\(\{ currentSet, field \}\) \{/)
+  assert.match(source, /export function clampQuickActualValue\(value\) \{/)
+  assert.match(source, /export function getQuickActualUpdatePayload\(\{ session, exerciseId, setId, field, delta \}\) \{[\s\S]*resolveQuickActualCurrentValue\(\{ currentSet, field \}\)/)
+  assert.match(source, /export function getQuickActualUpdatePayload\(\{ session, exerciseId, setId, field, delta \}\) \{[\s\S]*clampQuickActualValue\(currentValue \+ delta\)/)
+
+  const actionBlock = source.match(/export function getQuickActualUpdatePayload\(\{ session, exerciseId, setId, field, delta \}\) \{[\s\S]*?\n\}/)?.[0] ?? ''
+  assert.doesNotMatch(actionBlock, /Number\(currentSet\[field\]/)
+  assert.doesNotMatch(actionBlock, /Math\.max\(0, currentValue \+ delta\)/)
+})
 
 test('getQuickActualUpdatePayload starts from prescribed values when actuals are blank', () => {
   const trainState = createTrainDemoState({

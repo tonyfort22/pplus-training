@@ -1,3 +1,20 @@
+function normalizeDirectSupabaseMp4Url(value) {
+  if (typeof value !== 'string' || !value.trim()) return null;
+
+  let parsedUrl = null;
+  try {
+    parsedUrl = new URL(value.trim());
+  } catch {
+    return null;
+  }
+
+  const isSupabaseProjectHost = parsedUrl.hostname.endsWith('.supabase.co');
+  const isExerciseVideoStorageUrl = parsedUrl.pathname.includes('/storage/v1/object/public/exercise-videos/');
+  const isMp4Url = parsedUrl.pathname.toLowerCase().endsWith('.mp4');
+
+  return isSupabaseProjectHost && isExerciseVideoStorageUrl && isMp4Url ? parsedUrl.toString() : null;
+}
+
 export function orchestrateOpenExerciseDetail({
   exercise = null,
   sourceSurface = null,
@@ -71,7 +88,7 @@ export function orchestrateOpenExerciseDetail({
           ...current,
           ...resolvedExercise,
           exerciseId: current.exerciseId || resolvedExercise.id || exerciseId,
-          videoUrl: resolvedExercise.videoUrl || current.videoUrl || null,
+          videoUrl: normalizeDirectSupabaseMp4Url(resolvedExercise.videoUrl) || normalizeDirectSupabaseMp4Url(current.videoUrl),
           thumbnailUrl: resolvedExercise.thumbnailUrl || current.thumbnailUrl || null,
           name: resolvedExercise.name || current.name,
         };

@@ -3,6 +3,57 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
+test('invitation-code entry source covers validation states before onboarding handoff', () => {
+  const codeEntrySource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/invitation-code-entry-view.js'), 'utf8')
+  const appSource = readFileSync(resolve(process.cwd(), 'apps/mobile/App.js'), 'utf8')
+
+  assert.match(codeEntrySource, /const INVITATION_CODE_LENGTH = 6/)
+  assert.match(codeEntrySource, /const INVITATION_CODE_VALIDATION_STATES = Object\.freeze\(\{[\s\S]*EMPTY: 'empty',[\s\S]*INCOMPLETE: 'incomplete',[\s\S]*READY: 'ready',[\s\S]*SUBMITTING: 'submitting',[\s\S]*ERROR: 'error',[\s\S]*\}\)/)
+  assert.match(codeEntrySource, /function getInvitationCodeValidationState\(\{ code = '', errorMessage = '', isSubmitting = false \} = \{\}\) \{[\s\S]*if \(isSubmitting\) \{[\s\S]*return INVITATION_CODE_VALIDATION_STATES\.SUBMITTING[\s\S]*\}[\s\S]*if \(errorMessage\) \{[\s\S]*return INVITATION_CODE_VALIDATION_STATES\.ERROR[\s\S]*\}[\s\S]*if \(!normalizedCode\.length\) \{[\s\S]*return INVITATION_CODE_VALIDATION_STATES\.EMPTY[\s\S]*\}[\s\S]*if \(normalizedCode\.length < INVITATION_CODE_LENGTH\) \{[\s\S]*return INVITATION_CODE_VALIDATION_STATES\.INCOMPLETE[\s\S]*\}[\s\S]*return INVITATION_CODE_VALIDATION_STATES\.READY[\s\S]*\}/)
+  assert.match(codeEntrySource, /const validationState = getInvitationCodeValidationState\(\{ code: normalizedCode, errorMessage, isSubmitting \}\)/)
+  assert.match(codeEntrySource, /const isCodeReady = validationState === INVITATION_CODE_VALIDATION_STATES\.READY/)
+  assert.match(codeEntrySource, /const shouldShowValidationError = validationState === INVITATION_CODE_VALIDATION_STATES\.ERROR/)
+  assert.match(codeEntrySource, /maxLength=\{INVITATION_CODE_LENGTH\}/)
+  assert.match(codeEntrySource, /disabled=\{validationState !== INVITATION_CODE_VALIDATION_STATES\.READY\}/)
+  assert.match(codeEntrySource, /label=\{validationState === INVITATION_CODE_VALIDATION_STATES\.SUBMITTING \? 'Checking code\.\.\.' : 'Continue'\}/)
+  assert.match(codeEntrySource, /\{shouldShowValidationError \? \(/)
+  assert.match(codeEntrySource, /replace\(\/\[\^a-zA-Z0-9\]\/g, ''\)\.toUpperCase\(\)/)
+
+  assert.match(appSource, /const normalizedCode = String\(authInvitationCode \|\| ''\)\.trim\(\)\.toUpperCase\(\);/)
+  assert.match(appSource, /if \(normalizedCode\.length !== 6\) \{[\s\S]*setAuthInvitationCodeErrorMessage\('Enter the full 6-character invitation code before continuing\.'\);[\s\S]*return;[\s\S]*\}/)
+  assert.match(appSource, /setAuthInvitationCode\(normalizedCode\);[\s\S]*setAuthInvitationOnboardingStep\(0\);[\s\S]*setAuthMode\('invitation_onboarding'\);/)
+})
+
+test('invitation-code entry form is keyboard-safe and safe-area padded so Continue stays reachable', () => {
+  const codeEntrySource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/invitation-code-entry-view.js'), 'utf8')
+
+  assert.match(codeEntrySource, /import \{ KeyboardAvoidingView, Modal, Platform, ScrollView, Text, TextInput, View \} from 'react-native'/)
+  assert.match(codeEntrySource, /const insets = useSafeAreaInsets\(\)/)
+  assert.match(codeEntrySource, /paddingTop: Math\.max\(insets\.top, 16\)/)
+  assert.match(codeEntrySource, /paddingBottom: Math\.max\(insets\.bottom, 20\)/)
+  assert.match(codeEntrySource, /<KeyboardAvoidingView[\s\S]*behavior=\{Platform\.OS === 'ios' \? 'padding' : undefined\}[\s\S]*keyboardVerticalOffset=\{insets\.top\}/)
+  assert.match(codeEntrySource, /<ScrollView[\s\S]*keyboardShouldPersistTaps="handled"[\s\S]*showsVerticalScrollIndicator=\{false\}/)
+  assert.match(codeEntrySource, /contentContainerStyle=\{\{[\s\S]*flexGrow: 1,[\s\S]*justifyContent: 'center',[\s\S]*paddingBottom: 32,[\s\S]*\}\}/)
+  assert.match(codeEntrySource, /testID="athlete-invitation-code-input"/)
+  assert.match(codeEntrySource, /label=\{validationState === INVITATION_CODE_VALIDATION_STATES\.SUBMITTING \? 'Checking code\.\.\.' : 'Continue'\}/)
+})
+
+test('invited-athlete completion source covers final completion states', () => {
+  const appSource = readFileSync(resolve(process.cwd(), 'apps/mobile/App.js'), 'utf8')
+  const onboardingSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/athlete-invite-onboarding-view.js'), 'utf8')
+
+  assert.match(appSource, /const INVITED_ATHLETE_COMPLETION_STATES = Object\.freeze\(\{[\s\S]*IDLE: 'idle',[\s\S]*SUBMITTING: 'submitting',[\s\S]*UNAVAILABLE: 'unavailable',[\s\S]*SUCCEEDED: 'succeeded',[\s\S]*FAILED: 'failed',[\s\S]*\}\);/)
+  assert.match(appSource, /const \[invitedAthleteCompletionState, setInvitedAthleteCompletionState\] = useState\(INVITED_ATHLETE_COMPLETION_STATES\.IDLE\);/)
+  assert.match(appSource, /function handleOpenInvitationCodeFlow\(\) \{[\s\S]*setInvitedAthleteCompletionState\(INVITED_ATHLETE_COMPLETION_STATES\.IDLE\);[\s\S]*\}/)
+  assert.match(appSource, /function handleInvitationOnboardingChange\(fieldId, nextValue\) \{[\s\S]*setInvitedAthleteCompletionState\(INVITED_ATHLETE_COMPLETION_STATES\.IDLE\);[\s\S]*\}/)
+  assert.match(appSource, /async function handleInvitationOnboardingNext\(\) \{[\s\S]*if \(!invitationCompletionClient\?\.completeAthleteInvitation\) \{[\s\S]*setInvitedAthleteCompletionState\(INVITED_ATHLETE_COMPLETION_STATES\.UNAVAILABLE\);[\s\S]*throw new Error\('Athlete invitation completion is not available right now\.'\);[\s\S]*\}[\s\S]*setInvitedAthleteCompletionState\(INVITED_ATHLETE_COMPLETION_STATES\.SUBMITTING\);[\s\S]*const completionResult = await invitationCompletionClient\.completeAthleteInvitation\([\s\S]*setInvitedAthleteCompletionState\(INVITED_ATHLETE_COMPLETION_STATES\.SUCCEEDED\);[\s\S]*\} catch \(error\) \{[\s\S]*setInvitedAthleteCompletionState\(\(current\) => current === INVITED_ATHLETE_COMPLETION_STATES\.UNAVAILABLE \? current : INVITED_ATHLETE_COMPLETION_STATES\.FAILED\);[\s\S]*\}/)
+  assert.match(appSource, /<AthleteInviteOnboardingView[\s\S]*completionState=\{invitedAthleteCompletionState\}/)
+  assert.match(onboardingSource, /completionState = 'idle'/)
+  assert.match(onboardingSource, /const isCompletionSubmitting = isSubmitting \|\| completionState === 'submitting'/)
+  assert.match(onboardingSource, /label=\{isCompletionSubmitting && currentStep === 5 \? 'Getting started\.\.\.' : currentStep === 5 \? 'Get started' : 'Next'\}/)
+  assert.match(onboardingSource, /disabled=\{isCompletionSubmitting\}/)
+})
+
 test('mobile auth gate exposes an athlete invitation-code path that hands off into a screenshot-matched multi-step onboarding flow', () => {
   const appSource = readFileSync(resolve(process.cwd(), 'apps/mobile/App.js'), 'utf8')
   const authSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/auth-view.js'), 'utf8')
@@ -50,8 +101,8 @@ test('mobile auth gate exposes an athlete invitation-code path that hands off in
   assert.match(codeEntrySource, /testID="athlete-invitation-code-input"/)
   assert.match(codeEntrySource, /text-center text-\[24px\] font-semibold tracking-\[8px\]/)
   assert.match(codeEntrySource, /autoCapitalize="characters"/)
-  assert.match(codeEntrySource, /maxLength=\{6\}/)
-  assert.match(codeEntrySource, /label=\{isSubmitting \? 'Checking code\.\.\.' : 'Continue'\}/)
+  assert.match(codeEntrySource, /maxLength=\{INVITATION_CODE_LENGTH\}/)
+  assert.match(codeEntrySource, /label=\{validationState === INVITATION_CODE_VALIDATION_STATES\.SUBMITTING \? 'Checking code\.\.\.' : 'Continue'\}/)
   assert.doesNotMatch(codeEntrySource, /Coach-led athlete signup/)
   assert.doesNotMatch(codeEntrySource, /Enter the 6-character code your coach sent you\./)
   assert.doesNotMatch(codeEntrySource, /Backend invite claim is the next live seam/)
@@ -127,8 +178,8 @@ test('mobile auth gate exposes an athlete invitation-code path that hands off in
   assert.match(onboardingSource, /cm/)
   assert.match(onboardingSource, /Get started/)
   assert.match(onboardingSource, /Previous/)
-  assert.match(onboardingSource, /label=\{isSubmitting && currentStep === 5 \? 'Getting started\.\.\.' : currentStep === 5 \? 'Get started' : 'Next'\}/)
-  assert.match(onboardingSource, /disabled=\{isSubmitting\}/)
+  assert.match(onboardingSource, /label=\{isCompletionSubmitting && currentStep === 5 \? 'Getting started\.\.\.' : currentStep === 5 \? 'Get started' : 'Next'\}/)
+  assert.match(onboardingSource, /disabled=\{isCompletionSubmitting\}/)
   assert.match(onboardingSource, /Array\.from\(\{ length: 6 \}/)
   assert.match(onboardingSource, /PPLUS/)
   assert.match(onboardingSource, /textAlign: 'left'/)

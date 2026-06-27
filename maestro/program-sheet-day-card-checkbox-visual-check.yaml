@@ -1,0 +1,30 @@
+appId: host.exp.Exponent
+---
+- stopApp
+- openLink: exp://127.0.0.1:8084
+- extendedWaitUntil:
+    visible: "Viewing athlete"
+    timeout: 60000
+- assertVisible: "Thomas Thibault"
+- extendedWaitUntil:
+    visible: "Safe Assigned Program"
+    timeout: 10000
+- assertVisible: "Safe Assigned Workout"
+- tapOn: "Safe Assigned Program"
+- extendedWaitUntil:
+    visible: "Workouts"
+    timeout: 10000
+- assertVisible: "Schedule"
+- assertVisible: "Week 1"
+- assertVisible:
+    id: "program-sheet-routine-card-routine-1"
+- assertVisible:
+    id: "program-sheet-week-card-safe-assigned-program-week-1"
+- assertVisible:
+    id: "program-sheet-schedule-row-pw-safe-assigned-program-detail-smoke"
+- assertVisible:
+    id: "program-sheet-day-label-rail-pw-safe-assigned-program-detail-smoke"
+- assertVisible: "Safe Assigned Workout"
+- assertVisible: "1h"
+- assertVisible:
+    id: "program-sheet-status-checkbox-pw-safe-assigned-program-detail-smoke"

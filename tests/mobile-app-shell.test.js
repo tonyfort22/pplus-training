@@ -34,6 +34,595 @@ test('mobile app shell routes unconnected entry state to auth instead of demo tr
  assert.match(appSource, /overrideScreen: effectiveBootstrapState\.status === 'signed_out' \|\| \(isAuthPreviewEnabled && \(authPreviewState === 'sign_in' \|\| authPreviewState === 'sign_up'\)\)[\s\S]*\? authScreenModel/)
 })
 
+test('mobile app shell reads runtime auth preview from Expo virtual env with process.env fallback for simulator smoke', () => {
+ const appSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/App.js'),
+   'utf8'
+ )
+
+ assert.match(appSource, /const runtimeAuthPreviewEnv = globalThis\.process\?\.env \|\| \{\};/)
+ assert.match(appSource, /const runtimeAuthPreviewState = runtimeAuthPreviewEnv\.EXPO_PUBLIC_PPLUS_RUNTIME_AUTH_PREVIEW \|\| process\.env\.EXPO_PUBLIC_PPLUS_RUNTIME_AUTH_PREVIEW \|\| null;/)
+ assert.match(appSource, /const runtimeBootstrapOverride = runtimeAuthPreviewEnv\.EXPO_PUBLIC_PPLUS_RUNTIME_BOOTSTRAP_OVERRIDE \|\| process\.env\.EXPO_PUBLIC_PPLUS_RUNTIME_BOOTSTRAP_OVERRIDE \|\| null;/)
+ assert.match(appSource, /const isAuthPreviewEnabled = runtimeAuthPreviewState === 'sign_in' \|\| runtimeAuthPreviewState === 'sign_up';/)
+})
+
+test('signed-out simulator smoke opens login and invitation-code entry through the auth-preview lane', () => {
+ const maestroFlowSource = readFileSync(
+   resolve(process.cwd(), 'maestro/login-invite-entry-smoke.yaml'),
+   'utf8'
+ )
+ const appSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/App.js'),
+   'utf8'
+ )
+ const authSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/screens/auth-view.js'),
+   'utf8'
+ )
+ const invitationCodeSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/screens/invitation-code-entry-view.js'),
+   'utf8'
+ )
+
+ assert.match(appSource, /const runtimeAuthPreviewEnv = globalThis\.process\?\.env \|\| \{\};/)
+ assert.match(appSource, /process\.env\.EXPO_PUBLIC_PPLUS_RUNTIME_AUTH_PREVIEW/)
+ assert.match(appSource, /EXPO_PUBLIC_PPLUS_RUNTIME_AUTH_PREVIEW/)
+ assert.match(appSource, /status: 'signed_out'/)
+ assert.match(maestroFlowSource, /appId: host\.exp\.Exponent/)
+ assert.match(maestroFlowSource, /openLink: exp:\/\/127\.0\.0\.1:8084/)
+ assert.match(maestroFlowSource, /visible: "Sign in"/)
+ assert.match(maestroFlowSource, /assertVisible: "Email"/)
+ assert.match(maestroFlowSource, /assertVisible: "Password"/)
+ assert.match(maestroFlowSource, /assertVisible: "Sign up with invitation code"/)
+ assert.match(maestroFlowSource, /tapOn: "Sign up with invitation code"/)
+ assert.match(maestroFlowSource, /visible: "Invitation code"/)
+ assert.match(maestroFlowSource, /id: "athlete-invitation-code-input"/)
+ assert.match(maestroFlowSource, /assertVisible: "Continue"/)
+ assert.match(authSource, /Sign up with invitation code/)
+ assert.match(invitationCodeSource, /testID="athlete-invitation-code-input"/)
+})
+
+test('coach shell simulator smoke opens Expo Go with a seeded coach context', () => {
+ const maestroFlowSource = readFileSync(
+   resolve(process.cwd(), 'maestro/coach-shell-seeded-context-smoke.yaml'),
+   'utf8'
+ )
+ const bootstrapSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/auth/bootstrap.js'),
+   'utf8'
+ )
+ const appSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/App.js'),
+   'utf8'
+ )
+
+ assert.match(bootstrapSource, /runtimeBootstrapOverride === 'authenticated_coach_shell_seeded'/)
+ assert.match(appSource, /runtimeBootstrapOverride === 'authenticated_coach_shell_seeded'/)
+ assert.match(appSource, /EXPO_PUBLIC_PPLUS_RUNTIME_BOOTSTRAP_OVERRIDE/)
+ assert.match(maestroFlowSource, /appId: host\.exp\.Exponent/)
+ assert.match(maestroFlowSource, /openLink: exp:\/\/127\.0\.0\.1:8084/)
+ assert.match(maestroFlowSource, /Viewing athlete/)
+ assert.match(maestroFlowSource, /Thomas Thibault/)
+ assert.match(maestroFlowSource, /No workout scheduled/)
+ assert.match(maestroFlowSource, /My Programs/)
+ assert.match(maestroFlowSource, /My Workouts/)
+})
+
+test('coach shell simulator smoke switches the active athlete from the seeded list', () => {
+ const maestroFlowSource = readFileSync(
+   resolve(process.cwd(), 'maestro/coach-shell-seeded-context-smoke.yaml'),
+   'utf8'
+ )
+ const bootstrapSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/auth/bootstrap.js'),
+   'utf8'
+ )
+ const shellSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/screens/shell-renderers.js'),
+   'utf8'
+ )
+
+ assert.match(bootstrapSource, /firstName: 'Thomas',[\s\S]*lastName: 'Thibault'/)
+ assert.match(bootstrapSource, /firstName: 'Mia',[\s\S]*lastName: 'Chen'/)
+ assert.match(shellSource, /accessibilityLabel=\{`Open \$\{tab\.label\}`\}/)
+ assert.match(maestroFlowSource, /tapOn: "Open Athletes"/)
+ assert.match(maestroFlowSource, /extendedWaitUntil:[\s\S]*visible: "Mia Chen"/)
+ assert.match(maestroFlowSource, /tapOn: "Mia Chen"/)
+ assert.match(maestroFlowSource, /assertVisible: "Mia Chen"/)
+ assert.match(maestroFlowSource, /assertNotVisible: "Thomas Thibault"/)
+})
+
+test('simulator smoke opens a safe seeded workout and reaches active workout view', () => {
+ const maestroFlowSource = readFileSync(
+   resolve(process.cwd(), 'maestro/safe-workout-open-smoke.yaml'),
+   'utf8'
+ )
+ const bootstrapSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/auth/bootstrap.js'),
+   'utf8'
+ )
+ const appSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/App.js'),
+   'utf8'
+ )
+
+ assert.match(bootstrapSource, /runtimeBootstrapOverride === 'authenticated_coach_safe_workout_seeded'/)
+ assert.match(bootstrapSource, /Safe Simulator Workout/)
+ assert.match(bootstrapSource, /createStandaloneProgramWorkoutTrainState\(\{[\s\S]*programWorkout: safeWorkoutProgramWorkout/)
+ assert.match(bootstrapSource, /createTrainSessionStore\(\{[\s\S]*programWorkout: safeWorkoutTrainState\.programWorkout,[\s\S]*initialSession: safeWorkoutTrainState\.session,[\s\S]*env: \{\},/)
+ assert.match(appSource, /runtimeBootstrapOverride === 'authenticated_coach_safe_workout_seeded'[\s\S]*setCoachTrainBridgeState\(\{[\s\S]*trainState: bootstrapState\.trainState/)
+ assert.match(maestroFlowSource, /appId: host\.exp\.Exponent/)
+ assert.match(maestroFlowSource, /openLink: exp:\/\/127\.0\.0\.1:8084/)
+ assert.match(maestroFlowSource, /Safe Simulator Workout/)
+ assert.match(maestroFlowSource, /tapOn:[\s\S]*id: "surface-card-action-button"/)
+ assert.match(maestroFlowSource, /tapOn:[\s\S]*id: "workout-sheet-start-button"/)
+ assert.match(maestroFlowSource, /assertVisible: "Active workout session"/)
+ assert.match(maestroFlowSource, /assertVisible: "Mia Chen"/)
+ assert.match(maestroFlowSource, /assertVisible: "Barbell Back Squat"/)
+})
+
+test('simulator smoke opens assigned program detail from the seeded coach train home', () => {
+ const maestroFlowSource = readFileSync(
+   resolve(process.cwd(), 'maestro/assigned-program-detail-smoke.yaml'),
+   'utf8'
+ )
+ const bootstrapSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/auth/bootstrap.js'),
+   'utf8'
+ )
+ const appSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/App.js'),
+   'utf8'
+ )
+
+ assert.match(bootstrapSource, /runtimeBootstrapOverride === 'authenticated_coach_assigned_program_seeded'/)
+ assert.match(bootstrapSource, /createSafeAssignedProgram/)
+ assert.match(bootstrapSource, /createAssignedProgramTrainState\(\{[\s\S]*assignedProgram: safeAssignedProgram,[\s\S]*programWorkout: safeAssignedProgramWorkout/)
+ assert.match(bootstrapSource, /Safe Assigned Program/)
+ assert.match(bootstrapSource, /Safe Assigned Workout/)
+ assert.match(appSource, /runtimeBootstrapOverride === 'authenticated_coach_safe_workout_seeded' \|\| runtimeBootstrapOverride === 'authenticated_coach_assigned_program_seeded'[\s\S]*setCoachTrainBridgeState\(\{[\s\S]*trainState: bootstrapState\.trainState/)
+ assert.match(maestroFlowSource, /appId: host\.exp\.Exponent/)
+ assert.match(maestroFlowSource, /openLink: exp:\/\/127\.0\.0\.1:8084/)
+ assert.match(maestroFlowSource, /Safe Assigned Program/)
+ assert.match(maestroFlowSource, /Safe Assigned Workout/)
+ assert.match(maestroFlowSource, /tapOn: "Safe Assigned Program"/)
+ assert.match(maestroFlowSource, /extendedWaitUntil:[\s\S]*visible: "Edit"/)
+ assert.match(maestroFlowSource, /assertVisible: "Workouts"/)
+ assert.match(maestroFlowSource, /assertVisible: "Schedule"/)
+ assert.match(maestroFlowSource, /assertVisible: "Week 1"/)
+})
+
+test('visual device check covers program sheet day labels, card backgrounds, and small checkbox layout', () => {
+ const maestroFlowSource = readFileSync(
+   resolve(process.cwd(), 'maestro/program-sheet-day-card-checkbox-visual-check.yaml'),
+   'utf8'
+ )
+ const programSheetSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/screens/program-sheet.js'),
+   'utf8'
+ )
+ const primitivesSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/ui/primitives.js'),
+   'utf8'
+ )
+ const dayLabelLayoutContract = readFileSync(
+   resolve(process.cwd(), 'tests/mobile-program-sheet-day-label-layout.test.js'),
+   'utf8'
+ )
+ const cardBackgroundContract = readFileSync(
+   resolve(process.cwd(), 'tests/mobile-program-sheet-card-backgrounds.test.js'),
+   'utf8'
+ )
+ const smallCheckboxContract = readFileSync(
+   resolve(process.cwd(), 'tests/mobile-program-sheet-small-checkbox.test.js'),
+   'utf8'
+ )
+
+ assert.match(maestroFlowSource, /appId: host\.exp\.Exponent/)
+ assert.match(maestroFlowSource, /openLink: exp:\/\/127\.0\.0\.1:8084/)
+ assert.match(maestroFlowSource, /tapOn: "Safe Assigned Program"/)
+ assert.match(maestroFlowSource, /id: "program-sheet-routine-card-routine-1"/)
+ assert.match(maestroFlowSource, /id: "program-sheet-week-card-safe-assigned-program-week-1"/)
+ assert.match(maestroFlowSource, /id: "program-sheet-schedule-row-pw-safe-assigned-program-detail-smoke"/)
+ assert.match(maestroFlowSource, /id: "program-sheet-day-label-rail-pw-safe-assigned-program-detail-smoke"/)
+ assert.match(maestroFlowSource, /id: "program-sheet-status-checkbox-pw-safe-assigned-program-detail-smoke"/)
+ assert.match(programSheetSource, /testID=\{`program-sheet-routine-card-\$\{routine\.id\}`\}/)
+ assert.match(programSheetSource, /testID=\{`program-sheet-week-card-\$\{week\.id\}`\}/)
+ assert.match(programSheetSource, /testID=\{`program-sheet-schedule-row-\$\{entry\.id\}`\}/)
+ assert.match(programSheetSource, /testID=\{`program-sheet-day-label-rail-\$\{entry\.id\}`\}/)
+ assert.match(programSheetSource, /testID=\{`program-sheet-status-checkbox-\$\{entry\.id\}`\}/)
+ assert.match(primitivesSource, /export function AppSurfaceCard\([\s\S]*testID, accessibilityLabel/)
+ assert.match(primitivesSource, /testID=\{testID\}/)
+ assert.match(primitivesSource, /export function AppStatusIconBadge\([\s\S]*testID, accessibilityLabel/)
+ assert.match(dayLabelLayoutContract, /left rail with uppercase typography/)
+ assert.match(cardBackgroundContract, /same dark card background family/)
+ assert.match(smallCheckboxContract, /smaller workout status checkbox/)
+})
+
+test('simulator smoke opens progress analytics from seeded coach bottom tab', () => {
+ const maestroFlowSource = readFileSync(
+   resolve(process.cwd(), 'maestro/progress-analytics-smoke.yaml'),
+   'utf8'
+ )
+ const shellSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/screens/shell-renderers.js'),
+   'utf8'
+ )
+ const analyticsSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/screens/analytics-view.js'),
+   'utf8'
+ )
+
+ assert.match(shellSource, /accessibilityLabel=\{`Open \$\{tab\.label\}`\}/)
+ assert.match(analyticsSource, /testID="analytics-progress-screen"/)
+ assert.match(analyticsSource, /accessibilityLabel="Analytics progress screen"/)
+ assert.match(maestroFlowSource, /appId: host\.exp\.Exponent/)
+ assert.match(maestroFlowSource, /openLink: exp:\/\/127\.0\.0\.1:8084/)
+ assert.match(maestroFlowSource, /tapOn: "Open Progress"/)
+ assert.match(maestroFlowSource, /id: "analytics-progress-screen"/)
+ assert.match(maestroFlowSource, /assertVisible: "ANALYTICS"/)
+ assert.match(maestroFlowSource, /assertVisible: "Progress"/)
+ assert.match(maestroFlowSource, /assertVisible: "Strength"/)
+ assert.match(maestroFlowSource, /assertVisible: "Training Load"/)
+ assert.match(maestroFlowSource, /assertVisible: "Recovery"/)
+})
+
+test('critical mobile controls expose stable accessibility labels and test IDs', () => {
+ const shellRendererSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/shell-renderers.js'), 'utf8')
+ const genericRendererSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/renderers.js'), 'utf8')
+ const cardsSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/ui/cards.js'), 'utf8')
+ const primitivesSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/ui/primitives.js'), 'utf8')
+ const workoutSheetSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/workout-sheet.js'), 'utf8')
+ const workoutEditSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/workout-edit-view.js'), 'utf8')
+ const exerciseLibrarySource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/exercise-library-view.js'), 'utf8')
+ const safeWorkoutSmoke = readFileSync(resolve(process.cwd(), 'maestro/safe-workout-open-smoke.yaml'), 'utf8')
+ const editWorkoutSmoke = readFileSync(resolve(process.cwd(), 'maestro/workout-edit-open-smoke.yaml'), 'utf8')
+
+ assert.match(primitivesSource, /export function AppButton\([^)]*testID[^)]*accessibilityLabel/)
+ assert.match(shellRendererSource, /testID=\{`bottom-tab-\$\{tab\.key\}`\}/)
+ assert.match(shellRendererSource, /testID="header-profile-button"/)
+ assert.match(shellRendererSource, /testID="header-calendar-button"/)
+ assert.match(shellRendererSource, /testID="floating-start-workout-button"/)
+ assert.match(shellRendererSource, /testID="floating-active-workout-button"/)
+ assert.match(genericRendererSource, /testID=\{`train-tab-\$\{tab\.key\}`\}/)
+ assert.match(genericRendererSource, /testID=\{`calendar-day-\$\{day\.id\}`\}/)
+ assert.match(genericRendererSource, /accessibilityLabel=\{isActionable \? `Open \$\{row\.title\}` : undefined\}/)
+ assert.match(cardsSource, /testID="surface-card-action-button"/)
+ assert.match(cardsSource, /testID="create-workout-card"/)
+ assert.match(workoutSheetSource, /testID="workout-sheet-start-button"/)
+ assert.match(workoutSheetSource, /testID="workout-sheet-edit-button"/)
+ assert.match(workoutEditSource, /testID="workout-edit-add-set-button"/)
+ assert.match(workoutEditSource, /testID="workout-edit-add-exercise-button"/)
+ assert.match(exerciseLibrarySource, /testID="exercise-library-primary-action-button"/)
+ assert.match(safeWorkoutSmoke, /id: "surface-card-action-button"/)
+ assert.match(safeWorkoutSmoke, /id: "workout-sheet-start-button"/)
+ assert.match(editWorkoutSmoke, /id: "workout-sheet-edit-button"/)
+})
+
+test('simulator smoke opens profile from seeded coach header action', () => {
+ const maestroFlowSource = readFileSync(
+   resolve(process.cwd(), 'maestro/profile-open-smoke.yaml'),
+   'utf8'
+ )
+ const profileSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/screens/profile-view.js'),
+   'utf8'
+ )
+ const shellSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/screens/shell-renderers.js'),
+   'utf8'
+ )
+
+ assert.match(shellSource, /accessibilityLabel="Open Profile"/)
+ assert.match(profileSource, /testID="profile-settings-screen"/)
+ assert.match(profileSource, /accessibilityLabel="Profile settings screen"/)
+ assert.match(maestroFlowSource, /appId: host\.exp\.Exponent/)
+ assert.match(maestroFlowSource, /stopApp/)
+ assert.match(maestroFlowSource, /openLink: exp:\/\/127\.0\.0\.1:8084/)
+ assert.match(maestroFlowSource, /tapOn: "Open Profile"/)
+ assert.match(maestroFlowSource, /id: "profile-settings-screen"/)
+ assert.match(maestroFlowSource, /assertVisible: "Coach Tony"/)
+ assert.match(maestroFlowSource, /assertVisible: "TRAINING"/)
+ assert.match(maestroFlowSource, /assertVisible: "Profile"/)
+ assert.match(maestroFlowSource, /assertVisible: "Exercises"/)
+ assert.match(maestroFlowSource, /assertVisible: "PREFERENCES"/)
+ assert.match(maestroFlowSource, /scrollUntilVisible:[\s\S]*element: "Sign Out"[\s\S]*direction: DOWN/)
+ assert.match(maestroFlowSource, /assertVisible: "Sign Out"/)
+})
+
+test('simulator smoke opens exercise library and shared exercise detail from seeded coach profile', () => {
+ const maestroFlowSource = readFileSync(
+   resolve(process.cwd(), 'maestro/exercise-library-detail-smoke.yaml'),
+   'utf8'
+ )
+ const bootstrapSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/auth/bootstrap.js'),
+   'utf8'
+ )
+ const profileSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/screens/profile-view.js'),
+   'utf8'
+ )
+ const exerciseLibrarySource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/screens/exercise-library-view.js'),
+   'utf8'
+ )
+ const shellSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/screens/shell-renderers.js'),
+   'utf8'
+ )
+ const appSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/App.js'),
+   'utf8'
+ )
+
+ assert.match(bootstrapSource, /runtimeBootstrapOverride === 'authenticated_coach_shell_seeded'/)
+ assert.match(profileSource, /runtimeBootstrapOverride === 'authenticated_coach_shell_seeded'/)
+ assert.match(profileSource, /SEEDED_EXERCISE_LIBRARY_ITEMS/)
+ assert.match(profileSource, /seeded-exercise-trap-bar-deadlift/)
+ assert.match(exerciseLibrarySource, /accessibilityLabel=\{`Open exercise \$\{exercise\.name\}`\}/)
+ assert.match(exerciseLibrarySource, /testID=\{`exercise-library-row-\$\{exercise\.id\}`\}/)
+ assert.match(shellSource, /accessibilityLabel="Open Profile"/)
+ assert.match(appSource, /onOpenExerciseDetail=\{\(exercise\) => handleOpenExerciseDetail\(exercise, 'profile-view'\)\}/)
+ assert.match(maestroFlowSource, /appId: host\.exp\.Exponent/)
+ assert.match(maestroFlowSource, /openLink: exp:\/\/127\.0\.0\.1:8084/)
+ assert.match(maestroFlowSource, /tapOn: "Open Profile"/)
+ assert.match(maestroFlowSource, /tapOn: "Exercises"/)
+ assert.match(maestroFlowSource, /id: "exercise-library-row-seeded-exercise-trap-bar-deadlift"/)
+ assert.match(maestroFlowSource, /assertVisible: "Progress"/)
+ assert.match(maestroFlowSource, /assertVisible: "History"/)
+})
+
+test('visual device check proves video preview, chart, and body-map surfaces do not clip', () => {
+ const maestroFlowSource = readFileSync(
+   resolve(process.cwd(), 'maestro/visual-media-chart-bodymap-no-clip.yaml'),
+   'utf8'
+ )
+ const exerciseDetailSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/screens/exercise-detail-view.js'),
+   'utf8'
+ )
+ const analyticsSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/screens/analytics-view.js'),
+   'utf8'
+ )
+
+ assert.match(exerciseDetailSource, /testID="exercise-detail-video-preview"/)
+ assert.match(exerciseDetailSource, /accessibilityLabel="Exercise detail video preview"/)
+ assert.match(exerciseDetailSource, /testID="exercise-detail-progress-chart"/)
+ assert.match(exerciseDetailSource, /accessibilityLabel="Exercise detail progress chart"/)
+ assert.match(analyticsSource, /testID="analytics-consistency-chart"/)
+ assert.match(analyticsSource, /accessibilityLabel="Analytics consistency chart"/)
+ assert.match(analyticsSource, /testID="analytics-body-map-surface"/)
+ assert.match(analyticsSource, /testID="analytics-body-map-figure"/)
+ assert.match(maestroFlowSource, /appId: host\.exp\.Exponent/)
+ assert.match(maestroFlowSource, /openLink: exp:\/\/127\.0\.0\.1:8084/)
+ assert.match(maestroFlowSource, /id: "exercise-detail-video-preview"/)
+ assert.match(maestroFlowSource, /takeScreenshot: visual-no-clip-video-preview/)
+ assert.match(maestroFlowSource, /scrollUntilVisible:[\s\S]*id: "exercise-detail-progress-chart"[\s\S]*direction: DOWN/)
+ assert.match(maestroFlowSource, /takeScreenshot: visual-no-clip-exercise-chart/)
+ assert.match(maestroFlowSource, /tapOn: "Open Progress"/)
+ assert.match(maestroFlowSource, /scrollUntilVisible:[\s\S]*id: "analytics-body-map-figure"[\s\S]*visibilityPercentage: 100[\s\S]*centerElement: true/)
+ assert.match(maestroFlowSource, /id: "analytics-body-map-surface"/)
+ assert.match(maestroFlowSource, /id: "analytics-body-map-figure"/)
+ assert.match(maestroFlowSource, /takeScreenshot: visual-no-clip-body-map/)
+})
+
+test('simulator smoke opens workout edit from the seeded workout sheet', () => {
+ const maestroFlowSource = readFileSync(
+   resolve(process.cwd(), 'maestro/workout-edit-open-smoke.yaml'),
+   'utf8'
+ )
+ const bootstrapSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/auth/bootstrap.js'),
+   'utf8'
+ )
+ const workoutSheetSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/screens/workout-sheet.js'),
+   'utf8'
+ )
+ const workoutEditViewSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/screens/workout-edit-view.js'),
+   'utf8'
+ )
+ const appSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/App.js'),
+   'utf8'
+ )
+
+ assert.match(bootstrapSource, /runtimeBootstrapOverride === 'authenticated_coach_safe_workout_seeded'/)
+ assert.match(bootstrapSource, /Safe Simulator Workout/)
+ assert.match(workoutSheetSource, /testID="workout-sheet-edit-button"[\s\S]*onPress=\{onEditWorkout\}[\s\S]*model\.editLabel \|\| 'Edit'/)
+ assert.match(appSource, /<WorkoutSheet[\s\S]*onEditWorkout=\{handleOpenWorkoutEditView\}/)
+ assert.match(appSource, /<WorkoutEditView[\s\S]*isVisible=\{isWorkoutEditViewOpen\}/)
+ assert.match(workoutEditViewSource, /model\.editLabel \|\| 'Save'/)
+ assert.match(workoutEditViewSource, /model\.addExerciseLabel \|\| 'Add Exercise'/)
+ assert.match(workoutEditViewSource, /addSetLabel \|\| 'Add Set'/)
+ assert.match(maestroFlowSource, /appId: host\.exp\.Exponent/)
+ assert.match(maestroFlowSource, /openLink: exp:\/\/127\.0\.0\.1:8084/)
+ assert.match(maestroFlowSource, /Safe Simulator Workout/)
+ assert.match(maestroFlowSource, /tapOn:[\s\S]*id: "surface-card-action-button"/)
+ assert.match(maestroFlowSource, /tapOn:[\s\S]*id: "workout-sheet-edit-button"/)
+ assert.match(maestroFlowSource, /extendedWaitUntil:[\s\S]*visible: "Save"/)
+ assert.match(maestroFlowSource, /assertVisible: "Barbell Back Squat"/)
+ assert.match(maestroFlowSource, /assertVisible: "Add Set"/)
+ assert.match(maestroFlowSource, /assertVisible: "Add Exercise"/)
+})
+
+test('simulator smoke saves a safe workout edit only after explicit Save', () => {
+ const maestroFlowSource = readFileSync(
+   resolve(process.cwd(), 'maestro/workout-edit-save-explicit-smoke.yaml'),
+   'utf8'
+ )
+ const workoutEditViewSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/screens/workout-edit-view.js'),
+   'utf8'
+ )
+ const appSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/App.js'),
+   'utf8'
+ )
+ const dataContractSource = readFileSync(
+   resolve(process.cwd(), 'tests/program-supabase-rest.test.js'),
+   'utf8'
+ )
+
+ assert.match(workoutEditViewSource, /testID="workout-edit-name-input"/)
+ assert.match(workoutEditViewSource, /testID="workout-edit-notes-input"/)
+ assert.match(workoutEditViewSource, /testID="workout-edit-save-button"/)
+ assert.match(appSource, /async function handleSaveWorkoutEdit\(draft\) \{[\s\S]*programSheetClient\?\.updateProgramWorkout\?\.\([\s\S]*nameSnapshot: draft\?\.workoutName \|\| '',[\s\S]*notes: draft\?\.workoutNotes \|\| '',/)
+ assert.match(dataContractSource, /keeps workout edit field changes draft-only until explicit Save updates program_workouts/)
+ assert.match(dataContractSource, /localDraft = \{[\s\S]*workoutName: 'Unsaved draft rename',[\s\S]*workoutNotes: 'Unsaved draft notes'/)
+ assert.match(dataContractSource, /calls\.filter\(\(call\) => call\.method === 'PATCH' && call\.url\.includes\('\/program_workouts'\)\)\.length, 0/)
+ assert.match(dataContractSource, /const savedWorkout = await repo\.updateProgramWorkout\(\{[\s\S]*nameSnapshot: localDraft\.workoutName,[\s\S]*notes: localDraft\.workoutNotes/)
+ assert.match(maestroFlowSource, /appId: host\.exp\.Exponent/)
+ assert.match(maestroFlowSource, /openLink: exp:\/\/127\.0\.0\.1:8084/)
+ assert.match(maestroFlowSource, /id: "workout-edit-name-input"/)
+ assert.match(maestroFlowSource, /inputText: "Safe Edited Workout"/)
+ assert.match(maestroFlowSource, /id: "workout-edit-notes-input"/)
+ assert.match(maestroFlowSource, /inputText: "Saved only after explicit Save"/)
+ assert.match(maestroFlowSource, /tapOn: "Cancel"[\s\S]*assertNotVisible: "Safe Edited Workout"/)
+ assert.match(maestroFlowSource, /id: "workout-edit-save-button"/)
+ assert.match(maestroFlowSource, /extendedWaitUntil:[\s\S]*visible: "Safe Edited Workout"/)
+})
+
+test('simulator smoke edits and logs a safe seeded active-workout set', () => {
+ const maestroFlowSource = readFileSync(
+   resolve(process.cwd(), 'maestro/safe-workout-edit-set-smoke.yaml'),
+   'utf8'
+ )
+ const activeWorkoutViewSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/screens/active-workout-view.js'),
+   'utf8'
+ )
+
+ assert.match(activeWorkoutViewSource, /accessibilityLabel=\{accessibilityLabel\}/)
+ assert.match(activeWorkoutViewSource, /testID=\{testID\}/)
+ assert.match(activeWorkoutViewSource, /testID=\{`active-workout-set-\$\{set\.setNumber\}-\$\{cell\.key\}-input`\}/)
+ assert.match(activeWorkoutViewSource, /accessibilityLabel=\{`Complete set \$\{set\.setNumber\}`\}/)
+ assert.match(activeWorkoutViewSource, /testID=\{`active-workout-set-\$\{set\.setNumber\}-done-button`\}/)
+ assert.match(maestroFlowSource, /openLink: exp:\/\/127\.0\.0\.1:8084/)
+ assert.match(maestroFlowSource, /id: "active-workout-set-1-load-input"/)
+ assert.match(maestroFlowSource, /inputText: "105"/)
+ assert.match(maestroFlowSource, /id: "active-workout-set-1-reps-input"/)
+ assert.match(maestroFlowSource, /inputText: "6"/)
+ assert.match(maestroFlowSource, /id: "active-workout-set-1-done-button"/)
+})
+
+test('visual device check covers the safe active-workout header and exercise-card layout', () => {
+ const maestroFlowSource = readFileSync(
+   resolve(process.cwd(), 'maestro/active-workout-header-card-visual-check.yaml'),
+   'utf8'
+ )
+ const activeWorkoutViewSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/screens/active-workout-view.js'),
+   'utf8'
+ )
+
+ assert.match(maestroFlowSource, /openLink: exp:\/\/127\.0\.0\.1:8084/)
+ assert.match(maestroFlowSource, /Safe Simulator Workout/)
+ assert.match(maestroFlowSource, /Barbell Back Squat/)
+ assert.match(maestroFlowSource, /id: "active-workout-exercise-1-card"/)
+ assert.match(maestroFlowSource, /id: "active-workout-exercise-1-header"/)
+ assert.match(maestroFlowSource, /id: "active-workout-exercise-1-thumbnail"/)
+ assert.match(maestroFlowSource, /id: "active-workout-exercise-1-title"/)
+ assert.match(maestroFlowSource, /id: "active-workout-exercise-1-reorder-controls"/)
+ assert.match(maestroFlowSource, /id: "active-workout-exercise-1-set-header-row"/)
+ assert.match(maestroFlowSource, /assertVisible: "EFFORT"/)
+ assert.match(maestroFlowSource, /assertVisible: "LB"/)
+ assert.match(maestroFlowSource, /assertVisible: "REPS"/)
+ assert.match(maestroFlowSource, /assertVisible: "DONE"/)
+ assert.match(activeWorkoutViewSource, /testID=\{`active-workout-exercise-\$\{exerciseIndex \+ 1\}-card`\}/)
+ assert.match(activeWorkoutViewSource, /testID=\{`active-workout-exercise-\$\{exerciseIndex \+ 1\}-header`\}/)
+ assert.match(activeWorkoutViewSource, /testID=\{`active-workout-exercise-\$\{exerciseIndex \+ 1\}-thumbnail`\}/)
+ assert.match(activeWorkoutViewSource, /testID=\{`active-workout-exercise-\$\{exerciseIndex \+ 1\}-title`\}/)
+ assert.match(activeWorkoutViewSource, /testID=\{`active-workout-exercise-\$\{exerciseIndex \+ 1\}-reorder-controls`\}/)
+ assert.match(activeWorkoutViewSource, /testID=\{`active-workout-exercise-\$\{exerciseIndex \+ 1\}-set-header-row`\}/)
+})
+
+test('visual device checks cover active-workout finish and discard modal layouts', () => {
+ const finishFlowSource = readFileSync(
+   resolve(process.cwd(), 'maestro/active-workout-finish-modal-visual-check.yaml'),
+   'utf8'
+ )
+ const discardFlowSource = readFileSync(
+   resolve(process.cwd(), 'maestro/active-workout-discard-modal-visual-check.yaml'),
+   'utf8'
+ )
+ const activeWorkoutViewSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/screens/active-workout-view.js'),
+   'utf8'
+ )
+
+ assert.match(finishFlowSource, /openLink: exp:\/\/127\.0\.0\.1:8084/)
+ assert.match(finishFlowSource, /id: "active-workout-set-1-done-button"/)
+ assert.match(finishFlowSource, /tapOn: "Finish"/)
+ assert.match(finishFlowSource, /assertVisible:[\s\S]*id: "active-workout-finish-workout-modal"/)
+ assert.match(finishFlowSource, /assertVisible: "Session Difficulty"/)
+ assert.match(finishFlowSource, /id: "active-workout-finish-difficulty-control"/)
+ assert.match(finishFlowSource, /assertVisible: "Complete Workout"/)
+ assert.match(discardFlowSource, /openLink: exp:\/\/127\.0\.0\.1:8084/)
+ assert.match(discardFlowSource, /scrollUntilVisible:[\s\S]*element: "Discard Workout"/)
+ assert.match(discardFlowSource, /assertVisible:[\s\S]*id: "active-workout-discard-workout-modal"/)
+ assert.match(discardFlowSource, /Are you sure you want to discard this workout\? This action cannot be undone\./)
+ assert.match(discardFlowSource, /assertVisible: "Discard"/)
+ assert.match(discardFlowSource, /assertVisible: "Cancel"/)
+ assert.match(activeWorkoutViewSource, /testID="active-workout-finish-workout-modal"/)
+ assert.match(activeWorkoutViewSource, /testID="active-workout-finish-difficulty-control"/)
+ assert.match(activeWorkoutViewSource, /testID="active-workout-discard-workout-modal"/)
+})
+
+test('coach athlete selector phone-width smoke leaves the sheet open for visual/device proof', () => {
+ const maestroFlowSource = readFileSync(
+   resolve(process.cwd(), 'maestro/coach-athlete-selector-phone-width-smoke.yaml'),
+   'utf8'
+ )
+ const sheetSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/screens/coach-athletes-sheet.js'),
+   'utf8'
+ )
+ const primitivesSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/ui/primitives.js'),
+   'utf8'
+ )
+
+ assert.match(maestroFlowSource, /appId: host\.exp\.Exponent/)
+ assert.match(maestroFlowSource, /openLink: exp:\/\/127\.0\.0\.1:8084/)
+ assert.match(maestroFlowSource, /tapOn: "Open Athletes"/)
+ assert.match(maestroFlowSource, /extendedWaitUntil:[\s\S]*visible: "Mia Chen"/)
+ assert.match(maestroFlowSource, /assertVisible: "Invite athlete"/)
+ assert.match(maestroFlowSource, /assertVisible: "Search by name"/)
+ assert.doesNotMatch(maestroFlowSource, /tapOn: "Mia Chen"/)
+ assert.match(sheetSource, /<SafeAreaView className="flex-1"/)
+ assert.match(sheetSource, /<View className="flex-1 px-5"/)
+ assert.match(sheetSource, /contentContainerStyle=\{\{ paddingBottom: scrollBottomPadding \}\}/)
+ assert.match(sheetSource, /className="absolute inset-x-0 gap-3 px-5"/)
+ assert.match(primitivesSource, /<View className="min-w-0 flex-1 gap-1">/)
+ assert.match(primitivesSource, /<Text numberOfLines=\{1\} className="text-\[17px\] font-semibold"/)
+ assert.match(primitivesSource, /<Text numberOfLines=\{1\} className="text-\[14px\]"/)
+})
+
+test('mobile app shell keeps signed-out auth surfaces on the fullscreen path before renderAppShell', () => {
+ const appSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/App.js'),
+   'utf8'
+ )
+ const fullscreenAuthIndex = appSource.indexOf('if (isFullscreenAuthGate) {')
+ const shellRenderIndex = appSource.indexOf('{renderAppShell({')
+ const fullscreenAuthBlock = appSource.slice(fullscreenAuthIndex, appSource.indexOf('if (isFullscreenLoading)', fullscreenAuthIndex))
+
+ assert.notEqual(fullscreenAuthIndex, -1)
+ assert.notEqual(shellRenderIndex, -1)
+ assert.ok(fullscreenAuthIndex < shellRenderIndex, 'signed-out auth gate must return before the app shell render path')
+ assert.match(fullscreenAuthBlock, /<AuthView/)
+ assert.match(fullscreenAuthBlock, /<InvitationCodeEntryView/)
+ assert.match(fullscreenAuthBlock, /<AthleteInviteOnboardingView/)
+ assert.doesNotMatch(fullscreenAuthBlock, /renderAppShell|bottomTabViewItems|bottomTabs/)
+ assert.match(appSource, /const isFullscreenAuthGate = appRenderModel\.screen\.type === 'auth'/)
+ assert.match(appSource, /bottomTabs: appRenderModel\.bottomTabs,/)
+ assert.doesNotMatch(appSource, /bottomTabs: bottomTabViewItems,/)
+})
+
 test('mobile app shell uses react-native-safe-area-context instead of deprecated react-native SafeAreaView', () => {
  const appSource = readFileSync(
    resolve(process.cwd(), 'apps/mobile/App.js'),
@@ -44,6 +633,7 @@ test('mobile app shell uses react-native-safe-area-context instead of deprecated
  assert.match(appSource, /SafeAreaProvider/)
  assert.match(appSource, /<SafeAreaProvider>/)
  assert.match(appSource, /<SafeAreaView edges=\{\['top', 'left', 'right'\]\} style=\{styles\.container\}>/)
+ assert.match(appSource, /<SafeAreaView edges=\{\['top', 'left', 'right', 'bottom'\]\} style=\{styles\.container\}>/)
  assert.doesNotMatch(appSource, /import\s*\{\s*SafeAreaView\s*\}\s*from 'react-native'/)
 })
 
@@ -108,8 +698,9 @@ test('mobile app shell renders bottom navigation from grouped shell tab view ite
  assert.match(appSource, /const visibleBottomTabs = useMemo\(\(\) => \(effectiveBootstrapState\.status === 'authenticated_coach' \? mobileTabs : mobileTabs\.filter\(\(tab\) => tab\.key !== 'inbox'\)\), \[effectiveBootstrapState\.status\]\);/)
  assert.match(appSource, /const bottomTabModels = useMemo\(\(\) => getTabButtonModels\(\{ tabs: visibleBottomTabs, activeKey: activeTab \}\), \[activeTab, visibleBottomTabs\]\);/)
  assert.match(appSource, /const bottomTabViewItems = useMemo\(\(\) => getBottomTabViewItems\(bottomTabModels\), \[bottomTabModels\]\);/)
- assert.match(appSource, /renderAppShell\(\{[\s\S]*bottomTabs: bottomTabViewItems,[\s\S]*\}\)/)
+ assert.match(appSource, /renderAppShell\(\{[\s\S]*bottomTabs: appRenderModel\.bottomTabs,[\s\S]*\}\)/)
  assert.doesNotMatch(appSource, /renderAppShell\(\{[\s\S]*bottomTabs: bottomTabModels,[\s\S]*\}\)/)
+ assert.doesNotMatch(appSource, /renderAppShell\(\{[\s\S]*bottomTabs: bottomTabViewItems,[\s\S]*\}\)/)
 })
 
 test('mobile app shell keeps the floating Start Workout CTA available across bottom tabs only for the current date workout', () => {
@@ -469,7 +1060,7 @@ test('mobile app shell also owns a dedicated workout edit view state that suppor
  assert.match(appSource, /if \(didWorkflowContextChange\) \{[\s\S]*setPersistedCreatedWorkoutRows\(\[\]\);[\s\S]*\}/)
  assert.match(appSource, /getTrainSurfaceModel\(\{[\s\S]*persistedWorkoutListRows: scopedPersistedCreatedWorkoutRows,[\s\S]*\}\)/)
  assert.match(appSource, /\[[\s\S]*persistedCreatedWorkoutRows[\s\S]*\]\s*\);/)
- assert.match(appSource, /async function handleCreateWorkout\(\) \{[\s\S]*const rawAthleteId = bootstrapState\.status === 'authenticated_coach'[\s\S]*const rawCoachId = trainState\.programWorkout\?\.coachId \|\| activeCoachAthleteProfile\?\.coachId \|\| null;[\s\S]*const rawProgramId = trainState\.program\.id \|\| null;[\s\S]*const athleteId = isUuidValue\(rawAthleteId\) \? rawAthleteId : null;[\s\S]*const coachId = isUuidValue\(rawCoachId\) \? rawCoachId : null;[\s\S]*const programId = isUuidValue\(rawProgramId\) \? rawProgramId : null;[\s\S]*const selectedProgramDayId = trainState\.program\.calendarWeek\.find\(\(day\) => day\.id === selectedCalendarDayId\)\?\.programDayId \|\| null;[\s\S]*nameSnapshot: defaultWorkoutName,[\s\S]*notes: '',[\s\S]*sortOrder: relatedWorkoutCount \+ 1,[\s\S]*\)[\s\S]*setSelectedProgramWorkoutPreview\([\s\S]*createdWorkout[\s\S]*\)[\s\S]*setSelectedWorkoutSessionPreview\([\s\S]*programWorkoutId: createdWorkout\.id[\s\S]*\)[\s\S]*orchestrateOpenWorkoutEditView\(\{[\s\S]*nextReturnSurface: 'train-home'[\s\S]*setWorkoutEditDraftModel,[\s\S]*workoutDraftModel: \{[\s\S]*programWorkoutId: createdWorkout\.id[\s\S]*\}[\s\S]*\}\);[\s\S]*\}/)
+ assert.match(appSource, /async function handleCreateWorkout\(\) \{[\s\S]*const rawAthleteId = activeTrainAthleteId \?\? null;[\s\S]*const rawCoachId = trainState\.programWorkout\?\.coachId \|\| activeCoachAthleteProfile\?\.coachId \|\| null;[\s\S]*const rawProgramId = trainState\.program\.id \|\| null;[\s\S]*const athleteId = isUuidValue\(rawAthleteId\) \? rawAthleteId : null;[\s\S]*const coachId = isUuidValue\(rawCoachId\) \? rawCoachId : null;[\s\S]*const programId = isUuidValue\(rawProgramId\) \? rawProgramId : null;[\s\S]*const selectedProgramDayId = trainState\.program\.calendarWeek\.find\(\(day\) => day\.id === selectedCalendarDayId\)\?\.programDayId \|\| null;[\s\S]*nameSnapshot: defaultWorkoutName,[\s\S]*notes: '',[\s\S]*sortOrder: relatedWorkoutCount \+ 1,[\s\S]*\)[\s\S]*setSelectedProgramWorkoutPreview\([\s\S]*createdWorkout[\s\S]*\)[\s\S]*setSelectedWorkoutSessionPreview\([\s\S]*programWorkoutId: createdWorkout\.id[\s\S]*\)[\s\S]*orchestrateOpenWorkoutEditView\(\{[\s\S]*nextReturnSurface: 'train-home'[\s\S]*setWorkoutEditDraftModel,[\s\S]*workoutDraftModel: \{[\s\S]*programWorkoutId: createdWorkout\.id[\s\S]*\}[\s\S]*\}\);[\s\S]*\}/)
  assert.doesNotMatch(appSource, /if \(targetKey === 'create-workout'\) \{[\s\S]*createEmptyWorkoutEditDraftModel\(\)/)
  assert.match(appSource, /function handleCloseWorkoutEditView\(\) \{[\s\S]*orchestrateCloseWorkoutEditView\(\{[\s\S]*workoutEditReturnSurface,[\s\S]*setIsWorkoutEditViewOpen,[\s\S]*setIsWorkoutSheetOpen,[\s\S]*setWorkoutEditReturnSurface,[\s\S]*setWorkoutEditDraftModel,[\s\S]*\}\);[\s\S]*\}/)
  assert.match(appSource, /<WorkoutEditView[\s\S]*isVisible=\{isWorkoutEditViewOpen\}/)
@@ -715,16 +1306,43 @@ test('mobile app shell lets authenticated athletes open the train tab while stil
 })
 
 test('mobile app shell derives one canonical active Train/Home athlete context so coach-selected athletes and authenticated athletes use the same ownership seam', () => {
- const appSource = readFileSync(
-   resolve(process.cwd(), 'apps/mobile/App.js'),
-   'utf8'
- )
+ const appSource = readFileSync(resolve(process.cwd(), 'apps/mobile/App.js'), 'utf8')
 
- assert.match(appSource, /const activeTrainAthleteProfile = useMemo\(\(\) => \{[\s\S]*if \(isCoachBootstrapState\) \{[\s\S]*return activeCoachAthleteProfile \?\? null[\s\S]*\}[\s\S]*return effectiveBootstrapState\.athleteProfile \?\? null[\s\S]*\}, \[activeCoachAthleteProfile, effectiveBootstrapState\.athleteProfile, isCoachBootstrapState\]\)/)
- assert.match(appSource, /const activeTrainAthleteId = activeTrainAthleteProfile\?\.id \?\? null;/)
- assert.match(appSource, /const activeTrainAthleteLabel = useMemo\(\(\) => \{[\s\S]*if \(isCoachBootstrapState\) \{[\s\S]*return activeCoachAthleteSummary[\s\S]*\}[\s\S]*if \(!activeTrainAthleteProfile\) \{[\s\S]*return null[\s\S]*\}[\s\S]*return \{[\s\S]*firstName: activeTrainAthleteProfile\?\.firstName \?\? ''[\s\S]*lastName: activeTrainAthleteProfile\?\.lastName \?\? ''[\s\S]*avatarUrl: activeTrainAthleteProfile\?\.avatarUrl \?\? null[\s\S]*\}[\s\S]*\}, \[activeCoachAthleteSummary, activeTrainAthleteProfile, isCoachBootstrapState\]\)/)
+ assert.match(appSource, /const activeTrainContext = useMemo\(\(\) => \{[\s\S]*const source = isCoachBootstrapState \? 'coach-selected-athlete' : 'signed-in-athlete'/)
+ assert.match(appSource, /const activeTrainAthleteProfile = activeTrainContext\.athleteProfile;/)
+ assert.match(appSource, /const activeTrainAthleteId = activeTrainContext\.athleteProfile\?\.id \?\? null;/)
+ assert.match(appSource, /const rawAthleteId = activeTrainAthleteId \?\? null;/)
  assert.match(appSource, /const analyticsStrengthSelectionContextId = activeTrainAthleteId \|\| authSession\?\.currentUserId \|\| null;/)
  assert.match(appSource, /activeAthleteSummary: isCoachBootstrapState \? activeTrainAthleteLabel : null,/)
+})
+
+test('mobile app shell makes the coach-selected versus signed-in athlete context explicit before train ownership is used', () => {
+ const appSource = readFileSync(resolve(process.cwd(), 'apps/mobile/App.js'), 'utf8')
+
+ assert.match(appSource, /const activeTrainContext = useMemo\(\(\) => \{[\s\S]*const source = isCoachBootstrapState \? 'coach-selected-athlete' : 'signed-in-athlete'[\s\S]*const athleteProfile = isCoachBootstrapState \? activeCoachAthleteProfile \?\? null : effectiveBootstrapState\.athleteProfile \?\? null[\s\S]*return \{[\s\S]*source,[\s\S]*athleteProfile,[\s\S]*coachSelectedAthleteId: isCoachBootstrapState \? selectedCoachAthleteId : null,[\s\S]*\}[\s\S]*\}, \[activeCoachAthleteProfile, effectiveBootstrapState\.athleteProfile, isCoachBootstrapState, selectedCoachAthleteId\]\)/)
+ assert.match(appSource, /const activeTrainAthleteProfile = activeTrainContext\.athleteProfile;/)
+ assert.match(appSource, /const activeTrainAthleteId = activeTrainContext\.athleteProfile\?\.id \?\? null;/)
+ assert.match(appSource, /const rawAthleteId = activeTrainAthleteId \?\? null;/)
+ assert.doesNotMatch(appSource, /const activeTrainAthleteId = activeCoachAthleteProfile\?\.id \|\| effectiveBootstrapState\.athleteProfile\?\.id/)
+ assert.doesNotMatch(appSource, /athleteId = isCoachBootstrapState \? activeCoachAthleteProfile\?\.id : effectiveBootstrapState\.athleteProfile\?\.id/)
+})
+
+test('mobile app shell persists and rehydrates the selected coach athlete context before falling back to default athlete resolution', () => {
+ const appSource = readFileSync(resolve(process.cwd(), 'apps/mobile/App.js'), 'utf8')
+ const contextStorageSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/train/coach-athlete-context-storage.js'), 'utf8')
+
+ assert.match(appSource, /import \{ resolveCoachSelectedAthleteStorage \} from '\.\/src\/train\/coach-athlete-context-storage\.js';/)
+ assert.match(appSource, /const \[hasRehydratedSelectedCoachAthleteContext, setHasRehydratedSelectedCoachAthleteContext\] = useState\(false\);/)
+ assert.match(appSource, /const coachSelectedAthleteStorageRef = useRef\(null\);/)
+ assert.match(appSource, /useEffect\(\(\) => \{[\s\S]*resolveCoachSelectedAthleteStorage\(\)[\s\S]*const storedCoachAthleteId = await storage\?\.getItem\?\.\(\)[\s\S]*if \(storedCoachAthleteId && coachAthleteOptions\.some\(\(athlete\) => athlete\.id === storedCoachAthleteId\)\) \{[\s\S]*setSelectedCoachAthleteId\(storedCoachAthleteId\)[\s\S]*setHasRehydratedSelectedCoachAthleteContext\(true\)[\s\S]*\}, \[bootstrapState\.status, coachAthleteOptions\]\)/)
+ assert.match(appSource, /if \(bootstrapState\.status !== 'authenticated_coach' \|\| !authSession\?\.accessToken \|\| !bootstrapState\.coachAthletes\?\.length \|\| !hasRehydratedSelectedCoachAthleteContext\) \{[\s\S]*return[\s\S]*\}/)
+ assert.match(appSource, /useEffect\(\(\) => \{[\s\S]*if \(bootstrapState\.status !== 'authenticated_coach'\) \{[\s\S]*coachSelectedAthleteStorageRef\.current\?\.removeItem\?\.\(\)[\s\S]*return[\s\S]*\}[\s\S]*if \(!coachAthleteOptions\.some\(\(athlete\) => athlete\.id === selectedCoachAthleteId\)\) return[\s\S]*coachSelectedAthleteStorageRef\.current\?\.setItem\?\.\(selectedCoachAthleteId\)[\s\S]*\}, \[bootstrapState\.status, coachAthleteOptions, selectedCoachAthleteId\]\)/)
+
+ assert.match(contextStorageSource, /export const COACH_SELECTED_ATHLETE_STORAGE_KEY = 'pplus\.coach\.selectedAthleteId\.v1'/)
+ assert.match(contextStorageSource, /globalThis\.localStorage\.getItem\(key\)/)
+ assert.match(contextStorageSource, /await import\('expo-secure-store'\)/)
+ assert.match(contextStorageSource, /secureStore\.getItemAsync\(key\)/)
+ assert.match(contextStorageSource, /export async function resolveCoachSelectedAthleteStorage\(key = COACH_SELECTED_ATHLETE_STORAGE_KEY\)/)
 })
 
 test('mobile app shell scopes created My Workouts rows to the active train athlete and program so coach-created rows do not leak into a different athlete context', () => {
@@ -737,6 +1355,18 @@ test('mobile app shell scopes created My Workouts rows to the active train athle
  assert.match(appSource, /persistedWorkoutListRows: scopedPersistedCreatedWorkoutRows,/)
  assert.match(appSource, /actionPayload: \{[\s\S]*selectedDayId: selectedCalendarDayId,[\s\S]*programWorkoutId: createdWorkout\.id,[\s\S]*athleteId,[\s\S]*programId,[\s\S]*\}/)
  assert.match(appSource, /if \(didWorkflowContextChange\) \{[\s\S]*setPersistedCreatedWorkoutRows\(\[\]\);[\s\S]*\}/)
+})
+
+test('mobile app shell source blocks stale or demo athlete fallbacks from authenticated train ownership', () => {
+ const appSource = readFileSync(resolve(process.cwd(), 'apps/mobile/App.js'), 'utf8')
+
+ assert.doesNotMatch(appSource, /createTrainDemoState/)
+ assert.doesNotMatch(appSource, /createDemoProgramWorkout/)
+ assert.doesNotMatch(appSource, /pw-lower-a|ath-1/)
+ assert.match(appSource, /const activeTrainAthleteId = activeTrainContext\.athleteProfile\?\.id \?\? null;/)
+ assert.match(appSource, /const rawAthleteId = activeTrainAthleteId \?\? null;/)
+ assert.doesNotMatch(appSource, /activeTrainAthleteId \|\| trainState\.programWorkout\?\.athleteId/)
+ assert.doesNotMatch(appSource, /trainState\.programWorkout\?\.athleteId \|\| activeTrainAthleteId/)
 })
 
 test('mobile coach athlete quick button replaces chat/inbox utility copy with athlete selection access', () => {
@@ -759,7 +1389,11 @@ test('mobile bottom nav renders one four-option bar and keeps athletes as the fa
  assert.doesNotMatch(shellSource, /tabViewItems\.utilityTab/)
  assert.match(shellSource, /if \(tabKey === 'inbox'\) \{[\s\S]*return <Contact color=\{iconColor\} size=\{22\} strokeWidth=\{2\.2\} \/>/)
  assert.match(shellSource, /if \(tabKey === 'team'\) \{[\s\S]*return <Users color=\{iconColor\} size=\{22\} strokeWidth=\{2\.2\} \/>/)
- assert.match(stylesSource, /bottomNavWrap:\s*\{[\s\S]*left: 24,[\s\S]*right: 24,[\s\S]*bottom: 16,[\s\S]*alignItems: 'stretch',[\s\S]*gap: 12,/)
+ assert.match(stylesSource, /bottomNavWrap:\s*\{[\s\S]*backgroundColor: theme\.background,[\s\S]*paddingTop: 8,[\s\S]*paddingHorizontal: 24,[\s\S]*paddingBottom: 16,[\s\S]*alignItems: 'stretch',[\s\S]*gap: 12,/)
+ assert.match(stylesSource, /scrollContent:\s*\{[\s\S]*paddingBottom: 24,[\s\S]*\}/)
+ assert.match(stylesSource, /shellScrollView:\s*\{[\s\S]*flex: 1,[\s\S]*\}/)
+ assert.match(shellSource, /<ScrollView style=\{styles\.shellScrollView\} contentContainerStyle=\{styles\.scrollContent\}>/)
+ assert.doesNotMatch(stylesSource.slice(stylesSource.indexOf('bottomNavWrap: {'), stylesSource.indexOf('bottomNavMainPill: {')), /position: 'absolute'|left: 24|right: 24|bottom: 16/)
  assert.match(stylesSource, /bottomNavMainPill:\s*\{[\s\S]*justifyContent: 'space-between'/)
  assert.doesNotMatch(stylesSource, /bottomNavUtilityButton:\s*\{/)
  assert.doesNotMatch(stylesSource, /bottomNavUtilityButtonActive:\s*\{/)

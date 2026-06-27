@@ -230,7 +230,7 @@ function ProgramCreateWorkoutView({ isVisible, theme, model, onOpenAddExercise, 
               <Pressable onPress={onClose}>
                 <Text className="text-[17px] font-semibold" style={{ color: resolvedTheme.textSoft }}>Cancel</Text>
               </Pressable>
-              <Pressable onPress={onSave}>
+              <Pressable onPress={() => onSave?.({ routineName, routineNotes })}>
                 <Text className="text-[17px] font-semibold" style={{ color: resolvedTheme.accent }}>Save</Text>
               </Pressable>
             </View>

@@ -1,0 +1,58 @@
+appId: host.exp.Exponent
+---
+- stopApp
+- openLink: exp://127.0.0.1:8084
+- extendedWaitUntil:
+    visible: "Viewing athlete"
+    timeout: 60000
+- tapOn: "Open Profile"
+- extendedWaitUntil:
+    visible: "Exercises"
+    timeout: 10000
+- tapOn: "Exercises"
+- extendedWaitUntil:
+    visible:
+      id: "exercise-library-row-seeded-exercise-trap-bar-deadlift"
+    timeout: 10000
+- tapOn:
+    id: "exercise-library-row-seeded-exercise-trap-bar-deadlift"
+- extendedWaitUntil:
+    visible:
+      id: "exercise-detail-video-preview"
+    timeout: 10000
+- assertVisible: "Trap Bar Deadlift"
+- assertVisible:
+    id: "exercise-detail-video-preview"
+- takeScreenshot: visual-no-clip-video-preview
+- scrollUntilVisible:
+    element:
+      id: "exercise-detail-progress-chart"
+    direction: DOWN
+    timeout: 10000
+- assertVisible:
+    id: "exercise-detail-progress-chart"
+- assertVisible: "CURRENT BEST"
+- takeScreenshot: visual-no-clip-exercise-chart
+- stopApp
+- openLink: exp://127.0.0.1:8084
+- extendedWaitUntil:
+    visible: "Viewing athlete"
+    timeout: 60000
+- tapOn: "Open Progress"
+- extendedWaitUntil:
+    visible:
+      id: "analytics-progress-screen"
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: "analytics-body-map-figure"
+    direction: DOWN
+    timeout: 10000
+    visibilityPercentage: 100
+    centerElement: true
+- assertVisible:
+    id: "analytics-body-map-surface"
+- assertVisible:
+    id: "analytics-body-map-figure"
+- assertVisible: "Recovery"
+- takeScreenshot: visual-no-clip-body-map

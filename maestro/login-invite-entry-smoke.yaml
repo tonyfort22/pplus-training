@@ -1,0 +1,16 @@
+appId: host.exp.Exponent
+---
+- openLink: exp://127.0.0.1:8084
+- extendedWaitUntil:
+    visible: "Sign in"
+    timeout: 60000
+- assertVisible: "Email"
+- assertVisible: "Password"
+- assertVisible: "Sign up with invitation code"
+- tapOn: "Sign up with invitation code"
+- extendedWaitUntil:
+    visible: "Invitation code"
+    timeout: 30000
+- assertVisible:
+    id: "athlete-invitation-code-input"
+- assertVisible: "Continue"

@@ -1,0 +1,12 @@
+appId: host.exp.Exponent
+---
+# Deferred L5 visual/device check.
+# Purpose: capture immediate loading skeleton and post-load final screenshots for the same surface,
+# then visually compare geometry before marking loading-skeleton-final-surface-match as passed.
+- stopApp
+- openLink: exp://127.0.0.1:8084
+- waitForAnimationToEnd
+- takeScreenshot: loading-skeleton-initial
+- waitForAnimationToEnd
+- waitForAnimationToEnd
+- takeScreenshot: loading-skeleton-final

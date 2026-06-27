@@ -1301,6 +1301,23 @@ test('mobile analytics recovery ui derives a grouped svg color map, uses the app
   assert.match(analyticsSource, /svg=\{recoveryFigureSvg\}/)
 })
 
+test('mobile analytics recovery body-map coloring rules are source-tested from Recovery rows through grouped svg fills', () => {
+  const analyticsSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/analytics-view.js'), 'utf8')
+  const recoveryMapSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/assets/recovery-muscle-map.js'), 'utf8')
+
+  assert.match(recoveryMapSource, /export const RECOVERY_COLOR_SCALE = \{[\s\S]*100: '#06D6A0'[\s\S]*75: '#82D483'[\s\S]*50: '#FFD166'[\s\S]*25: '#F78C6A'[\s\S]*0: '#EF476F'[\s\S]*\}/)
+  assert.match(recoveryMapSource, /export const RECOVERY_DIMMED = '#6B7280'/)
+  assert.match(recoveryMapSource, /const groupPattern = new RegExp\(`\(<g id="\$\{groupId\}">\)\(\[\\\\s\\\\S\]\*\?\)\(<\/g>\)`, 'g'\)/)
+  assert.match(recoveryMapSource, /groupBody\.replace\(\/\(<path\[\^>\]\*\?fill="\)\(\[\^"\]\+\)\("\[\^>\]\*\?\)\(\?: fill-opacity="\[\^"\]\*"\)\?\(\\\/\?>\)\/g, `\$1\$\{fillColor\}\$3 fill-opacity="\$\{fillOpacity\}"\$4`\)/)
+  assert.match(recoveryMapSource, /export function applyFocusedRecoveryColorsToSvg\(svg, colorMap = \{\}, focusedIds = \[\]\) \{[\s\S]*const trackedSvgIds = new Set\(Object\.values\(RECOVERY_GROUP_TO_SVG_IDS\)\.flat\(\)\)[\s\S]*rewriteRecoveryGroupPaths\(nextSvg, trackedId, RECOVERY_DIMMED, '0\.35'\)[\s\S]*rewriteRecoveryGroupPaths\(nextSvg, focusedId, focusedColor, '0\.8'\)/)
+
+  assert.match(analyticsSource, /const recoveryMuscleGroups = model\.recoveryMuscleGroups \|\| model\.recoveryRows \|\| \[\]/)
+  assert.match(analyticsSource, /const recoverySvgColorMap = useMemo\(\(\) => \{[\s\S]*const color = getRecoveryColorForPercent\(parseRecoveryPercentageLabel\(row\.percentageLabel\)\)[\s\S]*for \(const svgId of RECOVERY_GROUP_TO_SVG_IDS\[row\.id\] \|\| \[\]\) \{[\s\S]*accumulator\[svgId\] = color[\s\S]*\}, \[recoveryMuscleGroups\]\)/)
+  assert.match(analyticsSource, /const recoveryFigureSvg = useMemo\(\(\) => \{[\s\S]*focusedRecoverySvgIds\.length > 0[\s\S]*applyFocusedRecoveryColorsToSvg\(recoveryMuscleMapSvg, recoverySvgColorMap, focusedRecoverySvgIds\)[\s\S]*applyRecoveryColorsToSvg\(recoveryMuscleMapSvg, recoverySvgColorMap\)[\s\S]*\}, \[recoveryMuscleMapSvg, recoverySvgColorMap, focusedRecoverySvgIds\]\)/)
+  assert.doesNotMatch(analyticsSource, /recoverySvgColorMap[\s\S]{0,400}fillOpacity/)
+  assert.doesNotMatch(analyticsSource, /recoverySvgColorMap[\s\S]{0,400}opacity:/)
+})
+
 test('mobile analytics Consistency chart builds real rolling week labels and counts from completed sessions', () => {
   const sessions = [
     {
@@ -1409,6 +1426,119 @@ test('mobile analytics recovery view supports borderless figure art and muscle d
   assert.match(progressSource, /label: 'Biceps'/)
   assert.match(progressSource, /label: 'Triceps'/)
   assert.match(progressSource, /label: 'Forearms'/)
+})
+
+test('mobile analytics data only counts completed sessions as completed work for Training Load activity', () => {
+  const completedBenchSession = {
+    id: 'session-completed-bench',
+    status: 'completed',
+    completedAt: '2026-06-01T20:00:00.000Z',
+    exercises: [
+      {
+        id: 'completed-bench-exercise',
+        exerciseId: 'exercise-bench-press',
+        nameSnapshot: 'Barbell Bench Press',
+        sets: [
+          { id: 'completed-bench-set-1', isCompleted: true, actualLoad: 185, actualReps: 5 },
+          { id: 'completed-bench-set-2', isCompleted: true, actualLoad: 185, actualReps: 5 },
+        ],
+      },
+    ],
+  }
+  const inProgressCurlSession = {
+    id: 'session-in-progress-curl',
+    status: 'in_progress',
+    startedAt: '2026-06-02T20:00:00.000Z',
+    exercises: [
+      {
+        id: 'in-progress-curl-exercise',
+        exerciseId: 'exercise-curl',
+        nameSnapshot: 'Dumbbell Curl',
+        sets: [
+          { id: 'in-progress-curl-set-1', isCompleted: true, actualLoad: 30, actualReps: 10 },
+          { id: 'in-progress-curl-set-2', isCompleted: true, actualLoad: 30, actualReps: 10 },
+          { id: 'in-progress-curl-set-3', isCompleted: true, actualLoad: 30, actualReps: 10 },
+        ],
+      },
+    ],
+  }
+  const discardedSquatSession = {
+    id: 'session-discarded-squat',
+    status: 'discarded',
+    discardedAt: '2026-06-03T20:00:00.000Z',
+    exercises: [
+      {
+        id: 'discarded-squat-exercise',
+        exerciseId: 'exercise-squat',
+        nameSnapshot: 'Back Squat',
+        sets: [
+          { id: 'discarded-squat-set-1', isCompleted: true, actualLoad: 225, actualReps: 5 },
+        ],
+      },
+    ],
+  }
+
+  const model = getAnalyticsViewModel({
+    sessions: [completedBenchSession, inProgressCurlSession, discardedSquatSession],
+  })
+  const arms = model.activityMuscleGroups.find((group) => group.id === 'arms')
+  const chest = model.activityMuscleGroups.find((group) => group.id === 'chest')
+  const legs = model.activityMuscleGroups.find((group) => group.id === 'legs')
+
+  assert.equal(arms.setCountLabel, '0 sets')
+  assert.equal(arms.subMuscles.find((muscle) => muscle.id === 'biceps').setCountLabel, '0 sets')
+  assert.equal(chest.setCountLabel, '2 sets')
+  assert.equal(chest.subMuscles.find((muscle) => muscle.id === 'mid-chest').setCountLabel, '2 sets')
+  assert.equal(legs.setCountLabel, '0 sets')
+  assert.deepEqual(model.consistencyChart.bars.map((bar) => bar.value).filter(Boolean), [1])
+})
+
+test('mobile analytics data excludes discarded sessions from completed work even when discarded sets are filled in', () => {
+  const completedBenchSession = {
+    id: 'session-completed-bench-only',
+    status: 'completed',
+    completedAt: '2026-06-04T20:00:00.000Z',
+    exercises: [
+      {
+        id: 'completed-bench-exercise-only',
+        exerciseId: 'exercise-bench-press',
+        nameSnapshot: 'Barbell Bench Press',
+        sets: [
+          { id: 'completed-bench-only-set-1', isCompleted: true, actualLoad: 185, actualReps: 5 },
+          { id: 'completed-bench-only-set-2', isCompleted: true, actualLoad: 185, actualReps: 5 },
+        ],
+      },
+    ],
+  }
+  const discardedSquatSession = {
+    id: 'session-discarded-squat-only',
+    status: 'discarded',
+    discardedAt: '2026-06-05T20:00:00.000Z',
+    exercises: [
+      {
+        id: 'discarded-squat-exercise-only',
+        exerciseId: 'exercise-squat',
+        nameSnapshot: 'Back Squat',
+        sets: [
+          { id: 'discarded-squat-only-set-1', isCompleted: true, actualLoad: 225, actualReps: 5 },
+          { id: 'discarded-squat-only-set-2', isCompleted: true, actualLoad: 225, actualReps: 5 },
+          { id: 'discarded-squat-only-set-3', isCompleted: true, actualLoad: 225, actualReps: 5 },
+        ],
+      },
+    ],
+  }
+
+  const model = getAnalyticsViewModel({
+    sessions: [discardedSquatSession, completedBenchSession],
+  })
+  const chest = model.activityMuscleGroups.find((group) => group.id === 'chest')
+  const legs = model.activityMuscleGroups.find((group) => group.id === 'legs')
+
+  assert.equal(chest.setCountLabel, '2 sets')
+  assert.equal(chest.subMuscles.find((muscle) => muscle.id === 'mid-chest').setCountLabel, '2 sets')
+  assert.equal(legs.setCountLabel, '0 sets')
+  assert.equal(legs.subMuscles.find((muscle) => muscle.id === 'quads').setCountLabel, '0 sets')
+  assert.deepEqual(model.consistencyChart.bars.map((bar) => bar.value).filter(Boolean), [1])
 })
 
 test('mobile analytics 7 day activity uses set counts with muscle drilldown, a dedicated activity-colored svg, and the same green back card treatment', () => {

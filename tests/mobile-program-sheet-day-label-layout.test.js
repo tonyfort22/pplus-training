@@ -17,7 +17,7 @@ test('mobile program sheet schedule rows place the day label in a left rail with
   assert.match(primitivesSource, /status === 'upcoming'[\s\S]*borderColor: theme\.borderStrong[\s\S]*backgroundColor: theme\.surface[\s\S]*iconColor: theme\.textSoft/)
   assert.match(sheetSource, /entry\.status === 'rest' \? \([\s\S]*\) : \([\s\S]*className=\"flex-1\"[\s\S]*text-\[14px\] font-semibold[\s\S]*\{entry\.workoutLabel\}/)
   assert.match(sheetSource, /entry\.durationLabel \? <Text className=\"text-\[12px\] font-medium\" style=\{\{ color: theme\.textSoft \}\}>\{entry\.durationLabel\}<\/Text> : null/)
-  assert.match(sheetSource, /entry\.durationLabel \?[\s\S]*<ProgramSheetStatusBadge status=\{entry\.status\} theme=\{theme\} \/>/)
+  assert.match(sheetSource, /entry\.durationLabel \?[\s\S]*<ProgramSheetStatusBadge status=\{entry\.status\} theme=\{theme\} testID=\{`program-sheet-status-checkbox-\$\{entry\.id\}`\} \/>/)
   assert.doesNotMatch(sheetSource, /\{entry\.dayLabel\} • \{entry\.durationLabel\}/)
   assert.match(sheetSource, /<Pressable className=\"flex-1\"[\s\S]*\{entry\.workoutLabel\}<\/Text>\n\s*<\/Pressable>/)
 })

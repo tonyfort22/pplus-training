@@ -98,6 +98,41 @@ test('createMobileInvitationClient lets the completion flow use a longer timeout
   )
 })
 
+test('createMobileInvitationClient can complete invitation onboarding through an explicit safe fixture without remote fetch', async () => {
+  const fetchCalls = []
+  const client = createMobileInvitationClient({
+    invitationCompletionFixture: 'invited_athlete_completion_safe',
+    fetchImpl: async (...args) => {
+      fetchCalls.push(args)
+      throw new Error('remote fetch must not run for the safe completion fixture')
+    },
+  })
+
+  const result = await client.completeAthleteInvitation({
+    inviteCode: 'SAFE11',
+    firstName: 'Safe',
+    lastName: 'Athlete',
+    password: 'secret123',
+    confirmPassword: 'secret123',
+    gender: 'Female',
+    position: 'Forward',
+    weight: '170',
+    weightUnit: 'lb',
+    heightUnit: 'ft',
+    heightFeet: '5',
+    heightInches: '9',
+  })
+
+  assert.deepEqual(fetchCalls, [])
+  assert.deepEqual(result, {
+    accessToken: 'safe-invited-athlete-access-token',
+    refreshToken: 'safe-invited-athlete-refresh-token',
+    currentUserId: 'auth-safe-invited-athlete',
+    currentAthleteId: 'ath-safe-invited-athlete',
+    assignedProgramId: 'program-safe-invited-athlete',
+  })
+})
+
 test('sendCoachAthleteInvitation normalizes the email and forwards coach profile details through the mobile invitation client', async () => {
   const calls = []
   const response = await sendCoachAthleteInvitation({

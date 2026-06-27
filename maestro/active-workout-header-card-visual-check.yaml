@@ -1,0 +1,33 @@
+appId: host.exp.Exponent
+---
+- stopApp
+- openLink: exp://127.0.0.1:8084
+- extendedWaitUntil:
+    visible: "Viewing athlete"
+    timeout: 60000
+- assertVisible: "Mia Chen"
+- extendedWaitUntil:
+    visible: "Start Workout"
+    timeout: 10000
+- tapOn: "Start Workout"
+- extendedWaitUntil:
+    visible: "Safe Simulator Workout"
+    timeout: 15000
+- assertVisible: "Safe Simulator Workout"
+- assertVisible: "Barbell Back Squat"
+- assertVisible:
+    id: "active-workout-exercise-1-card"
+- assertVisible:
+    id: "active-workout-exercise-1-header"
+- assertVisible:
+    id: "active-workout-exercise-1-thumbnail"
+- assertVisible:
+    id: "active-workout-exercise-1-title"
+- assertVisible:
+    id: "active-workout-exercise-1-reorder-controls"
+- assertVisible:
+    id: "active-workout-exercise-1-set-header-row"
+- assertVisible: "EFFORT"
+- assertVisible: "LB"
+- assertVisible: "REPS"
+- assertVisible: "DONE"

@@ -3,7 +3,7 @@ import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-nativ
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Trash2, Users } from 'lucide-react-native'
 import { getAppTheme } from '../theme/app-theme.js'
-import { AppDangerPillButton, AppOutlinedActionButton } from '../ui/primitives.js'
+import { AppDangerPillButton, AppNoticeCard, AppOutlinedActionButton } from '../ui/primitives.js'
 import { AthleteMultiSelectView, AthleteSelectionRow } from './athlete-multi-select-view.js'
 
 function createDraftFromModel(model) {
@@ -20,6 +20,8 @@ function GroupEditViewContent({
   onSave,
   onAddAthletes,
   onDeleteGroup,
+  isSavingGroup = false,
+  saveErrorMessage = '',
   theme,
 }) {
   const insets = useSafeAreaInsets()
@@ -28,6 +30,7 @@ function GroupEditViewContent({
   const [isAddAthletesViewOpen, setIsAddAthletesViewOpen] = useState(false)
   const [selectedAddAthleteIds, setSelectedAddAthleteIds] = useState([])
   const [addAthleteSearchQuery, setAddAthleteSearchQuery] = useState('')
+  const [localSaveErrorMessage, setLocalSaveErrorMessage] = useState('')
 
   useEffect(() => {
     setDraft(model ? createDraftFromModel(model) : null)
@@ -35,6 +38,25 @@ function GroupEditViewContent({
   }, [model])
 
   if (!model || !draft) return null
+
+  const trimmedGroupName = draft.groupName.trim()
+  const visibleSaveErrorMessage = localSaveErrorMessage || saveErrorMessage
+  const isSaveDisabled = isSavingGroup || !trimmedGroupName
+
+  function handleGroupNameChange(nextValue) {
+    setDraft((currentDraft) => ({ ...currentDraft, groupName: nextValue }))
+    setLocalSaveErrorMessage('')
+  }
+
+  function handleSaveGroup() {
+    if (!trimmedGroupName) {
+      setLocalSaveErrorMessage('Group name is required.')
+      return
+    }
+
+    setLocalSaveErrorMessage('')
+    onSave?.({ ...draft, groupName: trimmedGroupName })
+  }
 
   function handleToggleAddAthlete(athleteId) {
     setSelectedAddAthleteIds((currentValue) => currentValue.includes(athleteId)
@@ -96,8 +118,8 @@ function GroupEditViewContent({
           <Pressable className="px-1 py-2" onPress={onClose}>
             <Text className="text-[17px]" style={{ color: resolvedTheme.textMuted }}>{model.cancelLabel || 'Cancel'}</Text>
           </Pressable>
-          <Pressable className="px-1 py-2" onPress={() => onSave?.(draft)}>
-            <Text className="text-[17px] font-semibold" style={{ color: resolvedTheme.accentText }}>{model.saveLabel || 'Save'}</Text>
+          <Pressable className="px-1 py-2" onPress={handleSaveGroup} disabled={isSaveDisabled} testID="group-save-button">
+            <Text className="text-[17px] font-semibold" style={{ color: isSaveDisabled ? resolvedTheme.textSoft : resolvedTheme.accentText }}>{isSavingGroup ? 'Saving...' : model.saveLabel || 'Save'}</Text>
           </Pressable>
         </View>
 
@@ -105,7 +127,8 @@ function GroupEditViewContent({
           <View className="gap-9">
             <TextInput
               className="px-0 py-1 text-[28px] font-bold leading-[32px]"
-              onChangeText={(nextValue) => setDraft((currentDraft) => ({ ...currentDraft, groupName: nextValue }))}
+              testID="group-name-input"
+              onChangeText={handleGroupNameChange}
               placeholder={model.namePlaceholder || 'Group name'}
               placeholderTextColor={resolvedTheme.textSoft}
               style={{ backgroundColor: 'transparent', outlineStyle: 'none', color: resolvedTheme.text }}
@@ -113,6 +136,10 @@ function GroupEditViewContent({
             />
 
             <View className="gap-9">
+              {visibleSaveErrorMessage ? (
+                <AppNoticeCard theme={resolvedTheme} body={visibleSaveErrorMessage} tone="danger" />
+              ) : null}
+
               <AppOutlinedActionButton
                 theme={resolvedTheme}
                 label={model.addAthletesLabel || 'Add Athletes'}
@@ -151,7 +178,7 @@ function GroupEditViewContent({
   )
 }
 
-export function GroupEditView({ isVisible, model, onClose, onSave, onAddAthletes, onDeleteGroup, theme }) {
+export function GroupEditView({ isVisible, model, onClose, onSave, onAddAthletes, onDeleteGroup, isSavingGroup = false, saveErrorMessage = '', theme }) {
   return (
     <Modal visible={isVisible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaProvider>
@@ -161,6 +188,8 @@ export function GroupEditView({ isVisible, model, onClose, onSave, onAddAthletes
           onSave={onSave}
           onAddAthletes={onAddAthletes}
           onDeleteGroup={onDeleteGroup}
+          isSavingGroup={isSavingGroup}
+          saveErrorMessage={saveErrorMessage}
           theme={theme}
         />
       </SafeAreaProvider>

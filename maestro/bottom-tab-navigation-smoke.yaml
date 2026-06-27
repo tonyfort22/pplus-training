@@ -1,0 +1,44 @@
+appId: host.exp.Exponent
+---
+- stopApp
+- openLink: exp://127.0.0.1:8084
+- extendedWaitUntil:
+    visible: "Viewing athlete"
+    timeout: 60000
+- assertVisible: "Mia Chen"
+- assertVisible:
+    id: "bottom-tab-train"
+- assertVisible:
+    id: "bottom-tab-progress"
+- assertVisible:
+    id: "bottom-tab-team"
+- assertVisible:
+    id: "bottom-tab-inbox"
+- assertVisible: "No workout scheduled"
+- assertVisible: "My Programs"
+- assertVisible: "My Workouts"
+- tapOn:
+    id: "bottom-tab-progress"
+- extendedWaitUntil:
+    visible:
+      id: "analytics-progress-screen"
+    timeout: 10000
+- assertVisible: "ANALYTICS"
+- assertVisible: "Progress"
+- assertVisible: "Strength"
+- tapOn:
+    id: "bottom-tab-team"
+- extendedWaitUntil:
+    visible: "Groups"
+    timeout: 10000
+- assertVisible:
+    id: "body-list-row-group-preview-speed"
+- assertVisible: "Open Speed Group"
+- assertVisible: "Create a group"
+- tapOn:
+    id: "bottom-tab-inbox"
+- extendedWaitUntil:
+    visible: "Athletes"
+    timeout: 10000
+- assertVisible: "Thomas Thibault"
+- assertVisible: "Mia Chen"

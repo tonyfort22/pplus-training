@@ -47,7 +47,11 @@ function ExerciseProgressChart({ model, theme }) {
   const pathD = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ')
 
   return (
-    <View className="gap-4">
+    <View
+      testID="exercise-detail-progress-chart"
+      accessibilityLabel="Exercise detail progress chart"
+      className="gap-4"
+    >
       <Text className="text-[22px] font-semibold" style={{ color: theme.text }}>{model.progressTitle || 'Progress'}</Text>
       <View className="flex-row items-start justify-between gap-4">
           <View className="flex-1 gap-2">
@@ -230,7 +234,12 @@ function ExerciseDetailViewContent({ model, onClose, theme }) {
       <View className="flex-1" style={{ paddingBottom: Math.max(insets.bottom, 20) }}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
           <View>
-            <View className="relative overflow-hidden" style={{ backgroundColor: resolvedTheme.surface }}>
+            <View
+              testID="exercise-detail-video-preview"
+              accessibilityLabel="Exercise detail video preview"
+              className="relative overflow-hidden"
+              style={{ backgroundColor: resolvedTheme.surface }}
+            >
               <VideoView
                 fullscreenOptions={{ enable: true }}
                 contentFit="cover"
@@ -260,7 +269,11 @@ function ExerciseDetailViewContent({ model, onClose, theme }) {
                 {hasProgressData ? (
                   <ExerciseProgressChart model={model} theme={resolvedTheme} />
                 ) : (
-                  <View className="gap-4">
+                  <View
+                    testID="exercise-detail-progress-chart"
+                    accessibilityLabel="Exercise detail progress chart"
+                    className="gap-4"
+                  >
                     <Text className="text-[22px] font-semibold" style={{ color: resolvedTheme.text }}>{model.progressTitle || 'Progress'}</Text>
                     <View className="flex-row items-start justify-between gap-4">
                         <View className="flex-1 gap-2">

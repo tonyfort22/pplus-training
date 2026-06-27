@@ -1,7 +1,28 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 import { getActiveWorkoutViewModel } from '../apps/mobile/src/train/active-workout-view-models.js';
+
+test('active workout view model source keeps exercise and set mapping in named model helpers', () => {
+  const source = readFileSync(resolve(process.cwd(), 'apps/mobile/src/train/active-workout-view-models.js'), 'utf8')
+  const activeWorkoutBlock = source.match(/export function getActiveWorkoutViewModel\([\s\S]*?\n\}/)?.[0] || ''
+  const exerciseModelBlock = source.match(/function getActiveWorkoutExerciseViewModel\(exercise, session\) \{[\s\S]*?\n\}/)?.[0] || ''
+  const setModelBlock = source.match(/function getActiveWorkoutSetViewModel\(set, index, columns, session, exercise\) \{[\s\S]*?\n\}/)?.[0] || ''
+
+  assert.match(source, /function getActiveWorkoutExerciseViewModel\(exercise, session\) \{/)
+  assert.match(source, /function getActiveWorkoutSetViewModel\(set, index, columns, session, exercise\) \{/)
+  assert.match(activeWorkoutBlock, /exercises:\s*\(session\.exercises \|\| \[\]\)\.map\(\(exercise\) => getActiveWorkoutExerciseViewModel\(exercise, session\)\)/)
+  assert.match(exerciseModelBlock, /const columns = getActiveWorkoutExerciseColumns\(exercise\)/)
+  assert.match(exerciseModelBlock, /thumbnailUrl: exercise\.thumbnailUrl \?\? null/)
+  assert.match(exerciseModelBlock, /videoUrl: exercise\.videoUrl \?\? null/)
+  assert.match(exerciseModelBlock, /supersetGroupId: exercise\.supersetGroupId \?\? null/)
+  assert.match(exerciseModelBlock, /isSupersetLinked: Boolean\(exercise\.supersetGroupId\)/)
+  assert.match(exerciseModelBlock, /sets:\s*\(exercise\.sets \|\| \[\]\)\.map\(\(set, index\) => getActiveWorkoutSetViewModel\(set, index, columns, session, exercise\)\)/)
+  assert.match(setModelBlock, /cells: columns\.map\(\(column\) => \(\{/)
+  assert.match(setModelBlock, /isActiveTarget: session\.activeSetTarget\?\.exerciseId === exercise\.id && session\.activeSetTarget\?\.setId === set\.id/)
+})
 
 function buildSessionWithExercise(exercise) {
   return {

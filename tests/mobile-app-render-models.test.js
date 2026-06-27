@@ -64,6 +64,24 @@ test('getAppRenderModel can override the train screen during auth/bootstrap stat
   assert.equal(model.screen.sections[0].title, 'Sign in required')
 })
 
+test('getAppRenderModel keeps signed-out override screens outside the app shell bottom tabs', () => {
+  const model = getAppRenderModel({
+    activeTab: 'train',
+    bottomTabModels: getTabButtonModels({ tabs: mobileTabs, activeKey: 'train' }),
+    trainRenderModel: { content: { type: 'sections', sections: [] } },
+    progressSections: [],
+    teamSections: [],
+    inboxSections: [],
+    overrideScreen: {
+      type: 'auth',
+      sections: [{ type: 'body', title: 'Sign in' }],
+    },
+  })
+
+  assert.equal(model.screen.type, 'auth')
+  assert.equal(model.bottomTabs, null)
+})
+
 test('getAppRenderModel switches to analytics and placeholder surfaces by active tab', () => {
   const model = getAppRenderModel({
     activeTab: 'progress',
@@ -237,7 +255,7 @@ test('getAnalyticsViewModel does not classify trap bar deadlift as full hamstrin
   assert.equal(hamstringsSubMuscle?.barWidth, '100%')
 })
 
-test('getAnalyticsViewModel keeps 7 day activity set counts honest across mapped groups and includes completed sets inside in-progress workouts', () => {
+test('getAnalyticsViewModel keeps 7 day activity set counts honest across mapped groups and excludes completed sets inside in-progress workouts', () => {
   const completedStrengthSession = {
     status: 'completed',
     exercises: [
@@ -293,14 +311,14 @@ test('getAnalyticsViewModel keeps 7 day activity set counts honest across mapped
 
   assert.equal(armsGroup?.setCountLabel, '1 sets')
   assert.equal(armsGroup?.subMuscles.find((row) => row.id === 'biceps')?.setCountLabel, '1 sets')
-  assert.equal(shouldersGroup?.setCountLabel, '1 sets')
-  assert.equal(shouldersGroup?.subMuscles.find((row) => row.id === 'front-delts')?.setCountLabel, '1 sets')
+  assert.equal(shouldersGroup?.setCountLabel, '0 sets')
+  assert.equal(shouldersGroup?.subMuscles.find((row) => row.id === 'front-delts')?.setCountLabel, '0 sets')
   assert.equal(chestGroup?.setCountLabel, '2 sets')
   assert.equal(chestGroup?.subMuscles.find((row) => row.id === 'mid-chest')?.setCountLabel, '2 sets')
   assert.equal(backGroup?.setCountLabel, '1 sets')
   assert.equal(backGroup?.subMuscles.find((row) => row.id === 'lats')?.setCountLabel, '1 sets')
-  assert.equal(absGroup?.setCountLabel, '1 sets')
-  assert.equal(absGroup?.subMuscles.find((row) => row.id === 'upper-abs')?.setCountLabel, '1 sets')
+  assert.equal(absGroup?.setCountLabel, '0 sets')
+  assert.equal(absGroup?.subMuscles.find((row) => row.id === 'upper-abs')?.setCountLabel, '0 sets')
 })
 
 test('getAnalyticsViewModel does not double count incline bench press across chest submuscles in 7 day activity', () => {

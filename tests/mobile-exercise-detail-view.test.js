@@ -79,7 +79,7 @@ test('mobile exercise detail view can resolve profile library exercises and acti
   assert.match(appSource, /if \(previewExerciseId !== selectedExerciseId\) return matchedExercise;/)
   assert.match(appSource, /return \{ \.\.\.matchedExercise, \.\.\.selectedExercisePreview \};/)
   assert.match(modelSource, /title: exercise\?\.title \|\| exercise\?\.name \|\| exercise\?\.nameSnapshot \|\| 'Exercise detail',/)
-  assert.match(modelSource, /videoUrl: exercise\?\.videoUrl \|\| DEFAULT_VIDEO_URL,/)
+  assert.match(modelSource, /videoUrl: normalizeDirectSupabaseMp4Url\(exercise\?\.videoUrl\) \|\| DEFAULT_VIDEO_URL,/)
 })
 
 test('mobile app shell delegates exercise-detail hydration-by-id to the extracted selection helper so imported video URLs still win', () => {
@@ -108,7 +108,33 @@ test('mobile app shell delegates exact-name exercise-detail fallback lookup to t
 test('mobile exercise detail view prefers the imported exercise video URL even for known library exercise ids', () => {
   const modelSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/train/exercise-detail-view-models.js'), 'utf8')
 
-  assert.match(modelSource, /return \{[\s\S]*\.\.\.libraryDetail,[\s\S]*videoUrl: exercise\?\.videoUrl \|\| libraryDetail\.videoUrl \|\| DEFAULT_VIDEO_URL,[\s\S]*\}/)
+  assert.match(modelSource, /return \{[\s\S]*\.\.\.libraryDetail,[\s\S]*videoUrl: normalizeDirectSupabaseMp4Url\(exercise\?\.videoUrl\) \|\| normalizeDirectSupabaseMp4Url\(libraryDetail\.videoUrl\) \|\| DEFAULT_VIDEO_URL,[\s\S]*\}/)
+})
+
+test('mobile exercise detail source exposes only direct Supabase mp4 video URLs and rejects YouTube or generic media URLs', () => {
+  const modelSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/train/exercise-detail-view-models.js'), 'utf8')
+  const directSupabaseMp4Url = 'https://example.supabase.co/storage/v1/object/public/exercise-videos/exercise-1/demo.mp4'
+
+  assert.match(modelSource, /const DEFAULT_VIDEO_URL = null/)
+  assert.match(modelSource, /function normalizeDirectSupabaseMp4Url\(value\)/)
+  assert.match(modelSource, /parsedUrl\.hostname\.endsWith\('\.supabase\.co'\)/)
+  assert.match(modelSource, /parsedUrl\.pathname\.includes\('\/storage\/v1\/object\/public\/exercise-videos\/'\)/)
+  assert.match(modelSource, /parsedUrl\.pathname\.toLowerCase\(\)\.endsWith\('\.mp4'\)/)
+  assert.doesNotMatch(modelSource, /commondatastorage\.googleapis\.com\/gtv-videos-bucket/)
+  assert.doesNotMatch(modelSource, /youtube\.com\/watch|youtu\.be/)
+
+  assert.equal(getExerciseDetailViewModel({
+    exercise: { id: 'exercise-youtube', title: 'YouTube Row', videoUrl: 'https://www.youtube.com/watch?v=WepkDTJaBvw' },
+  }).videoUrl, null)
+  assert.equal(getExerciseDetailViewModel({
+    exercise: { id: 'exercise-cdn', title: 'Generic CDN Row', videoUrl: 'https://cdn.example.com/exercise.mp4' },
+  }).videoUrl, null)
+  assert.equal(getExerciseDetailViewModel({
+    exercise: { id: 'exercise-mov', title: 'Wrong Extension Row', videoUrl: 'https://example.supabase.co/storage/v1/object/public/exercise-videos/exercise-1/demo.mov' },
+  }).videoUrl, null)
+  assert.equal(getExerciseDetailViewModel({
+    exercise: { id: 'exercise-mp4', title: 'Supabase MP4 Row', videoUrl: directSupabaseMp4Url },
+  }).videoUrl, directSupabaseMp4Url)
 })
 
 test('mobile exercise detail view builds athlete-plus-exercise PR chart points from completed sessions instead of hardcoded placeholders', () => {
@@ -602,7 +628,8 @@ test('mobile exercise detail view is video-ready and keeps one shared shell whil
   assert.match(screenSource, /model\.historyHeaders\.map/)
   assert.match(screenSource, /formatHistoryCellDisplay\(model\.historyHeaders\[index\], cell\)/)
   assert.match(screenSource, /<SafeAreaView edges=\{\['bottom'\]\}/)
-  assert.match(screenSource, /className="relative overflow-hidden" style=\{\{ backgroundColor: resolvedTheme\.surface \}\}/)
+  assert.match(screenSource, /testID="exercise-detail-video-preview"[\s\S]*className="relative overflow-hidden"[\s\S]*style=\{\{ backgroundColor: resolvedTheme\.surface \}\}/)
+  assert.match(screenSource, /testID="exercise-detail-progress-chart"/)
   assert.match(screenSource, /className="absolute left-5 h-10 w-10 items-center justify-center rounded-\[14px\]"/)
   assert.match(screenSource, /className="-mt-7 rounded-t-\[32px\] border-x border-t px-5 pt-6"/)
   assert.match(screenSource, /className="text-\[30px\] font-bold leading-\[36px\]" style=\{\{ color: resolvedTheme\.text \}\}>\{model\.title\}<\/Text>/)

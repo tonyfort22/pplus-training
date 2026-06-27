@@ -193,7 +193,7 @@ function WorkoutEditExerciseControls({ exercise, addSetLabel, onAddSet, onOpenRe
       </GlassActionSurface>
 
       <GlassActionSurface className="min-w-[112px]" theme={theme}>
-        <Pressable className="flex-row items-center justify-center gap-2 px-4 py-3" onPress={() => onAddSet(exercise.id)}>
+        <Pressable accessibilityLabel={`Add set to ${exercise.name}`} accessibilityRole="button" testID="workout-edit-add-set-button" className="flex-row items-center justify-center gap-2 px-4 py-3" onPress={() => onAddSet(exercise.id)}>
           <Text className="text-[18px] font-semibold" style={{ color: theme.accentText }}>+</Text>
           <Text className="text-[15px] font-semibold" style={{ color: theme.accentText }}>{addSetLabel || 'Add Set'}</Text>
         </Pressable>
@@ -649,7 +649,12 @@ function WorkoutEditViewContent({ model, onClose, onSave, onAddSet, onDeleteSet,
           <Pressable className="px-1 py-2" onPress={onClose}>
             <Text className="text-[17px]" style={{ color: resolvedTheme.textMuted }}>{model.cancelLabel || 'Cancel'}</Text>
           </Pressable>
-          <Pressable className="px-1 py-2" onPress={() => onSave?.(draft)}>
+          <Pressable
+            accessibilityLabel="Save workout edit"
+            className="px-1 py-2"
+            onPress={() => onSave?.(draft)}
+            testID="workout-edit-save-button"
+          >
             <Text className="text-[17px] font-semibold" style={{ color: resolvedTheme.accentText }}>{model.editLabel || 'Save'}</Text>
           </Pressable>
         </View>
@@ -658,20 +663,24 @@ function WorkoutEditViewContent({ model, onClose, onSave, onAddSet, onDeleteSet,
           <View className="gap-9">
             <View className="gap-3">
               <TextInput
+                accessibilityLabel="Workout edit name"
                 className="px-0 py-1 text-[28px] font-bold leading-[32px]"
                 onChangeText={(nextValue) => setDraft((currentDraft) => ({ ...currentDraft, workoutName: nextValue }))}
                 placeholder={model.workoutNamePlaceholder || 'Workout name'}
                 placeholderTextColor={resolvedTheme.textSoft}
                 style={{ backgroundColor: 'transparent', outlineStyle: 'none', color: resolvedTheme.text }}
+                testID="workout-edit-name-input"
                 value={draft.workoutName}
               />
               <TextInput
+                accessibilityLabel="Workout edit notes"
                 className="min-h-[24px] px-0 py-1 text-[15px] leading-[20px]"
                 multiline
                 onChangeText={handleWorkoutNotesChange}
                 placeholder={model.workoutNotesPlaceholder || 'Add notes'}
                 placeholderTextColor={resolvedTheme.textSoft}
                 style={{ backgroundColor: 'transparent', outlineStyle: 'none', color: resolvedTheme.text }}
+                testID="workout-edit-notes-input"
                 value={draft.workoutNotes}
               />
             </View>
@@ -700,6 +709,8 @@ function WorkoutEditViewContent({ model, onClose, onSave, onAddSet, onDeleteSet,
               <AppOutlinedActionButton
                 theme={resolvedTheme}
                 label={model.addExerciseLabel || 'Add Exercise'}
+                accessibilityLabel="Add exercise to workout edit"
+                testID="workout-edit-add-exercise-button"
                 onPress={handleOpenAddExercise}
                 leftIcon={<Dumbbell color={resolvedTheme.accentText} size={18} strokeWidth={2.2} />}
               />

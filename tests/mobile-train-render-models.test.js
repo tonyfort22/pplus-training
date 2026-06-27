@@ -1,10 +1,32 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { createDemoProgramWorkout, createTrainDemoState, getCalendarSurfaceModel, getTodaySurfaceModel, getWorkoutSurfaceModel, trainTabs } from '../apps/mobile/src/train/index.js'
 import { getActiveSessionSurfaceModel } from '../apps/mobile/src/train/active-session-models.js'
 import { getTrainSurfaceModel } from '../apps/mobile/src/train/train-screen-models.js'
 import { getSessionSections } from '../apps/mobile/src/screens/session-sections.js'
 import { getTrainRenderModel } from '../apps/mobile/src/train/train-render-models.js'
+
+test('Train/Home source routes all empty data sections through one shared EmptyCard section helper', () => {
+  const trainRenderSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/train/train-render-models.js'), 'utf8')
+  const renderersSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/renderers.js'), 'utf8')
+  const cardsSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/ui/cards.js'), 'utf8')
+  const emptyCardHelperBlock = trainRenderSource.match(/function createEmptyCardSection\([\s\S]*?\n\}/)?.[0] || ''
+  const genericEmptyRendererBlock = renderersSource.match(/if \(section\.type === 'empty-state-card'\) \{[\s\S]*?\n    \}/)?.[0] || ''
+  const emptyCardBlock = cardsSource.match(/export function EmptyCard\([\s\S]*?\n\}/)?.[0] || ''
+
+  assert.match(emptyCardHelperBlock, /type:\s*'empty-state-card'/)
+  assert.match(emptyCardHelperBlock, /title:\s*emptyState\.title/)
+  assert.match(emptyCardHelperBlock, /body:\s*emptyState\.body/)
+  assert.equal((trainRenderSource.match(/createEmptyCardSection\(trainSurfaceModel\.surface\.(selectedWorkoutEmptyState|programEmptyState|workoutEmptyState)\)/g) || []).length, 3)
+  assert.doesNotMatch(trainRenderSource, /selectedWorkoutEmptyState\.title|selectedWorkoutEmptyState\.body/)
+  assert.doesNotMatch(trainRenderSource, /programEmptyState\.title|programEmptyState\.body/)
+  assert.doesNotMatch(trainRenderSource, /workoutEmptyState\.title|workoutEmptyState\.body/)
+  assert.match(genericEmptyRendererBlock, /<EmptyCard/)
+  assert.doesNotMatch(genericEmptyRendererBlock, /<SurfaceCard/)
+  assert.doesNotMatch(emptyCardBlock, /actionLabel|targetKey|onAction|Pressable|Button/)
+})
 
 test('getTrainRenderModel builds the stacked train-home sections for the barbell view', () => {
   const trainState = createTrainDemoState({

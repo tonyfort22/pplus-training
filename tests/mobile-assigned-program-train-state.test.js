@@ -1,6 +1,46 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { getAssignedProgramWorkoutIdForDate } from '../apps/mobile/src/train/assigned-program-workout-id.js'
 import { createAssignedProgramTrainState } from '../apps/mobile/src/train/index.js'
+
+test('assigned program train state source uses one shared preferred-workout helper for calendar ids and train-home state', () => {
+  const trainSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/train/index.js'), 'utf8')
+  const workoutIdSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/train/assigned-program-workout-id.js'), 'utf8')
+  const sharedHelperSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/train/assigned-program-workouts.js'), 'utf8')
+  const assignedStateBlock = trainSource.match(/export function createAssignedProgramTrainState\([\s\S]*?\n\}/)?.[0] || ''
+
+  assert.match(sharedHelperSource, /export function getPreferredAssignedWorkout\(dayWorkouts = \[\]\)/)
+  assert.match(sharedHelperSource, /String\(workout\?\.nameSnapshot \|\| ''\)\.trim\(\)/)
+  assert.match(trainSource, /import \{ getPreferredAssignedWorkout, getPreferredAssignedWorkoutName \} from '\.\/assigned-program-workouts\.js'/)
+  assert.match(workoutIdSource, /import \{ getPreferredAssignedWorkout \} from '\.\/assigned-program-workouts\.js'/)
+  assert.match(assignedStateBlock, /const workoutByDayId = new Map\(\)/)
+  assert.match(assignedStateBlock, /getPreferredAssignedWorkout\(dayWorkouts\)/)
+  assert.match(assignedStateBlock, /workouts:\s*dayWorkouts/)
+  assert.match(assignedStateBlock, /hasStructuredWorkoutExercises\(programWorkout\)/)
+  assert.doesNotMatch(workoutIdSource, /day\.workouts\[0\]/)
+})
+
+test('getAssignedProgramWorkoutIdForDate uses the same preferred assigned workout as Train/Home when leading rows are blank', () => {
+  const assignedProgram = {
+    weeks: [
+      {
+        days: [
+          {
+            date: '2026-05-18',
+            workouts: [
+              { id: 'pw-blank-1', nameSnapshot: '' },
+              { id: 'pw-named-1', nameSnapshot: 'Workout 1' },
+            ],
+          },
+        ],
+      },
+    ],
+  }
+
+  assert.equal(getAssignedProgramWorkoutIdForDate(assignedProgram, '2026-05-18'), 'pw-named-1')
+})
 
 test('createAssignedProgramTrainState keeps multiple persisted workouts on the same day available for later train-home hydration', () => {
   const assignedProgram = {

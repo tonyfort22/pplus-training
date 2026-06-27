@@ -17,6 +17,7 @@
     "supabase:functions:deploy:invite": "supabase functions deploy send-athlete-invitation --workdir infra/supabase",
     "lint": "pnpm -r lint",
     "test": "node --test",
+    "test:mobile": "node apps/mobile/testing/run-mobile-tests.js",
     "test:web": "node apps/web/testing/run-web-tests.js",
     "test:web:coverage": "node apps/web/testing/coverage-summary.js",
     "verify:local": "pnpm test",

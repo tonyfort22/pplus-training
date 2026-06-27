@@ -96,7 +96,11 @@ function ConsistencyBarChart({ chart, theme, styles }) {
   const maxChartValue = Math.max(6, ...chart.bars.map((bar) => bar.value || 0))
 
   return (
-    <View style={styles.consistencyCardContent}>
+    <View
+      testID="analytics-consistency-chart"
+      accessibilityLabel="Analytics consistency chart"
+      style={styles.consistencyCardContent}
+    >
       <Text style={styles.consistencyChartTitle}>WORKOUTS PER WEEK</Text>
 
       <View style={styles.consistencyChartWrap}>
@@ -152,7 +156,11 @@ function ConsistencyBarChart({ chart, theme, styles }) {
 
 function RecoveryFigure({ styles, svg }) {
   return (
-    <View style={styles.recoveryFigureWrap}>
+    <View
+      testID="analytics-body-map-figure"
+      accessibilityLabel="Analytics body map figure"
+      style={styles.recoveryFigureWrap}
+    >
       <SvgXml xml={svg} width="100%" height="100%" />
     </View>
   )
@@ -198,7 +206,11 @@ function RecoveryBackButton({ theme, styles }) {
 
 function RecoveryOverview({ rows, onSelectMuscle, styles, svg }) {
   return (
-    <View style={styles.trainingLoadContent}>
+    <View
+      testID="analytics-body-map-surface"
+      accessibilityLabel="Analytics body map surface"
+      style={styles.trainingLoadContent}
+    >
       <RecoveryFigure styles={styles} svg={svg} />
       <View style={styles.recoveryGridColumn}>
         <View style={styles.recoveryGridRow}>
@@ -791,7 +803,7 @@ export function AnalyticsView({ model = getAnalyticsViewModel(), theme, onOpenEx
   }
 
   return (
-    <View style={styles.screen}>
+    <View testID="analytics-progress-screen" accessibilityLabel="Analytics progress screen" style={styles.screen}>
       <View style={styles.analyticsHeaderWrap}>
         <Text style={styles.analyticsEyebrow}>{model.title}</Text>
       </View>

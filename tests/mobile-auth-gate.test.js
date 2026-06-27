@@ -25,7 +25,7 @@ test('mobile auth gate uses the loading-screen background treatment, keeps only 
   const backgroundSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/assets/loading-screen-backgrounds.js'), 'utf8')
   const primitivesSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/ui/primitives.js'), 'utf8')
 
-  assert.match(authSource, /import \{ useWindowDimensions, Pressable, Text, TextInput, View \} from 'react-native'/)
+  assert.match(authSource, /import \{ KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions \} from 'react-native'/)
   assert.match(authSource, /import \{ SvgXml \} from 'react-native-svg'/)
   assert.match(authSource, /import \{ getLoadingScreenThemeBranding \} from '\.\.\/assets\/loading-screen-backgrounds\.js'/)
   assert.match(backgroundSource, /backgroundColor: '#0A1221'/)
@@ -66,7 +66,7 @@ test('mobile auth gate uses the loading-screen background treatment, keeps only 
 test('mobile auth gate keeps the submit button in the normal flex foreground layer so the auth form is not mounted inside an absolute interaction wrapper', () => {
   const authSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/auth-view.js'), 'utf8')
 
-  assert.match(authSource, /<View className="flex-1 px-6">/)
+  assert.match(authSource, /<ScrollView[\s\S]*className="flex-1 px-6"/)
   assert.doesNotMatch(authSource, /<View className="absolute inset-0 px-6">/)
   assert.match(authSource, /<Pressable[\s\S]*onPress=\{\(\) => onSubmit\?\.\(\{ mode, values \}\)\}/)
 })
@@ -75,8 +75,21 @@ test('mobile auth gate uses the loading-screen background treatment and vertical
   const authSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/auth-view.js'), 'utf8')
 
   assert.match(authSource, /<View pointerEvents="none" className="absolute inset-0 items-center justify-center">/)
-  assert.match(authSource, /<View className="flex-1 px-6">/)
-  assert.match(authSource, /<View className="flex-1 items-center justify-center">/)
+  assert.match(authSource, /<ScrollView[\s\S]*className="flex-1 px-6"/)
+  assert.match(authSource, /<View className="items-center justify-center">/)
   assert.match(authSource, /<View className="w-full max-w-\[420px\] gap-5">/)
   assert.doesNotMatch(authSource, /<View className="absolute inset-0 px-6">/)
+})
+
+test('mobile auth login form is keyboard-safe and safe-area padded so primary actions stay reachable', () => {
+  const authSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/auth-view.js'), 'utf8')
+
+  assert.match(authSource, /import \{ KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions \} from 'react-native'/)
+  assert.match(authSource, /import \{ useSafeAreaInsets \} from 'react-native-safe-area-context'/)
+  assert.match(authSource, /const insets = useSafeAreaInsets\(\)/)
+  assert.match(authSource, /<KeyboardAvoidingView[\s\S]*behavior=\{Platform\.OS === 'ios' \? 'padding' : undefined\}[\s\S]*keyboardVerticalOffset=\{0\}/)
+  assert.match(authSource, /<ScrollView[\s\S]*keyboardShouldPersistTaps="handled"[\s\S]*showsVerticalScrollIndicator=\{false\}/)
+  assert.match(authSource, /contentContainerStyle=\{\{[\s\S]*flexGrow: 1,[\s\S]*justifyContent: 'center',[\s\S]*paddingTop: Math\.max\(insets\.top, 24\),[\s\S]*paddingBottom: Math\.max\(insets\.bottom, 24\),[\s\S]*\}\}/)
+  assert.match(authSource, /<Pressable[\s\S]*onPress=\{\(\) => onSubmit\?\.\(\{ mode, values \}\)\}/)
+  assert.match(authSource, /Sign up with invitation code/)
 })

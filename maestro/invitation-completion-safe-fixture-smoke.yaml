@@ -1,0 +1,38 @@
+appId: host.exp.Exponent
+---
+- stopApp
+- openLink: exp://127.0.0.1:8084
+- assertVisible: "Sign up with invitation code"
+- tapOn: "Sign up with invitation code"
+- assertVisible:
+    visible: "Invitation code"
+- tapOn:
+    id: "athlete-invitation-code-input"
+- inputText: "SAFE11"
+- assertVisible: "SAFE11"
+- tapOn: "Continue"
+- assertVisible: "Athlete onboarding"
+- assertVisible: "Enter your details"
+- tapOn: "FIRST NAME"
+- inputText: "Safe"
+- tapOn: "LAST NAME"
+- inputText: "Athlete"
+- tapOn: "PASSWORD"
+- inputText: "secret123"
+- tapOn: "CONFIRM PASSWORD"
+- inputText: "secret123"
+- tapOn: "Next"
+- assertVisible: "What is your date of birth?"
+- tapOn: "Select date"
+- tapOn: "Next"
+- assertVisible: "What is your gender?"
+- tapOn: "Female"
+- tapOn: "Next"
+- assertVisible: "What is your position?"
+- tapOn: "Forward"
+- tapOn: "Next"
+- assertVisible: "What is your weight?"
+- tapOn: "Next"
+- assertVisible: "What is your height?"
+- tapOn: "Get started"
+- assertVisible: "Welcome to PPLUS."

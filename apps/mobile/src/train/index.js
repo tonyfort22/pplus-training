@@ -1,5 +1,6 @@
 import { completeWorkoutSet, createWorkoutSession, discardWorkoutSession, finishWorkoutSession } from '../../../../packages/core/src/index.js'
 export { createTrainSessionStore } from './session-runtime.js'
+import { getPreferredAssignedWorkout, getPreferredAssignedWorkoutName } from './assigned-program-workouts.js'
 import { doesSessionMatchWorkout, getComparableProgramWorkoutId } from './session-truth.js'
 
 export const mobileTabs = [
@@ -143,18 +144,75 @@ function hasStructuredWorkoutExercises(programWorkout) {
   return Array.isArray(programWorkout?.exercises) && programWorkout.exercises.length > 0
 }
 
-function getPreferredAssignedWorkout(dayWorkouts = []) {
-  return dayWorkouts.find((workout) => String(workout?.nameSnapshot || '').trim()) || dayWorkouts[0] || null
-}
+export function createStandaloneProgramWorkoutTrainState({ programWorkout = null, startedAt, previewState = 'planned', todayIsoDate = null, completedSessions = [] } = {}) {
+  const todayDate = todayIsoDate || new Date().toISOString().slice(0, 10)
+  const workoutName = programWorkout?.nameSnapshot || programWorkout?.name || 'Workout'
+  const todayCalendarDayId = programWorkout?.programDayId || programWorkout?.program_day_id || 'today'
+  const session = createPreviewSession({ programWorkout, startedAt, previewState })
+  const workoutPreview = programWorkout?.id ? createAssignedProgramWorkoutPreview(programWorkout, workoutName) : null
+  const completedWorkouts = String(programWorkout?.status || '').toLowerCase() === 'completed' ? 1 : 0
+  const totalWorkouts = programWorkout?.id ? 1 : 0
 
-function getPreferredAssignedWorkoutName(dayWorkouts = [], fallbackDayName = null) {
-  const preferredWorkout = getPreferredAssignedWorkout(dayWorkouts)
-  return preferredWorkout?.nameSnapshot || fallbackDayName || 'Rest Day'
+  return {
+    programWorkout,
+    today: {
+      title: 'Today',
+      workoutName,
+      scheduledLabel: programWorkout?.id ? 'Scheduled for today' : 'No workout scheduled',
+      quickSummary: programWorkout?.id
+        ? 'Start the session, log each set cleanly, and keep rest flowing.'
+        : 'No workout is scheduled for the selected athlete today.',
+    },
+    program: {
+      id: programWorkout?.programId || programWorkout?.program_id || null,
+      name: programWorkout?.programName || programWorkout?.program_name || 'Training Program',
+      dateRangeLabel: '',
+      currentWeek: 1,
+      totalWeeks: 1,
+      weekLabel: 'Week 1 of 1',
+      completedWorkouts,
+      totalWorkouts,
+      completionLabel: `${completedWorkouts} of ${totalWorkouts} workouts completed`,
+      todayCalendarDayId,
+      selectedCalendarDayId: todayCalendarDayId,
+      weeks: [
+        {
+          id: programWorkout?.programWeekId || programWorkout?.program_week_id || 'week-current',
+          weekIndex: 1,
+          name: 'Week 1',
+          days: [
+            {
+              id: todayCalendarDayId,
+              date: todayDate,
+              name: workoutName,
+              workouts: programWorkout?.id ? [programWorkout] : [],
+            },
+          ],
+        },
+      ],
+      calendarWeek: [
+        {
+          id: todayCalendarDayId,
+          dayLabel: formatWeekdayShortLabel(todayDate),
+          weekdayLabel: formatWeekdayUpperLabel(todayDate),
+          dateLabel: formatMonthDayLabel(todayDate),
+          workoutName,
+          status: workoutPreview?.id ? 'today' : 'off',
+          programDayId: todayCalendarDayId,
+          date: todayDate,
+          workoutPreview,
+          workouts: programWorkout?.id ? [programWorkout] : [],
+        },
+      ],
+    },
+    session,
+    completedSessions: Array.isArray(completedSessions) ? completedSessions : [],
+  }
 }
 
 export function createAssignedProgramTrainState({ assignedProgram, programWorkout = null, startedAt, previewState = 'planned', todayIsoDate = null, completedSessions = [] } = {}) {
   if (!assignedProgram?.id) {
-    return createTrainDemoState({ programWorkout: programWorkout || createDemoProgramWorkout(), startedAt, previewState })
+    return createStandaloneProgramWorkoutTrainState({ programWorkout, startedAt, previewState, todayIsoDate, completedSessions })
   }
 
   const todayDate = todayIsoDate || new Date().toISOString().slice(0, 10)

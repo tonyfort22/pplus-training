@@ -14,7 +14,7 @@ export function getAppRenderModel({
 
   if (overrideScreen) {
     return {
-      bottomTabs: bottomTabViewItems,
+      bottomTabs: null,
       screen: overrideScreen,
     }
   }

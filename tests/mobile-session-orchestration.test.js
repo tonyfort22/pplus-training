@@ -2337,7 +2337,8 @@ test('orchestrateOpenExerciseDetail opens the detail view, closes the correct so
     ['getExerciseById', 'exercise-1'],
   ]);
 
-  resolveById({ id: 'resolved-1', name: 'Rear Foot Elevated Split Squat', videoUrl: 'resolved.mp4', thumbnailUrl: 'thumb.jpg' });
+  const directSupabaseMp4Url = 'https://example.supabase.co/storage/v1/object/public/exercise-videos/resolved-1/demo.mp4';
+  resolveById({ id: 'resolved-1', name: 'Rear Foot Elevated Split Squat', videoUrl: directSupabaseMp4Url, thumbnailUrl: 'thumb.jpg' });
   await Promise.resolve();
   await Promise.resolve();
 
@@ -2349,8 +2350,78 @@ test('orchestrateOpenExerciseDetail opens the detail view, closes the correct so
     id: 'resolved-1',
     name: 'Rear Foot Elevated Split Squat',
     exerciseId: 'resolved-1',
-    videoUrl: 'resolved.mp4',
+    videoUrl: directSupabaseMp4Url,
     thumbnailUrl: 'thumb.jpg',
+  });
+});
+
+test('orchestrateOpenExerciseDetail hydrates exercise detail preview with only direct Supabase mp4 URLs', async () => {
+  const calls = [];
+  let resolveById;
+  const directSupabaseMp4Url = 'https://example.supabase.co/storage/v1/object/public/exercise-videos/exercise-1/demo.mp4';
+  const client = {
+    getExerciseById(exerciseId) {
+      calls.push(['getExerciseById', exerciseId]);
+      return new Promise((resolve) => {
+        resolveById = resolve;
+      });
+    },
+  };
+
+  orchestrateOpenExerciseDetail({
+    exercise: { id: 'exercise-1', name: 'Split Squat', videoUrl: 'https://www.youtube.com/watch?v=WepkDTJaBvw' },
+    sourceSurface: 'workout-sheet',
+    exerciseDetailClient: client,
+    logger: { info: () => {} },
+    setSelectedExercisePreview: (value) => calls.push(['setSelectedExercisePreview', value]),
+  });
+
+  resolveById({ id: 'exercise-1', name: 'Split Squat', videoUrl: directSupabaseMp4Url });
+  await Promise.resolve();
+  await Promise.resolve();
+
+  const updater = calls.find((call) => call[0] === 'setSelectedExercisePreview' && typeof call[1] === 'function')?.[1];
+  assert.equal(typeof updater, 'function');
+  assert.deepEqual(updater({ id: 'exercise-1', name: 'Split Squat', videoUrl: 'https://www.youtube.com/watch?v=WepkDTJaBvw' }), {
+    id: 'exercise-1',
+    name: 'Split Squat',
+    videoUrl: directSupabaseMp4Url,
+    exerciseId: 'exercise-1',
+    thumbnailUrl: null,
+  });
+});
+
+test('orchestrateOpenExerciseDetail drops fetched YouTube or generic media URLs before they reach preview state', async () => {
+  const calls = [];
+  let resolveById;
+  const client = {
+    getExerciseById() {
+      return new Promise((resolve) => {
+        resolveById = resolve;
+      });
+    },
+  };
+
+  orchestrateOpenExerciseDetail({
+    exercise: { id: 'exercise-1', name: 'Split Squat', videoUrl: 'https://cdn.example.com/not-allowed.mp4' },
+    sourceSurface: 'workout-sheet',
+    exerciseDetailClient: client,
+    logger: { info: () => {} },
+    setSelectedExercisePreview: (value) => calls.push(['setSelectedExercisePreview', value]),
+  });
+
+  resolveById({ id: 'exercise-1', name: 'Split Squat', videoUrl: 'https://www.youtube.com/watch?v=WepkDTJaBvw' });
+  await Promise.resolve();
+  await Promise.resolve();
+
+  const updater = calls.find((call) => call[0] === 'setSelectedExercisePreview' && typeof call[1] === 'function')?.[1];
+  assert.equal(typeof updater, 'function');
+  assert.deepEqual(updater({ id: 'exercise-1', name: 'Split Squat', videoUrl: 'https://cdn.example.com/not-allowed.mp4' }), {
+    id: 'exercise-1',
+    name: 'Split Squat',
+    videoUrl: null,
+    exerciseId: 'exercise-1',
+    thumbnailUrl: null,
   });
 });
 

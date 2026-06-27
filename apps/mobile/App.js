@@ -78,6 +78,7 @@ import {
 } from './src/train/session-orchestration.js';
 import { deriveWorkoutOpenRequestContext } from './src/train/workout-open-request-context.js';
 import { hydrateCoachTrainBridge } from './src/train/coach-train-bridge.js';
+import { resolveCoachSelectedAthleteStorage } from './src/train/coach-athlete-context-storage.js';
 import { createMobileInvitationClient, sendCoachAthleteInvitation } from './src/train/athlete-invitation-runtime.js';
 import { orchestrateWorkoutOpen } from './src/train/workout-open-selection.js';
 import { orchestrateStartWorkoutFromSheet } from './src/train/start-workout-selection.js';
@@ -119,6 +120,14 @@ const authPreviewStates = [
   { key: 'sign_in', label: 'Sign in' },
   { key: 'sign_up', label: 'Sign up' },
 ];
+
+const INVITED_ATHLETE_COMPLETION_STATES = Object.freeze({
+  IDLE: 'idle',
+  SUBMITTING: 'submitting',
+  UNAVAILABLE: 'unavailable',
+  SUCCEEDED: 'succeeded',
+  FAILED: 'failed',
+});
 
 const initialInvitationOnboardingValues = {
   avatarUrl: '',
@@ -205,7 +214,37 @@ function createMobileWorkoutClient({ env = process.env, fetchImpl = globalThis.f
   });
 }
 
+function createProfileGroupUpdateSafeGroupsClient() {
+  return {
+    async updateGroup({ groupId, name, athleteIds = [] } = {}) {
+      return {
+        id: groupId,
+        name,
+        athleteIds,
+        athleteCount: athleteIds.length,
+        athleteCountLabel: `${athleteIds.length} ${athleteIds.length === 1 ? 'athlete' : 'athletes'}`,
+        status: 'active',
+      }
+    },
+    async createGroup({ coachId, name, athleteIds = [] } = {}) {
+      return {
+        id: 'group-profile-update-safe-created',
+        coachId,
+        name,
+        athleteIds,
+        athleteCount: athleteIds.length,
+        athleteCountLabel: `${athleteIds.length} ${athleteIds.length === 1 ? 'athlete' : 'athletes'}`,
+        status: 'active',
+      }
+    },
+  }
+}
+
 function createMobileGroupsClient({ env = process.env, fetchImpl = globalThis.fetch, accessToken = null } = {}) {
+  if (env?.EXPO_PUBLIC_PPLUS_PROFILE_GROUP_UPDATE_FIXTURE === 'profile_group_update_safe') {
+    return createProfileGroupUpdateSafeGroupsClient()
+  }
+
   const url = env.EXPO_PUBLIC_SUPABASE_URL;
   const anonKey = env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -335,7 +374,9 @@ function AppShellContent() {
   const emptySession = useMemo(() => createEmptySessionState(), []);
   const emptyTrainState = useMemo(() => createEmptyTrainState(emptySession), [emptySession]);
   const { authSession, bootstrapState, sessionStore, signInWithPassword, signUpWithPassword, resetPasswordForEmail, signOut, refreshAuthSession, updateAuthSession, updateAthleteProfile, updateCoachProfile, createCoachBodyMetricLog, getLatestCoachBodyMetricLog } = useMobileAuthSession();
-  const runtimeAuthPreviewState = process.env.EXPO_PUBLIC_PPLUS_RUNTIME_AUTH_PREVIEW || null;
+  const runtimeAuthPreviewEnv = globalThis.process?.env || {};
+  const runtimeAuthPreviewState = runtimeAuthPreviewEnv.EXPO_PUBLIC_PPLUS_RUNTIME_AUTH_PREVIEW || process.env.EXPO_PUBLIC_PPLUS_RUNTIME_AUTH_PREVIEW || null;
+  const runtimeBootstrapOverride = runtimeAuthPreviewEnv.EXPO_PUBLIC_PPLUS_RUNTIME_BOOTSTRAP_OVERRIDE || process.env.EXPO_PUBLIC_PPLUS_RUNTIME_BOOTSTRAP_OVERRIDE || null;
   const isAuthPreviewEnabled = runtimeAuthPreviewState === 'sign_in' || runtimeAuthPreviewState === 'sign_up';
   const [authPreviewState, setAuthPreviewState] = useState(runtimeAuthPreviewState || 'live');
   const [authMode, setAuthMode] = useState('sign_in');
@@ -345,6 +386,7 @@ function AppShellContent() {
   const [authInvitationCodeErrorMessage, setAuthInvitationCodeErrorMessage] = useState('');
   const [authInvitationOnboardingStep, setAuthInvitationOnboardingStep] = useState(0);
   const [authInvitationOnboardingValues, setAuthInvitationOnboardingValues] = useState(initialInvitationOnboardingValues);
+  const [invitedAthleteCompletionState, setInvitedAthleteCompletionState] = useState(INVITED_ATHLETE_COMPLETION_STATES.IDLE);
   const [isAuthSubmitting, setIsAuthSubmitting] = useState(false);
   const [isProfileSaving, setIsProfileSaving] = useState(false);
   const [profileSaveNotice, setProfileSaveNotice] = useState('');
@@ -376,6 +418,8 @@ function AppShellContent() {
   const [isGroupEditViewOpen, setIsGroupEditViewOpen] = useState(false);
   const [selectedGroupEditModel, setSelectedGroupEditModel] = useState(null);
   const [groupEditDraftModel, setGroupEditDraftModel] = useState(null);
+  const [isSavingGroupEdit, setIsSavingGroupEdit] = useState(false);
+  const [groupEditErrorMessage, setGroupEditErrorMessage] = useState('');
   const [isDeleteWorkoutModalOpen, setIsDeleteWorkoutModalOpen] = useState(false);
   const [isDeletingWorkout, setIsDeletingWorkout] = useState(false);
   const [deleteWorkoutErrorMessage, setDeleteWorkoutErrorMessage] = useState('');
@@ -401,7 +445,9 @@ function AppShellContent() {
   const [selectedCalendarDayId, setSelectedCalendarDayId] = useState(() => emptyTrainState.program.selectedCalendarDayId);
   const [selectedCoachAthleteId, setSelectedCoachAthleteId] = useState(null);
   const [resolvedCoachAthleteDefaultId, setResolvedCoachAthleteDefaultId] = useState(null);
+  const [hasRehydratedSelectedCoachAthleteContext, setHasRehydratedSelectedCoachAthleteContext] = useState(false);
   const workflowContextKeyRef = useRef(null);
+  const coachSelectedAthleteStorageRef = useRef(null);
   const invitationClient = useMemo(() => createMobileInvitationClient({ accessToken: authSession.accessToken }), [authSession.accessToken]);
   const invitationCompletionClient = useMemo(() => createMobileInvitationClient({ accessToken: null }), []);
   const [coachTrainBridgeState, setCoachTrainBridgeState] = useState({ trainState: null, sessionStore: null, isHydrating: false, hasResolved: false });
@@ -483,7 +529,46 @@ function AppShellContent() {
   }, [activeCoachAthleteProfile, selectedCoachAthlete]);
 
   useEffect(() => {
-    if (bootstrapState.status !== 'authenticated_coach' || !authSession?.accessToken || !bootstrapState.coachAthletes?.length) {
+    let isActive = true
+
+    if (bootstrapState.status !== 'authenticated_coach') {
+      setHasRehydratedSelectedCoachAthleteContext(false)
+      return () => {
+        isActive = false
+      }
+    }
+
+    setHasRehydratedSelectedCoachAthleteContext(false)
+
+    ;(async () => {
+      const storage = await resolveCoachSelectedAthleteStorage()
+      if (!isActive) return
+      coachSelectedAthleteStorageRef.current = storage
+      const storedCoachAthleteId = await storage?.getItem?.()
+      if (!isActive) return
+      if (storedCoachAthleteId && coachAthleteOptions.some((athlete) => athlete.id === storedCoachAthleteId)) {
+        setSelectedCoachAthleteId(storedCoachAthleteId)
+      }
+      setHasRehydratedSelectedCoachAthleteContext(true)
+    })()
+
+    return () => {
+      isActive = false
+    }
+  }, [bootstrapState.status, coachAthleteOptions])
+
+  useEffect(() => {
+    if (bootstrapState.status !== 'authenticated_coach') {
+      coachSelectedAthleteStorageRef.current?.removeItem?.()
+      return
+    }
+
+    if (!coachAthleteOptions.some((athlete) => athlete.id === selectedCoachAthleteId)) return
+    coachSelectedAthleteStorageRef.current?.setItem?.(selectedCoachAthleteId)
+  }, [bootstrapState.status, coachAthleteOptions, selectedCoachAthleteId])
+
+  useEffect(() => {
+    if (bootstrapState.status !== 'authenticated_coach' || !authSession?.accessToken || !bootstrapState.coachAthletes?.length || !hasRehydratedSelectedCoachAthleteContext) {
       setResolvedCoachAthleteDefaultId(null)
       return
     }
@@ -517,7 +602,7 @@ function AppShellContent() {
     return () => {
       isActive = false
     }
-  }, [authSession?.accessToken, bootstrapState.coachAthletes, bootstrapState.status, coachAthleteOptions, selectedCoachAthleteId]);
+  }, [authSession?.accessToken, bootstrapState.coachAthletes, bootstrapState.status, coachAthleteOptions, hasRehydratedSelectedCoachAthleteContext, selectedCoachAthleteId]);
 
   useEffect(() => {
     if (!resolvedCoachAthleteDefaultId) return
@@ -568,7 +653,17 @@ function AppShellContent() {
   }, [getLatestCoachBodyMetricLog, selectedCoachAthlete?.athleteProfileId, selectedCoachAthleteId])
 
   useEffect(() => {
-    if (bootstrapState.status !== 'authenticated_coach' || !activeCoachAthleteProfile?.id || !authSession?.accessToken) {
+    if (runtimeBootstrapOverride === 'authenticated_coach_safe_workout_seeded' || runtimeBootstrapOverride === 'authenticated_coach_assigned_program_seeded') {
+      setCoachTrainBridgeState({
+        trainState: bootstrapState.trainState,
+        sessionStore: bootstrapState.sessionStore,
+        isHydrating: false,
+        hasResolved: true,
+      })
+      return
+    }
+
+    if (runtimeBootstrapOverride === 'authenticated_coach_shell_seeded' || runtimeBootstrapOverride === 'authenticated_coach_athlete_switching_safe' || bootstrapState.status !== 'authenticated_coach' || !activeCoachAthleteProfile?.id || !authSession?.accessToken) {
       setCoachTrainBridgeState({ trainState: null, sessionStore: null, isHydrating: false, hasResolved: false })
       return
     }
@@ -613,7 +708,7 @@ function AppShellContent() {
     return () => {
       isActive = false
     }
-  }, [activeCoachAthleteProfile?.id, authSession?.accessToken, authSession?.currentUserId, bootstrapState.status, refreshAuthSession, selectedCoachAthlete?.athleteProfileId])
+  }, [activeCoachAthleteProfile?.id, authSession?.accessToken, authSession?.currentUserId, bootstrapState.status, refreshAuthSession, runtimeBootstrapOverride, selectedCoachAthlete?.athleteProfileId])
   const [elapsedSecondsNow, setElapsedSecondsNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -790,14 +885,18 @@ function AppShellContent() {
   const bottomTabViewItems = useMemo(() => getBottomTabViewItems(bottomTabModels), [bottomTabModels]);
   const isCoachBootstrapState = effectiveBootstrapState.status === 'authenticated_coach';
   const isAthleteLimitedState = !isRuntimeTrainHomeVerificationEnabled && !isCoachBootstrapState && (effectiveBootstrapState.status === 'authenticated' || effectiveBootstrapState.status === 'authenticated_no_workout');
-  const activeTrainAthleteProfile = useMemo(() => {
-    if (isCoachBootstrapState) {
-      return activeCoachAthleteProfile ?? null
-    }
+  const activeTrainContext = useMemo(() => {
+    const source = isCoachBootstrapState ? 'coach-selected-athlete' : 'signed-in-athlete'
+    const athleteProfile = isCoachBootstrapState ? activeCoachAthleteProfile ?? null : effectiveBootstrapState.athleteProfile ?? null
 
-    return effectiveBootstrapState.athleteProfile ?? null
-  }, [activeCoachAthleteProfile, effectiveBootstrapState.athleteProfile, isCoachBootstrapState])
-  const activeTrainAthleteId = activeTrainAthleteProfile?.id ?? null;
+    return {
+      source,
+      athleteProfile,
+      coachSelectedAthleteId: isCoachBootstrapState ? selectedCoachAthleteId : null,
+    }
+  }, [activeCoachAthleteProfile, effectiveBootstrapState.athleteProfile, isCoachBootstrapState, selectedCoachAthleteId])
+  const activeTrainAthleteProfile = activeTrainContext.athleteProfile;
+  const activeTrainAthleteId = activeTrainContext.athleteProfile?.id ?? null;
   const activeTrainAthleteLabel = useMemo(() => {
     if (isCoachBootstrapState) {
       return activeCoachAthleteSummary
@@ -1133,6 +1232,7 @@ function AppShellContent() {
     setAuthInvitationCode('');
     setAuthInvitationOnboardingStep(0);
     setAuthInvitationOnboardingValues(initialInvitationOnboardingValues);
+    setInvitedAthleteCompletionState(INVITED_ATHLETE_COMPLETION_STATES.IDLE);
   }
 
   function handleContinueInvitationCodeFlow() {
@@ -1160,6 +1260,7 @@ function AppShellContent() {
   }
 
   function handleInvitationOnboardingChange(fieldId, nextValue) {
+    setInvitedAthleteCompletionState(INVITED_ATHLETE_COMPLETION_STATES.IDLE);
     setAuthInvitationOnboardingValues((current) => ({ ...current, [fieldId]: nextValue }));
   }
 
@@ -1286,9 +1387,11 @@ function AppShellContent() {
       }
 
       if (!invitationCompletionClient?.completeAthleteInvitation) {
+        setInvitedAthleteCompletionState(INVITED_ATHLETE_COMPLETION_STATES.UNAVAILABLE);
         throw new Error('Athlete invitation completion is not available right now.');
       }
 
+      setInvitedAthleteCompletionState(INVITED_ATHLETE_COMPLETION_STATES.SUBMITTING);
       const completionResult = await invitationCompletionClient.completeAthleteInvitation({
         inviteCode: authInvitationCode,
         firstName: authInvitationOnboardingValues.firstName,
@@ -1320,11 +1423,13 @@ function AppShellContent() {
       }
 
       void nextAuthSession;
+      setInvitedAthleteCompletionState(INVITED_ATHLETE_COMPLETION_STATES.SUCCEEDED);
       setAuthInvitationCode('');
       setAuthInvitationOnboardingValues(initialInvitationOnboardingValues);
       setAuthInvitationOnboardingStep(0);
       setAuthNoticeMessage('Welcome to PPLUS.');
     } catch (error) {
+      setInvitedAthleteCompletionState((current) => current === INVITED_ATHLETE_COMPLETION_STATES.UNAVAILABLE ? current : INVITED_ATHLETE_COMPLETION_STATES.FAILED);
       setAuthErrorMessage(error?.message || 'Something went sideways while preparing the athlete onboarding flow.');
     } finally {
       setIsAuthSubmitting(false);
@@ -1666,9 +1771,7 @@ function AppShellContent() {
   }
 
   async function handleCreateWorkout() {
-    const rawAthleteId = bootstrapState.status === 'authenticated_coach'
-      ? activeCoachAthleteProfile?.id || null
-      : bootstrapState.athleteProfile?.id || trainState.programWorkout?.athleteId || null;
+    const rawAthleteId = activeTrainAthleteId ?? null;
     const rawCoachId = trainState.programWorkout?.coachId || activeCoachAthleteProfile?.coachId || null;
     const rawProgramId = trainState.program.id || null;
     const athleteId = isUuidValue(rawAthleteId) ? rawAthleteId : null;
@@ -2087,16 +2190,20 @@ function AppShellContent() {
     setIsGroupEditViewOpen(false);
     setSelectedGroupEditModel(null);
     setGroupEditDraftModel(null);
+    setGroupEditErrorMessage('');
+    setIsSavingGroupEdit(false);
   }
 
   async function handleSaveGroupEdit(draft = {}) {
     const athleteIds = (draft.athleteIds || draft.athletes?.map((athlete) => athlete.id) || []).map(normalizeGroupAthleteIdForPersistence).filter(Boolean);
+    setGroupEditErrorMessage('');
 
     if (!groupEditClient) {
-      handleCloseGroupEditView();
+      setGroupEditErrorMessage('Group save is unavailable right now.');
       return;
     }
 
+    setIsSavingGroupEdit(true);
     try {
       if (selectedGroupEditModel?.id || draft.groupId) {
         await groupEditClient.updateGroup({
@@ -2115,6 +2222,9 @@ function AppShellContent() {
       handleCloseGroupEditView();
     } catch (error) {
       console.error('Failed to save group', error);
+      setGroupEditErrorMessage(error?.message || 'Something went sideways while saving the group.');
+    } finally {
+      setIsSavingGroupEdit(false);
     }
   }
 
@@ -2240,6 +2350,7 @@ function AppShellContent() {
               onPrevious={handleInvitationOnboardingPrevious}
               onClose={handleCloseInvitationOnboardingView}
               isSubmitting={isAuthSubmitting}
+              completionState={invitedAthleteCompletionState}
               errorMessage={authErrorMessage}
               noticeMessage={authNoticeMessage}
               theme={appTheme}
@@ -2284,7 +2395,7 @@ function AppShellContent() {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
+      <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={styles.container}>
         {isAuthPreviewEnabled ? (
           <View style={styles.previewBar}>
             <View style={styles.previewHeaderTopRow}>
@@ -2320,7 +2431,7 @@ function AppShellContent() {
         {renderAppShell({
           styles,
           screen: appRenderModel.screen,
-          bottomTabs: bottomTabViewItems,
+          bottomTabs: appRenderModel.bottomTabs,
           activeAthleteSummary: isCoachBootstrapState ? activeTrainAthleteLabel : null,
           floatingStartWorkoutButton: floatingStartWorkoutButtonModel,
           trainRenderModel,
@@ -2478,6 +2589,8 @@ function AppShellContent() {
         onSave={handleSaveGroupEdit}
         onAddAthletes={() => {}}
         onDeleteGroup={handleCloseGroupEditView}
+        isSavingGroup={isSavingGroupEdit}
+        saveErrorMessage={groupEditErrorMessage}
         theme={appTheme}
       />
 

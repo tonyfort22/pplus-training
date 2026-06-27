@@ -2,7 +2,24 @@ import {
   resolveMetricProfileIdFromExercise,
 } from './exercise-metric-profile-resolution.js'
 
-const DEFAULT_VIDEO_URL = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4'
+const DEFAULT_VIDEO_URL = null
+
+function normalizeDirectSupabaseMp4Url(value) {
+  if (typeof value !== 'string' || !value.trim()) return null
+
+  let parsedUrl = null
+  try {
+    parsedUrl = new URL(value.trim())
+  } catch {
+    return null
+  }
+
+  const isSupabaseProjectHost = parsedUrl.hostname.endsWith('.supabase.co')
+  const isExerciseVideoStorageUrl = parsedUrl.pathname.includes('/storage/v1/object/public/exercise-videos/')
+  const isMp4Url = parsedUrl.pathname.toLowerCase().endsWith('.mp4')
+
+  return isSupabaseProjectHost && isExerciseVideoStorageUrl && isMp4Url ? parsedUrl.toString() : null
+}
 
 const EXERCISE_LIBRARY = {
   'exercise-squat': {
@@ -27,7 +44,7 @@ function createFallbackExerciseDetail(exercise) {
   return {
     id: exercise?.exerciseId || exercise?.id || 'exercise-generic',
     title: exercise?.title || exercise?.name || exercise?.nameSnapshot || 'Exercise detail',
-    videoUrl: exercise?.videoUrl || DEFAULT_VIDEO_URL,
+    videoUrl: normalizeDirectSupabaseMp4Url(exercise?.videoUrl) || DEFAULT_VIDEO_URL,
     metricProfileId: 'strength_1rm',
     progressPoints: [],
     historyHeaders: ['DATE', 'WEIGHT (LB)', 'REPS', 'EST 1RM (LB)'],
@@ -365,7 +382,7 @@ function getExerciseDetailRecord(exercise, sessions = []) {
   if (libraryDetail) {
     return {
       ...libraryDetail,
-      videoUrl: exercise?.videoUrl || libraryDetail.videoUrl || DEFAULT_VIDEO_URL,
+      videoUrl: normalizeDirectSupabaseMp4Url(exercise?.videoUrl) || normalizeDirectSupabaseMp4Url(libraryDetail.videoUrl) || DEFAULT_VIDEO_URL,
       ...metricProfile,
     }
   }

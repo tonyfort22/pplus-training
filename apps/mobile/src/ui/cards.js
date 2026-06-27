@@ -71,6 +71,8 @@ export function CreateWorkoutCard({ styles, title, subtitle, onAction }) {
   return (
     <AppSurfaceCard
       theme={theme}
+      accessibilityLabel={title || 'Create workout'}
+      testID="create-workout-card"
       onPress={onAction}
       contentClassName="flex-row items-center justify-between px-6 py-5"
       style={{
@@ -148,7 +150,7 @@ export function SurfaceCard({
       <Text className="text-[20px] font-bold" style={{ color: theme.text }}>{title}</Text>
       <Text className="text-[15px] leading-[22px]" style={{ color: theme.textMuted }}>{body}</Text>
       {actionLabel ? (
-        <AppButton theme={theme} label={actionLabel} onPress={onAction} />
+        <AppButton theme={theme} label={actionLabel} accessibilityLabel={actionLabel} testID="surface-card-action-button" onPress={onAction} />
       ) : null}
     </AppSurfaceCard>
   )

@@ -1,3 +1,12 @@
+function createEmptyCardSection(emptyState) {
+  return {
+    type: 'empty-state-card',
+    variant: 'empty-card',
+    title: emptyState.title,
+    body: emptyState.body,
+  }
+}
+
 export function getTrainRenderModel({ trainSurfaceModel, sessionSections }) {
   if (trainSurfaceModel.surface.type === 'completed-session' || trainSurfaceModel.surface.type === 'discarded-session') {
     return {
@@ -74,12 +83,7 @@ export function getTrainRenderModel({ trainSurfaceModel, sessionSections }) {
                 type: 'action-card',
                 ...trainSurfaceModel.surface.selectedWorkoutCard,
               }
-            : {
-                type: 'empty-state-card',
-                variant: 'empty-card',
-                title: trainSurfaceModel.surface.selectedWorkoutEmptyState.title,
-                body: trainSurfaceModel.surface.selectedWorkoutEmptyState.body,
-              },
+            : createEmptyCardSection(trainSurfaceModel.surface.selectedWorkoutEmptyState),
           {
             type: 'section-heading',
             title: trainSurfaceModel.surface.programSectionTitle,
@@ -89,12 +93,7 @@ export function getTrainRenderModel({ trainSurfaceModel, sessionSections }) {
                 type: 'action-card',
                 ...trainSurfaceModel.surface.programCard,
               }
-            : {
-                type: 'empty-state-card',
-                variant: 'empty-card',
-                title: trainSurfaceModel.surface.programEmptyState.title,
-                body: trainSurfaceModel.surface.programEmptyState.body,
-              },
+            : createEmptyCardSection(trainSurfaceModel.surface.programEmptyState),
           {
             type: 'section-heading',
             title: trainSurfaceModel.surface.workoutListTitle,
@@ -105,12 +104,7 @@ export function getTrainRenderModel({ trainSurfaceModel, sessionSections }) {
                 title: undefined,
                 rows: trainSurfaceModel.surface.workoutListRows,
               }]
-            : [{
-                type: 'empty-state-card',
-                variant: 'empty-card',
-                title: trainSurfaceModel.surface.workoutEmptyState.title,
-                body: trainSurfaceModel.surface.workoutEmptyState.body,
-              }]),
+            : [createEmptyCardSection(trainSurfaceModel.surface.workoutEmptyState)]),
           ...(trainSurfaceModel.surface.createWorkoutCard
             ? [{
                 type: 'create-workout-card',
