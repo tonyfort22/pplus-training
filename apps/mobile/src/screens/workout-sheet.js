@@ -91,7 +91,7 @@ function WorkoutSheetContent({ model, theme, onClose, onStartWorkout, onEditWork
           >
             <X color={resolvedTheme.icon} size={20} strokeWidth={2.4} />
           </AppSurfaceCard>
-          <Pressable onPress={onEditWorkout}>
+          <Pressable accessibilityLabel="Edit workout" accessibilityRole="button" testID="workout-sheet-edit-button" onPress={onEditWorkout}>
             <Text className="text-[17px] font-semibold" style={{ color: resolvedTheme.accentText }}>{model.editLabel || 'Edit'}</Text>
           </Pressable>
         </View>
@@ -137,6 +137,8 @@ function WorkoutSheetContent({ model, theme, onClose, onStartWorkout, onEditWork
         <AppButton
           theme={resolvedTheme}
           label={isStartingWorkout ? 'Starting...' : (model.ctaLabel || 'Start Workout')}
+          accessibilityLabel="Start workout from sheet"
+          testID="workout-sheet-start-button"
           disabled={isStartingWorkout}
           onPress={onStartWorkout}
           style={{

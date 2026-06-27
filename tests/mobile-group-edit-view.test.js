@@ -117,6 +117,30 @@ test('GroupEditView opens an inline Add Athletes picker based on the Add Exercis
   assert.match(source, /\{draft\.athletes\.length > 0 \? \([\s\S]*draft\.athletes\.map\(\(athlete\) => \([\s\S]*<AthleteSelectionRow[\s\S]*key=\{athlete\.id\}[\s\S]*athlete=\{athlete\}[\s\S]*rightAction=\{[\s\S]*<Trash2 color=\{resolvedTheme\.textMuted\} size=\{18\} strokeWidth=\{2\.2\} \/>[\s\S]*onRightActionPress=\{\(\) => handleRemoveDraftAthlete\(athlete\.id\)\}/)
 })
 
+test('GroupEditView source covers draft validation, disabled save, saving copy, and app-owned error form states', () => {
+  const source = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/group-edit-view.js'), 'utf8')
+  const appSource = readFileSync(resolve(process.cwd(), 'apps/mobile/App.js'), 'utf8')
+
+  assert.match(source, /const \[draft, setDraft\] = useState\(\(\) => \(model \? createDraftFromModel\(model\) : null\)\)/)
+  assert.match(source, /const \[localSaveErrorMessage, setLocalSaveErrorMessage\] = useState\(''\)/)
+  assert.match(source, /const trimmedGroupName = draft\.groupName\.trim\(\)/)
+  assert.match(source, /const visibleSaveErrorMessage = localSaveErrorMessage \|\| saveErrorMessage/)
+  assert.match(source, /const isSaveDisabled = isSavingGroup \|\| !trimmedGroupName/)
+  assert.match(source, /function handleGroupNameChange\(nextValue\) \{[\s\S]*setDraft\(\(currentDraft\) => \(\{ \.\.\.currentDraft, groupName: nextValue \}\)\)[\s\S]*setLocalSaveErrorMessage\(''\)/)
+  assert.match(source, /function handleSaveGroup\(\) \{[\s\S]*if \(!trimmedGroupName\) \{[\s\S]*setLocalSaveErrorMessage\('Group name is required\.'\)[\s\S]*return[\s\S]*\}[\s\S]*onSave\?\.\(\{ \.\.\.draft, groupName: trimmedGroupName \}\)/)
+  assert.match(source, /onPress=\{handleSaveGroup\} disabled=\{isSaveDisabled\}/)
+  assert.match(source, /isSavingGroup \? 'Saving\.\.\.' : model\.saveLabel \|\| 'Save'/)
+  assert.match(source, /<AppNoticeCard theme=\{resolvedTheme\} body=\{visibleSaveErrorMessage\} tone="danger" \/>/)
+  assert.match(source, /export function GroupEditView\(\{ isVisible, model, onClose, onSave, onAddAthletes, onDeleteGroup, isSavingGroup = false, saveErrorMessage = '', theme \}\)/)
+
+  assert.match(appSource, /const \[isSavingGroupEdit, setIsSavingGroupEdit\] = useState\(false\);/)
+  assert.match(appSource, /const \[groupEditErrorMessage, setGroupEditErrorMessage\] = useState\(''\);/)
+  assert.match(appSource, /setGroupEditErrorMessage\('Group save is unavailable right now\.'\)/)
+  assert.match(appSource, /setIsSavingGroupEdit\(true\);[\s\S]*await groupEditClient\.(?:updateGroup|createGroup)/)
+  assert.match(appSource, /catch \(error\) \{[\s\S]*setGroupEditErrorMessage\(error\?\.message \|\| 'Something went sideways while saving the group\.'\)[\s\S]*\} finally \{[\s\S]*setIsSavingGroupEdit\(false\);/)
+  assert.match(appSource, /<GroupEditView[\s\S]*isSavingGroup=\{isSavingGroupEdit\}[\s\S]*saveErrorMessage=\{groupEditErrorMessage\}/)
+})
+
 test('AthleteMultiSelectView mirrors the exercise picker labels and selected-count add button', () => {
   const source = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/athlete-multi-select-view.js'), 'utf8')
 

@@ -1,6 +1,23 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { getAnalyticsViewModel } from '../apps/mobile/src/progress/index.js'
+
+test('mobile analytics Progress source resolves Strength classification through the shared metric-profile resolver before load-plus-reps fallback', () => {
+  const progressSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/progress/index.js'), 'utf8')
+  const resolverSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/train/exercise-metric-profile-resolution.js'), 'utf8')
+
+  assert.match(progressSource, /import \{[\s\S]*resolveMetricProfileIdFromExercise[\s\S]*\} from '\.\.\/train\/exercise-metric-profile-resolution\.js'/)
+  assert.match(progressSource, /function resolveMetricProfileIdForAnalyticsSet\(exercise, set\) \{[\s\S]*const resolvedMetricProfileId = resolveMetricProfileIdFromExercise\(exercise\)[\s\S]*if \(resolvedMetricProfileId\) return resolvedMetricProfileId[\s\S]*const load = set\.actualLoad \?\? set\.prescribedLoad[\s\S]*if \(load != null && Number\(load\) > 0 && reps != null && Number\(reps\) > 0\) return 'strength_1rm'/)
+  assert.match(progressSource, /function buildAnalyticsMetricCardsByOptionId\(sessions\) \{[\s\S]*const metricProfileId = resolveMetricProfileIdForAnalyticsSet\(exercise, set\)[\s\S]*if \(metricProfileId === 'strength_1rm'\)/)
+  assert.match(progressSource, /function buildDefaultMetricExerciseIdsByOptionId\(sessions\) \{[\s\S]*const metricProfileId = resolveMetricProfileIdForAnalyticsSet\(exercise, set\)[\s\S]*resolvedOptionId = getProgressMetricOptionId\(metricProfileId\)/)
+  assert.doesNotMatch(progressSource, /function resolveMetricProfileIdForAnalyticsExercise\(/)
+  assert.doesNotMatch(progressSource, /const STIMULUS_TYPE_TO_METRIC_PROFILE_ID = \{/)
+  assert.match(resolverSource, /speed: 'speed_time'/)
+  assert.match(resolverSource, /loaded_carry: 'distance_load'/)
+  assert.match(resolverSource, /power: 'strength_1rm'/)
+})
 
 test('mobile analytics Strength cards prefer classification truth over load-plus-reps heuristics for non-strength exercises', () => {
   const model = getAnalyticsViewModel({

@@ -212,6 +212,36 @@ test('createProgramRepository strips coach-athlete UI ids before delegating athl
   ])
 })
 
+test('createProgramRepository exposes workout edit Save as the only high-level workout rename persistence seam', async () => {
+  const calls = []
+  const repository = createProgramRepository({
+    async createProgramWorkout(input) {
+      calls.push(['createProgramWorkout', input.nameSnapshot, input.notes])
+      return { id: 'pw-created-1', nameSnapshot: input.nameSnapshot, notes: input.notes }
+    },
+    async updateProgramWorkout(input) {
+      calls.push(['updateProgramWorkout', input.programWorkoutId, input.nameSnapshot, input.notes])
+      return { id: input.programWorkoutId, nameSnapshot: input.nameSnapshot, notes: input.notes }
+    },
+  })
+
+  await repository.createProgramWorkout({
+    athleteId: 'ath-1',
+    nameSnapshot: 'Untitled Workout 1',
+    notes: '',
+  })
+  await repository.updateProgramWorkout({
+    programWorkoutId: 'pw-created-1',
+    nameSnapshot: 'Draft name saved on tap',
+    notes: 'Saved notes only',
+  })
+
+  assert.deepEqual(calls, [
+    ['createProgramWorkout', 'Untitled Workout 1', ''],
+    ['updateProgramWorkout', 'pw-created-1', 'Draft name saved on tap', 'Saved notes only'],
+  ])
+})
+
 test('createSupabaseRestProgramRepository fetches an assigned program with nested weeks, days, workouts, and derived workout checkbox states', async () => {
   const repo = createSupabaseRestProgramRepository({
     url: 'https://example.supabase.co',
@@ -770,6 +800,69 @@ test('createSupabaseRestProgramRepository can update a planned workout name snap
   assert.equal(calls[0].method, 'PATCH')
   assert.equal(calls[0].body.name_snapshot, 'Custom workout name')
   assert.equal(new URL(calls[0].url).searchParams.get('id'), 'eq.pw-created-1')
+})
+
+test('createSupabaseRestProgramRepository keeps workout edit field changes draft-only until explicit Save updates program_workouts', async () => {
+  const calls = []
+  const repo = createSupabaseRestProgramRepository({
+    url: 'https://example.supabase.co',
+    anonKey: 'anon-key',
+    accessToken: 'user-token',
+    fetchImpl: async (url, options = {}) => {
+      const parsed = new URL(url)
+      const body = options.body ? JSON.parse(options.body) : null
+      calls.push({ url: parsed.toString(), method: options.method || 'GET', body })
+
+      if (parsed.pathname.endsWith('/program_workouts') && (options.method || 'GET') === 'POST') {
+        return json([{ id: 'pw-draft-1', athlete_id: 'ath-1', coach_id: 'coach-1', program_id: 'program-1', program_day_id: 'day-1', workout_template_id: null, name_snapshot: body.name_snapshot, notes: body.notes, status: 'scheduled', sort_order: body.sort_order }])
+      }
+
+      if (parsed.pathname.endsWith('/program_workouts') && (options.method || 'GET') === 'PATCH') {
+        return json([{ id: 'pw-draft-1', athlete_id: 'ath-1', coach_id: 'coach-1', program_id: 'program-1', program_day_id: 'day-1', workout_template_id: null, name_snapshot: body.name_snapshot, notes: body.notes, status: 'scheduled', sort_order: 1 }])
+      }
+
+      throw new Error(`Unexpected request: ${parsed.pathname}`)
+    },
+  })
+
+  const createdWorkout = await repo.createProgramWorkout({
+    athleteId: 'ath-1',
+    coachId: 'coach-1',
+    programId: 'program-1',
+    programDayId: 'day-1',
+    nameSnapshot: 'Untitled Workout 1',
+    notes: '',
+    sortOrder: 1,
+  })
+  const localDraft = {
+    programWorkoutId: createdWorkout.id,
+    workoutName: 'Unsaved draft rename',
+    workoutNotes: 'Unsaved draft notes',
+  }
+
+  assert.equal(createdWorkout.nameSnapshot, 'Untitled Workout 1')
+  assert.equal(createdWorkout.notes, '')
+  assert.equal(localDraft.workoutName, 'Unsaved draft rename')
+  assert.equal(localDraft.workoutNotes, 'Unsaved draft notes')
+  assert.equal(calls.filter((call) => call.method === 'PATCH' && call.url.includes('/program_workouts')).length, 0)
+  assert.equal(calls[0].body.name_snapshot, 'Untitled Workout 1')
+  assert.equal(calls[0].body.notes, '')
+
+  const savedWorkout = await repo.updateProgramWorkout({
+    programWorkoutId: localDraft.programWorkoutId,
+    nameSnapshot: localDraft.workoutName,
+    notes: localDraft.workoutNotes,
+  })
+
+  assert.equal(savedWorkout.nameSnapshot, 'Unsaved draft rename')
+  assert.equal(savedWorkout.notes, 'Unsaved draft notes')
+  assert.equal(calls.length, 2)
+  assert.equal(calls[1].method, 'PATCH')
+  assert.equal(new URL(calls[1].url).searchParams.get('id'), 'eq.pw-draft-1')
+  assert.deepEqual(calls[1].body, {
+    name_snapshot: 'Unsaved draft rename',
+    notes: 'Unsaved draft notes',
+  })
 })
 
 test('createSupabaseRestProgramRepository can create a planned workout with a real persisted default name', async () => {

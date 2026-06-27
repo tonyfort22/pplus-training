@@ -76,7 +76,14 @@ export function renderBottomTabBar({ bottomTabs, styles, onTabPress }) {
     <View style={styles.bottomNavWrap}>
       <View style={styles.bottomNavMainPill}>
         {tabViewItems.tabs.map((tab) => (
-          <Pressable key={tab.key} style={[styles.bottomNavTab, tab.isActive && styles.bottomNavTabActive]} onPress={() => onTabPress(tab.key)}>
+          <Pressable
+            key={tab.key}
+            accessibilityRole="button"
+            accessibilityLabel={`Open ${tab.label}`}
+            testID={`bottom-tab-${tab.key}`}
+            style={[styles.bottomNavTab, tab.isActive && styles.bottomNavTabActive]}
+            onPress={() => onTabPress(tab.key)}
+          >
             <BottomNavIcon tabKey={tab.key} styles={styles} isActive={tab.isActive} />
           </Pressable>
         ))}
@@ -111,10 +118,10 @@ export function renderAppShell({
 
   return (
     <View style={styles.appShell}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView style={styles.shellScrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.brandHeader}>
           <View style={styles.brandHeaderSide}>
-            <Pressable style={styles.brandIconButton} onPress={onProfileHeaderPress}>{renderProfileHeaderIcon(styles)}</Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Open Profile" testID="header-profile-button" style={styles.brandIconButton} onPress={onProfileHeaderPress}>{renderProfileHeaderIcon(styles)}</Pressable>
           </View>
           <View style={styles.brandHeaderCenter}>
             <View style={styles.brandLogoWrap}>
@@ -122,7 +129,7 @@ export function renderAppShell({
             </View>
           </View>
           <View style={[styles.brandHeaderSide, styles.brandHeaderSideRight]}>
-            <Pressable style={styles.brandIconButton} onPress={onUtilityHeaderPress}>{renderUtilityHeaderIcon(styles)}</Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Open Training Calendar" testID="header-calendar-button" style={styles.brandIconButton} onPress={onUtilityHeaderPress}>{renderUtilityHeaderIcon(styles)}</Pressable>
           </View>
         </View>
         {activeAthleteSummary ? (
@@ -171,6 +178,9 @@ export function renderAppShell({
         >
           {floatingStartWorkoutButton.kind === 'in-progress' ? (
             <Pressable
+              accessibilityLabel="Open active workout"
+              accessibilityRole="button"
+              testID="floating-active-workout-button"
               onPress={() => onActionTarget?.(floatingStartWorkoutButton.targetKey, floatingStartWorkoutButton.actionPayload)}
               style={{
                 minHeight: 52,
@@ -202,6 +212,8 @@ export function renderAppShell({
             <AppButton
               theme={styles.theme}
               label={floatingStartWorkoutButton.label}
+              accessibilityLabel="Start workout"
+              testID="floating-start-workout-button"
               leftIcon={<Play color={styles.theme.accentText} size={18} strokeWidth={2.4} fill={styles.theme.accentText} />}
               onPress={() => onActionTarget?.(floatingStartWorkoutButton.targetKey, floatingStartWorkoutButton.actionPayload)}
               style={{
@@ -217,11 +229,11 @@ export function renderAppShell({
         </View>
       ) : null}
 
-      {renderBottomTabBar({
+      {bottomTabs ? renderBottomTabBar({
         bottomTabs,
         styles,
         onTabPress,
-      })}
+      }) : null}
     </View>
   )
 }

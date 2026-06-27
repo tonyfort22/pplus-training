@@ -1,0 +1,29 @@
+appId: host.exp.Exponent
+---
+- stopApp
+- openLink: "exp://127.0.0.1:8084"
+- assertVisible: "Coach Tony"
+- tapOn: "Open Profile"
+- assertVisible: "Coach Tony"
+- tapOn: "Profile"
+- tapOn:
+    id: "profile-first-name-input"
+- eraseText
+- inputText: "Coach Safe"
+- tapOn:
+    id: "profile-save-button"
+- assertVisible: "Profile updated."
+- tapOn:
+    id: "sheet-back-button"
+- tapOn:
+    id: "profile-close-button"
+- tapOn:
+    id: "bottom-tab-team"
+- assertVisible: "Speed Group"
+- tapOn: "Speed Group"
+- tapOn:
+    id: "group-name-input"
+- eraseText
+- inputText: "Safe Group Updated"
+- tapOn:
+    id: "group-save-button"

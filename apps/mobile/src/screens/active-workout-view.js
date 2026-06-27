@@ -10,11 +10,12 @@ import { ExerciseMultiSelectView } from './exercise-multi-select-view.js'
 
 const ACTIVE_WORKOUT_KEEP_AWAKE_TAG = 'PPLUSActiveWorkout'
 
-function ActiveWorkoutCellInput({ value, onChangeText, widthClass, theme }) {
+function ActiveWorkoutCellInput({ value, onChangeText, widthClass, theme, accessibilityLabel, testID }) {
   const [isFocused, setIsFocused] = useState(false)
 
   return (
     <TextInput
+      accessibilityLabel={accessibilityLabel}
       className={`${widthClass} h-full border px-0 py-0.5 text-[15px] text-center`}
       keyboardType="numeric"
       onBlur={() => setIsFocused(false)}
@@ -29,6 +30,7 @@ function ActiveWorkoutCellInput({ value, onChangeText, widthClass, theme }) {
         paddingVertical: 0,
         color: theme.text,
       }}
+      testID={testID}
       value={value}
     />
   )
@@ -130,10 +132,13 @@ function ActiveWorkoutSetRow({ set, theme, onCompleteSet, exerciseId, onSetValue
           value={cell.value}
           widthClass="flex-1"
           theme={theme}
+          accessibilityLabel={`Set ${set.setNumber} ${cell.key} input`}
+          testID={`active-workout-set-${set.setNumber}-${cell.key}-input`}
           onChangeText={(nextValue) => onSetValueChange?.(exerciseId, set.id, cell.key, nextValue)}
         />
       ))}
       <Pressable
+        accessibilityLabel={`Complete set ${set.setNumber}`}
         className="ml-1 h-9 w-16 items-center justify-center rounded-[12px]"
         onPress={() => onCompleteSet?.(exerciseId, set.id)}
         style={{
@@ -141,6 +146,7 @@ function ActiveWorkoutSetRow({ set, theme, onCompleteSet, exerciseId, onSetValue
           borderColor: isCompleted ? theme.accentBorder : theme.border,
           backgroundColor: isCompleted ? theme.accentSurface : theme.surface,
         }}
+        testID={`active-workout-set-${set.setNumber}-done-button`}
       >
         {isCompleted ? <Check color={theme.accentText} size={16} strokeWidth={2.5} /> : <Text className="text-[12px] font-semibold" style={{ color: theme.textSoft }}>Done</Text>}
       </Pressable>
@@ -236,8 +242,10 @@ function ActiveWorkoutExerciseBlock({ exercise, exerciseIndex, totalExercises, t
 
   return (
     <SwipeableActiveWorkoutExerciseRow onDelete={() => onDeleteExercise?.(exercise.id)} theme={theme}>
+      <View testID={`active-workout-exercise-${exerciseIndex + 1}-card`}>
       <AppSurfaceCard theme={theme} containerClassName={`${isSupersetLinked ? 'ml-3 ' : ''}rounded-[24px] overflow-hidden`.trim()} contentClassName="gap-5 px-5 py-5">
-        <View className="flex-row items-start gap-3">
+        <View className="flex-row items-start gap-3" testID={`active-workout-exercise-${exerciseIndex + 1}-header`}>
+          <View testID={`active-workout-exercise-${exerciseIndex + 1}-thumbnail`}>
           <AppSurfaceCard
             theme={theme}
             containerClassName="h-14 w-14 rounded-[18px] overflow-hidden"
@@ -249,12 +257,13 @@ function ActiveWorkoutExerciseBlock({ exercise, exerciseIndex, totalExercises, t
               <Dumbbell color={theme.iconMuted} size={22} strokeWidth={2.2} />
             )}
           </AppSurfaceCard>
+          </View>
           <View className="flex-1">
             <Pressable onPress={() => onOpenExerciseDetail?.(exercise)}>
-              <Text className="text-[22px] font-semibold leading-[28px]" style={{ color: theme.text }}>{exercise.title}</Text>
+              <Text className="text-[22px] font-semibold leading-[28px]" style={{ color: theme.text }} testID={`active-workout-exercise-${exerciseIndex + 1}-title`}>{exercise.title}</Text>
             </Pressable>
           </View>
-          <View className="flex-row gap-2">
+          <View className="flex-row gap-2" testID={`active-workout-exercise-${exerciseIndex + 1}-reorder-controls`}>
             <AppSurfaceCard
               theme={theme}
               containerClassName="h-10 w-10 rounded-[14px] overflow-hidden"
@@ -276,7 +285,7 @@ function ActiveWorkoutExerciseBlock({ exercise, exerciseIndex, totalExercises, t
           </View>
         </View>
 
-        <View className="flex-row items-center pb-3" style={{ borderBottomWidth: 1, borderBottomColor: theme.border }}>
+        <View className="flex-row items-center pb-3" style={{ borderBottomWidth: 1, borderBottomColor: theme.border }} testID={`active-workout-exercise-${exerciseIndex + 1}-set-header-row`}>
           <Text className="w-14 text-center text-[11px] font-semibold uppercase tracking-[1px]" style={{ color: theme.textSoft }}>#</Text>
           {(exercise.columns || []).map((column) => (
             <Text key={column.key} className="flex-1 text-center text-[11px] font-semibold uppercase tracking-[1px]" style={{ color: theme.textSoft }}>{column.label}</Text>
@@ -294,6 +303,7 @@ function ActiveWorkoutExerciseBlock({ exercise, exerciseIndex, totalExercises, t
 
         <ActiveWorkoutExerciseControls exercise={exercise} addSetLabel={addSetLabel} theme={theme} onAddSet={onAddSet} onOpenSupersetPicker={onOpenSupersetPicker} onOpenExerciseRestTimer={onOpenExerciseRestTimer} supersetTargetOptions={supersetTargetOptions} />
       </AppSurfaceCard>
+      </View>
     </SwipeableActiveWorkoutExerciseRow>
   )
 }
@@ -694,7 +704,7 @@ function ActiveWorkoutEmptyWorkoutSheet({ isVisible, theme, onCloseEmptyWorkoutS
     <View className="absolute inset-0 items-center justify-center px-5" pointerEvents="box-none">
       <Pressable className="absolute inset-0" onPress={onCloseEmptyWorkoutSheet} style={{ backgroundColor: 'rgba(0, 0, 0, 0.42)' }} />
       <AppSurfaceCard theme={theme} containerClassName="w-full max-w-[420px] rounded-[28px] overflow-hidden" contentClassName="gap-5 px-5 py-5">
-        <View className="flex-row items-start justify-between gap-3">
+        <View className="flex-row items-start justify-between gap-3" testID="active-workout-empty-workout-modal">
           <View className="flex-1 gap-2">
             <Text className="text-[18px] font-semibold" style={{ color: theme.text }}>Empty Workout</Text>
             <Text className="text-[14px]" style={{ color: theme.textSoft }}>Complete sets to finish a workout</Text>
@@ -720,7 +730,7 @@ function ActiveWorkoutFinishWorkoutSheet({ isVisible, theme, perceivedDifficulty
     <View className="absolute inset-0 items-center justify-center px-5" pointerEvents="box-none">
       <Pressable className="absolute inset-0" onPress={onCloseFinishWorkoutSheet} style={{ backgroundColor: 'rgba(0, 0, 0, 0.42)' }} />
       <AppSurfaceCard theme={theme} containerClassName="w-full max-w-[420px] rounded-[28px] overflow-hidden" contentClassName="gap-5 px-5 py-5">
-        <View className="flex-row items-start justify-between gap-3">
+        <View className="flex-row items-start justify-between gap-3" testID="active-workout-finish-workout-modal">
           <View className="flex-1 gap-2">
             <Text className="text-[18px] font-semibold" style={{ color: theme.text }}>Finish Workout</Text>
             <Text className="text-[14px]" style={{ color: theme.textSoft }}>Session Difficulty</Text>
@@ -730,7 +740,7 @@ function ActiveWorkoutFinishWorkoutSheet({ isVisible, theme, perceivedDifficulty
           </Pressable>
         </View>
 
-        <View className="flex-row items-center justify-between rounded-[20px] px-4 py-4" style={{ borderWidth: 1, borderColor: theme.border, backgroundColor: theme.surface }}>
+        <View className="flex-row items-center justify-between rounded-[20px] px-4 py-4" style={{ borderWidth: 1, borderColor: theme.border, backgroundColor: theme.surface }} testID="active-workout-finish-difficulty-control">
           <Pressable className="h-11 w-11 items-center justify-center" onPress={onDecreaseDifficulty}>
             <Text className="text-[24px] font-semibold" style={{ color: theme.accentText }}>−</Text>
           </Pressable>
@@ -753,7 +763,7 @@ function ActiveWorkoutDiscardWorkoutSheet({ isVisible, theme, onCloseDiscardWork
     <View className="absolute inset-0 items-center justify-center px-5" pointerEvents="box-none">
       <Pressable className="absolute inset-0" onPress={onCloseDiscardWorkout} style={{ backgroundColor: 'rgba(0, 0, 0, 0.42)' }} />
       <AppSurfaceCard theme={theme} containerClassName="w-full max-w-[420px] rounded-[28px] overflow-hidden" contentClassName="gap-5 px-5 py-5">
-        <View className="flex-row items-start justify-between gap-3">
+        <View className="flex-row items-start justify-between gap-3" testID="active-workout-discard-workout-modal">
           <View className="flex-1 gap-2">
             <Text className="text-[18px] font-semibold" style={{ color: theme.text }}>Discard Workout</Text>
             <Text className="text-[14px]" style={{ color: theme.textSoft }}>Are you sure you want to discard this workout? This action cannot be undone.</Text>

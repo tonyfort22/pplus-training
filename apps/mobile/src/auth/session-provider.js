@@ -65,6 +65,17 @@ export function createMemoryAuthStorage(initialValue = null) {
   }
 }
 
+function normalizeStoredAuthSession(authSession = {}) {
+  const initialAuthSession = getInitialAuthSessionState()
+
+  return {
+    accessToken: authSession.accessToken || initialAuthSession.accessToken,
+    refreshToken: authSession.refreshToken || initialAuthSession.refreshToken,
+    currentUserId: authSession.currentUserId || initialAuthSession.currentUserId,
+    currentAthleteId: authSession.currentAthleteId || initialAuthSession.currentAthleteId,
+  }
+}
+
 function createBrowserAuthStorage(key = AUTH_SESSION_STORAGE_KEY) {
   return {
     async getItem() {
@@ -144,20 +155,14 @@ export async function readStoredAuthSession(storage) {
   if (!raw) return getInitialAuthSessionState()
 
   try {
-    return {
-      ...getInitialAuthSessionState(),
-      ...JSON.parse(raw),
-    }
+    return normalizeStoredAuthSession(JSON.parse(raw))
   } catch {
     return getInitialAuthSessionState()
   }
 }
 
 export async function writeStoredAuthSession(storage, authSession) {
-  const nextSession = {
-    ...getInitialAuthSessionState(),
-    ...authSession,
-  }
+  const nextSession = normalizeStoredAuthSession(authSession)
   await storage.setItem(JSON.stringify(nextSession))
   return nextSession
 }
@@ -421,6 +426,21 @@ export function MobileAuthSessionProvider({
       const coachId = bootstrapState.coachProfile?.id
       if (!coachId) {
         throw new Error('Profile update requires an authenticated coach profile')
+      }
+
+      const isProfileGroupUpdateSafeFixture = env?.EXPO_PUBLIC_PPLUS_PROFILE_GROUP_UPDATE_FIXTURE === 'profile_group_update_safe'
+      if (isProfileGroupUpdateSafeFixture) {
+        const nextUpdates = { ...updates }
+        delete nextUpdates.avatarAsset
+        const updatedCoachProfile = {
+          ...bootstrapState.coachProfile,
+          ...nextUpdates,
+        }
+        setBootstrapState((current) => ({
+          ...current,
+          coachProfile: updatedCoachProfile,
+        }))
+        return updatedCoachProfile
       }
 
       const identityClient = createSupabaseMobileIdentityClient({

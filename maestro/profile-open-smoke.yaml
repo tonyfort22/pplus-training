@@ -1,0 +1,21 @@
+appId: host.exp.Exponent
+---
+- stopApp
+- openLink: exp://127.0.0.1:8084
+- extendedWaitUntil:
+    visible: "Viewing athlete"
+    timeout: 60000
+- tapOn: "Open Profile"
+- extendedWaitUntil:
+    visible:
+      id: "profile-settings-screen"
+    timeout: 10000
+- assertVisible: "Coach Tony"
+- assertVisible: "TRAINING"
+- assertVisible: "Profile"
+- assertVisible: "Exercises"
+- assertVisible: "PREFERENCES"
+- scrollUntilVisible:
+    element: "Sign Out"
+    direction: DOWN
+- assertVisible: "Sign Out"

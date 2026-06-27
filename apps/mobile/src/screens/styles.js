@@ -23,10 +23,13 @@ export function createAppStyles(theme) {
     appShell: {
       flex: 1,
     },
+    shellScrollView: {
+      flex: 1,
+    },
     scrollContent: {
       padding: 24,
       gap: 24,
-      paddingBottom: 132,
+      paddingBottom: 24,
     },
     brandHeader: {
       minHeight: 72,
@@ -811,10 +814,10 @@ export function createAppStyles(theme) {
     display: 'none',
   },
   bottomNavWrap: {
-    position: 'absolute',
-    left: 24,
-    right: 24,
-    bottom: 16,
+    backgroundColor: theme.background,
+    paddingTop: 8,
+    paddingHorizontal: 24,
+    paddingBottom: 16,
     flexDirection: 'row',
     alignItems: 'stretch',
     gap: 12,

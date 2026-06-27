@@ -182,3 +182,29 @@ test('mobile app shell opens a dedicated Program Edit View from the current prog
   assert.match(editViewSource, /onSelectOption\(option\.id\)/)
   assert.match(editViewSource, /model\.helperNote/)
 })
+
+test('mobile program edit workflow keeps local program drafts draft-only until explicit Save', () => {
+  const appSource = readFileSync(resolve(process.cwd(), 'apps/mobile/App.js'), 'utf8')
+  const editViewSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/program-edit-view.js'), 'utf8')
+  const contentBlock = editViewSource.match(/function ProgramEditViewContent\([\s\S]*?\n\}/)?.[0] || ''
+  const createWorkoutBlock = editViewSource.match(/function ProgramCreateWorkoutView\([\s\S]*?\n\}/)?.[0] || ''
+  const startDateDraftHandler = editViewSource.match(/function handleSelectStartDateOption\(optionId\) \{[\s\S]*?\n  \}/)?.[0] || ''
+  const endDateDraftHandler = editViewSource.match(/function handleSelectEndDateOption\(optionId\) \{[\s\S]*?\n  \}/)?.[0] || ''
+  const exerciseDraftHandler = editViewSource.match(/function handleToggleExercise\(exerciseId\) \{[\s\S]*?\n  \}/)?.[0] || ''
+
+  assert.match(contentBlock, /const \[selectedStartDateValue, setSelectedStartDateValue\] = useState\(model\?\.startDateSheet\?\.selectedValue \|\| null\)/)
+  assert.match(contentBlock, /const \[selectedEndDateValue, setSelectedEndDateValue\] = useState\(model\?\.endDateSheet\?\.selectedValue \|\| null\)/)
+  assert.match(startDateDraftHandler, /setSelectedStartDateValue\(option\.value\)/)
+  assert.doesNotMatch(startDateDraftHandler, /onSave|programSheetClient|updateProgram|createProgramWorkout/)
+  assert.match(endDateDraftHandler, /setSelectedEndDateValue\(option\.value\)/)
+  assert.doesNotMatch(endDateDraftHandler, /onSave|programSheetClient|updateProgram|createProgramWorkout/)
+  assert.match(exerciseDraftHandler, /setSelectedExerciseIds\(\(current\) => \{/)
+  assert.doesNotMatch(exerciseDraftHandler, /onSave|programSheetClient|updateProgram|createProgramWorkout/)
+  assert.match(createWorkoutBlock, /const \[routineName, setRoutineName\] = useState\(''\)/)
+  assert.match(createWorkoutBlock, /const \[routineNotes, setRoutineNotes\] = useState\(''\)/)
+  assert.match(createWorkoutBlock, /onChangeText=\{setRoutineName\}/)
+  assert.match(createWorkoutBlock, /onChangeText=\{setRoutineNotes\}/)
+  assert.doesNotMatch(createWorkoutBlock, /programSheetClient|createProgramWorkout|updateProgramWorkout/)
+  assert.match(editViewSource, /onPress=\{\(\) => onSave\?\.\(\{ routineName, routineNotes \}\)\}/)
+  assert.match(appSource, /<ProgramEditView[\s\S]*onSave=\{handleCloseProgramEditView\}/)
+})

@@ -1,0 +1,18 @@
+appId: host.exp.Exponent
+---
+# Deferred L5 visual/device check.
+# Purpose: switch Theme to Light, prove the selected state is actually Light,
+# then capture downstream Train/Progress/Profile/Athletes screenshots before marking light-theme-device-audit as passed.
+- stopApp
+- openLink: exp://127.0.0.1:8084
+- waitForAnimationToEnd
+- tapOn: "Open Profile"
+- assertVisible:
+    id: "profile-settings-screen"
+- scrollUntilVisible:
+    element:
+      text: "Theme"
+    direction: DOWN
+- tapOn: "Light"
+- assertVisible: "Light"
+- takeScreenshot: light-theme-selected

@@ -12,7 +12,7 @@ test('mobile app shell opens a dedicated training calendar screen from the top-r
   assert.match(appSource, /const trainingCalendarModel = useMemo\(/)
   assert.match(appSource, /<TrainingCalendarSheet[\s\S]*isVisible=\{isTrainingCalendarOpen\}/)
   assert.match(shellSource, /onUtilityHeaderPress/)
-  assert.match(shellSource, /<Pressable style=\{styles\.brandIconButton\} onPress=\{onUtilityHeaderPress\}>/)
+  assert.match(shellSource, /<Pressable accessibilityRole="button" accessibilityLabel="Open Training Calendar" testID="header-calendar-button" style=\{styles\.brandIconButton\} onPress=\{onUtilityHeaderPress\}>/)
 })
 
 test('getTrainingCalendarModel hydrates real weeks and workout states from the assigned program tree', () => {

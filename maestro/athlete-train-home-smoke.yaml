@@ -1,0 +1,17 @@
+appId: host.exp.Exponent
+---
+- stopApp
+- openLink: exp://127.0.0.1:8084
+- extendedWaitUntil:
+    visible: "Safe Simulator Workout, Off day"
+    timeout: 60000
+- assertVisible:
+    id: "calendar-day-safe-workout-today"
+- assertVisible: "My Programs"
+- assertVisible: "Safe Simulator Program, Safe Simulator Program, Week 1 of 1. 0 of 1 workouts completed., Week 1 of 1, 0 of 1 workouts"
+- assertVisible: "My Workouts"
+- assertVisible: "No workout available"
+- assertVisible:
+    id: "floating-start-workout-button"
+- assertNotVisible: "Viewing athlete"
+- assertNotVisible: "Create workout"

@@ -2,11 +2,12 @@ import { Children, cloneElement, isValidElement, useState } from 'react'
 import { Pressable, Text, TextInput, View } from 'react-native'
 import { Check, ChevronLeft, ChevronRight, Search, X } from 'lucide-react-native'
 
-export function AppSurfaceCard({ theme, children, onPress, accent = false, style, contentClassName = 'gap-3 px-6 py-5', containerClassName = 'rounded-[24px] overflow-hidden' }) {
+export function AppSurfaceCard({ theme, children, onPress, accent = false, style, contentClassName = 'gap-3 px-6 py-5', containerClassName = 'rounded-[24px] overflow-hidden', testID, accessibilityLabel }) {
   const Wrapper = onPress ? Pressable : View
 
   return (
     <Wrapper
+      accessibilityLabel={accessibilityLabel}
       className={containerClassName}
       style={[
         {
@@ -16,6 +17,7 @@ export function AppSurfaceCard({ theme, children, onPress, accent = false, style
         },
         style,
       ]}
+      testID={testID}
       onPress={onPress}
     >
       {accent ? <View className="absolute left-0 top-0 bottom-0 w-1" style={{ backgroundColor: theme.accent }} /> : null}
@@ -24,7 +26,7 @@ export function AppSurfaceCard({ theme, children, onPress, accent = false, style
   )
 }
 
-export function AppButton({ theme, label, onPress, tone = 'primary', disabled = false, leftIcon = null, style }) {
+export function AppButton({ theme, label, onPress, tone = 'primary', disabled = false, leftIcon = null, style, testID, accessibilityLabel }) {
   const toneStyle = tone === 'danger'
     ? {
         backgroundColor: theme.dangerSurface,
@@ -54,7 +56,10 @@ export function AppButton({ theme, label, onPress, tone = 'primary', disabled = 
         },
         style,
       ]}
+      accessibilityLabel={accessibilityLabel || label}
+      accessibilityRole="button"
       disabled={disabled}
+      testID={testID}
       onPress={onPress}
     >
       {leftIcon}
@@ -63,10 +68,13 @@ export function AppButton({ theme, label, onPress, tone = 'primary', disabled = 
   )
 }
 
-export function AppOutlinedActionButton({ theme, label, onPress, leftIcon = null, style }) {
+export function AppOutlinedActionButton({ theme, label, onPress, leftIcon = null, style, testID, accessibilityLabel }) {
   return (
     <Pressable
+      accessibilityLabel={accessibilityLabel || label}
+      accessibilityRole="button"
       className="flex-row items-center justify-center gap-2 rounded-[24px] border px-5 py-4"
+      testID={testID}
       onPress={onPress}
       style={[
         {
@@ -82,10 +90,13 @@ export function AppOutlinedActionButton({ theme, label, onPress, leftIcon = null
   )
 }
 
-export function AppDangerPillButton({ theme, label, onPress, leftIcon = null, style }) {
+export function AppDangerPillButton({ theme, label, onPress, leftIcon = null, style, testID, accessibilityLabel }) {
   return (
     <Pressable
+      accessibilityLabel={accessibilityLabel || label}
+      accessibilityRole="button"
       className="self-center rounded-full px-5 py-3"
+      testID={testID}
       onPress={onPress}
       style={[
         {
@@ -109,6 +120,7 @@ export function AppSheetHeader({ theme, title, onBack, rightAction = null, leftI
         className="h-11 w-11 items-center justify-center rounded-[18px]"
         style={{ borderWidth: 1, borderColor: theme.border, backgroundColor: theme.surface }}
         onPress={onBack}
+        testID="sheet-back-button"
       >
         {leftIcon || <ChevronLeft color={theme.icon} size={20} strokeWidth={2.6} />}
       </Pressable>
@@ -143,9 +155,9 @@ export function AppListRow({ theme, title, body = '', onPress = null, leading = 
   return (
     <Wrapper className="flex-row items-center gap-3 py-3" style={bordered ? { borderBottomWidth: 1, borderBottomColor: theme.border } : null} onPress={onPress}>
       {leading}
-      <View className="flex-1 gap-1">
-        <Text className="text-[17px] font-semibold" style={{ color: theme.text }}>{title}</Text>
-        {body ? <Text className="text-[14px]" style={{ color: theme.textSoft }}>{body}</Text> : null}
+      <View className="min-w-0 flex-1 gap-1">
+        <Text numberOfLines={1} className="text-[17px] font-semibold" style={{ color: theme.text }}>{title}</Text>
+        {body ? <Text numberOfLines={1} className="text-[14px]" style={{ color: theme.textSoft }}>{body}</Text> : null}
       </View>
       {trailing || (onPress ? <ChevronRight color={theme.iconMuted} size={18} strokeWidth={2.4} /> : null)}
     </Wrapper>
@@ -212,7 +224,7 @@ export function AppStatusBadge({ theme, label, tone = 'neutral' }) {
   )
 }
 
-export function AppStatusIconBadge({ theme, status, size = 'md' }) {
+export function AppStatusIconBadge({ theme, status, size = 'md', testID, accessibilityLabel }) {
   const sizeClassName = size === 'xs'
     ? 'h-6 w-6 rounded-[8px]'
     : size === 'sm'
@@ -229,7 +241,12 @@ export function AppStatusIconBadge({ theme, status, size = 'md' }) {
   const IconComponent = toneStyle.Icon
 
   return (
-    <View className={`${sizeClassName} items-center justify-center`} style={{ borderWidth: 1, borderColor: toneStyle.borderColor, backgroundColor: toneStyle.backgroundColor }}>
+    <View
+      accessibilityLabel={accessibilityLabel}
+      className={`${sizeClassName} items-center justify-center`}
+      style={{ borderWidth: 1, borderColor: toneStyle.borderColor, backgroundColor: toneStyle.backgroundColor }}
+      testID={testID}
+    >
       <IconComponent color={toneStyle.iconColor} size={iconSize} strokeWidth={2.6} />
     </View>
   )

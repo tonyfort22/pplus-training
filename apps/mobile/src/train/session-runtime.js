@@ -438,6 +438,12 @@ export function createTrainSessionStore({
     return resolvedProgramWorkout
   }
 
+  async function resolveSessionHydrationWorkout({ session = null, fallbackWorkout = null } = {}) {
+    return !hasRichSessionStructure(session) && session?.programWorkoutId && (!fallbackWorkout?.id || fallbackWorkout.id !== session.programWorkoutId || !hasRichWorkoutStructure(fallbackWorkout))
+      ? await ensureProgramWorkout({ programWorkoutId: session.programWorkoutId })
+      : fallbackWorkout
+  }
+
   async function syncCurrentSession({ programWorkoutId = null, onDate = null } = {}) {
     await sessionSettingsReadyPromise
     const workout = await ensureProgramWorkout({ programWorkoutId, onDate })
@@ -453,9 +459,10 @@ export function createTrainSessionStore({
       return cloneValue(storedSession)
     }
 
-    const hydrationWorkout = existingSession.programWorkoutId && existingSession.programWorkoutId !== workout.id
-      ? await ensureProgramWorkout({ programWorkoutId: existingSession.programWorkoutId })
-      : workout
+    const hydrationWorkout = await resolveSessionHydrationWorkout({
+      session: existingSession,
+      fallbackWorkout: workout,
+    })
     const hydratedSession = rehydrateEmptySessionFromWorkout(existingSession, hydrationWorkout)
     const mergedSession = mergeSessionSettings(hydratedSession, storedSession?.settings || getFallbackSessionSettingsFromWorkout(workout))
     storedSession = cloneValue(mergedSession)
@@ -520,9 +527,10 @@ export function createTrainSessionStore({
       if (!sessionId) return null
       const session = await repository.getSessionById(sessionId)
       if (!session) return null
-      const workout = !hasRichSessionStructure(session) && session?.programWorkoutId && (!resolvedProgramWorkout?.id || resolvedProgramWorkout.id !== session.programWorkoutId || !hasRichWorkoutStructure(resolvedProgramWorkout))
-        ? await ensureProgramWorkout({ programWorkoutId: session.programWorkoutId })
-        : resolvedProgramWorkout
+      const workout = await resolveSessionHydrationWorkout({
+        session,
+        fallbackWorkout: resolvedProgramWorkout,
+      })
       const hydratedSession = rehydrateEmptySessionFromWorkout(session, workout)
       const mergedSession = mergeSessionSettings(hydratedSession, storedSession?.settings || null)
       storedSession = cloneValue(mergedSession)

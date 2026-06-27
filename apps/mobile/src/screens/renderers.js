@@ -70,6 +70,9 @@ export function renderGenericSections({ sections, styles, onActionTarget }) {
               <RowWrapper
                 key={row.id || row.title}
                 className="flex-row items-center overflow-hidden rounded-[24px]" style={{ backgroundColor: styles.theme.surface, borderWidth: 1, borderColor: styles.theme.border }}
+                accessibilityLabel={isActionable ? `Open ${row.title}` : undefined}
+                accessibilityRole={isActionable ? 'button' : undefined}
+                testID={isActionable ? `body-list-row-${row.id || row.title}` : undefined}
                 onPress={isActionable ? () => onActionTarget(row.targetKey, row.actionPayload) : undefined}
               >
                 <View className="w-1 self-stretch" style={{ backgroundColor: styles.theme.accent }} />
@@ -143,7 +146,14 @@ export function renderGenericSections({ sections, styles, onActionTarget }) {
               }
 
               return (
-                <Pressable key={day.id} className={columnClassName} onPress={() => onActionTarget(day.targetKey, day.actionPayload)}>
+                <Pressable
+                  key={day.id}
+                  accessibilityLabel={`Select ${day.weekdayLabel} ${day.dateNumber}`}
+                  accessibilityRole="button"
+                  testID={`calendar-day-${day.id}`}
+                  className={columnClassName}
+                  onPress={() => onActionTarget(day.targetKey, day.actionPayload)}
+                >
                   {dayContent}
                 </Pressable>
               )
@@ -187,6 +197,9 @@ export function renderTrainSurface({ trainRenderModel, sessionRenderModel, style
             {trainRenderModel.tabs.map((tab) => (
               <Pressable
                 key={tab.key}
+                accessibilityLabel={`Open ${tab.label} train tab`}
+                accessibilityRole="button"
+                testID={`train-tab-${tab.key}`}
                 style={[styles.trainTabButton, tab.isActive && styles.trainTabButtonActive]}
                 onPress={() => onTrainTabPress(tab.key)}
               >

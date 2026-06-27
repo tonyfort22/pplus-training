@@ -13,7 +13,7 @@ test('mobile workout sheet can open a dedicated workout edit view from the Edit 
   assert.match(appSource, /const workoutEditViewModel = useMemo\(\(\) => getWorkoutEditViewModel\(\{ workoutSheetModel, workoutDraftModel: workoutEditDraftModel \}\), \[workoutEditDraftModel, workoutSheetModel\]\);/)
   assert.match(appSource, /<WorkoutEditView[\s\S]*isVisible=\{isWorkoutEditViewOpen\}/)
   assert.match(workoutSheetSource, /onEditWorkout/)
-  assert.match(workoutSheetSource, /<Pressable onPress=\{onEditWorkout\}>/)
+  assert.match(workoutSheetSource, /<Pressable accessibilityLabel="Edit workout" accessibilityRole="button" testID="workout-sheet-edit-button" onPress=\{onEditWorkout\}>/)
 })
 
 test('mobile workout edit cancel returns to the workout sheet instead of the main train view', () => {
@@ -30,9 +30,9 @@ test('mobile workout edit view matches the edit reference structure and uses Nat
   const sharedPickerSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/exercise-multi-select-view.js'), 'utf8')
 
   assert.match(editViewSource, /function createDraftFromModel\(model\) \{[\s\S]*workoutName: model\.title \|\| '',[\s\S]*workoutNotes: model\.workoutNotes \|\| model\.notes \|\| '',/)
-  assert.match(editViewSource, /<TextInput[\s\S]*placeholder=\{model\.workoutNamePlaceholder \|\| 'Workout name'\}/)
+  assert.match(editViewSource, /<TextInput[\s\S]*accessibilityLabel="Workout edit name"[\s\S]*placeholder=\{model\.workoutNamePlaceholder \|\| 'Workout name'\}[\s\S]*testID="workout-edit-name-input"/)
   assert.match(editViewSource, /value=\{draft\.workoutName\}/)
-  assert.match(editViewSource, /placeholder=\{model\.workoutNotesPlaceholder \|\| 'Add notes'\}/)
+  assert.match(editViewSource, /accessibilityLabel="Workout edit notes"[\s\S]*placeholder=\{model\.workoutNotesPlaceholder \|\| 'Add notes'\}[\s\S]*testID="workout-edit-notes-input"/)
   assert.match(editViewSource, /value=\{draft\.workoutNotes\}/)
   assert.match(editViewSource, /draft\.exercises\.map\(\(exercise, exerciseIndex\) => \(/)
   assert.match(editViewSource, /AppOutlinedActionButton/)
@@ -61,7 +61,7 @@ test('mobile workout edit view matches the edit reference structure and uses Nat
   assert.match(editViewSource, /multiline/)
   assert.match(editViewSource, /onChangeText=/)
   assert.match(editViewSource, /Cancel/)
-  assert.match(editViewSource, /Save/)
+  assert.match(editViewSource, /accessibilityLabel="Save workout edit"[\s\S]*testID="workout-edit-save-button"[\s\S]*model\.editLabel \|\| 'Save'/)
   assert.match(editViewSource, /Add notes/)
   assert.match(editViewSource, /Add Notes/)
   assert.match(editViewSource, /Add Set/)
@@ -165,6 +165,27 @@ test('mobile workout edit view supports changing exercise sort order through the
 
   assert.match(modelSource, /sortOrder: exercise\.sortOrder \?\? exerciseIndex \+ 1/)
   assert.match(modelSource, /sortOrderLabel: String\(exercise\.sortOrder \?\? exerciseIndex \+ 1\)/)
+})
+
+test('mobile workout edit title notes and set value changes stay draft-only until explicit Save', () => {
+  const appSource = readFileSync(resolve(process.cwd(), 'apps/mobile/App.js'), 'utf8')
+  const editViewSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/workout-edit-view.js'), 'utf8')
+  const saveHandler = appSource.match(/async function handleSaveWorkoutEdit\(draft\) \{[\s\S]*?\n  \}/)?.[0] || ''
+  const nameInput = editViewSource.match(/accessibilityLabel="Workout edit name"[\s\S]*?value=\{draft\.workoutName\}/)?.[0] || ''
+  const notesInput = editViewSource.match(/accessibilityLabel="Workout edit notes"[\s\S]*?value=\{draft\.workoutNotes\}/)?.[0] || ''
+  const workoutNotesDraftHandler = editViewSource.match(/function handleWorkoutNotesChange\(nextValue\) \{[\s\S]*?\n  \}/)?.[0] || ''
+  const setValueDraftHandler = editViewSource.match(/function handleSetValueChange\(exerciseId, setId, field, nextValue\) \{[\s\S]*?\n  \}/)?.[0] || ''
+
+  assert.match(nameInput, /onChangeText=\{\(nextValue\) => setDraft\(\(currentDraft\) => \(\{ \.\.\.currentDraft, workoutName: nextValue \}\)\)\}/)
+  assert.doesNotMatch(nameInput, /onSave|updateProgramWorkout|programSheetClient|persistSessionUpdate/)
+  assert.match(workoutNotesDraftHandler, /setDraft\(\(currentDraft\) => \(\{[\s\S]*workoutNotes: nextValue/)
+  assert.doesNotMatch(workoutNotesDraftHandler, /onSave|updateProgramWorkout|programSheetClient|persistSessionUpdate/)
+  assert.match(notesInput, /onChangeText=\{handleWorkoutNotesChange\}/)
+  assert.doesNotMatch(notesInput, /onSave|updateProgramWorkout|programSheetClient|persistSessionUpdate/)
+  assert.match(setValueDraftHandler, /setDraft\(\(currentDraft\) => \(\{[\s\S]*\[field\]: nextValue\.replace\(\/\[\^0-9\.-\]\/g, ''\)/)
+  assert.doesNotMatch(setValueDraftHandler, /onSave|updateProgramWorkout|programSheetClient|persistSessionUpdate/)
+  assert.match(editViewSource, /onPress=\{\(\) => onSave\?\.\(draft\)\}/)
+  assert.match(saveHandler, /programSheetClient\?\.updateProgramWorkout\?\.\(\{[\s\S]*nameSnapshot: draft\?\.workoutName \|\| '',[\s\S]*notes: draft\?\.workoutNotes \|\| '',/)
 })
 
 test('mobile workout edit view supports swipe-to-delete set rows through the planned workout seam', () => {

@@ -97,7 +97,7 @@ export function CoachAthletesSheetContent({ onClose, athletes = [], selectedAthl
     })
   }, [athletes, searchValue])
 
-  const safeBottom = Math.max(insets.bottom, 20)
+  const safeBottom = Math.max(insets.bottom + 12, 32)
   const keyboardBottomOffset = Math.max(keyboardHeight - insets.bottom, 0)
   const shouldCompactBottomActions = isSearchFocused || keyboardHeight > 0
   const compactTopTrayPadding = shouldCompactBottomActions ? 10 : 0

@@ -1,5 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { createMobileAppBootstrap, getBootstrapSurfaceModel } from '../apps/mobile/src/auth/bootstrap.js'
 import { getAssignedProgramWorkoutIdForDate } from '../apps/mobile/src/train/assigned-program-workout-id.js'
 
@@ -127,6 +129,24 @@ test('createMobileAppBootstrap returns signed out when Supabase env is missing i
   assert.equal(bootstrap.sessionStore, null)
 })
 
+test('createMobileAppBootstrap can force signed out for simulator auth smoke even when a persisted user exists', async () => {
+  const bootstrap = await createMobileAppBootstrap({
+    env: {
+      EXPO_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
+      EXPO_PUBLIC_PPLUS_RUNTIME_BOOTSTRAP_OVERRIDE: 'signed_out',
+    },
+    accessToken: 'persisted-token',
+    currentUserId: 'persisted-user',
+    currentAthleteId: 'persisted-athlete',
+  })
+
+  assert.equal(bootstrap.status, 'signed_out')
+  assert.equal(bootstrap.athleteProfile, null)
+  assert.equal(bootstrap.trainState, null)
+  assert.equal(bootstrap.sessionStore, null)
+})
+
 test('createMobileAppBootstrap can force an authenticated train/home preview override for runtime verification', async () => {
   const bootstrap = await createMobileAppBootstrap({
     env: {
@@ -145,6 +165,70 @@ test('createMobileAppBootstrap can force an authenticated train/home preview ove
   assert.equal(bootstrap.sessionStore.getCurrentSession()?.programWorkoutId || bootstrap.sessionStore.getCurrentSession()?.id, 'pw-lower-a')
 })
 
+test('createMobileAppBootstrap can force a seeded authenticated coach shell for simulator smoke', async () => {
+  const bootstrap = await createMobileAppBootstrap({
+    env: {
+      EXPO_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
+      EXPO_PUBLIC_PPLUS_RUNTIME_BOOTSTRAP_OVERRIDE: 'authenticated_coach_shell_seeded',
+    },
+  })
+
+  assert.equal(bootstrap.status, 'authenticated_coach')
+  assert.equal(bootstrap.role, 'coach')
+  assert.equal(bootstrap.coachProfile.id, 'coach-preview')
+  assert.equal(bootstrap.coachProfile.displayName, 'Coach Tony')
+  assert.equal(bootstrap.coachAthletes.length, 2)
+  assert.equal(bootstrap.coachAthletes[0].id, 'ath-preview-1')
+  assert.equal(bootstrap.coachAthletes[0].firstName, 'Thomas')
+  assert.equal(bootstrap.coachAthletes[0].lastName, 'Thibault')
+  assert.equal(bootstrap.coachGroups[0].name, 'Speed Group')
+  assert.equal(bootstrap.athleteProfile, null)
+  assert.equal(bootstrap.trainState, null)
+  assert.equal(bootstrap.sessionStore, null)
+})
+
+test('createMobileAppBootstrap can force a seeded authenticated coach workout for safe simulator smoke', async () => {
+  const bootstrap = await createMobileAppBootstrap({
+    env: {
+      EXPO_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
+      EXPO_PUBLIC_PPLUS_RUNTIME_BOOTSTRAP_OVERRIDE: 'authenticated_coach_safe_workout_seeded',
+    },
+  })
+
+  assert.equal(bootstrap.status, 'authenticated_coach')
+  assert.equal(bootstrap.role, 'coach')
+  assert.equal(bootstrap.coachAthletes[0].id, 'ath-preview-1')
+  assert.equal(bootstrap.trainState.programWorkout.id, 'pw-safe-simulator-smoke')
+  assert.equal(bootstrap.trainState.programWorkout.athleteId, 'ath-preview-1')
+  assert.equal(bootstrap.trainState.programWorkout.nameSnapshot, 'Safe Simulator Workout')
+  assert.equal(bootstrap.trainState.programWorkout.exercises[0].nameSnapshot, 'Barbell Back Squat')
+  assert.equal(bootstrap.trainState.session.status, 'planned')
+  assert.equal(bootstrap.sessionStore.getCurrentSession()?.programWorkoutId, 'pw-safe-simulator-smoke')
+})
+
+test('createMobileAppBootstrap can force a seeded assigned program for simulator program-detail smoke', async () => {
+  const bootstrap = await createMobileAppBootstrap({
+    env: {
+      EXPO_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
+      EXPO_PUBLIC_PPLUS_RUNTIME_BOOTSTRAP_OVERRIDE: 'authenticated_coach_assigned_program_seeded',
+    },
+  })
+
+  assert.equal(bootstrap.status, 'authenticated_coach')
+  assert.equal(bootstrap.role, 'coach')
+  assert.equal(bootstrap.coachAthletes[0].id, 'ath-preview-1')
+  assert.equal(bootstrap.trainState.program.id, 'program-safe-assigned-detail-smoke')
+  assert.equal(bootstrap.trainState.program.name, 'Safe Assigned Program')
+  assert.equal(bootstrap.trainState.programWorkout.id, 'pw-safe-assigned-program-detail-smoke')
+  assert.equal(bootstrap.trainState.programWorkout.nameSnapshot, 'Safe Assigned Workout')
+  assert.equal(bootstrap.trainState.program.calendarWeek[0].workoutPreview.programWorkoutId, 'pw-safe-assigned-program-detail-smoke')
+  assert.equal(bootstrap.trainState.session.status, 'planned')
+  assert.equal(bootstrap.sessionStore.getCurrentSession()?.programWorkoutId, 'pw-safe-assigned-program-detail-smoke')
+})
+
 test('createMobileAppBootstrap returns signed out when remote config exists but auth context is missing', async () => {
   const bootstrap = await createMobileAppBootstrap({
     env: {
@@ -155,6 +239,29 @@ test('createMobileAppBootstrap returns signed out when remote config exists but 
 
   assert.equal(bootstrap.status, 'signed_out')
   assert.equal(bootstrap.trainState, null)
+})
+
+test('auth bootstrap source keeps demo train creation isolated to the explicit runtime preview override', () => {
+  const bootstrapSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/auth/bootstrap.js'), 'utf8')
+  const runtimeOverrideBlock = bootstrapSource.match(/if \(runtimeBootstrapOverride === 'authenticated_train_preview'\) \{[\s\S]*?\n  \}\n\n  if \(runtimeBootstrapOverride === 'authenticated_coach_shell_seeded'\)/)?.[0] || ''
+  const sourceAfterRuntimeOverride = bootstrapSource.replace(runtimeOverrideBlock, '')
+  const authenticatedBootstrapBlock = sourceAfterRuntimeOverride.match(/const resolvedUserId = currentUser\?\.id \|\| currentUserId \|\| null[\s\S]*?return \{\n    status: 'authenticated',[\s\S]*?\n  \}\n\}/)?.[0] || ''
+
+  assert.match(bootstrapSource, /const runtimeBootstrapOverride = env\?\.EXPO_PUBLIC_PPLUS_RUNTIME_BOOTSTRAP_OVERRIDE \|\| null/)
+  assert.match(runtimeOverrideBlock, /createTrainDemoState\(\{ previewState \}\)/)
+  assert.doesNotMatch(sourceAfterRuntimeOverride, /createTrainDemoState\(/)
+  assert.doesNotMatch(authenticatedBootstrapBlock, /createTrainDemoState\(/)
+  assert.doesNotMatch(authenticatedBootstrapBlock, /createDemoProgramWorkout\(/)
+})
+
+test('train source exposes a real program-workout train state builder instead of using demo fallback after auth bootstrap', () => {
+  const trainSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/train/index.js'), 'utf8')
+  const standaloneBuilderBlock = trainSource.match(/export function createStandaloneProgramWorkoutTrainState[\s\S]*?\n\}/)?.[0] || ''
+
+  assert.match(standaloneBuilderBlock, /programWorkout/)
+  assert.match(standaloneBuilderBlock, /createPreviewSession\(\{ programWorkout/)
+  assert.doesNotMatch(standaloneBuilderBlock, /createTrainDemoState\(/)
+  assert.doesNotMatch(standaloneBuilderBlock, /createDemoProgramWorkout\(/)
 })
 
 test('createMobileAppBootstrap refreshes a recoverable stored auth session before falling back to signed out', async () => {
@@ -497,6 +604,25 @@ test('createMobileAppBootstrap replaces a generic coach display_name with auth m
 
   assert.equal(bootstrap.status, 'authenticated_coach')
   assert.equal(bootstrap.coachProfile.displayName, 'Anthony Fortugno')
+})
+
+
+test('createMobileAppBootstrap exposes a deterministic authenticated athlete Train/Home smoke override', async () => {
+  const bootstrap = await createMobileAppBootstrap({
+    env: {
+      EXPO_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
+      EXPO_PUBLIC_PPLUS_RUNTIME_BOOTSTRAP_OVERRIDE: 'authenticated_athlete_train_home_seeded',
+    },
+  })
+
+  assert.equal(bootstrap.status, 'authenticated')
+  assert.equal(bootstrap.role, 'athlete')
+  assert.equal(bootstrap.athleteProfile.id, 'ath-preview-1')
+  assert.equal(bootstrap.athleteProfile.firstName, 'Thomas')
+  assert.equal(bootstrap.trainState.programWorkout.nameSnapshot, 'Safe Simulator Workout')
+  assert.equal(bootstrap.trainState.programWorkout.athleteId, 'ath-preview-1')
+  assert.equal(bootstrap.sessionStore.identityClient, null)
 })
 
 test('createMobileAppBootstrap keeps an authenticated athlete train state when the assigned program has an off day today', async () => {

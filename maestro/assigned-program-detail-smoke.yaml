@@ -1,0 +1,20 @@
+appId: host.exp.Exponent
+---
+- stopApp
+- openLink: exp://127.0.0.1:8084
+- extendedWaitUntil:
+    visible: "Viewing athlete"
+    timeout: 60000
+- assertVisible: "Thomas Thibault"
+- extendedWaitUntil:
+    visible: "Safe Assigned Program"
+    timeout: 10000
+- assertVisible: "Safe Assigned Workout"
+- tapOn: "Safe Assigned Program"
+- extendedWaitUntil:
+    visible: "Edit"
+    timeout: 10000
+- assertVisible: "Workouts"
+- assertVisible: "Schedule"
+- assertVisible: "Week 1"
+- assertVisible: "Safe Assigned Workout"

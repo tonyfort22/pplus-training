@@ -385,7 +385,43 @@ const EXERCISES_VIEW_MODEL = {
   searchLabel: 'Search or Create Exercises',
 }
 
+const SEEDED_EXERCISE_LIBRARY_ITEMS = [
+  {
+    id: 'seeded-exercise-trap-bar-deadlift',
+    name: 'Trap Bar Deadlift',
+    thumbnailUrl: null,
+    videoUrl: null,
+    metricProfileId: 'strength_1rm',
+    stimulusType: 'strength',
+    movementPattern: 'hinge',
+  },
+  {
+    id: 'seeded-exercise-sprint-start',
+    name: 'Sprint [2-Point Start]',
+    thumbnailUrl: null,
+    videoUrl: null,
+    metricProfileId: 'speed_time',
+    stimulusType: 'speed',
+    movementPattern: 'sprint',
+  },
+]
+
+function createSeededExerciseLibraryClient() {
+  return {
+    async listExercises() {
+      return SEEDED_EXERCISE_LIBRARY_ITEMS
+    },
+  }
+}
+
 function createMobileExerciseLibraryClient({ env = process.env, fetchImpl = globalThis.fetch } = {}) {
+  const runtimeEnv = globalThis.process?.env || env || {}
+  const runtimeBootstrapOverride = runtimeEnv.EXPO_PUBLIC_PPLUS_RUNTIME_BOOTSTRAP_OVERRIDE || env?.EXPO_PUBLIC_PPLUS_RUNTIME_BOOTSTRAP_OVERRIDE || null
+
+  if (runtimeBootstrapOverride === 'authenticated_coach_shell_seeded') {
+    return createSeededExerciseLibraryClient()
+  }
+
   if (!env?.EXPO_PUBLIC_SUPABASE_URL || !env?.EXPO_PUBLIC_SUPABASE_ANON_KEY) {
     return null
   }
@@ -696,6 +732,7 @@ function ProfileField({ field, onChange, onOpenDatePicker, onOpenDropdown, units
             className="px-0 py-0 text-[16px]"
             style={{ backgroundColor: 'transparent', outlineStyle: 'none', color: resolvedTheme.textMuted }}
             value={field.value}
+            testID={`profile-${field.id}-input`}
             keyboardType={field.id === 'height' || field.id === 'weight' ? 'decimal-pad' : field.id === 'phone-number' ? 'phone-pad' : 'default'}
             textContentType={field.id === 'phone-number' ? 'telephoneNumber' : 'none'}
             autoComplete={field.id === 'phone-number' ? 'tel' : 'off'}
@@ -1066,6 +1103,7 @@ function ProfileDetailsView({ onBack, athleteProfile, onSaveProfile, isSavingPro
               }}
               onPress={handleSave}
               disabled={isSaveDisabled}
+              testID="profile-save-button"
             >
               <Text className="text-[18px] font-semibold" style={{ color: isSaveDisabled ? resolvedTheme.textSoft : resolvedTheme.accentText }}>{isSavingProfile ? 'Saving...' : 'Save Profile'}</Text>
             </Pressable>
@@ -1647,10 +1685,15 @@ function ProfileViewContent({ onClose, onSignOut, athleteProfile, onSaveProfile,
   }
 
   return (
-    <SafeAreaView className="flex-1" style={{ backgroundColor: resolvedTheme.background }}>
+    <SafeAreaView
+      className="flex-1"
+      testID="profile-settings-screen"
+      accessibilityLabel="Profile settings screen"
+      style={{ backgroundColor: resolvedTheme.background }}
+    >
       <View className="flex-1 px-5" style={{ paddingTop: Math.max(insets.top, 16), paddingBottom: Math.max(insets.bottom, 20) }}>
         <View className="mb-8 flex-row items-center justify-between">
-          <Pressable className="h-11 w-11 items-center justify-center rounded-[16px]" style={{ borderWidth: 1, borderColor: resolvedTheme.border, backgroundColor: resolvedTheme.surface }} onPress={onClose}>
+          <Pressable className="h-11 w-11 items-center justify-center rounded-[16px]" style={{ borderWidth: 1, borderColor: resolvedTheme.border, backgroundColor: resolvedTheme.surface }} onPress={onClose} testID="profile-close-button">
             <ChevronLeft color={resolvedTheme.icon} size={20} strokeWidth={2.6} />
           </Pressable>
           <View className="w-11" />

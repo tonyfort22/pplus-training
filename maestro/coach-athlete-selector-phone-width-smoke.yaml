@@ -1,0 +1,15 @@
+appId: host.exp.Exponent
+---
+- openLink: exp://127.0.0.1:8084
+- extendedWaitUntil:
+    visible: "Viewing athlete"
+    timeout: 60000
+- tapOn: "Open Athletes"
+- extendedWaitUntil:
+    visible: "Mia Chen"
+    timeout: 10000
+- assertVisible: "Athletes"
+- assertVisible: "Thomas Thibault"
+- assertVisible: "Mia Chen"
+- assertVisible: "Invite athlete"
+- assertVisible: "Search by name"

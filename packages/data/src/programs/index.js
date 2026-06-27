@@ -740,6 +740,12 @@ export function createProgramRepository(db) {
       }
       throw new Error('Program repository requires db.createProgramWorkout(input) for create-workout workflow')
     },
+    async updateProgramWorkout(input) {
+      if (typeof db?.updateProgramWorkout === 'function') {
+        return db.updateProgramWorkout(input)
+      }
+      throw new Error('Program repository requires db.updateProgramWorkout(input) for workout-edit save workflow')
+    },
     async createProgramWorkoutExercises(input) {
       if (typeof db?.createProgramWorkoutExercises === 'function') {
         return db.createProgramWorkoutExercises(input)

@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<testsuites>
+  <testsuite name="Test Suite" device="iPhone 17 Pro - iOS 26.3 - 7629C9EB-F4FD-4CE1-BBB7-797AB2ED15BA" tests="1" failures="0" time="23.0">
+    <testcase id="visual-media-chart-bodymap-no-clip" name="visual-media-chart-bodymap-no-clip" classname="visual-media-chart-bodymap-no-clip" time="23.0" status="SUCCESS"/>
+  </testsuite>
+</testsuites>

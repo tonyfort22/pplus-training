@@ -315,7 +315,7 @@ export function getAnalyticsViewModel({ sessions = [], progressModel = null, str
     consistencyChart: buildConsistencyChart(completedSessions),
     recoveryMuscleGroups: buildAnalyticsRecoveryMuscleGroups(completedSessions),
     recoveryRows: buildAnalyticsRecoveryRows(completedSessions),
-    activityMuscleGroups: buildAnalyticsActivityMuscleGroups(sessions),
+    activityMuscleGroups: buildAnalyticsActivityMuscleGroups(completedSessions),
   }
 }
 

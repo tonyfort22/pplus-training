@@ -1,0 +1,23 @@
+appId: host.exp.Exponent
+---
+- openLink: exp://127.0.0.1:8084
+- extendedWaitUntil:
+    visible: "Viewing athlete"
+    timeout: 60000
+- assertVisible: "Thomas Thibault"
+- assertVisible: "No workout scheduled"
+- assertVisible: "My Programs"
+- assertVisible: "No program available"
+- assertVisible: "My Workouts"
+- assertVisible: "No workout available"
+- tapOn: "Open Athletes"
+- extendedWaitUntil:
+    visible: "Mia Chen"
+    timeout: 10000
+- tapOn: "Mia Chen"
+- extendedWaitUntil:
+    visible: "Viewing athlete"
+    timeout: 10000
+- assertVisible: "Mia Chen"
+- assertNotVisible: "Thomas Thibault"
+- assertVisible: "No workout scheduled"

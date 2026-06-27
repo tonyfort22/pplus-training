@@ -1,0 +1,23 @@
+appId: host.exp.Exponent
+---
+- stopApp
+- openLink: exp://127.0.0.1:8084
+- extendedWaitUntil:
+    visible: "Viewing athlete"
+    timeout: 60000
+- tapOn: "Open Profile"
+- extendedWaitUntil:
+    visible: "Exercises"
+    timeout: 10000
+- tapOn: "Exercises"
+- extendedWaitUntil:
+    visible:
+      id: "exercise-library-row-seeded-exercise-trap-bar-deadlift"
+    timeout: 10000
+- tapOn:
+    id: "exercise-library-row-seeded-exercise-trap-bar-deadlift"
+- extendedWaitUntil:
+    visible: "Trap Bar Deadlift"
+    timeout: 10000
+- assertVisible: "Progress"
+- assertVisible: "History"

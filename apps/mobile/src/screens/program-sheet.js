@@ -12,17 +12,19 @@ function ProgramSheetStatIcon({ icon, theme }) {
   return <Dumbbell color={theme.accent} size={18} strokeWidth={2.2} />
 }
 
-function ProgramSheetStatusBadge({ status, theme }) {
-  return <AppStatusIconBadge status={status} theme={theme} size="xs" />
+function ProgramSheetStatusBadge({ status, theme, testID }) {
+  return <AppStatusIconBadge status={status} theme={theme} size="xs" testID={testID} />
 }
 
 function ProgramSheetWeekCard({ week, theme, onOpenWorkoutDetail, onOpenTrainingCalendar }) {
   return (
     <AppSurfaceCard
+      accessibilityLabel={`Program sheet ${week.title} card`}
       theme={theme}
       onPress={onOpenTrainingCalendar}
       contentClassName="gap-3.5 px-[18px] py-[18px]"
       containerClassName="rounded-3xl overflow-hidden"
+      testID={`program-sheet-week-card-${week.id}`}
     >
       <Text className="text-[13px] font-semibold" style={{ color: theme.textSoft }}>{week.dateRangeLabel}</Text>
       <Text className="text-2xl font-bold" style={{ color: theme.text }}>{week.title}</Text>
@@ -37,8 +39,9 @@ function ProgramSheetWeekCard({ week, theme, onOpenWorkoutDetail, onOpenTraining
             <View
               key={entry.id}
               className="flex-row items-center justify-between gap-3 py-2.5"
+              testID={`program-sheet-schedule-row-${entry.id}`}
             >
-              <View className="w-10 shrink-0 pr-2">
+              <View className="w-10 shrink-0 pr-2" testID={`program-sheet-day-label-rail-${entry.id}`}>
                 <Text className="text-[11px] font-semibold uppercase" style={{ color: theme.textSoft }}>{entry.dayLabel}</Text>
               </View>
               {entry.status === 'rest' ? (
@@ -53,7 +56,7 @@ function ProgramSheetWeekCard({ week, theme, onOpenWorkoutDetail, onOpenTraining
                     <Text className="text-[14px] font-semibold" style={{ color: theme.text }}>{entry.workoutLabel}</Text>
                   </Pressable>
                   {entry.durationLabel ? <Text className="text-[12px] font-medium" style={{ color: theme.textSoft }}>{entry.durationLabel}</Text> : null}
-                  <ProgramSheetStatusBadge status={entry.status} theme={theme} />
+                  <ProgramSheetStatusBadge status={entry.status} theme={theme} testID={`program-sheet-status-checkbox-${entry.id}`} />
                 </>
               )}
             </View>
@@ -130,6 +133,7 @@ function ProgramSheetContent({ model, theme, onClose, onEditProgram, onOpenWorko
                     theme={resolvedTheme}
                     containerClassName="min-h-[56px] w-[48%] justify-center rounded-[24px] overflow-hidden"
                     contentClassName="justify-center px-5 py-4"
+                    testID={`program-sheet-routine-card-${routine.id}`}
                   >
                     <Text className="text-[15px] font-semibold" style={{ color: resolvedTheme.text }}>{routine.label}</Text>
                   </AppSurfaceCard>

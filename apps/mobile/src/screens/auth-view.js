@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { useWindowDimensions, Pressable, Text, TextInput, View } from 'react-native'
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View, useWindowDimensions } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ChevronRight, Eye, EyeOff } from 'lucide-react-native'
 import { SvgXml } from 'react-native-svg'
 import { getLoadingScreenThemeBranding } from '../assets/loading-screen-backgrounds.js'
@@ -73,6 +74,7 @@ export function AuthView({
   theme,
 }) {
   const { width, height } = useWindowDimensions()
+  const insets = useSafeAreaInsets()
   const overlayWidth = width * 1.08
   const overlayHeight = height * 1.08
   const [values, setValues] = useState({
@@ -102,8 +104,19 @@ export function AuthView({
       <View pointerEvents="none" className="absolute inset-0 items-center justify-center">
         <SvgXml xml={authScreenBranding.overlaySvg} width={overlayWidth} height={overlayHeight} preserveAspectRatio="xMidYMid slice" />
       </View>
-      <View className="flex-1 px-6">
-        <View className="flex-1 items-center justify-center">
+      <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
+        <ScrollView
+          className="flex-1 px-6"
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: 'center',
+            paddingTop: Math.max(insets.top, 24),
+            paddingBottom: Math.max(insets.bottom, 24),
+          }}
+        >
+          <View className="items-center justify-center">
           <View className="w-full max-w-[420px] gap-5">
             <View className="rounded-[22px] p-2" style={{ borderWidth: 1, borderColor: resolvedTheme.border, backgroundColor: resolvedTheme.id === 'light' ? resolvedTheme.surface : resolvedTheme.surfaceMuted }}>
               <View className="flex-row gap-3">
@@ -158,7 +171,8 @@ export function AuthView({
             </View>
           </View>
         </View>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   )
 }

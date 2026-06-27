@@ -84,6 +84,57 @@ test('readStoredAuthSession falls back cleanly when persisted data is invalid JS
   assert.deepEqual(restored, getInitialAuthSessionState())
 })
 
+test('auth session SecureStore data persists only the minimal bootstrap resume shape', async () => {
+  const storage = createMemoryAuthStorage()
+
+  const written = await writeStoredAuthSession(storage, {
+    accessToken: 'access-token',
+    refreshToken: 'refresh-token',
+    currentUserId: 'user-1',
+    currentAthleteId: 'ath-1',
+    bootstrapState: { status: 'authenticated', trainState: { huge: true } },
+    athleteProfile: { id: 'ath-1', firstName: 'Tony' },
+    coachProfile: { id: 'coach-1' },
+    trainState: { programWorkout: { id: 'pw-1' } },
+    sessionStore: { getCurrentSession: 'not-serializable' },
+    errorMessage: 'stale bootstrap error',
+  })
+
+  const rawStored = await storage.getItem()
+  const persisted = JSON.parse(rawStored)
+
+  assert.deepEqual(written, {
+    accessToken: 'access-token',
+    refreshToken: 'refresh-token',
+    currentUserId: 'user-1',
+    currentAthleteId: 'ath-1',
+  })
+  assert.deepEqual(Object.keys(persisted).sort(), ['accessToken', 'currentAthleteId', 'currentUserId', 'refreshToken'].sort())
+  assert.doesNotMatch(rawStored, /bootstrapState|athleteProfile|coachProfile|trainState|sessionStore|errorMessage/)
+})
+
+test('readStoredAuthSession normalizes legacy oversized SecureStore snapshots back to the bootstrap resume shape', async () => {
+  const storage = createMemoryAuthStorage(JSON.stringify({
+    accessToken: 'legacy-access-token',
+    refreshToken: 'legacy-refresh-token',
+    currentUserId: 'legacy-user',
+    currentAthleteId: 'legacy-athlete',
+    bootstrapState: { status: 'authenticated', trainState: { huge: true } },
+    athleteProfile: { id: 'legacy-athlete', firstName: 'Tony' },
+    trainState: { programWorkout: { id: 'pw-1' } },
+    sessionStore: { currentSession: { id: 'session-1' } },
+  }))
+
+  const restored = await readStoredAuthSession(storage)
+
+  assert.deepEqual(restored, {
+    accessToken: 'legacy-access-token',
+    refreshToken: 'legacy-refresh-token',
+    currentUserId: 'legacy-user',
+    currentAthleteId: 'legacy-athlete',
+  })
+})
+
 test('getBootstrapFailureState converts bootstrap exceptions into a non-loading error shell', () => {
   const failureState = getBootstrapFailureState(new Error('coach bootstrap failed'))
 
