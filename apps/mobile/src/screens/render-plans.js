@@ -16,6 +16,13 @@ export function getGenericSectionRenderPlan(sections) {
       }
     }
 
+    if (section.type === 'section-heading') {
+      return {
+        type: 'section-heading',
+        title: section.title,
+      }
+    }
+
     if (section.type === 'body-list') {
       return {
         type: 'body-list',

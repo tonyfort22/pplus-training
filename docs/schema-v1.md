@@ -354,6 +354,8 @@ It may be coach-authored, imported, or normalized from source content.
 - difficulty nullable
 - focus_area nullable
 - training_type nullable
+- bg_color nullable
+- text_color nullable
 - estimated_duration_minutes nullable
 - thumbnail_url nullable
 - source_type (`imported`, `manual`, `hybrid`)
@@ -439,9 +441,9 @@ Layer 5 does **not** store the authoritative performed set history.
 Once a workout is started, Layer 6 becomes the execution source of truth.
 
 ## programs
-Assigned athlete programs.
+Coach-authored program plans. A program may start unassigned and later be attached to an athlete, while assigned athlete views still consume athlete-linked programs.
 - id
-- athlete_id
+- athlete_id nullable
 - coach_id
 - content_collection_id nullable
 - name
@@ -453,14 +455,15 @@ Assigned athlete programs.
 - updated_at
 
 ## program_phases
-Optional but useful because the imported sources are phase-heavy.
+A program-owned grouping layer for workouts that belong together inside a training phase.
+This is the structured home for imported labels like `Phase 1`, while the workouts/blocks/exercises/sets remain underneath it.
 - id
 - program_id
-- content_collection_id nullable
 - name
-- phase_index nullable
-- start_date nullable
-- end_date nullable
+- description nullable
+- training_type nullable
+- start_week nullable
+- end_week nullable
 - sort_order
 - created_at
 - updated_at
@@ -502,6 +505,7 @@ The assigned athlete-specific workout snapshot shown before execution starts.
 These rows should usually come from a `workout_template`, with optional `content_item_id` kept for provenance only.
 - id
 - program_day_id
+- program_phase_id nullable
 - workout_template_id nullable
 - content_item_id nullable
 - name_snapshot
@@ -509,6 +513,8 @@ These rows should usually come from a `workout_template`, with optional `content
 - category_snapshot nullable
 - focus_area_snapshot nullable
 - training_type_snapshot nullable
+- bg_color nullable
+- text_color nullable
 - estimated_duration_minutes_snapshot nullable
 - source_file_label_snapshot nullable
 - sort_order

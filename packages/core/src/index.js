@@ -74,10 +74,13 @@ export function createWorkoutSession({ programWorkout, startedAt } = {}) {
     id: exercise.id,
     programWorkoutExerciseId: exercise.id,
     exerciseId: exercise.exerciseId,
+    metricProfileId: exercise.metricProfileId ?? null,
     nameSnapshot: exercise.nameSnapshot || exercise.name || '',
     sortOrder: exercise.sortOrder || 0,
     notes: exercise.notes || '',
     defaultRestSeconds: exercise.defaultRestSeconds ?? null,
+    supersetGroupId: exercise.supersetGroupId ?? null,
+    supersetOrder: exercise.supersetOrder ?? null,
     fatigueMultiplier: exercise.fatigueMultiplier ?? null,
     axialFatigueMultiplier: exercise.axialFatigueMultiplier ?? null,
     skillFatigueMultiplier: exercise.skillFatigueMultiplier ?? null,
@@ -155,6 +158,8 @@ export function createWorkoutSessionFromTemplate(workoutTemplate) {
       id: exercise.id,
       name: exercise.name,
       defaultRestSeconds: exercise.defaultRestSeconds ?? null,
+      supersetGroupId: exercise.supersetGroupId ?? null,
+      supersetOrder: exercise.supersetOrder ?? null,
       notes: exercise.notes || '',
       status: 'not_started',
       sets: (exercise.sets || []).map((set) => ({
@@ -231,6 +236,56 @@ export function updateSessionExerciseRest(session, exerciseId, nextRestSeconds) 
       };
     })
   };
+}
+
+export function createSessionSuperset(session, sourceExerciseId, targetExerciseId) {
+  const currentExercises = Array.isArray(session?.exercises) ? session.exercises : [];
+  if (!sourceExerciseId || !targetExerciseId || sourceExerciseId === targetExerciseId) return session;
+
+  const sourceIndex = currentExercises.findIndex((exercise) => exercise.id === sourceExerciseId);
+  const targetIndex = currentExercises.findIndex((exercise) => exercise.id === targetExerciseId);
+  if (sourceIndex < 0 || targetIndex < 0) return session;
+
+  const existingGroupId = currentExercises[sourceIndex]?.supersetGroupId
+    || currentExercises[targetIndex]?.supersetGroupId
+    || `local-superset-${sourceExerciseId}-${targetExerciseId}`;
+
+  const orderByExerciseId = new Map([
+    [sourceExerciseId, 1],
+    [targetExerciseId, 2],
+  ]);
+
+  return applySessionProgress(updateExerciseStatuses({
+    ...session,
+    exercises: currentExercises.map((exercise) => {
+      const supersetOrder = orderByExerciseId.get(exercise.id);
+      if (!supersetOrder) return exercise;
+      return {
+        ...exercise,
+        supersetGroupId: existingGroupId,
+        supersetOrder,
+      };
+    }),
+  }));
+}
+
+export function removeSessionSuperset(session, exerciseId) {
+  const currentExercises = Array.isArray(session?.exercises) ? session.exercises : [];
+  const sourceExercise = currentExercises.find((exercise) => exercise.id === exerciseId) || null;
+  const supersetGroupId = sourceExercise?.supersetGroupId || null;
+  if (!sourceExercise || !supersetGroupId) return session;
+
+  return applySessionProgress(updateExerciseStatuses({
+    ...session,
+    exercises: currentExercises.map((exercise) => {
+      if (exercise.supersetGroupId !== supersetGroupId) return exercise;
+      return {
+        ...exercise,
+        supersetGroupId: null,
+        supersetOrder: null,
+      };
+    }),
+  }));
 }
 
 export function removeSessionExercise(session, exerciseId) {
@@ -369,6 +424,8 @@ export function appendSessionExercises(session, exercisesToAdd = [], { defaultRe
       status: 'not_started',
       notes: '',
       defaultRestSeconds: exerciseRestSeconds,
+      supersetGroupId: null,
+      supersetOrder: null,
       sets: buildSeededSessionSets(exercise, exerciseRestSeconds, nextExerciseId),
     }
   })
@@ -514,10 +571,40 @@ export function adjustRestTimer(session, secondsDelta) {
   };
 }
 
+function findNextIncompleteSessionSet(session, completedExerciseId, completedSetId) {
+  const exercises = Array.isArray(session?.exercises) ? session.exercises : [];
+  const flattenedSets = exercises.flatMap((exercise) => (exercise.sets || []).map((set) => ({
+    exerciseId: exercise.id,
+    setId: set.id,
+    isCompleted: Boolean(set.isCompleted),
+  })));
+  const completedIndex = flattenedSets.findIndex((item) => item.exerciseId === completedExerciseId && item.setId === completedSetId);
+  const searchStartIndex = completedIndex >= 0 ? completedIndex + 1 : 0;
+
+  return flattenedSets.slice(searchStartIndex).find((item) => !item.isCompleted)
+    || flattenedSets.slice(0, searchStartIndex).find((item) => !item.isCompleted)
+    || null;
+}
+
 export function clearRestTimer(session) {
   return {
     ...session,
     activeRestTimer: null
+  };
+}
+
+export function advanceSessionAfterRestTimerExpiry(session) {
+  if (!session?.activeRestTimer) return session;
+
+  const expiredTimer = session.activeRestTimer;
+  const nextTarget = session.settings?.autoProgressEnabled
+    ? findNextIncompleteSessionSet(session, expiredTimer.exerciseId, expiredTimer.setId)
+    : null;
+
+  return {
+    ...session,
+    activeRestTimer: null,
+    activeSetTarget: nextTarget,
   };
 }
 

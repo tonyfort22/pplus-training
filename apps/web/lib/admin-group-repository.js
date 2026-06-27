@@ -139,11 +139,15 @@ function formatAthleteCountLabel(count) {
   return `${count} athlete${count === 1 ? '' : 's'}`
 }
 
-function createAthleteNameMap(rows) {
+function createAthleteMap(rows) {
   return (Array.isArray(rows) ? rows : []).reduce((accumulator, row) => {
     if (!row?.id) return accumulator
     const fullName = [row.first_name, row.last_name].filter(Boolean).join(' ').trim()
-    accumulator.set(row.id, fullName || 'Unnamed athlete')
+    accumulator.set(row.id, {
+      id: row.id,
+      name: fullName || 'Unnamed athlete',
+      avatarUrl: row.avatar_url ?? '',
+    })
     return accumulator
   }, new Map())
 }
@@ -161,15 +165,16 @@ function createMembershipsByGroupId(rows) {
 
 function mapGroupRow(row, context) {
   const memberships = context.membershipsByGroupId.get(row.id) ?? []
-  const athleteNames = memberships.map((membership) => context.athleteNameById.get(membership.athlete_id)).filter(Boolean)
+  const athletes = memberships.map((membership) => context.athleteById.get(membership.athlete_id)).filter(Boolean)
+  const athleteNames = athletes.map((athlete) => athlete.name).filter(Boolean)
   return {
     id: row.id,
     name: row.name ?? 'Untitled group',
     athleteCount: memberships.length,
     athleteCountLabel: formatAthleteCountLabel(memberships.length),
-    athletes: formatAthleteCountLabel(memberships.length),
     athleteIds: memberships.map((membership) => membership.athlete_id).filter(Boolean),
     athleteNames,
+    athletes,
     access: formatAccessLevel(row.access_level),
     accessLevel: row.access_level ?? 'private',
     updated: formatUpdatedDate(row.updated_at ?? row.created_at),
@@ -182,16 +187,28 @@ function mapGroupRow(row, context) {
 
 function mapAthleteOption(row) {
   const name = [row.first_name, row.last_name].filter(Boolean).join(' ').trim() || 'Unnamed athlete'
-  return { id: row.id, name }
+  return { id: row.id, name, avatarUrl: row.avatar_url ?? '' }
 }
 
-function mapProgramOption(row) {
+function createCounter(rows = [], key) {
+  return (Array.isArray(rows) ? rows : []).reduce((counter, row) => {
+    const value = row?.[key]
+    if (!value) return counter
+    counter.set(value, (counter.get(value) ?? 0) + 1)
+    return counter
+  }, new Map())
+}
+
+function mapProgramOption(row, context = {}) {
   const athleteName = [row?.athlete_profiles?.first_name, row?.athlete_profiles?.last_name].filter(Boolean).join(' ').trim()
+  const workoutCount = context.workoutCountByProgramId?.get(row.id) ?? 0
   return {
     id: row.id,
     name: row.name ?? 'Untitled program',
     athleteLabel: athleteName || 'Unassigned',
     label: athleteName ? `${row.name} · ${athleteName}` : row.name ?? 'Untitled program',
+    workoutCount,
+    workouts: String(workoutCount),
   }
 }
 
@@ -346,24 +363,28 @@ async function cloneProgramTreeForAthlete({ athleteId, sourceProgramId }) {
 export function createAdminGroupRepository() {
   return {
     async listAthleteOptions() {
-      const athleteRows = await requestTable('athlete_profiles', '?select=id,first_name,last_name&order=created_at.asc')
+      const athleteRows = await requestTable('athlete_profiles', '?select=id,first_name,last_name,avatar_url&order=created_at.asc')
       return Array.isArray(athleteRows) ? athleteRows.map(mapAthleteOption) : []
     },
 
     async listProgramOptions() {
-      const programRows = await requestTable('programs', '?select=id,name,created_at,athlete_profiles(first_name,last_name)&order=created_at.desc')
-      return Array.isArray(programRows) ? programRows.map(mapProgramOption) : []
+      const [programRows, workoutRows] = await Promise.all([
+        requestTable('programs', '?select=id,name,created_at,athlete_profiles(first_name,last_name)&order=created_at.desc'),
+        requestTable('program_workouts', '?select=id,program_id'),
+      ])
+      const workoutCountByProgramId = createCounter(workoutRows, 'program_id')
+      return Array.isArray(programRows) ? programRows.map((row) => mapProgramOption(row, { workoutCountByProgramId })) : []
     },
 
     async listGroups() {
       const [groupRows, membershipRows, athleteRows] = await Promise.all([
         requestTable('athlete_groups', '?select=id,name,description,access_level,status,created_at,updated_at&order=created_at.asc'),
         requestTable('athlete_group_memberships', '?select=id,athlete_group_id,athlete_id,created_at'),
-        requestTable('athlete_profiles', '?select=id,first_name,last_name'),
+        requestTable('athlete_profiles', '?select=id,first_name,last_name,avatar_url'),
       ])
       const membershipsByGroupId = createMembershipsByGroupId(membershipRows)
-      const athleteNameById = createAthleteNameMap(athleteRows)
-      return Array.isArray(groupRows) ? groupRows.map((row) => mapGroupRow(row, { membershipsByGroupId, athleteNameById })) : []
+      const athleteById = createAthleteMap(athleteRows)
+      return Array.isArray(groupRows) ? groupRows.map((row) => mapGroupRow(row, { membershipsByGroupId, athleteById })) : []
     },
 
     async createGroup({ name, description = '', accessLevel = 'private', athleteIds = [] }) {
@@ -411,6 +432,23 @@ export function createAdminGroupRepository() {
       return groups.find((group) => group.id === groupId) ?? null
     },
 
+    async archiveGroups({ groupIds = [] }) {
+      const normalizedGroupIds = normalizeAthleteIds(groupIds)
+      if (!normalizedGroupIds.length) throw createRepositoryError('At least one group is required.', 400)
+      const groupFilter = encodeInFilter(normalizedGroupIds)
+      const groupRows = await requestTable('athlete_groups', `?select=id,status&id=in.${groupFilter}`)
+      const archivableGroupIds = groupRows.filter((group) => group?.status !== 'archived').map((group) => group.id)
+      if (!archivableGroupIds.length) throw createRepositoryError('No active groups selected to archive.', 400)
+      const now = new Date().toISOString()
+      const archivableGroupFilter = encodeInFilter(archivableGroupIds)
+      await patchTable('athlete_groups', `?id=in.${archivableGroupFilter}`, { status: 'archived', archived_at: now, updated_at: now })
+      return {
+        groupIds: archivableGroupIds,
+        archivedCount: archivableGroupIds.length,
+        skippedCount: normalizedGroupIds.length - archivableGroupIds.length,
+      }
+    },
+
     async unarchiveGroup({ groupId }) {
       if (!groupId) throw createRepositoryError('Group ID is required.', 400)
       const now = new Date().toISOString()
@@ -419,11 +457,47 @@ export function createAdminGroupRepository() {
       return groups.find((group) => group.id === groupId) ?? null
     },
 
+    async restoreGroups({ groupIds = [] }) {
+      const normalizedGroupIds = normalizeAthleteIds(groupIds)
+      if (!normalizedGroupIds.length) throw createRepositoryError('At least one group is required.', 400)
+      const groupFilter = encodeInFilter(normalizedGroupIds)
+      const groupRows = await requestTable('athlete_groups', `?select=id,status&id=in.${groupFilter}`)
+      const restorableGroupIds = groupRows.filter((group) => group?.status === 'archived').map((group) => group.id)
+      if (!restorableGroupIds.length) throw createRepositoryError('No archived groups selected to restore.', 400)
+      const now = new Date().toISOString()
+      const restorableGroupFilter = encodeInFilter(restorableGroupIds)
+      await patchTable('athlete_groups', `?id=in.${restorableGroupFilter}`, { status: 'active', archived_at: null, updated_at: now })
+      return {
+        groupIds: restorableGroupIds,
+        restoredCount: restorableGroupIds.length,
+        skippedCount: normalizedGroupIds.length - restorableGroupIds.length,
+      }
+    },
+
     async deleteGroup({ groupId }) {
       if (!groupId) throw createRepositoryError('Group ID is required.', 400)
       await deleteTable('athlete_group_memberships', `?athlete_group_id=eq.${encodeURIComponent(groupId)}`)
       await deleteTable('athlete_groups', `?id=eq.${encodeURIComponent(groupId)}`)
       return { id: groupId }
+    },
+
+    async addAthletesToGroups({ groupIds = [], athleteIds = [] }) {
+      const normalizedGroupIds = normalizeAthleteIds(groupIds)
+      const normalizedAthleteIds = normalizeAthleteIds(athleteIds)
+      if (!normalizedGroupIds.length) throw createRepositoryError('At least one group is required.', 400)
+      if (!normalizedAthleteIds.length) throw createRepositoryError('At least one athlete is required.', 400)
+
+      for (const groupId of normalizedGroupIds) {
+        const existingAthleteIds = await getGroupAthleteIds(groupId)
+        await syncMemberships(groupId, [...existingAthleteIds, ...normalizedAthleteIds])
+      }
+
+      return {
+        groupIds: normalizedGroupIds,
+        athleteIds: normalizedAthleteIds,
+        groupsUpdated: normalizedGroupIds.length,
+        athletesAdded: normalizedAthleteIds.length,
+      }
     },
 
     async assignProgramToGroup({ groupId, sourceProgramId }) {
@@ -438,6 +512,35 @@ export function createAdminGroupRepository() {
       return {
         groupId,
         sourceProgramId,
+        createdProgramsCount: createdPrograms.length,
+        createdProgramIds: createdPrograms.map((program) => program?.id).filter(Boolean),
+      }
+    },
+
+    async assignProgramToGroups({ groupIds = [], groupId = '', sourceProgramId }) {
+      const normalizedGroupIds = normalizeAthleteIds(groupIds.length ? groupIds : [groupId])
+      if (!normalizedGroupIds.length) throw createRepositoryError('At least one group is required.', 400)
+      if (!sourceProgramId) throw createRepositoryError('Program ID is required.', 400)
+
+      const athleteIdSet = new Set()
+      for (const currentGroupId of normalizedGroupIds) {
+        const groupAthleteIds = await getGroupAthleteIds(currentGroupId)
+        groupAthleteIds.forEach((athleteId) => athleteIdSet.add(athleteId))
+      }
+
+      const athleteIds = Array.from(athleteIdSet)
+      if (!athleteIds.length) throw createRepositoryError('Selected groups have no athlete memberships to assign.', 400)
+
+      const createdPrograms = []
+      for (const athleteId of athleteIds) {
+        createdPrograms.push(await cloneProgramTreeForAthlete({ athleteId, sourceProgramId }))
+      }
+
+      return {
+        groupIds: normalizedGroupIds,
+        sourceProgramId,
+        groupsUpdated: normalizedGroupIds.length,
+        athletesUpdated: athleteIds.length,
         createdProgramsCount: createdPrograms.length,
         createdProgramIds: createdPrograms.map((program) => program?.id).filter(Boolean),
       }

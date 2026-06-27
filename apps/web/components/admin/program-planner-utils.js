@@ -1,4 +1,4 @@
-import { programPlannerSeed } from './program-planner-data'
+import { programPlannerSeed } from './program-planner-data.js'
 
 const fixedDayDefinitions = [
   { id: 'day-1', label: 'Day 1' },
@@ -15,26 +15,61 @@ function cloneSection(section = {}) {
     id: section.id ?? '',
     title: section.title ?? '',
     description: section.description ?? '',
+    exercises: Array.isArray(section.exercises) ? section.exercises.map((exercise) => ({
+      ...exercise,
+      sets: Array.isArray(exercise.sets) ? exercise.sets.map((set) => ({ ...set })) : [],
+    })) : [],
+  }
+}
+
+function cloneProgramBlock(programBlock = {}) {
+  return {
+    id: programBlock.id ?? '',
+    title: programBlock.title ?? '',
+    description: programBlock.description ?? '',
   }
 }
 
 function cloneWorkout(workout = {}) {
   return {
     id: workout.id ?? '',
+    programWorkoutId: workout.programWorkoutId ?? workout.program_workout_id ?? workout.id ?? '',
+    programDayId: workout.programDayId ?? workout.program_day_id ?? null,
     title: workout.title ?? '',
+    source: workout.source ?? 'manual',
+    sourceFileName: workout.sourceFileName ?? '',
     blockLabel: workout.blockLabel ?? 'Main Work',
+    blockBgColor: workout.blockBgColor ?? null,
+    blockTextColor: workout.blockTextColor ?? null,
     duration: workout.duration ?? '0 min',
+    status: workout.status ?? 'scheduled',
+    focusArea: workout.focusArea ?? 'main-work',
     coachNote: workout.coachNote ?? '',
+    programBlocks: Array.isArray(workout.programBlocks) ? workout.programBlocks.map(cloneProgramBlock) : [],
     sections: Array.isArray(workout.sections) ? workout.sections.map(cloneSection) : [],
   }
 }
 
-export function createFixedDaySlots(daySlots = []) {
+function cloneProgramPhase(phase = {}) {
+  return {
+    id: phase.id ?? phase.programPhaseId ?? phase.program_phase_id ?? '',
+    name: phase.name ?? phase.label ?? '',
+    label: phase.label ?? phase.name ?? '',
+    trainingType: phase.trainingType ?? phase.training_type ?? '',
+    startWeek: phase.startWeek ?? phase.start_week ?? null,
+    endWeek: phase.endWeek ?? phase.end_week ?? null,
+  }
+}
+
+export function createFixedDaySlots(daySlots = [], fallbackProgramWeekId = null) {
   return fixedDayDefinitions.map((definition) => {
     const source = daySlots.find((slot) => slot.id === definition.id) ?? {}
 
     return {
       id: definition.id,
+      programDayId: source.programDayId ?? null,
+      programWeekId: source.programWeekId ?? fallbackProgramWeekId ?? null,
+      date: source.date ?? null,
       label: definition.label,
       summary: source.summary ?? 'No work assigned',
       focus: source.focus ?? 'Open day',
@@ -44,12 +79,14 @@ export function createFixedDaySlots(daySlots = []) {
 }
 
 function cloneWeek(week = {}, index = 0) {
+  const programWeekId = week.programWeekId ?? week.program_week_id ?? null
   return {
     id: week.id ?? `week-${index + 1}`,
+    programWeekId,
     label: week.label ?? `Week ${index + 1}`,
     focus: week.focus ?? 'Weekly focus',
     summary: week.summary ?? 'Coach-managed weekly structure.',
-    daySlots: createFixedDaySlots(week.daySlots),
+    daySlots: createFixedDaySlots(week.daySlots, programWeekId),
   }
 }
 
@@ -62,13 +99,87 @@ function cloneProgram(program = {}) {
     weekCount: program.weekCount ?? program.weeks?.length ?? 0,
     goal: program.goal ?? '',
     description: program.description ?? '',
+    phases: Array.isArray(program.phases ?? program.programPhases) ? (program.phases ?? program.programPhases).map(cloneProgramPhase) : [],
     weeks: Array.isArray(program.weeks) ? program.weeks.map(cloneWeek) : [],
   }
 }
 
+function buildFallbackPlanner(programId) {
+  const fallbackWeek = cloneWeek({ id: 'week-1', label: 'Week 1', focus: 'Training content', summary: 'Coach-managed weekly structure.' }, 0)
+
+  return {
+    id: programId || 'training-content',
+    title: 'Training content',
+    athleteLabel: '0 athletes',
+    duration: '1 week',
+    weekCount: 1,
+    goal: 'Training content',
+    description: 'Open this training content to start building the plan.',
+    weeks: [fallbackWeek],
+  }
+}
+
+export function createProgramPlannerFromAdminProgram(program = {}) {
+  if (Array.isArray(program.weeks) && program.weeks.length > 0) {
+    return cloneProgram({
+      id: program.id,
+      title: program.name || 'Untitled program',
+      athleteLabel: program.athletesLabel || 'Unassigned',
+      duration: program.duration || `${program.weeks.length} week${program.weeks.length === 1 ? '' : 's'}`,
+      weekCount: program.weeks.length,
+      goal: program.description || '',
+      description: program.description || '',
+      phases: program.phases ?? program.programPhases ?? [],
+      weeks: program.weeks,
+    })
+  }
+
+  const parsedWeekCount = Number(program.weekCount ?? String(program.duration ?? '').match(/\d+/)?.[0] ?? 0)
+  const weekCount = Math.max(1, Number.isFinite(parsedWeekCount) ? Math.floor(parsedWeekCount) : 0)
+
+  return cloneProgram({
+    id: program.id,
+    title: program.name || 'Untitled program',
+    athleteLabel: program.athletesLabel || 'Unassigned',
+    duration: program.duration || `${weekCount} week${weekCount === 1 ? '' : 's'}`,
+    weekCount,
+    goal: program.description || '',
+    description: program.description || '',
+    phases: program.phases ?? program.programPhases ?? [],
+    weeks: Array.from({ length: weekCount }, (_, index) => ({
+      id: `week-${index + 1}`,
+      label: `Week ${index + 1}`,
+      focus: program.name || 'Training content',
+      summary: 'Coach-managed weekly structure.',
+      daySlots: createFixedDaySlots(),
+    })),
+  })
+}
+
 export function getProgramPlannerById(programId) {
   const matchedProgram = programPlannerSeed.find((program) => program.id === programId)
-  return matchedProgram ? cloneProgram(matchedProgram) : null
+  return matchedProgram ? cloneProgram(matchedProgram) : buildFallbackPlanner(programId)
+}
+
+export function createEmptyProgramWeek(index = 0, programTitle = 'Training content') {
+  return cloneWeek(
+    {
+      id: `week-${index + 1}`,
+      label: `Week ${index + 1}`,
+      focus: programTitle || 'Training content',
+      summary: 'Coach-managed weekly structure.',
+      daySlots: createFixedDaySlots(),
+    },
+    index,
+  )
+}
+
+export function renumberProgramWeeks(weeks = []) {
+  return weeks.map((week, index) => ({
+    ...week,
+    id: `week-${index + 1}`,
+    label: `Week ${index + 1}`,
+  }))
 }
 
 export function swapDayLaneContent(daySlots, activeDayId, overDayId) {

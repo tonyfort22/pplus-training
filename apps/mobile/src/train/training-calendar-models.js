@@ -46,6 +46,48 @@ function mapWorkoutStatusToCalendarStatus(status) {
   return 'upcoming'
 }
 
+function formatDurationFromMinutes(value, { estimated = false } = {}) {
+  const minutes = Number(value)
+  if (!Number.isFinite(minutes) || minutes <= 0) return ''
+
+  const roundedMinutes = Math.round(minutes)
+  const hours = Math.floor(roundedMinutes / 60)
+  const remainingMinutes = roundedMinutes % 60
+  const parts = []
+  if (hours > 0) parts.push(`${hours}h`)
+  if (remainingMinutes > 0 || hours === 0) parts.push(hours > 0 ? `${remainingMinutes}m` : `${remainingMinutes} min`)
+  return `${estimated ? 'Est. ' : ''}${parts.join(' ')}`
+}
+
+function formatDurationFromSeconds(value, { estimated = false } = {}) {
+  const seconds = Number(value)
+  if (!Number.isFinite(seconds) || seconds <= 0) return ''
+  return formatDurationFromMinutes(Math.max(1, seconds / 60), { estimated })
+}
+
+function estimateDurationFromWorkoutSets(workout = {}) {
+  const exercises = Array.isArray(workout.exercises) ? workout.exercises : []
+  const totalSets = exercises.reduce((sum, exercise) => sum + (Array.isArray(exercise?.sets) ? exercise.sets.length : Number(exercise?.setCount || exercise?.set_count || 0) || 0), 0)
+  if (totalSets <= 0) return ''
+  return formatDurationFromMinutes(Math.max(1, totalSets * 7), { estimated: true })
+}
+
+function getWorkoutDurationLabel(workout = {}) {
+  return String(
+    workout.durationLabel
+      || workout.estimatedDurationLabel
+      || workout.estimated_duration_label
+      || workout.actualDurationLabel
+      || workout.actual_duration_label
+      || formatDurationFromSeconds(workout.elapsedSeconds ?? workout.elapsed_seconds ?? workout.actualDurationSeconds ?? workout.actual_duration_seconds)
+      || formatDurationFromMinutes(workout.actualDurationMinutes ?? workout.actual_duration_minutes)
+      || formatDurationFromSeconds(workout.estimatedDurationSeconds ?? workout.estimated_duration_seconds, { estimated: true })
+      || formatDurationFromMinutes(workout.estimatedDurationMinutes ?? workout.estimated_duration_minutes, { estimated: true })
+      || estimateDurationFromWorkoutSets(workout)
+      || ''
+  ).trim()
+}
+
 function createRestDay({ id, dayLabel, dateNumber }) {
   return {
     id,
@@ -56,7 +98,7 @@ function createRestDay({ id, dayLabel, dateNumber }) {
   }
 }
 
-function createWorkoutDay({ id, dayLabel, dateNumber, workoutLabel, status }) {
+function createWorkoutDay({ id, dayLabel, dateNumber, workoutLabel, status, durationLabel = '' }) {
   return {
     id,
     dayLabel,
@@ -64,6 +106,7 @@ function createWorkoutDay({ id, dayLabel, dateNumber, workoutLabel, status }) {
     type: 'workout',
     workoutLabel,
     status,
+    durationLabel,
   }
 }
 
@@ -152,6 +195,7 @@ function buildWeeksFromAssignedProgram(trainState) {
         dateNumber,
         workoutLabel: workout.nameSnapshot || day.name || 'Workout',
         status: mapWorkoutStatusToCalendarStatus(workout.status),
+        durationLabel: getWorkoutDurationLabel(workout),
       })
     }),
   }))

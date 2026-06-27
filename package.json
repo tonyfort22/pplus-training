@@ -17,7 +17,12 @@
     "supabase:functions:deploy:invite": "supabase functions deploy send-athlete-invitation --workdir infra/supabase",
     "lint": "pnpm -r lint",
     "test": "node --test",
+    "test:web": "node apps/web/testing/run-web-tests.js",
+    "test:web:coverage": "node apps/web/testing/coverage-summary.js",
     "verify:local": "pnpm test",
-    "verify:ci": "pnpm test"
+    "verify:ci": "pnpm test",
+    "test:web:browser": "node apps/web/testing/run-browser-tests.js --list",
+    "test:web:browser:fixtures:setup": "node apps/web/testing/browser-workflow-fixtures.js setup",
+    "test:web:browser:fixtures:teardown": "node apps/web/testing/browser-workflow-fixtures.js teardown"
   }
 }

@@ -1,7 +1,17 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import {
+  CalendarRange,
+  ChevronLeft,
+  ChevronRight,
+  Columns,
+  Grid2x2,
+  Grid3x3,
+  List,
+  Plus,
+} from 'lucide-react'
 import {
   closestCenter,
   DndContext,
@@ -14,6 +24,7 @@ import {
 } from '@dnd-kit/core'
 
 import { Button } from '@/components/ui/button'
+import WorkoutEditorDialog from '@/components/admin/workout-editor-dialog'
 import {
   Dialog,
   DialogContent,
@@ -22,9 +33,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const WEEK_HOURS = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00']
+const WEEK_HOURS = ['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00']
+const REFERENCE_TODAY = new Date(2026, 4, 25)
+const REFERENCE_MONTH_RANGE_LABEL = 'May 1, 2026 - May 31, 2026'
+
+const WORKOUT_TYPE_COLORS = {
+  warmup: { bgColor: '#a9d6e5', textColor: '#014f86' },
+  speedAccelerator: { bgColor: '#fae0e4', textColor: '#ff7096' },
+  edgeWork: { bgColor: '#dec9e9', textColor: '#815ac0' },
+  conditioning: { bgColor: '#ffedd8', textColor: '#a47148' },
+  fallback: { bgColor: '#dbeafe', textColor: '#1d4ed8' },
+}
 
 const WORKOUT_EVENTS = [
   {
@@ -32,7 +61,9 @@ const WORKOUT_EVENTS = [
     title: 'Power Skating A',
     startDate: new Date(2026, 4, 4),
     endDate: new Date(2026, 4, 4),
-    tone: 'green',
+    trainingType: 'Warmup',
+    bgColor: WORKOUT_TYPE_COLORS.warmup.bgColor,
+    textColor: WORKOUT_TYPE_COLORS.warmup.textColor,
     startHour: '06:00',
     endHour: '07:00',
   },
@@ -41,7 +72,9 @@ const WORKOUT_EVENTS = [
     title: 'Goalie Edge Control',
     startDate: new Date(2026, 4, 5),
     endDate: new Date(2026, 4, 5),
-    tone: 'blue',
+    trainingType: 'Edge Work',
+    bgColor: WORKOUT_TYPE_COLORS.edgeWork.bgColor,
+    textColor: WORKOUT_TYPE_COLORS.edgeWork.textColor,
     startHour: '07:00',
     endHour: '08:00',
   },
@@ -50,7 +83,9 @@ const WORKOUT_EVENTS = [
     title: 'Acceleration Tune-Up',
     startDate: new Date(2026, 4, 6),
     endDate: new Date(2026, 4, 6),
-    tone: 'amber',
+    trainingType: 'Speed Accelerator',
+    bgColor: WORKOUT_TYPE_COLORS.speedAccelerator.bgColor,
+    textColor: WORKOUT_TYPE_COLORS.speedAccelerator.textColor,
     startHour: '09:00',
     endHour: '10:00',
   },
@@ -59,7 +94,9 @@ const WORKOUT_EVENTS = [
     title: 'Transition Speed Builder',
     startDate: new Date(2026, 4, 8),
     endDate: new Date(2026, 4, 8),
-    tone: 'green',
+    trainingType: 'Conditioning',
+    bgColor: WORKOUT_TYPE_COLORS.conditioning.bgColor,
+    textColor: WORKOUT_TYPE_COLORS.conditioning.textColor,
     startHour: '10:00',
     endHour: '11:00',
   },
@@ -68,7 +105,9 @@ const WORKOUT_EVENTS = [
     title: 'Overspeed Mechanics',
     startDate: new Date(2026, 4, 9),
     endDate: new Date(2026, 4, 9),
-    tone: 'blue',
+    trainingType: 'Speed Accelerator',
+    bgColor: WORKOUT_TYPE_COLORS.speedAccelerator.bgColor,
+    textColor: WORKOUT_TYPE_COLORS.speedAccelerator.textColor,
     startHour: '08:00',
     endHour: '09:00',
   },
@@ -78,46 +117,214 @@ const ASSIGNABLE_WORKOUTS = [
   {
     id: 'assignable-workout-1',
     title: 'Stride Mechanics Reset',
-    tone: 'green',
+    trainingType: 'Warmup',
+    bgColor: WORKOUT_TYPE_COLORS.warmup.bgColor,
+    textColor: WORKOUT_TYPE_COLORS.warmup.textColor,
     durationHours: 1,
   },
   {
     id: 'assignable-workout-2',
     title: 'Reaction Speed Circuit',
-    tone: 'blue',
+    trainingType: 'Speed Accelerator',
+    bgColor: WORKOUT_TYPE_COLORS.speedAccelerator.bgColor,
+    textColor: WORKOUT_TYPE_COLORS.speedAccelerator.textColor,
     durationHours: 1,
   },
   {
     id: 'assignable-workout-3',
     title: 'Lateral Power Builder',
-    tone: 'amber',
+    trainingType: 'Edge Work',
+    bgColor: WORKOUT_TYPE_COLORS.edgeWork.bgColor,
+    textColor: WORKOUT_TYPE_COLORS.edgeWork.textColor,
     durationHours: 1,
   },
 ]
 
 const DEBUG_DENSE_DAY_EVENTS = [
-  { id: 'debug-dense-day-1', title: 'Edge Warmup Flow', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), tone: 'green', startHour: '06:00', endHour: '07:00', workoutTemplateId: 'assignable-workout-1', typeLabel: 'Skating', persisted: false },
-  { id: 'debug-dense-day-2', title: 'Explosive Start Circuit', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), tone: 'blue', startHour: '06:00', endHour: '07:00', workoutTemplateId: 'assignable-workout-2', typeLabel: 'Speed', persisted: false },
-  { id: 'debug-dense-day-3', title: 'Crossover Timing Builder', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), tone: 'amber', startHour: '07:00', endHour: '08:00', workoutTemplateId: 'assignable-workout-3', typeLabel: 'Skill', persisted: false },
-  { id: 'debug-dense-day-4', title: 'Goal Line Escape Reps', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), tone: 'green', startHour: '07:00', endHour: '08:00', workoutTemplateId: 'assignable-workout-1', typeLabel: 'Skating', persisted: false },
-  { id: 'debug-dense-day-5', title: 'Blue Line Quick Feet', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), tone: 'blue', startHour: '08:00', endHour: '09:00', workoutTemplateId: 'assignable-workout-2', typeLabel: 'Speed', persisted: false },
-  { id: 'debug-dense-day-6', title: 'Inside Edge Recovery Block', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), tone: 'amber', startHour: '08:00', endHour: '09:00', workoutTemplateId: 'assignable-workout-3', typeLabel: 'Recovery', persisted: false },
-  { id: 'debug-dense-day-7', title: 'Neutral Zone Burst Ladder', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), tone: 'green', startHour: '09:00', endHour: '10:00', workoutTemplateId: 'assignable-workout-1', typeLabel: 'Skating', persisted: false },
-  { id: 'debug-dense-day-8', title: 'Transition Pace Builder', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), tone: 'blue', startHour: '09:00', endHour: '10:00', workoutTemplateId: 'assignable-workout-2', typeLabel: 'Pace', persisted: false },
-  { id: 'debug-dense-day-9', title: 'Overspeed Push Set', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), tone: 'amber', startHour: '10:00', endHour: '11:00', workoutTemplateId: 'assignable-workout-3', typeLabel: 'Speed', persisted: false },
-  { id: 'debug-dense-day-10', title: 'Corner Battle Footwork', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), tone: 'green', startHour: '10:00', endHour: '11:00', workoutTemplateId: 'assignable-workout-1', typeLabel: 'Skill', persisted: false },
-  { id: 'debug-dense-day-11', title: 'High Tempo Relay', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), tone: 'blue', startHour: '11:00', endHour: '12:00', workoutTemplateId: 'assignable-workout-2', typeLabel: 'Tempo', persisted: false },
-  { id: 'debug-dense-day-12', title: 'Stride Reset Cooldown', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), tone: 'amber', startHour: '12:00', endHour: '13:00', workoutTemplateId: 'assignable-workout-3', typeLabel: 'Recovery', persisted: false },
+  { id: 'debug-dense-day-1', title: 'Edge Warmup Flow', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), trainingType: 'Warmup', bgColor: WORKOUT_TYPE_COLORS.warmup.bgColor, textColor: WORKOUT_TYPE_COLORS.warmup.textColor, startHour: '06:00', endHour: '07:00', workoutTemplateId: 'assignable-workout-1', typeLabel: 'Warmup', persisted: false },
+  { id: 'debug-dense-day-2', title: 'Explosive Start Circuit', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), trainingType: 'Speed Accelerator', bgColor: WORKOUT_TYPE_COLORS.speedAccelerator.bgColor, textColor: WORKOUT_TYPE_COLORS.speedAccelerator.textColor, startHour: '06:00', endHour: '07:00', workoutTemplateId: 'assignable-workout-2', typeLabel: 'Speed Accelerator', persisted: false },
+  { id: 'debug-dense-day-3', title: 'Crossover Timing Builder', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), trainingType: 'Edge Work', bgColor: WORKOUT_TYPE_COLORS.edgeWork.bgColor, textColor: WORKOUT_TYPE_COLORS.edgeWork.textColor, startHour: '07:00', endHour: '08:00', workoutTemplateId: 'assignable-workout-3', typeLabel: 'Edge Work', persisted: false },
+  { id: 'debug-dense-day-4', title: 'Goal Line Escape Reps', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), trainingType: 'Warmup', bgColor: WORKOUT_TYPE_COLORS.warmup.bgColor, textColor: WORKOUT_TYPE_COLORS.warmup.textColor, startHour: '07:00', endHour: '08:00', workoutTemplateId: 'assignable-workout-1', typeLabel: 'Warmup', persisted: false },
+  { id: 'debug-dense-day-5', title: 'Blue Line Quick Feet', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), trainingType: 'Speed Accelerator', bgColor: WORKOUT_TYPE_COLORS.speedAccelerator.bgColor, textColor: WORKOUT_TYPE_COLORS.speedAccelerator.textColor, startHour: '08:00', endHour: '09:00', workoutTemplateId: 'assignable-workout-2', typeLabel: 'Speed Accelerator', persisted: false },
+  { id: 'debug-dense-day-6', title: 'Inside Edge Recovery Block', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), trainingType: 'Conditioning', bgColor: WORKOUT_TYPE_COLORS.conditioning.bgColor, textColor: WORKOUT_TYPE_COLORS.conditioning.textColor, startHour: '08:00', endHour: '09:00', workoutTemplateId: 'assignable-workout-3', typeLabel: 'Conditioning', persisted: false },
+  { id: 'debug-dense-day-7', title: 'Neutral Zone Burst Ladder', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), trainingType: 'Warmup', bgColor: WORKOUT_TYPE_COLORS.warmup.bgColor, textColor: WORKOUT_TYPE_COLORS.warmup.textColor, startHour: '09:00', endHour: '10:00', workoutTemplateId: 'assignable-workout-1', typeLabel: 'Warmup', persisted: false },
+  { id: 'debug-dense-day-8', title: 'Transition Pace Builder', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), trainingType: 'Speed Accelerator', bgColor: WORKOUT_TYPE_COLORS.speedAccelerator.bgColor, textColor: WORKOUT_TYPE_COLORS.speedAccelerator.textColor, startHour: '09:00', endHour: '10:00', workoutTemplateId: 'assignable-workout-2', typeLabel: 'Speed Accelerator', persisted: false },
+  { id: 'debug-dense-day-9', title: 'Overspeed Push Set', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), trainingType: 'Edge Work', bgColor: WORKOUT_TYPE_COLORS.edgeWork.bgColor, textColor: WORKOUT_TYPE_COLORS.edgeWork.textColor, startHour: '10:00', endHour: '11:00', workoutTemplateId: 'assignable-workout-3', typeLabel: 'Edge Work', persisted: false },
+  { id: 'debug-dense-day-10', title: 'Corner Battle Footwork', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), trainingType: 'Warmup', bgColor: WORKOUT_TYPE_COLORS.warmup.bgColor, textColor: WORKOUT_TYPE_COLORS.warmup.textColor, startHour: '10:00', endHour: '11:00', workoutTemplateId: 'assignable-workout-1', typeLabel: 'Warmup', persisted: false },
+  { id: 'debug-dense-day-11', title: 'High Tempo Relay', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), trainingType: 'Speed Accelerator', bgColor: WORKOUT_TYPE_COLORS.speedAccelerator.bgColor, textColor: WORKOUT_TYPE_COLORS.speedAccelerator.textColor, startHour: '11:00', endHour: '12:00', workoutTemplateId: 'assignable-workout-2', typeLabel: 'Speed Accelerator', persisted: false },
+  { id: 'debug-dense-day-12', title: 'Stride Reset Cooldown', startDate: new Date(2026, 4, 18), endDate: new Date(2026, 4, 18), trainingType: 'Conditioning', bgColor: WORKOUT_TYPE_COLORS.conditioning.bgColor, textColor: WORKOUT_TYPE_COLORS.conditioning.textColor, startHour: '12:00', endHour: '13:00', workoutTemplateId: 'assignable-workout-3', typeLabel: 'Conditioning', persisted: false },
 ]
 
 const DEBUG_DENSE_DAY_DATE = new Date(2026, 4, 18)
 
-function createAssignmentDraft(date = null, hour = '', selectedWorkoutId = ASSIGNABLE_WORKOUTS[0].id) {
+function createAssignmentDraft(date = null, hour = '', selectedWorkoutId = null) {
   return {
     date,
     hour,
+    endDate: date,
+    endHour: hour ? getEventEndHour(hour) : '',
     selectedWorkoutId,
   }
+}
+
+function normalizeWorkoutTemplateOption(template) {
+  if (!template?.id) {
+    return null
+  }
+
+  const resolvedTrainingType = template.training_type ?? template.trainingType ?? 'Workout'
+  const resolvedTypeColors = getWorkoutTypeColors(resolvedTrainingType)
+  const estimatedDurationMinutes = Number.parseInt(template.estimated_duration_minutes ?? template.estimatedDurationMinutes ?? '60', 10)
+  const safeEstimatedDurationMinutes = Number.isNaN(estimatedDurationMinutes) ? 60 : Math.max(estimatedDurationMinutes, 30)
+  const exerciseCount = Number.parseInt(template.exercise_count ?? template.exerciseCount ?? '0', 10)
+  const setCount = Number.parseInt(template.set_count ?? template.setCount ?? '0', 10)
+  const sectionCount = Number.parseInt(template.section_count ?? template.sectionCount ?? '0', 10)
+
+  return {
+    id: template.id,
+    title: template.name ?? template.title ?? 'Workout',
+    trainingType: resolvedTrainingType,
+    bgColor: template.bg_color ?? template.bgColor ?? resolvedTypeColors.bgColor,
+    textColor: template.text_color ?? template.textColor ?? resolvedTypeColors.textColor,
+    estimatedDurationMinutes: safeEstimatedDurationMinutes,
+    durationHours: Math.max(Math.round(safeEstimatedDurationMinutes / 60), 1),
+    exerciseCount: Number.isNaN(exerciseCount) ? 0 : exerciseCount,
+    setCount: Number.isNaN(setCount) ? 0 : setCount,
+    sectionCount: Number.isNaN(sectionCount) ? 0 : sectionCount,
+  }
+}
+
+function formatDateInputValue(date) {
+  if (!date) return ''
+
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function parseDateInputValue(value) {
+  if (!value) return null
+
+  const [rawYear = '0', rawMonth = '1', rawDay = '1'] = String(value).split('-')
+  const year = Number.parseInt(rawYear, 10)
+  const month = Number.parseInt(rawMonth, 10)
+  const day = Number.parseInt(rawDay, 10)
+
+  if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)) {
+    return null
+  }
+
+  return new Date(year, month - 1, day)
+}
+
+function createProgramWorkoutEditorDraft(event, {
+  athleteId = '',
+  dayPlaylistEventIds = [],
+  dayPlaylistIndex = 0,
+  dayPlaylistRawCount = 0,
+} = {}) {
+  if (!event) {
+    return null
+  }
+
+  return {
+    calendarEventId: event.id,
+    athleteId: (event.athleteId ?? athleteId) || null,
+    programId: event.programId ?? null,
+    programWorkoutId: event.programWorkoutId ?? event.id,
+    workoutTemplateId: event.workoutTemplateId ?? null,
+    title: event.title,
+    scheduledDate: formatDateForApi(event.startDate),
+    scheduledStartTime: event.startHour ?? '',
+    scheduledEndTime: event.endHour ?? '',
+    dayPlaylistEventIds,
+    dayPlaylistIndex,
+    dayPlaylistRawCount,
+  }
+}
+
+function createWorkoutEditorDetailsValues(programWorkoutTree = null) {
+  const workout = programWorkoutTree?.workout ?? null
+  const workoutTemplate = workout?.workout_templates ?? null
+  const normalizedTemplateStatus = String(workoutTemplate?.status ?? '').trim().toLowerCase()
+  const normalizedWorkoutStatus = String(workout?.status ?? '').trim().toLowerCase()
+  const resolvedStatus = ['active', 'draft', 'archived'].includes(normalizedTemplateStatus)
+    ? normalizedTemplateStatus
+    : ['active', 'draft', 'archived'].includes(normalizedWorkoutStatus)
+      ? normalizedWorkoutStatus
+      : 'active'
+  const thumbnailName = (() => {
+    const thumbnailUrl = String(workoutTemplate?.thumbnail_url ?? '').trim()
+    if (!thumbnailUrl) return ''
+    try {
+      return decodeURIComponent(thumbnailUrl.split('/').pop() || '')
+    } catch {
+      return thumbnailUrl.split('/').pop() || ''
+    }
+  })()
+
+  return {
+    name: workout?.name_snapshot ?? '',
+    duration: workoutTemplate?.estimated_duration_minutes ? `${workoutTemplate.estimated_duration_minutes} min` : '',
+    thumbnailName,
+    program: '',
+    trainer: '',
+    equipmentNeeded: [],
+    category: '',
+    difficulty: '',
+    status: resolvedStatus,
+    focusArea: String(workoutTemplate?.training_type ?? '').trim().toLowerCase().replace(/\s+/g, '-'),
+    description: workout?.notes ?? workoutTemplate?.description ?? '',
+  }
+}
+
+function mapProgramWorkoutTreeToTrainingSections(programWorkoutTree = null) {
+  const blocks = Array.isArray(programWorkoutTree?.blocks) ? programWorkoutTree.blocks : []
+  const exercises = Array.isArray(programWorkoutTree?.exercises) ? programWorkoutTree.exercises : []
+  const sets = Array.isArray(programWorkoutTree?.sets) ? programWorkoutTree.sets : []
+
+  const effectiveBlocks = blocks.length > 0
+    ? blocks
+    : [{ id: '__synthetic-block__', block_code: 'A1', title: 'A1', instructions: '', sort_order: 0 }]
+
+  return effectiveBlocks.map((block, blockIndex) => {
+    const blockExercises = exercises.filter((exercise) => {
+      if (blocks.length > 0) {
+        return exercise.program_workout_block_id === block.id
+      }
+
+      return blockIndex === 0
+    })
+
+    return {
+      id: block.id,
+      label: block.block_code ?? block.title ?? `A${blockIndex + 1}`,
+      isExpanded: blockIndex === 0,
+      showInstruction: Boolean(block.instructions),
+      instruction: block.instructions ?? '',
+      draftExerciseQuery: '',
+      exercises: blockExercises.map((exercise, exerciseIndex) => ({
+        id: exercise.id,
+        title: exercise.name_snapshot,
+        isExpanded: exerciseIndex === 0,
+        showInstruction: Boolean(exercise.notes),
+        instruction: exercise.notes ?? '',
+        sets: sets
+          .filter((setRow) => setRow.program_workout_exercise_id === exercise.id)
+          .map((setRow) => ({
+            id: setRow.id,
+            tempo: setRow.notes ?? '',
+            effort: setRow.target_rpe != null ? `${setRow.target_rpe}/10` : '',
+            side: '',
+            duration: setRow.target_duration_seconds != null ? `${setRow.target_duration_seconds} sec` : '',
+            distance: setRow.target_distance != null ? `${setRow.target_distance}${setRow.target_distance_unit ? ` ${setRow.target_distance_unit}` : ''}` : '',
+            rest: setRow.target_rest_seconds != null ? String(setRow.target_rest_seconds) : '',
+            reps: setRow.target_reps != null ? String(setRow.target_reps) : '',
+          })),
+      })),
+    }
+  })
 }
 
 function createCalendarCells(selectedDate) {
@@ -167,10 +374,20 @@ function shiftMonth(date, delta) {
   return new Date(date.getFullYear(), date.getMonth() + delta, 1)
 }
 
+function shiftDay(date, delta) {
+  const nextDate = new Date(date)
+  nextDate.setDate(date.getDate() + delta)
+  return nextDate
+}
+
 function shiftWeek(date, delta) {
   const nextDate = new Date(date)
   nextDate.setDate(date.getDate() + delta * 7)
   return nextDate
+}
+
+function shiftYear(date, delta) {
+  return new Date(date.getFullYear() + delta, date.getMonth(), 1)
 }
 
 function isSameDay(left, right) {
@@ -188,6 +405,23 @@ function formatMonthLabel(date) {
   }).format(date)
 }
 
+function formatMonthRangeLabel(date) {
+  const year = date.getFullYear()
+  const month = date.getMonth()
+  const monthStart = new Date(year, month, 1)
+  const monthEnd = new Date(year, month + 1, 0)
+
+  return `${new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(monthStart)} - ${new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(monthEnd)}`
+}
+
 function formatWeekLabel(date) {
   const weekDays = createWeekDays(date)
   const weekStart = weekDays[0]
@@ -200,6 +434,19 @@ function formatWeekLabel(date) {
   }
 
   return `${startMonth} ${weekStart.getDate()}, ${weekStart.getFullYear()} - ${endMonth} ${weekEnd.getDate()}, ${weekEnd.getFullYear()}`
+}
+
+function formatDayLabel(date) {
+  return new Intl.DateTimeFormat('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(date)
+}
+
+function formatYearLabel(date) {
+  return String(date.getFullYear())
 }
 
 function formatAssignmentSlot(date, hour) {
@@ -230,6 +477,19 @@ function parseWeekSlotId(slotId = '') {
   }
 }
 
+function encodeMonthSlotId(date) {
+  return `month-slot:${date.toISOString()}`
+}
+
+function parseMonthSlotId(slotId = '') {
+  if (!slotId.startsWith('month-slot:')) {
+    return null
+  }
+
+  const isoDate = slotId.slice('month-slot:'.length)
+  return { date: new Date(isoDate) }
+}
+
 function getEventsForDate(date, events) {
   return events.filter((event) => isSameDay(event.startDate, date))
 }
@@ -238,6 +498,38 @@ function getEventEndHour(startHour, durationHours = 1) {
   const startHourNumber = Number.parseInt(startHour.slice(0, 2), 10)
   const nextHour = String(startHourNumber + durationHours).padStart(2, '0')
   return `${nextHour}:00`
+}
+
+const WEEK_SLOT_HEIGHT = 88
+
+function convertHourStringToMinutes(hour = '00:00') {
+  const [rawHour = '0', rawMinute = '0'] = String(hour).split(':')
+  const parsedHour = Number.parseInt(rawHour, 10)
+  const parsedMinute = Number.parseInt(rawMinute, 10)
+  return (Number.isNaN(parsedHour) ? 0 : parsedHour) * 60 + (Number.isNaN(parsedMinute) ? 0 : parsedMinute)
+}
+
+function getWeekViewBoundsInMinutes() {
+  const startMinutes = convertHourStringToMinutes(WEEK_HOURS[0])
+  const lastHourStartMinutes = convertHourStringToMinutes(WEEK_HOURS[WEEK_HOURS.length - 1])
+  return {
+    startMinutes,
+    endMinutes: lastHourStartMinutes + 60,
+  }
+}
+
+function getWeekEventLayout(event) {
+  const { startMinutes: calendarStartMinutes, endMinutes: calendarEndMinutes } = getWeekViewBoundsInMinutes()
+  const startMinutes = Math.max(convertHourStringToMinutes(event.startHour), calendarStartMinutes)
+  const endMinutes = Math.min(convertHourStringToMinutes(event.endHour), calendarEndMinutes)
+  const durationMinutes = Math.max(endMinutes - startMinutes, 30)
+  const topOffset = ((startMinutes - calendarStartMinutes) / 60) * WEEK_SLOT_HEIGHT
+  const height = Math.max((durationMinutes / 60) * WEEK_SLOT_HEIGHT, 44)
+
+  return {
+    topOffset,
+    height,
+  }
 }
 
 function hasSchedulingConflict({ events, date, startHour, excludeEventId = null }) {
@@ -251,7 +543,29 @@ function hasSchedulingConflict({ events, date, startHour, excludeEventId = null 
 }
 
 function getTemplateById(templateId) {
-  return ASSIGNABLE_WORKOUTS.find((workout) => workout.id === templateId) ?? ASSIGNABLE_WORKOUTS[0]
+  return ASSIGNABLE_WORKOUTS.find((workout) => workout.id === templateId) ?? null
+}
+
+function getWorkoutTypeColors(trainingType = '') {
+  const normalizedTrainingType = String(trainingType || '').trim().toLowerCase()
+
+  if (normalizedTrainingType === 'warmup') {
+    return WORKOUT_TYPE_COLORS.warmup
+  }
+
+  if (normalizedTrainingType === 'speed accelerator') {
+    return WORKOUT_TYPE_COLORS.speedAccelerator
+  }
+
+  if (normalizedTrainingType === 'edge work') {
+    return WORKOUT_TYPE_COLORS.edgeWork
+  }
+
+  if (normalizedTrainingType === 'conditioning') {
+    return WORKOUT_TYPE_COLORS.conditioning
+  }
+
+  return WORKOUT_TYPE_COLORS.fallback
 }
 
 function formatDateForApi(date) {
@@ -271,30 +585,39 @@ function parseScheduledDate(dateValue) {
 
 function mapAssignmentRowToCalendarEvent(row) {
   const template = getTemplateById(row.workout_template_id)
-  const resolvedScheduledDate = row.scheduled_date ?? row.program_days?.date ?? null
+  const resolvedScheduledDate = row.program_days?.date ?? row.scheduled_date ?? null
+  const resolvedTrainingType = row.workout_templates?.training_type ?? row.training_type ?? template?.trainingType ?? 'Workout'
+  const resolvedTypeColors = getWorkoutTypeColors(resolvedTrainingType)
 
   return {
     id: row.id,
-    title: row.name_snapshot,
+    programWorkoutId: row.id,
+    athleteId: row.athlete_id ?? null,
+    programId: row.program_id ?? null,
+    title: row.name_snapshot || row.workout_templates?.name || 'Workout',
     startDate: parseScheduledDate(resolvedScheduledDate),
     endDate: parseScheduledDate(resolvedScheduledDate),
-    tone: template?.tone ?? 'blue',
+    trainingType: resolvedTrainingType,
+    bgColor: resolvedTypeColors.bgColor,
+    textColor: resolvedTypeColors.textColor,
     startHour: row.scheduled_start_time?.slice(0, 5) ?? '06:00',
     endHour: row.scheduled_end_time?.slice(0, 5) ?? '07:00',
-    workoutTemplateId: row.workout_template_id ?? template.id,
+    workoutTemplateId: row.workout_template_id ?? template?.id ?? null,
     persisted: true,
   }
 }
 
 function mapCalendarEventToAssignmentPayload(event) {
   const matchedTemplate = ASSIGNABLE_WORKOUTS.find((workout) => workout.id === event.workoutTemplateId)
-    ?? ASSIGNABLE_WORKOUTS.find((workout) => workout.title === event.title && workout.tone === event.tone)
+    ?? ASSIGNABLE_WORKOUTS.find((workout) => workout.title === event.title)
     ?? ASSIGNABLE_WORKOUTS[0]
 
   return {
     id: event.id,
     workout_template_id: event.workoutTemplateId ?? matchedTemplate.id,
     name_snapshot: event.title,
+    bg_color: event.bgColor ?? matchedTemplate.bgColor,
+    text_color: event.textColor ?? matchedTemplate.textColor,
     status: 'scheduled',
     scheduled_date: formatDateForApi(event.startDate),
     scheduled_start_time: `${event.startHour}:00`,
@@ -326,28 +649,56 @@ async function requestCalendarApi(path = '', options = {}) {
   return payload
 }
 
-function getEventToneClasses(tone) {
-  if (tone === 'green') {
-    return 'border-[#1E5E4E] bg-[#153C35] text-[#7DF5CD]'
+async function requestProgramWorkoutApi(path = '', options = {}) {
+  const response = await fetch(`/api/admin/program-workouts${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
+  })
+
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    const message = payload?.error || 'Program workout request failed.'
+    const error = new Error(message)
+    error.status = response.status
+    throw error
   }
 
-  if (tone === 'amber') {
-    return 'border-[#6A4A1A] bg-[#3D2B12] text-[#F5D08A]'
-  }
-
-  return 'border-[#29496B] bg-[#142235] text-[#8FC7FF]'
+  return payload
 }
 
-function getEventDotClasses(tone) {
-  if (tone === 'green') {
-    return 'bg-[#3BE0AF]'
+async function requestWorkoutTemplatesApi() {
+  const response = await fetch('/api/admin/workout-templates', {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  })
+
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    const message = payload?.error || 'Workout templates request failed.'
+    const error = new Error(message)
+    error.status = response.status
+    throw error
   }
 
-  if (tone === 'amber') {
-    return 'bg-[#F5D08A]'
-  }
+  return payload
+}
 
-  return 'bg-[#8FC7FF]'
+function getEventCardStyle(event) {
+  return {
+    backgroundColor: event.bgColor ?? WORKOUT_TYPE_COLORS.fallback.bgColor,
+    color: event.textColor ?? WORKOUT_TYPE_COLORS.fallback.textColor,
+    borderColor: event.textColor ?? WORKOUT_TYPE_COLORS.fallback.textColor,
+  }
+}
+
+function getEventDotStyle(event) {
+  return {
+    backgroundColor: event.textColor ?? WORKOUT_TYPE_COLORS.fallback.textColor,
+  }
 }
 
 function getEventTypeLabel(event) {
@@ -355,15 +706,7 @@ function getEventTypeLabel(event) {
     return event.typeLabel
   }
 
-  if (event.tone === 'green') {
-    return 'Skating'
-  }
-
-  if (event.tone === 'amber') {
-    return 'Recovery'
-  }
-
-  return 'Speed'
+  return event.trainingType ?? 'Workout'
 }
 
 function buildDayPlaylistEventIds(events) {
@@ -394,38 +737,28 @@ function DraggableWeekEventCard({ event, onOpenEventDialog }) {
     : undefined
 
   return (
-    <div
+    <button
       ref={draggable.setNodeRef}
       data-week-event={event.id}
       style={{
+        ...getEventCardStyle(event),
         transform,
         opacity: draggable.isDragging ? 0.55 : 1,
       }}
-      className="grid"
+      type="button"
+      aria-label="Open event editor"
+      className="admin-shell-workouts-calendar-event-card grid h-full w-full min-w-0 cursor-grab touch-none select-none gap-1 rounded-[12px] border px-3 py-2 text-left transition-all hover:-translate-y-[1px] hover:opacity-95 active:cursor-grabbing"
+      onClick={() => onOpenEventDialog(event.id)}
       {...draggable.listeners}
       {...draggable.attributes}
     >
-      <button
-        type="button"
-        aria-label="Open event editor"
-        className={[
-          'grid w-full min-w-0 overflow-hidden gap-2 rounded-[18px] border px-4 py-4 text-left shadow-[0_10px_24px_rgba(0,0,0,0.18)] transition-all hover:-translate-y-[1px] hover:opacity-95',
-          getEventToneClasses(event.tone),
-        ].join(' ')}
-        onClick={() => onOpenEventDialog(event.id)}
-      >
-        <div className="flex min-w-0 items-start justify-between gap-3">
-          <div className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.18em] opacity-80">{event.startHour}</div>
-          <div className="max-w-full rounded-full border border-current/20 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] opacity-80">Scheduled</div>
-        </div>
-        <div className="min-w-0 break-words text-[13px] font-semibold leading-[1.35] text-[#F8FBFF] line-clamp-2">{event.title}</div>
-        <div className="text-xs opacity-80">Ends {event.endHour}</div>
-      </button>
-    </div>
+      <div className="min-w-0 break-words text-[12px] font-semibold leading-[1.3] line-clamp-2">{event.title}</div>
+      <div className="text-[11px] font-medium opacity-80">{event.startHour} - {event.endHour}</div>
+    </button>
   )
 }
 
-function WeekSlotDropZone({ slotId, children, showDropHint = false }) {
+function WeekSlotDropZone({ slotId, children }) {
   const droppable = useDroppable({ id: slotId })
 
   return (
@@ -434,15 +767,10 @@ function WeekSlotDropZone({ slotId, children, showDropHint = false }) {
       data-week-slot={slotId}
       className={[
         'min-h-[92px] rounded-[16px] transition-colors',
-        droppable.isOver ? 'bg-[#15233A]' : '',
+        droppable.isOver ? 'bg-[var(--admin-dashboard-control-hover-bg)]' : '',
       ].join(' ')}
     >
       {children}
-      {showDropHint ? (
-        <div className="mt-2 rounded-[12px] border border-dashed border-[#3BE0AF] px-2 py-2 text-[11px] font-medium text-[#7DF5CD]">
-          Drop workout here
-        </div>
-      ) : null}
     </div>
   )
 }
@@ -452,10 +780,8 @@ function EventOverlayCard({ event }) {
 
   return (
     <div
-      className={[
-        'grid min-w-[180px] gap-1 rounded-[16px] border px-3 py-3 text-left shadow-[0_14px_28px_rgba(0,0,0,0.28)]',
-        getEventToneClasses(event.tone),
-      ].join(' ')}
+      className="grid min-w-[180px] gap-1 rounded-[16px] border px-3 py-3 text-left"
+      style={getEventCardStyle(event)}
     >
       <div className="text-xs font-semibold uppercase tracking-[0.12em]">{event.startHour}</div>
       <div className="text-sm font-semibold leading-tight">{event.title}</div>
@@ -464,23 +790,77 @@ function EventOverlayCard({ event }) {
   )
 }
 
+function DraggableMonthEventCard({ event, onOpenEventDialog }) {
+  const draggable = useDraggable({
+    id: event.id,
+    data: {
+      eventId: event.id,
+      monthEvent: true,
+    },
+  })
+
+  const transform = draggable.transform
+    ? `translate3d(${Math.round(draggable.transform.x)}px, ${Math.round(draggable.transform.y)}px, 0)`
+    : undefined
+
+  return (
+    <button
+      ref={draggable.setNodeRef}
+      type="button"
+      aria-label="Open event editor"
+      data-week-event={event.id}
+      style={{
+        ...getEventCardStyle(event),
+        transform,
+        opacity: draggable.isDragging ? 0.55 : 1,
+      }}
+      className="admin-shell-workouts-calendar-event-card grid min-h-[44px] w-full min-w-0 cursor-grab touch-none select-none gap-1 rounded-[10px] border px-2 py-1.5 text-left text-[11px] leading-[1.25] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#3BE0AF] active:cursor-grabbing"
+      onClick={() => onOpenEventDialog(event.id)}
+      {...draggable.listeners}
+      {...draggable.attributes}
+    >
+      <div className="flex min-w-0 items-center gap-1.5">
+        <span className="event-dot hidden h-2 w-2 shrink-0 rounded-full max-[900px]:inline-flex" style={getEventDotStyle(event)} />
+        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] opacity-80">{event.startHour}</span>
+      </div>
+      <div className="min-w-0 break-words text-[11px] font-semibold leading-[1.25] line-clamp-2">{event.title}</div>
+    </button>
+  )
+}
+
+function MonthDayDropZone({ slotId, children }) {
+  const droppable = useDroppable({ id: slotId })
+
+  return (
+    <div
+      ref={droppable.setNodeRef}
+      data-month-slot={slotId}
+      className={[
+        'grid min-h-0 rounded-[12px] transition-colors',
+        droppable.isOver ? 'bg-[var(--admin-dashboard-control-hover-bg)]' : '',
+      ].join(' ')}
+    >
+      {children}
+    </div>
+  )
+}
+
 function StaticEventCard({ event, onOpenEventDialog }) {
   return (
-    <div key={event.id} className="grid">
-      <button
-        type="button"
-        aria-label="Open event editor"
-        data-week-event={event.id}
-        className={[
-          'grid w-full min-w-0 overflow-hidden gap-1.5 rounded-[16px] border px-3 py-3 text-left shadow-[0_10px_24px_rgba(0,0,0,0.18)] transition-all hover:-translate-y-[1px] hover:opacity-95',
-          getEventToneClasses(event.tone),
-        ].join(' ')}
-        onClick={() => onOpenEventDialog(event.id)}
-      >
-        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] opacity-80">{event.startHour}</div>
-        <div className="min-w-0 break-words text-[13px] font-semibold leading-[1.35] text-[#F8FBFF] line-clamp-2">{event.title}</div>
-      </button>
-    </div>
+    <button
+      type="button"
+      aria-label="Open event editor"
+      data-week-event={event.id}
+      className="admin-shell-workouts-calendar-event-card grid min-h-[44px] w-full min-w-0 gap-1 rounded-[10px] border px-2 py-1.5 text-left text-[11px] leading-[1.25] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#3BE0AF]"
+      style={getEventCardStyle(event)}
+      onClick={() => onOpenEventDialog(event.id)}
+    >
+      <div className="flex min-w-0 items-center gap-1.5">
+        <span className="event-dot hidden h-2 w-2 shrink-0 rounded-full max-[900px]:inline-flex" style={getEventDotStyle(event)} />
+        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] opacity-80">{event.startHour}</span>
+      </div>
+      <div className="min-w-0 break-words text-[11px] font-semibold leading-[1.25] line-clamp-2">{event.title}</div>
+    </button>
   )
 }
 
@@ -488,70 +868,189 @@ function renderMonthGrid(selectedDate, scheduledEvents, openEventDialog, openMon
   const cells = createCalendarCells(selectedDate)
 
   return (
-    <div className="overflow-x-auto rounded-[24px] border border-[#24334A] bg-[#111827] shadow-[0_18px_40px_rgba(0,0,0,0.26)]">
-      <div className="min-w-[720px]">
-        <div className="grid grid-cols-7 border-b border-[#24334A] bg-[#0F1728]">
-        {WEEK_DAYS.map((day) => (
-          <div key={day} className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">
-            {day}
-          </div>
-        ))}
-      </div>
+    <div className="admin-shell-workouts-calendar-month-grid overflow-x-auto rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)]">
+      <div className="min-w-[840px] lg:min-w-[720px]">
+        <div className="grid grid-cols-7 divide-x divide-[var(--admin-dashboard-card-border)] border-b border-[var(--admin-dashboard-card-border)]">
+          {WEEK_DAYS.map((day) => (
+            <div key={day} className="flex items-center justify-center py-2">
+              <span className="text-xs font-medium text-[var(--admin-dashboard-card-muted)]">{day}</span>
+            </div>
+          ))}
+        </div>
 
-        <div className="grid grid-cols-7">
+        <div className="grid grid-cols-7 overflow-hidden">
           {cells.map((cell) => {
             const events = getEventsForDate(cell.date, scheduledEvents)
             const isToday = isSameDay(cell.date, new Date())
+            const visibleEvents = events.slice(0, 3)
+            const slotId = encodeMonthSlotId(cell.date)
 
             return (
-              <div
-                key={cell.date.toISOString()}
-                className={[
-                  'min-h-[148px] border-r border-b border-[#24334A] px-3 py-3',
-                  cell.currentMonth ? 'bg-[#111827]' : 'bg-[#0F1728]/70',
-                ].join(' ')}
-              >
-                <div className="mb-3 flex items-center justify-between gap-2">
-                  <span
+              <MonthDayDropZone key={cell.date.toISOString()} slotId={slotId}>
+                <div className={['flex min-h-[128px] flex-col gap-1 border-l border-t border-[var(--admin-dashboard-card-border)] py-1.5 lg:pb-2 lg:pt-1', cell.date.getDay() === 0 ? 'border-l-0' : ''].join(' ')}>
+                  <button
+                    type="button"
+                    onClick={() => openMonthOverflow(cell.date)}
                     className={[
-                      'inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold',
-                      cell.currentMonth ? 'text-[#EEF4FF]' : 'text-[#5D708F]',
-                      isToday ? 'bg-[#3BE0AF] text-[#0B1120]' : '',
+                      'flex h-6 w-6 translate-x-1 items-center justify-center rounded-full text-xs font-semibold hover:bg-[var(--admin-dashboard-control-hover-bg)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#3BE0AF] lg:px-2',
+                      !cell.currentMonth ? 'opacity-20' : '',
+                      isToday ? 'bg-[#3BE0AF] font-bold text-[#0B1120] hover:bg-[#3BE0AF]' : 'text-[var(--admin-dashboard-card-text)]',
                     ].join(' ')}
                   >
                     {cell.date.getDate()}
-                  </span>
-                </div>
+                  </button>
 
-                <div className="grid gap-2">
-                  {events.length
-                    ? (
-                      <>
-                        {events.slice(0, 2).map((event) => (
-                          <StaticEventCard key={event.id} event={event} onOpenEventDialog={openEventDialog} />
-                        ))}
-                        {events.length > 2 ? (
-                          <button
-                            type="button"
-                            aria-label="Open workout overflow for day"
-                            className="rounded-[14px] border border-dashed border-[#29496B] bg-[#142235] px-3 py-2 text-left text-xs font-medium text-[#8FC7FF] transition-colors hover:border-[#8FC7FF] hover:bg-[#19304A]"
-                            onClick={() => openMonthOverflow(cell.date)}
-                          >
-                            +{events.length - 2} more
-                          </button>
-                        ) : null}
-                      </>
-                    ) : (
-                      <div className="rounded-[14px] border border-dashed border-[#24334A] px-3 py-2 text-xs text-[#5D708F]">
-                        No workout
-                      </div>
-                    )}
+                  <div className={['grid gap-1 px-1.5 sm:px-2 lg:h-[94px] lg:gap-2 lg:px-0', !cell.currentMonth ? 'opacity-50' : ''].join(' ')}>
+                    {[0, 1, 2].map((position) => {
+                      const event = visibleEvents[position]
+                      const eventKey = event ? `event-${event.id}-${position}` : `empty-${position}`
+
+                      return (
+                        <div key={eventKey} className="flex-1 px-2.5">
+                          {event ? (
+                            <DraggableMonthEventCard event={event} onOpenEventDialog={openEventDialog} />
+                          ) : null}
+                        </div>
+                      )
+                    })}
+                  </div>
+
+                  {events.length > 3 ? (
+                    <button
+                      type="button"
+                      aria-label="Open workout overflow for day"
+                      className={['h-4.5 px-1.5 text-left text-xs font-semibold text-[var(--admin-dashboard-card-muted)] hover:text-[var(--admin-dashboard-card-text)]', !cell.currentMonth ? 'opacity-50' : ''].join(' ')}
+                      onClick={() => openMonthOverflow(cell.date)}
+                    >
+                      <span className="sm:hidden">+{events.length - 3}</span>
+                      <span className="hidden sm:inline">{events.length - 3} more...</span>
+                    </button>
+                  ) : null}
                 </div>
-              </div>
+              </MonthDayDropZone>
             )
           })}
         </div>
       </div>
+    </div>
+  )
+}
+
+function renderDayGrid(
+  selectedDate,
+  scheduledEvents,
+  openAssignmentDialog,
+  openEventDialog,
+  moveEventByHours,
+  activeDragEventId,
+) {
+  return renderWeekGrid(
+    selectedDate,
+    scheduledEvents,
+    openAssignmentDialog,
+    openEventDialog,
+    moveEventByHours,
+    activeDragEventId,
+    { singleDay: true },
+  )
+}
+
+function renderYearGrid(selectedDate, scheduledEvents, setSelectedDate, setCurrentView) {
+  const year = selectedDate.getFullYear()
+  const months = Array.from({ length: 12 }, (_, monthIndex) => new Date(year, monthIndex, 1))
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-3 xl:grid-cols-4">
+      {months.map((monthDate) => {
+        const cells = createCalendarCells(monthDate).slice(0, 35)
+        const monthEvents = scheduledEvents.filter((event) => {
+          return event.startDate.getFullYear() === year && event.startDate.getMonth() === monthDate.getMonth()
+        })
+
+        return (
+          <button
+            key={monthDate.toISOString()}
+            type="button"
+            className="grid gap-3 rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-4 text-left hover:border-[var(--admin-shell-accent)]"
+            onClick={() => {
+              setSelectedDate(monthDate)
+              setCurrentView('month')
+            }}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{new Intl.DateTimeFormat('en-US', { month: 'long' }).format(monthDate)}</div>
+              <div className="text-xs text-[var(--admin-dashboard-card-muted)]">{monthEvents.length} workout{monthEvents.length === 1 ? '' : 's'}</div>
+            </div>
+            <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-[var(--admin-dashboard-card-muted)]">
+              {WEEK_DAYS.map((day) => <span key={day}>{day.slice(0, 1)}</span>)}
+            </div>
+            <div className="grid grid-cols-7 gap-1 text-center text-[11px] text-[var(--admin-dashboard-card-text)]">
+              {cells.map((cell) => {
+                const hasEvents = getEventsForDate(cell.date, scheduledEvents).length > 0
+                return (
+                  <span
+                    key={cell.date.toISOString()}
+                    className={[
+                      'grid h-7 place-items-center rounded-[8px]',
+                      cell.currentMonth ? 'bg-[var(--admin-dashboard-card-bg)]' : 'bg-[var(--admin-dashboard-card-bg)]/50 text-[var(--admin-dashboard-card-soft)]',
+                      hasEvents ? 'ring-1 ring-[#3BE0AF]/45' : '',
+                    ].join(' ')}
+                  >
+                    {cell.date.getDate()}
+                  </span>
+                )
+              })}
+            </div>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function renderAgendaView(selectedDate, scheduledEvents, openEventDialog) {
+  const agendaEvents = [...scheduledEvents]
+    .filter((event) => {
+      return event.startDate.getFullYear() === selectedDate.getFullYear() && event.startDate.getMonth() === selectedDate.getMonth()
+    })
+    .sort((left, right) => {
+      const leftKey = `${left.startDate.toISOString()}-${left.startHour}`
+      const rightKey = `${right.startDate.toISOString()}-${right.startHour}`
+      return leftKey.localeCompare(rightKey)
+    })
+
+  const groupedEvents = agendaEvents.reduce((groups, event) => {
+    const key = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).format(event.startDate)
+    if (!groups[key]) {
+      groups[key] = []
+    }
+    groups[key].push(event)
+    return groups
+  }, {})
+
+  return (
+    <div className="grid gap-4">
+      {Object.entries(groupedEvents).length ? Object.entries(groupedEvents).map(([dayLabel, dayEvents]) => (
+        <div key={dayLabel} className="grid gap-3">
+          <div className="text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{dayLabel}</div>
+          <div className="grid gap-2">
+            {dayEvents.map((event) => (
+              <button
+                key={event.id}
+                type="button"
+                className="grid gap-1 rounded-[14px] border px-3 py-3 text-left"
+                style={getEventCardStyle(event)}
+                onClick={() => openEventDialog(event.id)}
+              >
+                <div className="text-xs font-semibold opacity-80">{event.startHour} - {event.endHour}</div>
+                <div className="text-sm font-semibold">{event.title}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )) : (
+        <div className="rounded-[18px] border border-dashed border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-6 text-sm text-[var(--admin-dashboard-card-muted)]">No workouts scheduled for this month.</div>
+      )}
     </div>
   )
 }
@@ -563,80 +1062,127 @@ function renderWeekGrid(
   openEventDialog,
   moveEventByHours,
   activeDragEventId,
+  options = {},
 ) {
-  const weekDays = createWeekDays(selectedDate)
+  const singleDay = options.singleDay === true
+  const weekDays = singleDay ? [selectedDate] : createWeekDays(selectedDate)
+  const { startMinutes: calendarStartMinutes, endMinutes: calendarEndMinutes } = getWeekViewBoundsInMinutes()
+  const calendarHeight = WEEK_HOURS.length * WEEK_SLOT_HEIGHT
 
   return (
-    <div className="overflow-x-auto rounded-[24px] border border-[#24334A] bg-[#111827] shadow-[0_18px_40px_rgba(0,0,0,0.26)]">
-      <div className="min-w-[720px]">
-        <div className="border-b border-[#24334A] bg-[#0F1728] px-5 py-4">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">Weekly schedule</div>
+    <div className="admin-shell-workouts-calendar-week-grid overflow-x-auto rounded-[24px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)]">
+      <div className="min-w-[280px] sm:min-w-[560px]">
+        <div className="border-b border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-5 py-4">
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--admin-dashboard-card-muted)]">{singleDay ? 'Daily schedule' : 'Weekly schedule'}</div>
         </div>
 
-        <div className="grid grid-cols-[92px_repeat(7,minmax(0,1fr))] border-b border-[#24334A] bg-[#0F1728]">
-        <div className="border-r border-[#24334A] px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">Time</div>
-        {weekDays.map((day) => {
-          const isToday = isSameDay(day, new Date())
+        <div className={`grid ${singleDay ? 'grid-cols-[92px_minmax(0,1fr)]' : 'grid-cols-[92px_repeat(7,minmax(0,1fr))]'} border-b border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)]`}>
+          <div className="border-r border-[var(--admin-dashboard-card-border)] px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--admin-dashboard-card-muted)]">Time</div>
+          {weekDays.map((day) => {
+            const isToday = isSameDay(day, new Date())
 
-          return (
-            <div key={day.toISOString()} className="border-r border-[#24334A] px-3 py-3 text-center">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">{WEEK_DAYS[day.getDay()]}</div>
-              <div className={['mt-1 text-sm font-semibold', isToday ? 'text-[#3BE0AF]' : 'text-[#EEF4FF]'].join(' ')}>{day.getDate()}</div>
-            </div>
-          )
-        })}
-      </div>
+            return (
+              <div key={day.toISOString()} className="border-r border-[var(--admin-dashboard-card-border)] px-3 py-3 text-center last:border-r-0">
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--admin-dashboard-card-muted)]">{singleDay ? new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(day) : WEEK_DAYS[day.getDay()]}</div>
+                <div className={['mt-1 text-sm font-semibold', isToday ? 'text-[#3BE0AF]' : 'text-[var(--admin-dashboard-card-text)]'].join(' ')}>{day.getDate()}</div>
+              </div>
+            )
+          })}
+        </div>
 
-        <div className="grid">
-          {WEEK_HOURS.map((hour) => (
-            <div key={hour} className="grid grid-cols-[92px_repeat(7,minmax(0,1fr))]">
-              <div className="border-r border-b border-[#24334A] bg-[#0F1728] px-4 py-4 text-xs font-medium text-[#8EA0BC]">{hour}</div>
-              {weekDays.map((day) => {
-                const slotId = encodeWeekSlotId(day, hour)
-                const event = getEventsForDate(day, scheduledEvents).find((entry) => entry.startHour === hour)
-                const showDropHint = Boolean(activeDragEventId) && activeDragEventId !== event?.id
+        <div className={`grid ${singleDay ? 'grid-cols-[92px_minmax(0,1fr)]' : 'grid-cols-[92px_repeat(7,minmax(0,1fr))]'}`}>
+          <div className="border-r border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)]">
+            {WEEK_HOURS.map((hour) => (
+              <div
+                key={hour}
+                className="border-b border-[var(--admin-dashboard-card-border)] px-4 py-3 text-xs font-medium text-[var(--admin-dashboard-card-muted)]"
+                style={{ height: `${WEEK_SLOT_HEIGHT}px` }}
+              >
+                {hour}
+              </div>
+            ))}
+          </div>
 
-                return (
-                  <div key={`${day.toISOString()}-${hour}`} className="border-r border-b border-[#24334A] px-3 py-3">
-                    <WeekSlotDropZone slotId={slotId} showDropHint={showDropHint}>
-                      {event ? (
-                        <div className="min-h-[92px]">
-                          <DraggableWeekEventCard event={event} onOpenEventDialog={openEventDialog} />
-                        </div>
-                      ) : (
-                        <div className="min-h-[92px]">
+          {weekDays.map((day) => {
+            const dayEvents = getEventsForDate(day, scheduledEvents)
+              .filter((event) => {
+                const eventStartMinutes = convertHourStringToMinutes(event.startHour)
+                return eventStartMinutes >= calendarStartMinutes && eventStartMinutes < calendarEndMinutes
+              })
+              .sort((left, right) => convertHourStringToMinutes(left.startHour) - convertHourStringToMinutes(right.startHour))
+
+            return (
+              <div key={day.toISOString()} className="relative border-r border-[var(--admin-dashboard-card-border)] last:border-r-0" style={{ height: `${calendarHeight}px` }}>
+                <div className="absolute inset-0">
+                  {WEEK_HOURS.map((hour) => {
+                    const slotId = encodeWeekSlotId(day, hour)
+
+                    return (
+                      <div
+                        key={`${day.toISOString()}-${hour}`}
+                        className="relative border-b border-[var(--admin-dashboard-card-border)] px-2 py-2"
+                        style={{ height: `${WEEK_SLOT_HEIGHT}px` }}
+                      >
+                        <div className="pointer-events-none absolute inset-x-0 top-1/2 border-t border-[var(--admin-dashboard-chart-header-divider)]" />
+                        <WeekSlotDropZone slotId={slotId}>
                           <button
                             type="button"
                             aria-label="Open assignment composer"
-                            className="w-full rounded-[14px] border border-dashed border-[#24334A] px-3 py-2 text-left text-xs text-[#5D708F] transition-colors hover:border-[#3BE0AF] hover:text-[#DCE6F8]"
+                            className="absolute inset-0 z-0 w-full rounded-[12px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#3BE0AF]"
                             onClick={() => openAssignmentDialog(day, hour)}
                           >
-                            Assign workout
+                            <span className="sr-only">Assign workout</span>
                           </button>
+                        </WeekSlotDropZone>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div className="pointer-events-none absolute inset-0 z-10">
+                  {dayEvents.map((event) => {
+                    const layout = getWeekEventLayout(event)
+
+                    return (
+                      <div
+                        key={event.id}
+                        className="pointer-events-none absolute inset-x-2.5"
+                        style={{ top: `${layout.topOffset + 6}px`, height: `${Math.max(layout.height - 12, 32)}px` }}
+                      >
+                        <div className="pointer-events-auto h-full">
+                          <DraggableWeekEventCard event={event} onOpenEventDialog={openEventDialog} />
                         </div>
-                      )}
-                    </WeekSlotDropZone>
-                  </div>
-                )
-              })}
-            </div>
-          ))}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
     </div>
   )
 }
 
-export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
+export default function WorkoutsCalendarView({ selectedAthleteId = '', onOpenProgramWorkoutEditor = null }) {
+  const pathname = usePathname()
+  const router = useRouter()
   const searchParams = useSearchParams()
   const forceDenseDayPreview = searchParams.get('debugDenseDay') === '1'
   const [selectedDate, setSelectedDate] = useState(() => new Date(2026, 4, 4))
   const [currentView, setCurrentView] = useState('month')
-  const [scheduledEvents, setScheduledEvents] = useState(WORKOUT_EVENTS)
+  const [scheduledEvents, setScheduledEvents] = useState([])
   const [hydrationState, setHydrationState] = useState('idle')
   const [isAssignmentDialogOpen, setIsAssignmentDialogOpen] = useState(false)
   const [assignmentDraft, setAssignmentDraft] = useState(() => createAssignmentDraft())
   const [selectedEventId, setSelectedEventId] = useState(null)
+  const [workoutTemplateOptions, setWorkoutTemplateOptions] = useState([])
+  const [workoutTemplateHydrationState, setWorkoutTemplateHydrationState] = useState('idle')
+  const [workoutTemplatePagination, setWorkoutTemplatePagination] = useState({
+    pageIndex: 0,
+    pageSize: 5,
+  })
   const [isMonthOverflowDialogOpen, setIsMonthOverflowDialogOpen] = useState(false)
   const [monthOverflowDate, setMonthOverflowDate] = useState(null)
   const [dayPlaylistEventIds, setDayPlaylistEventIds] = useState([])
@@ -646,16 +1192,63 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
   const [assignmentConflictMessage, setAssignmentConflictMessage] = useState('')
   const [eventConflictMessage, setEventConflictMessage] = useState('')
   const [activeDragEventId, setActiveDragEventId] = useState(null)
+  const [isProgramWorkoutEditorOpen, setIsProgramWorkoutEditorOpen] = useState(false)
+  const [programWorkoutEditorDraft, setProgramWorkoutEditorDraft] = useState(null)
+  const [programWorkoutEditorLoadState, setProgramWorkoutEditorLoadState] = useState('idle')
+  const [programWorkoutEditorError, setProgramWorkoutEditorError] = useState('')
+  const [programWorkoutEditorDetailsValues, setProgramWorkoutEditorDetailsValues] = useState(() => createWorkoutEditorDetailsValues())
+  const [programWorkoutEditorTrainingSections, setProgramWorkoutEditorTrainingSections] = useState([])
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
   const rangeLabel = useMemo(() => {
-    return currentView === 'week' ? formatWeekLabel(selectedDate) : formatMonthLabel(selectedDate)
+    switch (currentView) {
+      case 'day':
+        return formatDayLabel(selectedDate)
+      case 'week':
+        return formatWeekLabel(selectedDate)
+      case 'year':
+        return formatYearLabel(selectedDate)
+      case 'agenda':
+        return formatMonthRangeLabel(selectedDate)
+      default:
+        return selectedDate.getFullYear() === 2026 && selectedDate.getMonth() === 4
+          ? REFERENCE_MONTH_RANGE_LABEL
+          : formatMonthRangeLabel(selectedDate)
+    }
   }, [currentView, selectedDate])
 
+  const monthLabel = useMemo(() => {
+    switch (currentView) {
+      case 'day':
+        return new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).format(selectedDate)
+      case 'week':
+        return 'Week view'
+      case 'year':
+        return formatYearLabel(selectedDate)
+      case 'agenda':
+        return 'Agenda'
+      default:
+        return formatMonthLabel(selectedDate)
+    }
+  }, [currentView, selectedDate])
+  const referenceDateBadgeMonth = 'MAY'
+  const referenceDateBadgeDay = String(REFERENCE_TODAY.getDate())
+
   const selectedTemplate = useMemo(() => {
-    return ASSIGNABLE_WORKOUTS.find((workout) => workout.id === assignmentDraft.selectedWorkoutId) ?? ASSIGNABLE_WORKOUTS[0]
-  }, [assignmentDraft.selectedWorkoutId])
+    return workoutTemplateOptions.find((workout) => workout.id === assignmentDraft.selectedWorkoutId) ?? workoutTemplateOptions[0] ?? null
+  }, [assignmentDraft.selectedWorkoutId, workoutTemplateOptions])
+
+  const workoutTemplatePageSizeOptions = [5, 10, 20, 30]
+  const visibleWorkoutTemplateOptions = useMemo(() => {
+    const startIndex = workoutTemplatePagination.pageIndex * workoutTemplatePagination.pageSize
+    return workoutTemplateOptions.slice(startIndex, startIndex + workoutTemplatePagination.pageSize)
+  }, [workoutTemplateOptions, workoutTemplatePagination])
+  const workoutTemplatePageCount = Math.max(1, Math.ceil(workoutTemplateOptions.length / workoutTemplatePagination.pageSize))
+  const workoutTemplatePageNumbers = Array.from({ length: workoutTemplatePageCount }, (_, index) => index)
+  const workoutTemplatePageStart = workoutTemplateOptions.length === 0 ? 0 : workoutTemplatePagination.pageIndex * workoutTemplatePagination.pageSize + 1
+  const workoutTemplatePageEnd = Math.min((workoutTemplatePagination.pageIndex + 1) * workoutTemplatePagination.pageSize, workoutTemplateOptions.length)
+  const workoutTemplateSkeletonRows = Array.from({ length: workoutTemplatePagination.pageSize }, (_, rowIndex) => rowIndex)
 
   const calendarEvents = useMemo(() => {
     if (!forceDenseDayPreview) {
@@ -665,6 +1258,7 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
     const scheduledEventIds = new Set(scheduledEvents.map((event) => event.id))
     return [...scheduledEvents, ...DEBUG_DENSE_DAY_EVENTS.filter((event) => !scheduledEventIds.has(event.id))]
   }, [forceDenseDayPreview, scheduledEvents])
+  const referenceEventCountLabel = '44 workouts'
 
   const selectedEvent = useMemo(() => {
     return calendarEvents.find((event) => event.id === selectedEventId) ?? null
@@ -702,6 +1296,40 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
     return calendarEvents.find((event) => event.id === activeDragEventId) ?? null
   }, [activeDragEventId, calendarEvents])
 
+  function updateCalendarQueryParams(updates = {}) {
+    const nextParams = new URLSearchParams(searchParams.toString())
+
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null || value === undefined || value === '') {
+        nextParams.delete(key)
+        return
+      }
+
+      nextParams.set(key, String(value))
+    })
+
+    const nextQueryString = nextParams.toString()
+    router.replace(`${pathname}${nextQueryString ? `?${nextQueryString}` : ''}`, { scroll: false })
+  }
+
+  function closeProgramWorkoutEditorSeam() {
+    setIsProgramWorkoutEditorOpen(false)
+    setProgramWorkoutEditorDraft(null)
+    setProgramWorkoutEditorLoadState('idle')
+    setProgramWorkoutEditorError('')
+    setProgramWorkoutEditorDetailsValues(createWorkoutEditorDetailsValues())
+    setProgramWorkoutEditorTrainingSections([])
+    updateCalendarQueryParams({
+      calendarOverlay: null,
+      calendarProgramWorkoutId: null,
+      calendarScheduledDate: null,
+      calendarStartTime: null,
+      calendarEndTime: null,
+      calendarDayPlaylistIndex: null,
+      calendarDayPlaylistCount: null,
+    })
+  }
+
   useEffect(() => {
     if (!forceDenseDayPreview) {
       return
@@ -713,10 +1341,65 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
     setIsMonthOverflowDialogOpen(true)
   }, [forceDenseDayPreview])
 
+  useEffect(() => {
+    if (!isAssignmentDialogOpen) {
+      return
+    }
+
+    if (assignmentDraft.selectedWorkoutId) {
+      return
+    }
+
+    const firstTemplateId = workoutTemplateOptions[0]?.id ?? null
+    if (!firstTemplateId) {
+      return
+    }
+
+    setAssignmentDraft((currentDraft) => ({
+      ...currentDraft,
+      selectedWorkoutId: currentDraft.selectedWorkoutId ?? firstTemplateId,
+    }))
+  }, [assignmentDraft.selectedWorkoutId, isAssignmentDialogOpen, workoutTemplateOptions])
+
+  useEffect(() => {
+    setWorkoutTemplatePagination((current) => {
+      const maxPageIndex = Math.max(0, Math.ceil(workoutTemplateOptions.length / current.pageSize) - 1)
+      if (current.pageIndex <= maxPageIndex) {
+        return current
+      }
+
+      return {
+        ...current,
+        pageIndex: maxPageIndex,
+      }
+    })
+  }, [workoutTemplateOptions.length])
+
+  async function loadWorkoutTemplateOptions() {
+    setWorkoutTemplateHydrationState('loading')
+
+    try {
+      const payload = await requestWorkoutTemplatesApi()
+      const hydratedWorkoutTemplates = (Array.isArray(payload.workoutTemplates) ? payload.workoutTemplates : [])
+        .map(normalizeWorkoutTemplateOption)
+        .filter(Boolean)
+      setWorkoutTemplateOptions(hydratedWorkoutTemplates)
+      setWorkoutTemplatePagination((current) => ({
+        ...current,
+        pageIndex: 0,
+      }))
+      setWorkoutTemplateHydrationState('ready')
+    } catch (error) {
+      setWorkoutTemplateOptions([])
+      setWorkoutTemplateHydrationState('error')
+      setAssignmentConflictMessage(error?.message || 'Failed to load workout templates.')
+    }
+  }
+
   async function loadPersistedCalendarAssignments() {
-    if (!selectedAthleteId) {
-      setScheduledEvents([])
-      setHydrationState('idle')
+    if (forceDenseDayPreview) {
+      setScheduledEvents(WORKOUT_EVENTS)
+      setHydrationState('ready')
       setEventConflictMessage('')
       return
     }
@@ -724,9 +1407,21 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
     setHydrationState('loading')
 
     try {
-      const payload = await requestCalendarApi(`?athleteId=${encodeURIComponent(selectedAthleteId)}`)
+      const calendarAssignmentsPath = selectedAthleteId
+        ? `?athleteId=${encodeURIComponent(selectedAthleteId)}`
+        : ''
+      const payload = await requestCalendarApi(calendarAssignmentsPath)
       const assignments = Array.isArray(payload.assignments) ? payload.assignments : []
-      setScheduledEvents(assignments.map(mapAssignmentRowToCalendarEvent).filter((event) => event.startDate && event.startHour))
+      const hydratedEvents = assignments
+        .map(mapAssignmentRowToCalendarEvent)
+        .filter((event) => event.startDate && event.startHour)
+      setScheduledEvents(hydratedEvents)
+
+      const firstHydratedEvent = [...hydratedEvents].sort((left, right) => left.startDate - right.startDate)[0]
+      if (firstHydratedEvent?.startDate) {
+        setSelectedDate(new Date(firstHydratedEvent.startDate))
+      }
+
       setHydrationState('ready')
       setEventConflictMessage('')
     } catch (error) {
@@ -743,7 +1438,11 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
 
   useEffect(() => {
     loadPersistedCalendarAssignments()
-  }, [selectedAthleteId])
+  }, [forceDenseDayPreview, selectedAthleteId])
+
+  useEffect(() => {
+    loadWorkoutTemplateOptions()
+  }, [])
 
   async function createPersistedAssignment(event) {
     const payload = {
@@ -791,8 +1490,74 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
     openEventDialog(firstEvent.id, { dayPlaylistEventIds: eventIds, dayPlaylistIndex: 0, dayPlaylistRawCount: events.length })
   }
 
+  async function openProgramWorkoutEditorWithDraft(nextProgramWorkoutEditorDraft) {
+    if (!nextProgramWorkoutEditorDraft?.programWorkoutId) {
+      setProgramWorkoutEditorError('Program workout ID missing for editor handoff.')
+      setIsProgramWorkoutEditorOpen(true)
+      setProgramWorkoutEditorLoadState('error')
+      return
+    }
+
+    setProgramWorkoutEditorDraft(nextProgramWorkoutEditorDraft)
+    setIsProgramWorkoutEditorOpen(true)
+    setProgramWorkoutEditorLoadState('loading')
+    setProgramWorkoutEditorError('')
+
+    try {
+      const payload = await requestProgramWorkoutApi(`/${encodeURIComponent(nextProgramWorkoutEditorDraft.programWorkoutId)}`)
+      const programWorkoutTree = payload?.programWorkoutTree ?? null
+      setProgramWorkoutEditorDetailsValues(createWorkoutEditorDetailsValues(programWorkoutTree))
+      setProgramWorkoutEditorTrainingSections(mapProgramWorkoutTreeToTrainingSections(programWorkoutTree))
+      setProgramWorkoutEditorLoadState('ready')
+    } catch (error) {
+      setProgramWorkoutEditorError(error?.message || 'Failed to load program workout editor data.')
+      setProgramWorkoutEditorLoadState('error')
+    }
+  }
+
+  async function saveProgramWorkoutEditor() {
+    if (!programWorkoutEditorDraft?.programWorkoutId) {
+      setProgramWorkoutEditorError('Program workout ID missing for save.')
+      return
+    }
+
+    setProgramWorkoutEditorLoadState('saving')
+    setProgramWorkoutEditorError('')
+
+    try {
+      const detailsPayload = {
+        name_snapshot: programWorkoutEditorDetailsValues.name,
+        notes: programWorkoutEditorDetailsValues.description,
+        status: programWorkoutEditorDetailsValues.status,
+        scheduled_date: programWorkoutEditorDraft.scheduledDate,
+        scheduled_start_time: programWorkoutEditorDraft.scheduledStartTime ? `${programWorkoutEditorDraft.scheduledStartTime}:00` : null,
+        end_date: programWorkoutEditorDraft.scheduledDate,
+        scheduled_end_time: programWorkoutEditorDraft.scheduledEndTime ? `${programWorkoutEditorDraft.scheduledEndTime}:00` : null,
+      }
+
+      const payload = await requestProgramWorkoutApi(`/${encodeURIComponent(programWorkoutEditorDraft.programWorkoutId)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          details: detailsPayload,
+          trainingSections: programWorkoutEditorTrainingSections,
+        }),
+      })
+
+      const programWorkoutTree = payload?.programWorkoutTree ?? null
+      setProgramWorkoutEditorDetailsValues(createWorkoutEditorDetailsValues(programWorkoutTree))
+      setProgramWorkoutEditorTrainingSections(mapProgramWorkoutTreeToTrainingSections(programWorkoutTree))
+      await loadPersistedCalendarAssignments()
+      setProgramWorkoutEditorLoadState('ready')
+      closeProgramWorkoutEditorSeam()
+    } catch (error) {
+      setProgramWorkoutEditorError(error?.message || 'Failed to save program workout changes.')
+      setProgramWorkoutEditorLoadState('error')
+    }
+  }
+
   function openAssignmentDialog(date, hour) {
     setSelectedEventId(null)
+    closeProgramWorkoutEditorSeam()
     setDayPlaylistEventIds([])
     setDayPlaylistRawCount(0)
     setCompletedDayPlaylistEventIds([])
@@ -824,7 +1589,31 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
     setAssignmentDraft(createAssignmentDraft(event.startDate, event.startHour, event.workoutTemplateId))
     setAssignmentConflictMessage('')
     setEventConflictMessage('')
-    setIsAssignmentDialogOpen(true)
+
+    const nextProgramWorkoutEditorDraft = createProgramWorkoutEditorDraft(event, {
+      athleteId: selectedAthleteId,
+      dayPlaylistEventIds: nextPlaylistEventIds,
+      dayPlaylistIndex: nextDayPlaylistIndex,
+      dayPlaylistRawCount: nextDayPlaylistRawCount || nextPlaylistEventIds.length,
+    })
+
+    setIsAssignmentDialogOpen(false)
+    updateCalendarQueryParams({
+      calendarOverlay: 'program-workout-editor',
+      calendarProgramWorkoutId: nextProgramWorkoutEditorDraft?.programWorkoutId,
+      calendarScheduledDate: nextProgramWorkoutEditorDraft?.scheduledDate,
+      calendarStartTime: nextProgramWorkoutEditorDraft?.scheduledStartTime,
+      calendarEndTime: nextProgramWorkoutEditorDraft?.scheduledEndTime,
+      calendarDayPlaylistIndex: nextProgramWorkoutEditorDraft ? nextProgramWorkoutEditorDraft.dayPlaylistIndex + 1 : null,
+      calendarDayPlaylistCount: nextProgramWorkoutEditorDraft?.dayPlaylistRawCount || null,
+    })
+
+    if (typeof onOpenProgramWorkoutEditor === 'function') {
+      onOpenProgramWorkoutEditor(nextProgramWorkoutEditorDraft)
+      return
+    }
+
+    void openProgramWorkoutEditorWithDraft(nextProgramWorkoutEditorDraft)
   }
 
   function goToDayPlaylistEvent(nextIndex) {
@@ -833,11 +1622,11 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
       return
     }
 
-    setDayPlaylistIndex(nextIndex)
-    setSelectedEventId(nextEvent.id)
-    setAssignmentDraft(createAssignmentDraft(nextEvent.startDate, nextEvent.startHour, nextEvent.workoutTemplateId))
-    setAssignmentConflictMessage('')
-    setEventConflictMessage('')
+    openEventDialog(nextEvent.id, {
+      dayPlaylistEventIds,
+      dayPlaylistIndex: nextIndex,
+      dayPlaylistRawCount,
+    })
   }
 
   function reopenMonthOverflowFromPlaylist() {
@@ -847,6 +1636,7 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
     }
 
     setIsAssignmentDialogOpen(false)
+    closeProgramWorkoutEditorSeam()
     setMonthOverflowDate(new Date(overflowDate))
     setIsMonthOverflowDialogOpen(true)
   }
@@ -902,6 +1692,15 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
     }
   }
 
+  async function moveMonthEventToDate(eventId, date) {
+    const event = scheduledEvents.find((entry) => entry.id === eventId)
+    if (!event) {
+      return false
+    }
+
+    return moveEventToSlot(eventId, date, event.startHour)
+  }
+
   function handleWeekEventDragStart(event) {
     setActiveDragEventId(String(event.active.id))
   }
@@ -918,8 +1717,36 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
     setActiveDragEventId(null)
   }
 
+  async function handleMonthEventDragEnd(event) {
+    const eventId = String(event.active.id)
+    const overId = event.over?.id ? String(event.over.id) : ''
+    const targetSlot = parseMonthSlotId(overId)
+
+    if (targetSlot) {
+      await moveMonthEventToDate(eventId, targetSlot.date)
+    }
+
+    setActiveDragEventId(null)
+  }
+
   async function createAssignment() {
-    if (!assignmentDraft.date || !assignmentDraft.hour) {
+    if (!selectedTemplate) {
+      setAssignmentConflictMessage('Choose a real workout template before saving.')
+      return
+    }
+
+    if (!assignmentDraft.date || !assignmentDraft.hour || !assignmentDraft.endDate || !assignmentDraft.endHour) {
+      setAssignmentConflictMessage('Choose a start date/time and end date/time before saving.')
+      return
+    }
+
+    if (!isSameDay(assignmentDraft.date, assignmentDraft.endDate)) {
+      setAssignmentConflictMessage('End date must match the start date for calendar workout scheduling.')
+      return
+    }
+
+    if (convertHourStringToMinutes(assignmentDraft.endHour) <= convertHourStringToMinutes(assignmentDraft.hour)) {
+      setAssignmentConflictMessage('End time must be after the start time.')
       return
     }
 
@@ -943,11 +1770,13 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
       const createdEvent = await createPersistedAssignment({
         id: null,
         title: selectedTemplate.title,
-        tone: selectedTemplate.tone,
+        trainingType: selectedTemplate.trainingType,
+        bgColor: selectedTemplate.bgColor,
+        textColor: selectedTemplate.textColor,
         startDate: assignmentDraft.date,
-        endDate: assignmentDraft.date,
+        endDate: assignmentDraft.endDate,
         startHour: assignmentDraft.hour,
-        endHour: getEventEndHour(assignmentDraft.hour, selectedTemplate.durationHours),
+        endHour: assignmentDraft.endHour,
         workoutTemplateId: selectedTemplate.id,
       })
       setScheduledEvents((currentEvents) => [...currentEvents, createdEvent])
@@ -985,7 +1814,9 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
       const updatedEvent = await updatePersistedAssignment({
         ...selectedEvent,
         title: selectedTemplate.title,
-        tone: selectedTemplate.tone,
+        trainingType: selectedTemplate.trainingType,
+        bgColor: selectedTemplate.bgColor,
+        textColor: selectedTemplate.textColor,
         startHour: assignmentDraft.hour,
         endHour: getEventEndHour(assignmentDraft.hour, selectedTemplate.durationHours),
         workoutTemplateId: selectedTemplate.id,
@@ -1071,112 +1902,218 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
     await moveEventToSlot(event.id, event.startDate, nextHour)
   }
 
+  function changeCalendarView(nextView) {
+    setCurrentView(nextView)
+    setActiveDragEventId(null)
+    setEventConflictMessage('')
+    setAssignmentConflictMessage('')
+    setIsMonthOverflowDialogOpen(false)
+    setMonthOverflowDate(null)
+  }
+
   const shiftDate = (delta) => {
     setSelectedDate((currentDate) => {
-      return currentView === 'week' ? shiftWeek(currentDate, delta) : shiftMonth(currentDate, delta)
+      switch (currentView) {
+        case 'day':
+          return shiftDay(currentDate, delta)
+        case 'week':
+          return shiftWeek(currentDate, delta)
+        case 'year':
+          return shiftYear(currentDate, delta)
+        case 'agenda':
+          return shiftMonth(currentDate, delta)
+        default:
+          return shiftMonth(currentDate, delta)
+      }
     })
   }
 
+  const renderedCalendarView = useMemo(() => {
+    switch (currentView) {
+      case 'day':
+        return (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleWeekEventDragStart} onDragEnd={handleWeekEventDragEnd}>
+            {renderDayGrid(
+              selectedDate,
+              scheduledEvents,
+              openAssignmentDialog,
+              openEventDialog,
+              moveEventByHours,
+              activeDragEventId,
+            )}
+            <DragOverlay>
+              <EventOverlayCard event={activeDragEvent} />
+            </DragOverlay>
+          </DndContext>
+        )
+      case 'week':
+        return (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleWeekEventDragStart} onDragEnd={handleWeekEventDragEnd}>
+            {renderWeekGrid(
+              selectedDate,
+              scheduledEvents,
+              openAssignmentDialog,
+              openEventDialog,
+              moveEventByHours,
+              activeDragEventId,
+            )}
+            <DragOverlay>
+              <EventOverlayCard event={activeDragEvent} />
+            </DragOverlay>
+          </DndContext>
+        )
+      case 'year':
+        return renderYearGrid(selectedDate, calendarEvents, setSelectedDate, setCurrentView)
+      case 'agenda':
+        return renderAgendaView(selectedDate, calendarEvents, openEventDialog)
+      default:
+        return (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleWeekEventDragStart} onDragEnd={handleMonthEventDragEnd}>
+            {renderMonthGrid(selectedDate, calendarEvents, openEventDialog, openMonthOverflow)}
+            <DragOverlay>
+              <EventOverlayCard event={activeDragEvent} />
+            </DragOverlay>
+          </DndContext>
+        )
+    }
+  }, [
+    activeDragEvent,
+    activeDragEventId,
+    calendarEvents,
+    currentView,
+    openAssignmentDialog,
+    openEventDialog,
+    openMonthOverflow,
+    scheduledEvents,
+    selectedDate,
+    sensors,
+  ])
+
   return (
     <>
-      <section className="admin-shell-workouts-calendar-view grid gap-5" aria-label="Workout calendar admin view">
-        <div className="admin-shell-workouts-calendar-header grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
-          <div className="min-w-0 grid gap-1">
-            <h1 className="admin-shell-athletes-page-title">Workout Calendar</h1>
-            <p className="text-sm text-[#8EA0BC]">
-              {currentView === 'week'
-                ? 'Review scheduled workouts and open slots in a weekly schedule.'
-                : 'Review scheduled workouts and upcoming workload in a month view.'}
-            </p>
-            {forceDenseDayPreview ? (
-              <div className="mt-2 inline-flex w-fit items-center gap-2 rounded-full border border-[#6A4A1A] bg-[#3D2B12] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#F5D08A]">
-                <span>Preview mode</span>
-                <span className="rounded-full border border-current/25 px-2 py-0.5 text-[10px]">Debug dense day</span>
-              </div>
-            ) : null}
-            {eventConflictMessage ? (
-              <div className="mt-2 rounded-[14px] border border-[#6A4A1A] bg-[#3D2B12] px-3 py-2 text-sm text-[#F5D08A]">
-                {eventConflictMessage}
-              </div>
-            ) : null}
-          </div>
+      <section className="admin-shell-workouts-calendar-view grid gap-5 text-[var(--admin-dashboard-card-text)]" aria-label="Workout calendar admin view">
+        <div className="admin-shell-workouts-calendar-header grid gap-4 border-b border-[var(--admin-dashboard-card-border)] pb-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-wrap items-start gap-4">
+              <button
+                type="button"
+                className="grid h-[72px] w-[72px] place-items-center rounded-[20px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)]"
+                onClick={() => setSelectedDate(REFERENCE_TODAY)}
+              >
+                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--admin-dashboard-card-muted)]">{referenceDateBadgeMonth}</span>
+                <span className="text-2xl font-black leading-none">{referenceDateBadgeDay}</span>
+              </button>
 
-          <div className="grid w-full gap-3 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center xl:w-auto justify-self-start xl:justify-self-end">
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="rounded-[12px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
-                onClick={() => setSelectedDate(new Date(2026, 4, 4))}
-              >
-                Today
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="rounded-[12px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
-                onClick={() => shiftDate(-1)}
-              >
-                Previous
-              </Button>
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg font-semibold text-[var(--admin-dashboard-card-text)]">
+                    {monthLabel}
+                  </span>
+                  <span className="rounded-md border border-[var(--admin-dashboard-card-border)] px-1.5 py-0.5 text-xs font-medium text-[var(--admin-dashboard-card-text)]">
+                    {referenceEventCountLabel}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="size-6.5 px-0 rounded-r-none border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]"
+                    onClick={() => shiftDate(-1)}
+                  >
+                    <ChevronLeft className="size-4.5" />
+                  </Button>
+
+                  <p className="text-sm text-[var(--admin-dashboard-card-muted)]">{rangeLabel}</p>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="size-6.5 px-0 rounded-l-none border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]"
+                    onClick={() => shiftDate(1)}
+                  >
+                    <ChevronRight className="size-4.5" />
+                  </Button>
+                </div>
+              </div>
             </div>
 
-            <div className="order-last w-full text-left text-sm font-semibold text-[#EEF4FF] lg:order-none lg:min-w-[220px] lg:text-center">{rangeLabel}</div>
+            <div className="flex flex-col items-center gap-1.5 sm:flex-row sm:justify-between">
+              <div className="flex w-full flex-wrap items-center gap-1.5">
+                <div className="inline-flex first:rounded-r-none last:rounded-l-none [&:not(:first-child):not(:last-child)]:rounded-none">
+                  <Button
+                    type="button"
+                    aria-label="View by day"
+                    variant={currentView === 'day' ? 'default' : 'outline'}
+                    size="icon"
+                    className="rounded-r-none border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] [&_svg]:size-5"
+                    onClick={() => changeCalendarView('day')}
+                  >
+                    <List strokeWidth={1.8} />
+                    <span className="sr-only">Day</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    aria-label="View by week"
+                    variant={currentView === 'week' ? 'default' : 'outline'}
+                    size="icon"
+                    className="-ml-px rounded-none border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] [&_svg]:size-5"
+                    onClick={() => changeCalendarView('week')}
+                  >
+                    <Columns strokeWidth={1.8} />
+                    <span className="sr-only">Week</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    aria-label="View by month"
+                    variant={currentView === 'month' ? 'default' : 'outline'}
+                    size="icon"
+                    className="-ml-px rounded-none border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] [&_svg]:size-5"
+                    onClick={() => changeCalendarView('month')}
+                  >
+                    <Grid2x2 strokeWidth={1.8} />
+                    <span className="sr-only">Month</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    aria-label="View by year"
+                    variant={currentView === 'year' ? 'default' : 'outline'}
+                    size="icon"
+                    className="-ml-px rounded-none border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] [&_svg]:size-5"
+                    onClick={() => changeCalendarView('year')}
+                  >
+                    <Grid3x3 strokeWidth={1.8} />
+                    <span className="sr-only">Year</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    aria-label="View by agenda"
+                    variant={currentView === 'agenda' ? 'default' : 'outline'}
+                    size="icon"
+                    className="-ml-px rounded-l-none border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] [&_svg]:size-5"
+                    onClick={() => changeCalendarView('agenda')}
+                  >
+                    <CalendarRange strokeWidth={1.8} />
+                    <span className="sr-only">Agenda</span>
+                  </Button>
+                </div>
+              </div>
 
-            <div className="flex flex-wrap items-center justify-self-start gap-2 xl:justify-self-end">
               <Button
                 type="button"
-                variant="outline"
-                className="rounded-[12px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
-                onClick={() => shiftDate(1)}
+                className="w-full sm:w-auto min-h-[40px] rounded-[10px] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]"
+                onClick={() => openAssignmentDialog(selectedDate, WEEK_HOURS[0])}
               >
-                Next
+                <Plus className="size-4" />
+                Add Workout
               </Button>
-              <div className="flex items-center gap-1 rounded-[14px] border border-[#24334A] bg-[#111D30] p-1">
-                <button
-                  type="button"
-                  className={[
-                    'rounded-[10px] px-3 py-2 text-sm font-medium transition-colors',
-                    currentView === 'month' ? 'bg-[#3BE0AF] text-[#0B1120]' : 'text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]',
-                  ].join(' ')}
-                  onClick={() => setCurrentView('month')}
-                >
-                  Month
-                </button>
-                <button
-                  type="button"
-                  className={[
-                    'rounded-[10px] px-3 py-2 text-sm font-medium transition-colors',
-                    currentView === 'week' ? 'bg-[#3BE0AF] text-[#0B1120]' : 'text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]',
-                  ].join(' ')}
-                  onClick={() => setCurrentView('week')}
-                >
-                  Week
-                </button>
-              </div>
             </div>
           </div>
         </div>
 
         <div className="grid min-w-0 gap-5">
           <div className="grid gap-5">
-            {currentView === 'week' ? (
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleWeekEventDragStart} onDragEnd={handleWeekEventDragEnd}>
-                {renderWeekGrid(
-                  selectedDate,
-                  scheduledEvents,
-                  openAssignmentDialog,
-                  openEventDialog,
-                  moveEventByHours,
-                  activeDragEventId,
-                )}
-                <DragOverlay>
-                  <EventOverlayCard event={activeDragEvent} />
-                </DragOverlay>
-              </DndContext>
-            ) : (
-              renderMonthGrid(selectedDate, calendarEvents, openEventDialog, openMonthOverflow)
-            )}
+            {renderedCalendarView}
           </div>
         </div>
       </section>
@@ -1187,38 +2124,38 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
           setMonthOverflowDate(null)
         }
       }}>
-        <DialogContent className="fixed inset-x-2 bottom-2 top-auto z-50 grid w-full max-w-[calc(100%-1rem)] translate-y-0 gap-4 rounded-t-[28px] rounded-b-[18px] border border-[#24334A] bg-[#111827] p-5 text-[#EEF4FF] shadow-[0_-24px_80px_rgba(0,0,0,0.5)] duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-bottom-[18%] data-[state=open]:slide-in-from-bottom-[18%] sm:left-1/2 sm:right-auto sm:bottom-auto sm:top-[50%] sm:max-w-[420px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[28px] sm:shadow-[0_24px_80px_rgba(0,0,0,0.5)]">
+        <DialogContent className="fixed inset-x-2 bottom-2 top-auto z-50 grid w-full max-w-[calc(100%-1rem)] translate-y-0 gap-4 rounded-t-[28px] rounded-b-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-5 text-[var(--admin-dashboard-card-text)] shadow-[0_-24px_80px_rgba(0,0,0,0.5)] duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-bottom-[18%] data-[state=open]:slide-in-from-bottom-[18%] sm:left-1/2 sm:right-auto sm:bottom-auto sm:top-[50%] sm:max-w-[420px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[28px] sm:shadow-[0_24px_80px_rgba(0,0,0,0.5)]">
           <DialogHeader>
             <DialogTitle>{monthOverflowEvents.length} workout{monthOverflowEvents.length === 1 ? '' : 's'}</DialogTitle>
-            <DialogDescription className="text-[#8EA0BC]">
+            <DialogDescription className="text-[var(--admin-dashboard-card-muted)]">
               Review the hidden workouts for this day and open any one to edit it.
             </DialogDescription>
           </DialogHeader>
 
             <div className="grid gap-3 py-2">
               {monthOverflowDate ? (
-                <div className="grid gap-2 rounded-[18px] border border-[#24334A] bg-[#0F1728] px-4 py-4">
+                <div className="grid gap-2 rounded-[18px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-4 py-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">Day</div>
-                      <div className="mt-1 text-sm font-semibold text-[#EEF4FF]">{new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).format(monthOverflowDate)}</div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--admin-dashboard-card-muted)]">Day</div>
+                      <div className="mt-1 text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).format(monthOverflowDate)}</div>
                     </div>
-                    <div className="rounded-full border border-[#29496B] bg-[#142235] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#8FC7FF]">
+                    <div className="rounded-full border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-shell-nav-active-bg)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--admin-shell-nav-active-text)]">
                       Sorted by time
                     </div>
                   </div>
                 </div>
               ) : null}
 
-              <div className="flex items-center justify-between gap-3 border-t border-[#24334A] pt-3">
+              <div className="flex items-center justify-between gap-3 border-t border-[var(--admin-dashboard-card-border)] pt-3">
                 <div>
-                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">Workout count</div>
-                  <div className="mt-1 text-sm font-semibold text-[#EEF4FF]">{monthOverflowEvents.length} total workouts</div>
+                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--admin-dashboard-card-muted)]">Workout count</div>
+                  <div className="mt-1 text-sm font-semibold text-[var(--admin-dashboard-card-text)]">{monthOverflowEvents.length} total workouts</div>
                 </div>
                 <Button
                   type="button"
                   variant="outline"
-                  className="rounded-[12px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
+                  className="rounded-[12px] border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]"
                   onClick={() => openAllDayWorkouts(monthOverflowEvents)}
                 >
                   Open all in day
@@ -1226,39 +2163,37 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
               </div>
 
               <div className="grid gap-2">
-{monthOverflowEvents.map((event) => {
-                const typeLabel = event.typeLabel ?? getEventTypeLabel(event)
+                {monthOverflowEvents.map((event) => {
+                  const typeLabel = event.typeLabel ?? getEventTypeLabel(event)
 
-                return (
-                <button
-                  key={event.id}
-                  type="button"
-                  aria-label="Open event editor"
-                  className={[
-                    'grid w-full min-w-0 overflow-hidden gap-1.5 rounded-[16px] border px-3 py-3 text-left transition-all hover:-translate-y-[1px] hover:opacity-95',
-                    getEventToneClasses(event.tone),
-                  ].join(' ')}
-                  onClick={() => openEventDialog(event.id)}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] opacity-80">{event.startHour}</div>
-                    <div className="flex items-center gap-2">
-                      <span className={["rounded-full h-2.5 w-2.5", getEventDotClasses(event.tone)].join(' ')} />
-                      <span className="rounded-full border border-current/20 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] opacity-80">{typeLabel}</span>
-                    </div>
-                  </div>
-                  <div className="min-w-0 break-words text-[13px] font-semibold leading-[1.35] text-[#F8FBFF] line-clamp-2">{event.title}</div>
-                  <div className="text-[11px] text-inherit opacity-75">Ends {event.endHour}</div>
-                </button>
-              )})}
-            </div>
+                  return (
+                    <button
+                      key={event.id}
+                      type="button"
+                      className="grid w-full min-w-0 overflow-hidden gap-1.5 rounded-[16px] border px-3 py-3 text-left transition-all hover:-translate-y-[1px] hover:opacity-95"
+                      style={getEventCardStyle(event)}
+                      onClick={() => openEventDialog(event.id)}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] opacity-80">{event.startHour}</div>
+                        <div className="flex items-center gap-2">
+                          <span className="rounded-full h-2.5 w-2.5" style={getEventDotStyle(event)} />
+                          <span className="rounded-full border border-current/20 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] opacity-80">{typeLabel}</span>
+                        </div>
+                      </div>
+                      <div className="min-w-0 break-words text-[13px] font-semibold leading-[1.35] line-clamp-2">{event.title}</div>
+                      <div className="text-[11px] text-inherit opacity-75">Ends {event.endHour}</div>
+                    </button>
+                  )
+                })}
+              </div>
           </div>
 
           <DialogFooter className="sm:justify-end">
             <Button
               type="button"
               variant="outline"
-              className="rounded-[12px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
+              className="rounded-[12px] border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]"
               onClick={() => {
                 setIsMonthOverflowDialogOpen(false)
                 setMonthOverflowDate(null)
@@ -1277,189 +2212,278 @@ export default function WorkoutsCalendarView({ selectedAthleteId = '' }) {
           setDayPlaylistEventIds([])
           setCompletedDayPlaylistEventIds([])
           setDayPlaylistIndex(0)
+          setWorkoutTemplatePagination((current) => ({ ...current, pageIndex: 0, pageSize: 5 }))
           setAssignmentDraft(createAssignmentDraft())
           setAssignmentConflictMessage('')
           setEventConflictMessage('')
         }
       }}>
-        <DialogContent className="border-[#24334A] bg-[#111827] text-[#EEF4FF] sm:max-w-[560px]">
-          <DialogHeader>
-            <DialogTitle>Schedule workout</DialogTitle>
-            <DialogDescription className="text-[#8EA0BC]">
-              Select a workout template and save it into this calendar slot.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent pageScrollable className="admin-shell-workouts-calendar-add-dialog border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] p-0 text-[var(--admin-dashboard-card-text)] shadow-[0_28px_80px_rgba(0,0,0,0.55)] sm:max-w-[640px]">
+          <div className="grid gap-4 p-6">
+            <DialogHeader>
+              <DialogTitle>Add Workout</DialogTitle>
+              <DialogDescription className="text-[var(--admin-dashboard-card-muted)]">
+                Pick a workout template, start date/time, and end date/time before handing the new assignment to the shared program workout flow.
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="grid gap-4 py-2">
-            {isDayPlaylistActive ? (
-              <div className="rounded-[16px] border border-[#24334A] bg-[#0F1728] px-4 py-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">Day playlist</div>
-                    <div className="mt-1 text-sm font-semibold text-[#EEF4FF]">Workout {dayPlaylistIndex + 1} of {activeDayPlaylistDedupedCount}</div>
-                    {activeDayPlaylistRawCount > activeDayPlaylistDedupedCount ? (
-                      <div className="mt-1 text-xs text-[#8EA0BC]">Deduped from {activeDayPlaylistRawCount} to {activeDayPlaylistDedupedCount}</div>
-                    ) : null}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="rounded-[12px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
-                      onClick={reopenMonthOverflowFromPlaylist}
-                    >
-                      Back to overflow list
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="rounded-[12px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
-                      onClick={() => goToDayPlaylistEvent(dayPlaylistIndex - 1)}
-                      disabled={dayPlaylistIndex === 0}
-                    >
-                      Previous workout
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="rounded-[12px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
-                      onClick={() => goToDayPlaylistEvent(dayPlaylistIndex + 1)}
-                      disabled={dayPlaylistIndex === activeDayPlaylistEvents.length - 1}
-                    >
-                      Next workout
-                    </Button>
-                  </div>
+            <div className="grid gap-4 py-2">
+              {(assignmentConflictMessage || eventConflictMessage) ? (
+                <div className="rounded-[14px] border border-[#f59e0b]/40 bg-[#fef3c7] px-3 py-2 text-sm text-[#92400e]">
+                  {assignmentConflictMessage || eventConflictMessage}
                 </div>
-              </div>
-            ) : null}
-
-            <div className="rounded-[16px] border border-[#24334A] bg-[#0F1728] px-4 py-3">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">Workout</div>
-              <div className="mt-1 text-sm font-semibold text-[#EEF4FF]">{selectedEvent ? selectedEvent.title : selectedTemplate.title}</div>
-            </div>
-
-            <div className="rounded-[16px] border border-[#24334A] bg-[#0F1728] px-4 py-3">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">Slot</div>
-              <div className="mt-1 text-sm font-semibold text-[#EEF4FF]">{formatAssignmentSlot(assignmentDraft.date, assignmentDraft.hour)}</div>
-            </div>
-
-            {(assignmentConflictMessage || eventConflictMessage) ? (
-              <div className="rounded-[14px] border border-[#6A4A1A] bg-[#3D2B12] px-3 py-2 text-sm text-[#F5D08A]">
-                {assignmentConflictMessage || eventConflictMessage}
-              </div>
-            ) : null}
-
-            <div className="grid gap-2">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">Workout templates</div>
-              <div className="grid gap-2">
-                {ASSIGNABLE_WORKOUTS.map((workout) => {
-                  const isSelected = workout.id === assignmentDraft.selectedWorkoutId
-
-                  return (
-                    <button
-                      key={workout.id}
-                      type="button"
-                      className={[
-                        'rounded-[16px] border px-4 py-3 text-left transition-colors',
-                        isSelected
-                          ? 'border-[#3BE0AF] bg-[#153C35] text-[#EEF4FF]'
-                          : 'border-[#24334A] bg-[#0F1728] text-[#DCE6F8] hover:border-[#3BE0AF] hover:bg-[#15233A]',
-                      ].join(' ')}
-                      onClick={() => {
-                        setAssignmentDraft((currentDraft) => ({ ...currentDraft, selectedWorkoutId: workout.id }))
-                        setAssignmentConflictMessage('')
-                        setEventConflictMessage('')
-                      }}
-                    >
-                      <div className="text-sm font-semibold">{workout.title}</div>
-                      <div className="mt-1 text-xs text-inherit opacity-80">{workout.durationHours} hour block</div>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            <div className="grid gap-2">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6F84A6]">Time options</div>
-              <div className="flex flex-wrap gap-2">
-                {WEEK_HOURS.map((hour) => {
-                  const isSelected = hour === assignmentDraft.hour
-                  return (
-                    <button
-                      key={hour}
-                      type="button"
-                      className={[
-                        'rounded-[12px] border px-3 py-2 text-sm transition-colors',
-                        isSelected
-                          ? 'border-[#3BE0AF] bg-[#153C35] text-[#EEF4FF]'
-                          : 'border-[#24334A] bg-[#0F1728] text-[#DCE6F8] hover:border-[#3BE0AF] hover:bg-[#15233A]',
-                      ].join(' ')}
-                      onClick={() => {
-                        setAssignmentDraft((currentDraft) => ({ ...currentDraft, hour }))
-                        setAssignmentConflictMessage('')
-                        setEventConflictMessage('')
-                      }}
-                    >
-                      {hour}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-wrap gap-3">
-              {selectedEvent ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="rounded-[12px] border-[#7A2430] bg-[#2B1117] text-[#F5B7C0] hover:bg-[#34151C] hover:text-[#FFD4DB]"
-                  onClick={deleteScheduledEvent}
-                >
-                  Delete workout
-                </Button>
               ) : null}
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="grid gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--admin-dashboard-card-muted)]">Start date</span>
+                  <input
+                    type="date"
+                    className="h-11 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3BE0AF]/20"
+                    value={formatDateInputValue(assignmentDraft.date)}
+                    onChange={(event) => {
+                      const nextDate = parseDateInputValue(event.target.value)
+                      setAssignmentDraft((currentDraft) => ({
+                        ...currentDraft,
+                        date: nextDate,
+                        endDate: currentDraft.endDate && nextDate && !isSameDay(currentDraft.endDate, currentDraft.date ?? nextDate)
+                          ? nextDate
+                          : currentDraft.endDate ?? nextDate,
+                      }))
+                      setAssignmentConflictMessage('')
+                      setEventConflictMessage('')
+                    }}
+                  />
+                </label>
+
+                <label className="grid gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--admin-dashboard-card-muted)]">Start time</span>
+                  <input
+                    type="time"
+                    step="3600"
+                    min="06:00"
+                    max="23:00"
+                    className="h-11 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3BE0AF]/20"
+                    value={assignmentDraft.hour}
+                    onChange={(event) => {
+                      const nextHour = event.target.value
+                      setAssignmentDraft((currentDraft) => ({
+                        ...currentDraft,
+                        hour: nextHour,
+                        endHour: currentDraft.endHour || getEventEndHour(nextHour || '06:00'),
+                      }))
+                      setAssignmentConflictMessage('')
+                      setEventConflictMessage('')
+                    }}
+                  />
+                </label>
+
+                <label className="grid gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--admin-dashboard-card-muted)]">End date</span>
+                  <input
+                    type="date"
+                    className="h-11 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3BE0AF]/20"
+                    value={formatDateInputValue(assignmentDraft.endDate)}
+                    onChange={(event) => {
+                      const nextDate = parseDateInputValue(event.target.value)
+                      setAssignmentDraft((currentDraft) => ({ ...currentDraft, endDate: nextDate }))
+                      setAssignmentConflictMessage('')
+                      setEventConflictMessage('')
+                    }}
+                  />
+                </label>
+
+                <label className="grid gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--admin-dashboard-card-muted)]">End time</span>
+                  <input
+                    type="time"
+                    step="3600"
+                    min="06:00"
+                    max="23:59"
+                    className="h-11 rounded-[12px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-4 text-sm text-[var(--admin-dashboard-card-text)] focus-visible:border-[var(--admin-shell-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3BE0AF]/20"
+                    value={assignmentDraft.endHour}
+                    onChange={(event) => {
+                      setAssignmentDraft((currentDraft) => ({ ...currentDraft, endHour: event.target.value }))
+                      setAssignmentConflictMessage('')
+                      setEventConflictMessage('')
+                    }}
+                  />
+                </label>
+              </div>
+
+              <div className="grid gap-2">
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--admin-dashboard-card-muted)]">Workout templates</div>
+                <div className="grid gap-2">
+                  {workoutTemplateHydrationState === 'loading'
+                    ? workoutTemplateSkeletonRows.map((rowIndex) => (
+                        <div key={`workout-template-skeleton-${rowIndex}`} className="rounded-[16px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-4 py-3">
+                          <div className="flex flex-col gap-2">
+                            <Skeleton className="h-4 w-[160px] bg-[#1B2A40]" />
+                            <Skeleton className="h-3 w-[112px] bg-[#1B2A40]" />
+                            <Skeleton className="h-3 w-[88px] bg-[#1B2A40]" />
+                          </div>
+                        </div>
+                      ))
+                    : null}
+
+                  {workoutTemplateHydrationState === 'error' && !workoutTemplateOptions.length ? (
+                    <div className="rounded-[16px] border border-[#fecaca] bg-[#fef2f2] px-4 py-3 text-sm text-[#991b1b]">
+                      Real workout templates could not be loaded.
+                    </div>
+                  ) : null}
+
+                  {workoutTemplateHydrationState === 'ready' && !workoutTemplateOptions.length ? (
+                    <div className="rounded-[16px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] px-4 py-3 text-sm text-[var(--admin-dashboard-card-muted)]">
+                      No active workout templates found.
+                    </div>
+                  ) : null}
+
+                  {visibleWorkoutTemplateOptions.map((workout) => {
+                    const isSelected = workout.id === assignmentDraft.selectedWorkoutId
+                    const exerciseCountLabel = `${workout.exerciseCount} exercise${workout.exerciseCount === 1 ? '' : 's'}`
+                    const setCountLabel = `${workout.setCount} set${workout.setCount === 1 ? '' : 's'}`
+
+                    return (
+                      <button
+                        key={workout.id}
+                        type="button"
+                        className={[
+                          'rounded-[16px] border px-4 py-3 text-left transition-colors',
+                          isSelected
+                            ? 'border-[var(--admin-shell-accent)] bg-[var(--admin-shell-nav-active-bg)] text-[var(--admin-dashboard-card-text)]'
+                            : 'border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-card-bg)] text-[var(--admin-dashboard-card-text)] hover:border-[var(--admin-shell-accent)] hover:bg-[var(--admin-dashboard-control-hover-bg)]',
+                        ].join(' ')}
+                        onClick={() => {
+                          setAssignmentDraft((currentDraft) => ({ ...currentDraft, selectedWorkoutId: workout.id }))
+                          setAssignmentConflictMessage('')
+                          setEventConflictMessage('')
+                        }}
+                      >
+                        <div className="text-sm font-semibold">{workout.title}</div>
+                        <div className="mt-1 text-xs text-inherit opacity-80">{exerciseCountLabel}</div>
+                        <div className="mt-1 text-xs text-inherit opacity-70">{setCountLabel}</div>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {workoutTemplateHydrationState === 'ready' && workoutTemplateOptions.length > 0 ? (
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-sm text-[var(--admin-dashboard-card-muted)]">
+                    <div className="flex items-center gap-2">
+                      <span>Rows per page</span>
+                      <Select
+                        value={String(workoutTemplatePagination.pageSize)}
+                        onValueChange={(value) => {
+                          const nextPageSize = Number(value)
+                          setWorkoutTemplatePagination({
+                            pageIndex: 0,
+                            pageSize: nextPageSize,
+                          })
+                        }}
+                      >
+                        <SelectTrigger className="h-9 w-[76px] rounded-[10px] !border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] px-3 text-sm text-[var(--admin-dashboard-card-text)]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {workoutTemplatePageSizeOptions.map((option) => (
+                            <SelectItem key={option} value={String(option)}>{option}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <span>{workoutTemplatePageStart} - {workoutTemplatePageEnd} of {workoutTemplateOptions.length}</span>
+                      <nav className="flex items-center gap-1" aria-label="Workout template pagination">
+                        <button
+                          type="button"
+                          aria-label="Go to previous workout template page"
+                          className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] transition hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)] disabled:opacity-50"
+                          onClick={() => setWorkoutTemplatePagination((current) => ({ ...current, pageIndex: Math.max(0, current.pageIndex - 1) }))}
+                          disabled={workoutTemplatePagination.pageIndex === 0}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </button>
+                        {workoutTemplatePageNumbers.map((pageNumber) => (
+                          <button
+                            key={`workout-template-page-${pageNumber}`}
+                            type="button"
+                            className={[
+                              'flex h-9 min-w-9 items-center justify-center rounded-[10px] border px-3 text-sm transition',
+                              workoutTemplatePagination.pageIndex === pageNumber
+                                ? 'border-[#3BE0AF] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]'
+                                : 'border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]',
+                            ].join(' ')}
+                            onClick={() => setWorkoutTemplatePagination((current) => ({ ...current, pageIndex: pageNumber }))}
+                          >
+                            {pageNumber + 1}
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          aria-label="Go to next workout template page"
+                          className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] transition hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)] disabled:opacity-50"
+                          onClick={() => setWorkoutTemplatePagination((current) => ({ ...current, pageIndex: Math.min(workoutTemplatePageCount - 1, current.pageIndex + 1) }))}
+                          disabled={workoutTemplatePagination.pageIndex >= workoutTemplatePageCount - 1}
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </button>
+                      </nav>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-3 sm:justify-end">
+
+            <DialogFooter className="flex flex-col gap-3 border-t border-[var(--admin-dashboard-card-border)] pt-4 sm:flex-row sm:justify-end">
               <Button
                 type="button"
                 variant="outline"
-                className="rounded-[12px] border-[#24334A] bg-[#111D30] text-[#DCE6F8] hover:bg-[#15233A] hover:text-[#EEF4FF]"
+                className="min-h-[40px] rounded-[12px] border-[var(--admin-dashboard-card-border)] bg-[var(--admin-dashboard-control-bg)] text-[var(--admin-dashboard-card-text)] hover:bg-[var(--admin-dashboard-control-hover-bg)] hover:text-[var(--admin-dashboard-card-text)]"
                 onClick={() => {
                   setIsAssignmentDialogOpen(false)
                   setSelectedEventId(null)
                   setDayPlaylistEventIds([])
                   setCompletedDayPlaylistEventIds([])
                   setDayPlaylistIndex(0)
+                  setWorkoutTemplatePagination((current) => ({ ...current, pageIndex: 0, pageSize: 5 }))
                   setAssignmentDraft(createAssignmentDraft())
                   setAssignmentConflictMessage('')
                   setEventConflictMessage('')
                 }}
               >
-                Close
+                Cancel
               </Button>
-              {selectedEvent && isDayPlaylistActive && dayPlaylistIndex < activeDayPlaylistEvents.length - 1 ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="rounded-[12px] border-[#3BE0AF] bg-[#153C35] text-[#EEF4FF] hover:bg-[#1B4B42]"
-                  onClick={saveAndAdvanceDayPlaylist}
-                >
-                  Save & next
-                </Button>
-              ) : null}
               <Button
                 type="button"
-                className="rounded-[12px] border border-[#3BE0AF] bg-[#3BE0AF] text-[#0B1120] hover:bg-[#35c89d]"
-                onClick={selectedEvent ? updateScheduledEvent : createAssignment}
+                className="min-h-[40px] rounded-[12px] border border-[var(--admin-shell-accent)] bg-[var(--admin-shell-primary-button-bg)] text-[#0B1120] hover:bg-[var(--admin-shell-primary-button-bg)]"
+                onClick={createAssignment}
               >
-                {selectedEvent ? 'Save changes' : 'Save assignment'}
+                Create workout
               </Button>
-            </div>
-          </DialogFooter>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
+
+      <WorkoutEditorDialog
+        open={isProgramWorkoutEditorOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            closeProgramWorkoutEditorSeam()
+          }
+        }}
+        mode="edit"
+        title="Edit workout"
+        description={programWorkoutEditorDraft?.title ? `Update ${programWorkoutEditorDraft.title} below.` : 'Update this workout below.'}
+        detailsValues={programWorkoutEditorDetailsValues}
+        onDetailsChange={setProgramWorkoutEditorDetailsValues}
+        trainingSections={programWorkoutEditorTrainingSections}
+        onTrainingSectionsChange={setProgramWorkoutEditorTrainingSections}
+        showTrainingTab
+        primaryActionLabel={programWorkoutEditorLoadState === 'saving' ? 'Saving...' : 'Save changes'}
+        onPrimaryAction={programWorkoutEditorLoadState === 'loading' ? undefined : saveProgramWorkoutEditor}
+      />
     </>
   )
 }

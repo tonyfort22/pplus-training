@@ -39,6 +39,28 @@ async function requestTable(table, query = '') {
   return response.json()
 }
 
+async function patchTable(table, query = '', payload = {}) {
+  const { baseRestUrl, serviceRoleKey } = getRepositoryConfig()
+  const response = await fetch(`${baseRestUrl}/${table}${query}`, {
+    method: 'PATCH',
+    headers: {
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+    },
+    cache: 'no-store',
+    body: JSON.stringify(payload),
+  })
+
+  if (!response.ok) {
+    const text = await response.text()
+    throw createRepositoryError(`${table} patch failed: ${response.status} ${text}`, response.status)
+  }
+
+  return response.json()
+}
+
 function formatDateLabel(value) {
   if (!value) return '-'
 
@@ -102,6 +124,12 @@ function mapInviteRow(row) {
   }
 }
 
+function normalizeInviteIds(inviteIds = []) {
+  return Array.from(new Set((Array.isArray(inviteIds) ? inviteIds : [])
+    .map((inviteId) => String(inviteId || '').trim())
+    .filter(Boolean)))
+}
+
 export function createAdminInviteRepository() {
   return {
     async listInvites() {
@@ -111,6 +139,40 @@ export function createAdminInviteRepository() {
       )
 
       return Array.isArray(rows) ? rows.map(mapInviteRow) : []
+    },
+
+    async listInvitesByIds({ inviteIds = [] }) {
+      const normalizedInviteIds = normalizeInviteIds(inviteIds)
+      if (normalizedInviteIds.length === 0) throw createRepositoryError('At least one invite ID is required.', 400)
+
+      const rows = await requestTable(
+        'athlete_invitations',
+        `?select=id,invitee_email,expires_at,used_at,revoked_at,sent_at,athlete_profile_id,created_at,athlete_profiles(first_name,last_name)&id=in.(${normalizedInviteIds.map((inviteId) => encodeURIComponent(inviteId)).join(',')})&order=created_at.asc`,
+      )
+
+      return Array.isArray(rows) ? rows.map(mapInviteRow) : []
+    },
+
+    async cancelInvite({ inviteId }) {
+      const normalizedInviteId = String(inviteId || '').trim()
+      if (!normalizedInviteId) throw createRepositoryError('Invite ID is required.', 400)
+
+      const rows = await patchTable(
+        'athlete_invitations',
+        `?id=eq.${encodeURIComponent(normalizedInviteId)}`,
+        { revoked_at: new Date().toISOString() },
+      )
+      const invite = Array.isArray(rows) ? rows[0] : rows
+      if (!invite?.id) throw createRepositoryError('Invite not found.', 404)
+      return mapInviteRow(invite)
+    },
+
+    async cancelInvites({ inviteIds = [] }) {
+      const normalizedInviteIds = inviteIds.map((inviteId) => String(inviteId || '').trim()).filter(Boolean)
+      if (normalizedInviteIds.length === 0) throw createRepositoryError('At least one invite ID is required.', 400)
+
+      const invites = await Promise.all(normalizedInviteIds.map((inviteId) => this.cancelInvite({ inviteId })))
+      return { inviteIds: normalizedInviteIds, canceledCount: invites.length, invites }
     },
   }
 }

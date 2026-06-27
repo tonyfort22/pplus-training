@@ -1,22 +1,7 @@
-import { createAdminInviteRepository } from '@/lib/admin-invite-repository'
+import { createAdminInviteRouteHandlers } from '@/lib/admin-invite-route-handlers'
 
-function json(payload, init = {}) {
-  return Response.json(payload, init)
-}
+const handlers = createAdminInviteRouteHandlers()
 
-function handleRouteError(error) {
-  return json(
-    { error: error?.message || 'Unknown admin invites route error' },
-    { status: error?.status || 500 },
-  )
-}
-
-export async function GET() {
-  try {
-    const repository = createAdminInviteRepository()
-    const invites = await repository.listInvites()
-    return json({ invites })
-  } catch (error) {
-    return handleRouteError(error)
-  }
-}
+export const GET = handlers.GET
+export const POST = handlers.POST
+export const PATCH = handlers.PATCH

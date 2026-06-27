@@ -5,6 +5,11 @@ function requireFetch(fetchImpl) {
   return fetchImpl
 }
 
+function normalizeCoachAthleteProfileId(athleteId) {
+  const value = String(athleteId || '').trim()
+  return value.startsWith('coach-athlete-') ? value.slice('coach-athlete-'.length) : value
+}
+
 function mapProgramRow(row) {
   if (!row) return null
   return {
@@ -96,7 +101,14 @@ function mapProgramWorkoutSetRow(row) {
     reps: row.target_reps == null ? '' : String(row.target_reps),
     load: row.target_load == null ? '' : String(row.target_load),
     effort: row.target_rpe == null ? '' : String(row.target_rpe),
+    targetReps: row.target_reps ?? null,
+    targetLoad: row.target_load ?? null,
     targetLoadUnit: row.target_load_unit ?? null,
+    targetDurationSeconds: row.target_duration_seconds ?? null,
+    targetDistance: row.target_distance ?? null,
+    targetDistanceUnit: row.target_distance_unit ?? null,
+    targetRpe: row.target_rpe ?? null,
+    targetRir: row.target_rir ?? null,
     prescribedRestSeconds: row.target_rest_seconds ?? null,
     notes: row.notes ?? '',
   }
@@ -124,6 +136,34 @@ function mapProgramWorkoutRowsWithDerivedStatus(workoutRows = [], workoutSession
       }),
     }
   })
+}
+
+function attachProgramWorkoutExercises(workouts = [], exerciseRows = [], setRows = []) {
+  const setsByExerciseId = new Map()
+  for (const row of Array.isArray(setRows) ? setRows : []) {
+    const set = mapProgramWorkoutSetRow(row)
+    if (!set?.programWorkoutExerciseId) continue
+    const list = setsByExerciseId.get(set.programWorkoutExerciseId) || []
+    list.push(set)
+    setsByExerciseId.set(set.programWorkoutExerciseId, list)
+  }
+
+  const exercisesByWorkoutId = new Map()
+  for (const row of Array.isArray(exerciseRows) ? exerciseRows : []) {
+    const exercise = mapProgramWorkoutExerciseRow(row)
+    if (!exercise?.programWorkoutId) continue
+    const list = exercisesByWorkoutId.get(exercise.programWorkoutId) || []
+    list.push({
+      ...exercise,
+      sets: setsByExerciseId.get(exercise.id) || [],
+    })
+    exercisesByWorkoutId.set(exercise.programWorkoutId, list)
+  }
+
+  return workouts.map((workout) => ({
+    ...workout,
+    exercises: exercisesByWorkoutId.get(workout.id) || workout.exercises || [],
+  }))
 }
 
 function formatLocalIsoDate(date = new Date()) {
@@ -289,11 +329,38 @@ export function createSupabaseRestProgramRepository(config) {
         })
       : []
 
+    const exerciseRows = workoutIds.length > 0
+      ? await request({
+          table: 'program_workout_exercises',
+          query: {
+            select: 'id,program_workout_id,exercise_id,name_snapshot,sort_order,notes,default_rest_seconds',
+            program_workout_id: `in.(${workoutIds.join(',')})`,
+            order: 'sort_order.asc',
+          },
+        })
+      : []
+
+    const exerciseIds = Array.isArray(exerciseRows) ? exerciseRows.map((row) => row.id).filter(Boolean) : []
+    const setRows = exerciseIds.length > 0
+      ? await request({
+          table: 'program_workout_sets',
+          query: {
+            select: 'id,program_workout_exercise_id,sort_order,set_type,target_reps,target_load,target_load_unit,target_duration_seconds,target_distance,target_distance_unit,target_rpe,target_rir,target_rest_seconds,notes',
+            program_workout_exercise_id: `in.(${exerciseIds.join(',')})`,
+            order: 'sort_order.asc',
+          },
+        })
+      : []
+
     const workoutSessions = Array.isArray(workoutSessionRows)
       ? workoutSessionRows.map(mapWorkoutSessionStatusRow).filter(Boolean)
       : []
 
-    const workouts = mapProgramWorkoutRowsWithDerivedStatus(workoutRows, workoutSessions, daysById, todayIsoDate)
+    const workouts = attachProgramWorkoutExercises(
+      mapProgramWorkoutRowsWithDerivedStatus(workoutRows, workoutSessions, daysById, todayIsoDate),
+      exerciseRows,
+      setRows,
+    )
     const workoutsByDayId = new Map()
     for (const workout of workouts) {
       const list = workoutsByDayId.get(workout.programDayId) || []
@@ -378,17 +445,19 @@ export function createSupabaseRestProgramRepository(config) {
     },
 
     async listProgramsForAthlete(athleteId) {
-      if (!athleteId) return []
+      const resolvedAthleteId = normalizeCoachAthleteProfileId(athleteId)
+      if (!resolvedAthleteId) return []
       return listProgramsByQuery({
-        athlete_id: `eq.${athleteId}`,
+        athlete_id: `eq.${resolvedAthleteId}`,
         order: 'start_date.asc',
       })
     },
 
     async getAssignedProgramForAthlete(athleteId) {
-      if (!athleteId) return null
+      const resolvedAthleteId = normalizeCoachAthleteProfileId(athleteId)
+      if (!resolvedAthleteId) return null
       return getProgramTree({
-        athlete_id: `eq.${athleteId}`,
+        athlete_id: `eq.${resolvedAthleteId}`,
         order: 'start_date.asc',
       })
     },
@@ -421,6 +490,7 @@ export function createSupabaseRestProgramRepository(config) {
     },
 
     async createProgramWorkout({ athleteId = null, coachId = null, programId = null, programDayId = null, nameSnapshot = '', notes = '', sortOrder = 1 }) {
+      const resolvedAthleteId = normalizeCoachAthleteProfileId(athleteId)
       let workoutRows
       try {
         workoutRows = await request({
@@ -430,7 +500,7 @@ export function createSupabaseRestProgramRepository(config) {
             select: PROGRAM_WORKOUT_SELECT,
           },
           body: {
-            athlete_id: athleteId,
+            athlete_id: resolvedAthleteId,
             coach_id: coachId,
             program_id: programId,
             program_day_id: programDayId,
@@ -450,7 +520,7 @@ export function createSupabaseRestProgramRepository(config) {
             select: PROGRAM_WORKOUT_LEGACY_SELECT,
           },
           body: {
-            athlete_id: athleteId,
+            athlete_id: resolvedAthleteId,
             coach_id: coachId,
             program_id: programId,
             program_day_id: programDayId,
@@ -643,8 +713,9 @@ export function createProgramRepository(db) {
       return []
     },
     async getAssignedProgramForAthlete(athleteId) {
+      const resolvedAthleteId = normalizeCoachAthleteProfileId(athleteId)
       if (typeof db?.getAssignedProgramForAthlete === 'function') {
-        return db.getAssignedProgramForAthlete(athleteId)
+        return db.getAssignedProgramForAthlete(resolvedAthleteId)
       }
       return null
     },
@@ -662,7 +733,10 @@ export function createProgramRepository(db) {
     },
     async createProgramWorkout(input) {
       if (typeof db?.createProgramWorkout === 'function') {
-        return db.createProgramWorkout(input)
+        return db.createProgramWorkout({
+          ...input,
+          athleteId: normalizeCoachAthleteProfileId(input?.athleteId),
+        })
       }
       throw new Error('Program repository requires db.createProgramWorkout(input) for create-workout workflow')
     },

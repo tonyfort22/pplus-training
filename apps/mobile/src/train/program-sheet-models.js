@@ -75,6 +75,67 @@ function mapWorkoutStatusToSheetStatus(status) {
   return 'upcoming'
 }
 
+function formatDurationFromMinutes(value, { estimated = false } = {}) {
+  const minutes = Number(value)
+  if (!Number.isFinite(minutes) || minutes <= 0) return ''
+
+  const roundedMinutes = Math.round(minutes)
+  const hours = Math.floor(roundedMinutes / 60)
+  const remainingMinutes = roundedMinutes % 60
+  const parts = []
+  if (hours > 0) parts.push(`${hours}h`)
+  if (remainingMinutes > 0 || hours === 0) parts.push(hours > 0 ? `${remainingMinutes}m` : `${remainingMinutes} min`)
+  return `${estimated ? 'Est. ' : ''}${parts.join(' ')}`
+}
+
+function formatDurationFromSeconds(value, { estimated = false } = {}) {
+  const seconds = Number(value)
+  if (!Number.isFinite(seconds) || seconds <= 0) return ''
+  return formatDurationFromMinutes(Math.max(1, seconds / 60), { estimated })
+}
+
+function estimateDurationFromWorkoutSets(workout = {}) {
+  const exercises = Array.isArray(workout.exercises) ? workout.exercises : []
+  const totalSets = exercises.reduce((sum, exercise) => sum + (Array.isArray(exercise?.sets) ? exercise.sets.length : Number(exercise?.setCount || exercise?.set_count || 0) || 0), 0)
+  if (totalSets <= 0) return ''
+  return formatDurationFromMinutes(Math.max(1, totalSets * 7), { estimated: true })
+}
+
+function getWorkoutDurationLabel(workout = {}) {
+  return String(
+    workout.durationLabel
+      || workout.estimatedDurationLabel
+      || workout.estimated_duration_label
+      || workout.actualDurationLabel
+      || workout.actual_duration_label
+      || formatDurationFromSeconds(workout.elapsedSeconds ?? workout.elapsed_seconds ?? workout.actualDurationSeconds ?? workout.actual_duration_seconds)
+      || formatDurationFromMinutes(workout.actualDurationMinutes ?? workout.actual_duration_minutes)
+      || formatDurationFromSeconds(workout.estimatedDurationSeconds ?? workout.estimated_duration_seconds, { estimated: true })
+      || formatDurationFromMinutes(workout.estimatedDurationMinutes ?? workout.estimated_duration_minutes, { estimated: true })
+      || estimateDurationFromWorkoutSets(workout)
+      || ''
+  ).trim()
+}
+
+function markProgramEndEntry(entry) {
+  if (!entry || entry.status !== 'rest') return entry
+  return {
+    ...entry,
+    workoutLabel: 'Program End',
+    durationLabel: 'Program End',
+    isProgramEnd: true,
+  }
+}
+
+function markFinalProgramEndWeek(week, weekIndex, weeks) {
+  if (weekIndex !== weeks.length - 1 || !Array.isArray(week.entries) || week.entries.length === 0) return week
+  const finalEntryIndex = week.entries.length - 1
+  return {
+    ...week,
+    entries: week.entries.map((entry, entryIndex) => entryIndex === finalEntryIndex ? markProgramEndEntry(entry) : entry),
+  }
+}
+
 function createRestDayEntry({ id, date, label = 'Rest Day' }) {
   return {
     id,
@@ -106,7 +167,7 @@ function buildWeekEntriesFromDays(week) {
         programDayId: day.id || null,
         dayLabel: formatWeekdayShortLabel(day.date),
         workoutLabel: workout.nameSnapshot || day.name || 'Workout',
-        durationLabel: day.status === 'off' ? 'Off day' : 'Scheduled',
+        durationLabel: getWorkoutDurationLabel(workout),
         status: mapWorkoutStatusToSheetStatus(workout.status),
         isRestDay: false,
       }))
@@ -128,7 +189,7 @@ function buildWeekEntriesFromDays(week) {
       programDayId: day?.id || null,
       dayLabel: formatWeekdayShortLabel(date),
       workoutLabel: workout.nameSnapshot || day?.name || 'Workout',
-      durationLabel: day?.status === 'off' ? 'Off day' : 'Scheduled',
+      durationLabel: getWorkoutDurationLabel(workout),
       status: mapWorkoutStatusToSheetStatus(workout.status),
       isRestDay: false,
     }
@@ -178,12 +239,12 @@ function buildSheetModelFromDetailedProgram(program) {
       },
     ],
     routines: routineLabels.map((label, index) => ({ id: `routine-${index + 1}`, label })),
-    weeks: weeks.map((week, index) => ({
+    weeks: weeks.map((week, index, sourceWeeks) => markFinalProgramEndWeek({
       id: week.id || `week-${index + 1}`,
       title: week.name || `Week ${week.weekIndex || index + 1}`,
       dateRangeLabel: [week.startDate, week.endDate].filter(Boolean).map(formatMonthDayLabel).join(' - '),
       entries: buildWeekEntriesFromDays(week),
-    })),
+    }, index, sourceWeeks)),
   }
 }
 
@@ -241,7 +302,7 @@ export function getProgramSheetModel(source) {
       { id: 'routine-lower-b', label: 'Lower B' },
       { id: 'routine-shoulders-arms', label: 'Shoulders & Arms' },
     ],
-    weeks: createProgramScheduleWeeks(),
+    weeks: createProgramScheduleWeeks().map((week, index, weeks) => markFinalProgramEndWeek(week, index, weeks)),
   }
 }
 

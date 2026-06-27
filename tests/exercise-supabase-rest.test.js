@@ -36,7 +36,7 @@ test('createSupabaseRestExerciseRepository lists exercises with thumbnail, video
           id: 'exercise-1',
           name: 'Front Squat',
           thumbnail_url: 'data:image/jpeg;base64,abc',
-          video_url: 'https://www.youtube.com/watch?v=WepkDTJaBvw',
+          video_url: 'https://example.supabase.co/storage/v1/object/public/exercise-videos/exercise-1/front-squat.mp4',
           stimulus_type: 'strength',
           movement_pattern: 'squat',
         },
@@ -59,7 +59,7 @@ test('createSupabaseRestExerciseRepository lists exercises with thumbnail, video
       id: 'exercise-1',
       name: 'Front Squat',
       thumbnailUrl: 'data:image/jpeg;base64,abc',
-      videoUrl: 'https://www.youtube.com/watch?v=WepkDTJaBvw',
+      videoUrl: 'https://example.supabase.co/storage/v1/object/public/exercise-videos/exercise-1/front-squat.mp4',
       stimulusType: 'strength',
       movementPattern: 'squat',
     },
@@ -74,6 +74,57 @@ test('createSupabaseRestExerciseRepository lists exercises with thumbnail, video
   ])
   assert.equal(calls.length, 1)
   assert.equal(calls[0].method, 'GET')
+})
+
+test('createSupabaseRestExerciseRepository exposes only direct Supabase mp4 exercise media URLs', async () => {
+  const repo = createSupabaseRestExerciseRepository({
+    url: 'https://example.supabase.co',
+    anonKey: 'anon-key',
+    accessToken: 'user-token',
+    fetchImpl: async () => json([
+      {
+        id: 'exercise-youtube',
+        name: 'YouTube Row',
+        thumbnail_url: null,
+        video_url: 'https://www.youtube.com/watch?v=WepkDTJaBvw',
+        stimulus_type: 'strength',
+        movement_pattern: 'squat',
+      },
+      {
+        id: 'exercise-cdn',
+        name: 'Generic CDN Row',
+        thumbnail_url: null,
+        video_url: 'https://cdn.example.com/exercise.mp4',
+        stimulus_type: 'strength',
+        movement_pattern: 'hinge',
+      },
+      {
+        id: 'exercise-mov',
+        name: 'Wrong Extension Row',
+        thumbnail_url: null,
+        video_url: 'https://example.supabase.co/storage/v1/object/public/exercise-videos/exercise-mov/demo.mov',
+        stimulus_type: 'speed',
+        movement_pattern: 'jump',
+      },
+      {
+        id: 'exercise-mp4',
+        name: 'Supabase MP4 Row',
+        thumbnail_url: null,
+        video_url: 'https://example.supabase.co/storage/v1/object/public/exercise-videos/exercise-mp4/demo.mp4',
+        stimulus_type: 'power',
+        movement_pattern: 'jump',
+      },
+    ]),
+  })
+
+  const exercises = await repo.listExercises()
+
+  assert.deepEqual(exercises.map((exercise) => [exercise.id, exercise.videoUrl]), [
+    ['exercise-youtube', null],
+    ['exercise-cdn', null],
+    ['exercise-mov', null],
+    ['exercise-mp4', 'https://example.supabase.co/storage/v1/object/public/exercise-videos/exercise-mp4/demo.mp4'],
+  ])
 })
 
 test('createSupabaseRestExerciseRepository fetches a single exercise with linked default rest, set structure, and exercise classification by id', async () => {
@@ -99,7 +150,7 @@ test('createSupabaseRestExerciseRepository fetches a single exercise with linked
             id: 'exercise-1',
             name: 'Front Squat',
             thumbnail_url: 'data:image/jpeg;base64,abc',
-            video_url: 'https://cdn.example.com/front-squat.mp4',
+            video_url: 'https://example.supabase.co/storage/v1/object/public/exercise-videos/exercise-1/front-squat.mp4',
             stimulus_type: 'strength',
             movement_pattern: 'squat',
           },
@@ -150,7 +201,7 @@ test('createSupabaseRestExerciseRepository fetches a single exercise with linked
     id: 'exercise-1',
     name: 'Front Squat',
     thumbnailUrl: 'data:image/jpeg;base64,abc',
-    videoUrl: 'https://cdn.example.com/front-squat.mp4',
+    videoUrl: 'https://example.supabase.co/storage/v1/object/public/exercise-videos/exercise-1/front-squat.mp4',
     stimulusType: 'strength',
     movementPattern: 'squat',
     defaultRestSeconds: 150,
@@ -212,7 +263,7 @@ test('createSupabaseRestExerciseRepository fetches a single exercise with thumbn
             id: 'db-exercise-squat',
             name: 'Barbell Back Squat',
             thumbnail_url: 'data:image/jpeg;base64,xyz',
-            video_url: 'https://cdn.example.com/back-squat.mp4',
+            video_url: 'https://example.supabase.co/storage/v1/object/public/exercise-videos/db-exercise-squat/back-squat.mp4',
             stimulus_type: 'strength',
             movement_pattern: 'squat',
           },
@@ -233,7 +284,7 @@ test('createSupabaseRestExerciseRepository fetches a single exercise with thumbn
     id: 'db-exercise-squat',
     name: 'Barbell Back Squat',
     thumbnailUrl: 'data:image/jpeg;base64,xyz',
-    videoUrl: 'https://cdn.example.com/back-squat.mp4',
+    videoUrl: 'https://example.supabase.co/storage/v1/object/public/exercise-videos/db-exercise-squat/back-squat.mp4',
     stimulusType: 'strength',
     movementPattern: 'squat',
   })

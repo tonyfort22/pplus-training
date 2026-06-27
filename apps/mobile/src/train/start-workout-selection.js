@@ -1,4 +1,4 @@
-import { buildStartWorkoutPlan } from './session-orchestration.js';
+import { buildStartWorkoutPlan, hasRichSessionStructure } from './session-orchestration.js';
 import {
   logStartWorkoutTap as logStartWorkoutTapDefault,
   logStartWorkoutBlockedMissingStore as logStartWorkoutBlockedMissingStoreDefault,
@@ -11,6 +11,55 @@ import {
   logStartWorkoutOpenActiveWorkoutView as logStartWorkoutOpenActiveWorkoutViewDefault,
 } from './session-diagnostics.js';
 
+export function scheduleActiveWorkoutOpen({
+  setIsActiveWorkoutViewOpen = () => {},
+  runAfterInteractions = (callback) => callback(),
+} = {}) {
+  return runAfterInteractions(() => setIsActiveWorkoutViewOpen(true));
+}
+
+export function mergeResolvedStartWorkoutSession({ optimisticSession = null, resolvedSession = null } = {}) {
+  if (!resolvedSession) return null;
+  if (!hasRichSessionStructure(optimisticSession)) {
+    return resolvedSession;
+  }
+
+  const optimisticProgramWorkoutId = optimisticSession?.programWorkoutId || optimisticSession?.id || null;
+  const resolvedProgramWorkoutId = resolvedSession?.programWorkoutId || resolvedSession?.id || null;
+  const isSameProgramWorkout = Boolean(optimisticProgramWorkoutId && optimisticProgramWorkoutId === resolvedProgramWorkoutId);
+
+  if (hasRichSessionStructure(resolvedSession)) {
+    if (!isSameProgramWorkout) return resolvedSession;
+
+    return {
+      ...resolvedSession,
+      ...(optimisticSession.nameSnapshot ? { nameSnapshot: optimisticSession.nameSnapshot } : {}),
+      ...(optimisticSession.name ? { name: optimisticSession.name } : {}),
+    };
+  }
+
+  if (!isSameProgramWorkout) {
+    return resolvedSession;
+  }
+
+  const optimisticExercises = optimisticSession.exercises || [];
+  const optimisticTotalSets = optimisticExercises.reduce((sum, exercise) => sum + (exercise.sets?.length || 0), 0);
+
+  return {
+    ...optimisticSession,
+    ...resolvedSession,
+    nameSnapshot: resolvedSession.nameSnapshot || optimisticSession.nameSnapshot,
+    status: resolvedSession.status || optimisticSession.status,
+    startedAt: resolvedSession.startedAt || optimisticSession.startedAt,
+    elapsedSeconds: resolvedSession.elapsedSeconds ?? optimisticSession.elapsedSeconds ?? 0,
+    totalExercisesCount: resolvedSession.totalExercisesCount || optimisticExercises.length,
+    totalSetsCount: resolvedSession.totalSetsCount || optimisticTotalSets,
+    completedExercisesCount: resolvedSession.completedExercisesCount ?? optimisticSession.completedExercisesCount ?? 0,
+    completedSetsCount: resolvedSession.completedSetsCount ?? optimisticSession.completedSetsCount ?? 0,
+    exercises: optimisticExercises,
+  };
+}
+
 export async function orchestrateStartWorkout({
   effectiveSessionStore = null,
   startedAt = new Date().toISOString(),
@@ -22,6 +71,8 @@ export async function orchestrateStartWorkout({
   setIsStartingWorkout = () => {},
   setIsActiveWorkoutViewOpen = () => {},
   runAfterInteractions = (callback) => callback(),
+  shouldApplyResolvedSession = () => true,
+  onBlockedResolvedSession = () => {},
   logStartWorkoutBlockedMissingStore: logStartWorkoutBlockedMissingStoreOverride = logStartWorkoutBlockedMissingStoreDefault,
   logStartWorkoutResumeExistingSession: logStartWorkoutResumeExistingSessionOverride = logStartWorkoutResumeExistingSessionDefault,
   logStartWorkoutOpenOptimisticSession: logStartWorkoutOpenOptimisticSessionOverride = logStartWorkoutOpenOptimisticSessionDefault,
@@ -54,15 +105,39 @@ export async function orchestrateStartWorkout({
         sessionId: startWorkoutPlan.resumeSessionId,
         targetProgramWorkoutId,
       });
-      if (session?.id) {
-        setSession(session);
+      const immediateResumeSession = optimisticWorkoutSession || session;
+      if (immediateResumeSession?.id) {
+        setSession(immediateResumeSession);
       }
       setIsWorkoutSheetOpen(false);
       setIsStartingWorkout(false);
       logStartWorkoutOpenActiveWorkoutViewOverride();
-      setIsActiveWorkoutViewOpen(true);
+      scheduleActiveWorkoutOpen({ setIsActiveWorkoutViewOpen, runAfterInteractions });
       openedActiveWorkoutImmediately = true;
-      nextSession = await effectiveSessionStore.resumeSession(startWorkoutPlan.resumeSessionId);
+
+      void effectiveSessionStore.resumeSession(startWorkoutPlan.resumeSessionId)
+        .then((resolvedSession) => {
+          const nextResolvedSession = mergeResolvedStartWorkoutSession({
+            optimisticSession: immediateResumeSession,
+            resolvedSession,
+          });
+          if (!nextResolvedSession || !shouldApplyResolvedSession()) {
+            if (nextResolvedSession) onBlockedResolvedSession(nextResolvedSession);
+            return;
+          }
+          logStartWorkoutResolvedSessionOverride({ nextSession: nextResolvedSession });
+          setSession(nextResolvedSession);
+        })
+        .catch((error) => {
+          logStartWorkoutFailedOverride({ error, targetProgramWorkoutId });
+        });
+
+      return {
+        outcome: 'resume-session-opened',
+        nextSession: immediateResumeSession || null,
+        startWorkoutPlan,
+        targetProgramWorkoutId,
+      };
     } else {
       if (optimisticWorkoutSession) {
         logStartWorkoutOpenOptimisticSessionOverride({ targetProgramWorkoutId });
@@ -70,8 +145,44 @@ export async function orchestrateStartWorkout({
         setIsWorkoutSheetOpen(false);
         setIsStartingWorkout(false);
         logStartWorkoutOpenActiveWorkoutViewOverride();
-        setIsActiveWorkoutViewOpen(true);
+        scheduleActiveWorkoutOpen({ setIsActiveWorkoutViewOpen, runAfterInteractions });
         openedActiveWorkoutImmediately = true;
+
+        logStartWorkoutCreateSessionOverride({
+          targetProgramWorkoutId,
+          storedSessionId,
+          sessionStatus: session?.status || null,
+        });
+
+        void effectiveSessionStore.startSession({
+          startedAt,
+          programWorkoutId: targetProgramWorkoutId,
+          forceNewSession: Boolean(startWorkoutPlan?.shouldStartNewSession),
+        })
+          .then((result) => {
+            const resolvedSession = result?.session || null;
+            const nextResolvedSession = mergeResolvedStartWorkoutSession({
+              optimisticSession: optimisticWorkoutSession,
+              resolvedSession,
+            });
+            if (!nextResolvedSession || !shouldApplyResolvedSession()) {
+              if (nextResolvedSession) onBlockedResolvedSession(nextResolvedSession);
+              logStartWorkoutBlockedNoNextSessionOverride();
+              return;
+            }
+            logStartWorkoutResolvedSessionOverride({ nextSession: nextResolvedSession });
+            setSession(nextResolvedSession);
+          })
+          .catch((error) => {
+            logStartWorkoutFailedOverride({ error, targetProgramWorkoutId });
+          });
+
+        return {
+          outcome: 'optimistic-session-opened',
+          nextSession: optimisticWorkoutSession,
+          startWorkoutPlan,
+          targetProgramWorkoutId,
+        };
       }
 
       logStartWorkoutCreateSessionOverride({
@@ -84,17 +195,10 @@ export async function orchestrateStartWorkout({
         programWorkoutId: targetProgramWorkoutId,
         forceNewSession: Boolean(startWorkoutPlan?.shouldStartNewSession),
       });
-      nextSession = result?.session || null;
-
-      if (optimisticWorkoutSession) {
-        setSession(result?.session ?? optimisticWorkoutSession);
-
-        return {
-          outcome: 'optimistic-session-created',
-          nextSession,
-          startWorkoutPlan,
-        };
-      }
+      nextSession = mergeResolvedStartWorkoutSession({
+        optimisticSession: optimisticWorkoutSession,
+        resolvedSession: result?.session || null,
+      });
     }
   } catch (error) {
     logStartWorkoutFailedOverride({ error, targetProgramWorkoutId });
@@ -110,7 +214,8 @@ export async function orchestrateStartWorkout({
 
   logStartWorkoutResolvedSessionOverride({ nextSession });
 
-  if (!nextSession) {
+  if (!nextSession || !shouldApplyResolvedSession()) {
+    if (nextSession) onBlockedResolvedSession(nextSession);
     logStartWorkoutBlockedNoNextSessionOverride();
     setIsStartingWorkout(false);
 
@@ -143,12 +248,15 @@ export async function orchestrateStartWorkoutFromSheet({
   session = null,
   selectedWorkoutSessionPreview = null,
   workoutSheetModel = null,
+  programWorkout = null,
   startedAt = new Date().toISOString(),
   setIsStartingWorkout = () => {},
   setSession = () => {},
   setIsWorkoutSheetOpen = () => {},
   setIsActiveWorkoutViewOpen = () => {},
   runAfterInteractions = (callback) => callback(),
+  shouldApplyResolvedSession = () => true,
+  onBlockedResolvedSession = () => {},
   logStartWorkoutTap = logStartWorkoutTapDefault,
   logStartWorkoutBlockedMissingStore = logStartWorkoutBlockedMissingStoreDefault,
   logStartWorkoutResumeExistingSession = logStartWorkoutResumeExistingSessionDefault,
@@ -174,6 +282,7 @@ export async function orchestrateStartWorkoutFromSheet({
     storedSessionId,
     selectedWorkoutSessionPreview,
     workoutSheetModel,
+    programWorkout,
     selectedProgramWorkoutId,
     startedAt,
   });
@@ -189,6 +298,8 @@ export async function orchestrateStartWorkoutFromSheet({
     setIsStartingWorkout,
     setIsActiveWorkoutViewOpen,
     runAfterInteractions,
+    shouldApplyResolvedSession,
+    onBlockedResolvedSession,
     logStartWorkoutBlockedMissingStore,
     logStartWorkoutResumeExistingSession,
     logStartWorkoutOpenOptimisticSession,

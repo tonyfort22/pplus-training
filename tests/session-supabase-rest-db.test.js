@@ -288,6 +288,35 @@ test('createSupabaseRestSessionDb can load completed sessions for an athlete thr
   assert.match(completedSessionsCall.url, /athlete_id=eq\.ath-1/)
 })
 
+test('createSupabaseRestSessionDb strips coach-athlete UI ids before athlete-scoped REST filters', async () => {
+  const { fetchImpl, calls, rows } = createSupabaseFetchStub()
+  rows.workoutSession = {
+    ...rows.workoutSession,
+    athlete_id: 'f8a72b19-c5c6-4da1-8793-27d80635a444',
+    status: 'completed',
+    completed_at: '2026-04-21T21:00:00.000Z',
+  }
+  rows.programWorkout = {
+    ...rows.programWorkout,
+    athlete_id: 'f8a72b19-c5c6-4da1-8793-27d80635a444',
+  }
+  const db = createSupabaseRestSessionDb({
+    url: 'https://example.supabase.co',
+    anonKey: 'anon-key',
+    fetchImpl,
+  })
+
+  await db.getCompletedSessionsByAthleteId('coach-athlete-f8a72b19-c5c6-4da1-8793-27d80635a444')
+  await db.listProgramWorkoutsForAthlete('coach-athlete-f8a72b19-c5c6-4da1-8793-27d80635a444')
+
+  const athleteScopedCalls = calls.filter((call) => call.url.includes('athlete_id='))
+  assert.equal(athleteScopedCalls.length >= 2, true)
+  for (const call of athleteScopedCalls) {
+    assert.equal(new URL(call.url).searchParams.get('athlete_id'), 'eq.f8a72b19-c5c6-4da1-8793-27d80635a444')
+    assert.doesNotMatch(call.url, /coach-athlete-/)
+  }
+})
+
 test('createSupabaseRestSessionDb loads a nested planned workout through Supabase REST', async () => {
   const { fetchImpl, calls } = createSupabaseFetchStub()
   const db = createSupabaseRestSessionDb({

@@ -8,27 +8,41 @@ import { ExerciseMultiSelectView } from './exercise-multi-select-view.js';
 
 function ProgramEditDayRow({ day, theme, onOpenAddWorkout }) {
   return (
-    <View className="flex-row items-center gap-3 py-2.5">
-      <View className="w-12 shrink-0">
-        <Text className="text-[14px] font-semibold uppercase" style={{ color: theme.textSoft }}>{day.dayLabel}</Text>
+    <View className="flex-row items-center gap-2.5 py-2">
+      <View className="w-10 shrink-0">
+        <Text className="text-[12px] font-semibold uppercase" style={{ color: theme.textSoft }}>{day.dayLabel}</Text>
       </View>
 
       {day.isAssigned ? (
-        <>
-          <AppSurfaceCard
-            theme={theme}
-            containerClassName="flex-1 rounded-[22px] overflow-hidden"
-            contentClassName="px-5 py-4"
+        <AppSurfaceCard
+          theme={theme}
+          containerClassName="relative flex-1 rounded-[20px]"
+          contentClassName="min-h-[54px] justify-center px-4 py-3 pr-12"
+          style={{ overflow: 'visible' }}
+        >
+          <Text className="text-[14px] font-semibold" style={{ color: theme.text }} numberOfLines={1}>{day.routineLabel}</Text>
+          <Pressable
+            className="items-center justify-center rounded-full"
+            style={{
+              position: 'absolute',
+              right: -10,
+              top: -10,
+              zIndex: 20,
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              borderWidth: 1.5,
+              borderColor: theme.dangerBorder,
+              backgroundColor: theme.dangerSurface,
+              elevation: 4,
+            }}
           >
-            <Text className="text-[16px] font-semibold" style={{ color: theme.text }}>{day.routineLabel}</Text>
-          </AppSurfaceCard>
-          <Pressable className="h-9 w-9 items-center justify-center rounded-full" style={{ borderWidth: 1, borderColor: theme.border, backgroundColor: theme.surface }}>
-            <CircleMinus color={theme.iconMuted} size={18} strokeWidth={2.2} />
+            <CircleMinus color={theme.dangerText} size={20} strokeWidth={2.6} />
           </Pressable>
-        </>
+        </AppSurfaceCard>
       ) : (
-        <Pressable className="flex-1 px-1 py-4" onPress={() => onOpenAddWorkout?.(day)}>
-          <Text className="text-[16px] font-semibold" style={{ color: theme.accent }}>{day.actionLabel}</Text>
+        <Pressable className="flex-1 px-1 py-3" onPress={() => onOpenAddWorkout?.(day)}>
+          <Text className="text-[14px] font-semibold" style={{ color: theme.accent }}>{day.actionLabel}</Text>
         </Pressable>
       )}
     </View>
@@ -435,7 +449,6 @@ function ProgramEditViewContent({ model, theme, onClose, onSave }) {
               <View className="flex-row gap-3">
                 <AppSurfaceCard
                   theme={resolvedTheme}
-                  onPress={() => setIsStartDateSheetOpen(true)}
                   containerClassName="flex-1 rounded-[22px] overflow-hidden"
                   contentClassName="gap-1.5 px-4 py-4"
                 >
@@ -444,7 +457,6 @@ function ProgramEditViewContent({ model, theme, onClose, onSave }) {
                 </AppSurfaceCard>
                 <AppSurfaceCard
                   theme={resolvedTheme}
-                  onPress={() => setIsEndDateSheetOpen(true)}
                   containerClassName="flex-1 rounded-[22px] overflow-hidden"
                   contentClassName="gap-1.5 px-4 py-4"
                 >
@@ -454,7 +466,7 @@ function ProgramEditViewContent({ model, theme, onClose, onSave }) {
               </View>
             </View>
 
-            <View className="gap-3.5">
+            <View className="gap-3.5" style={{ paddingHorizontal: 12 }}>
               <Text className="text-[12px] font-semibold uppercase tracking-[1px]" style={{ color: resolvedTheme.textSoft }}>{model.trainingSplitLabel}</Text>
               <View className="gap-1.5">
                 {model.splitDays.map((day) => (
@@ -464,6 +476,14 @@ function ProgramEditViewContent({ model, theme, onClose, onSave }) {
             </View>
 
             <Text className="flex-1 text-[13px] leading-[19px]" style={{ color: resolvedTheme.textSoft }}>{model.helperNote}</Text>
+
+            <View className="pt-1">
+              <AppButton
+                theme={resolvedTheme}
+                label={model.endProgramLabel}
+                tone="danger"
+              />
+            </View>
           </View>
         </ScrollView>
       </View>

@@ -5,7 +5,7 @@ import { doesSessionMatchWorkout, getComparableProgramWorkoutId } from './sessio
 export const mobileTabs = [
   { key: 'train', label: 'Train' },
   { key: 'progress', label: 'Progress' },
-  { key: 'team', label: 'Team' },
+  { key: 'team', label: 'Groups' },
   { key: 'inbox', label: 'Athletes' },
 ]
 
@@ -183,7 +183,7 @@ export function createAssignedProgramTrainState({ assignedProgram, programWorkou
     ? programWorkout
     : (dayWorkoutForToday?.id ? dayWorkoutForToday : null)
 
-  const effectiveProgramWorkout = selectedProgramWorkout || programWorkout || createDemoProgramWorkout()
+  const effectiveProgramWorkout = selectedProgramWorkout || programWorkout || null
   const session = createPreviewSession({ programWorkout: effectiveProgramWorkout, startedAt, previewState })
   const completedWorkouts = Array.from(workoutByDayId.values()).filter((workout) => String(workout?.status || '').toLowerCase() == 'completed').length
   const totalWorkouts = workoutByDayId.size

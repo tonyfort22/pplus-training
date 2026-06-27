@@ -9,10 +9,12 @@ test('mobile program sheet uses a shared primitive for the smaller workout statu
 
   assert.match(primitivesSource, /export function AppStatusIconBadge\(/)
   assert.match(primitivesSource, /size = 'md'/)
+  assert.match(primitivesSource, /size === 'xs'/)
+  assert.match(primitivesSource, /h-6 w-6 rounded-\[8px\]/)
   assert.match(primitivesSource, /size === 'sm'/)
   assert.match(sheetSource, /from '\.\.\/ui\/primitives\.js'/)
   assert.match(sheetSource, /AppStatusIconBadge/)
-  assert.match(sheetSource, /return <AppStatusIconBadge status=\{status\} theme=\{theme\} size="sm" \/>/)
+  assert.match(sheetSource, /return <AppStatusIconBadge status=\{status\} theme=\{theme\} size="xs" \/>/)
   assert.match(sheetSource, /function ProgramSheetStatusBadge/)
   assert.doesNotMatch(sheetSource, /h-10 w-10 items-center justify-center rounded-\[12px\]/)
 })

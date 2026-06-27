@@ -15,6 +15,7 @@ const PROGRAM_WORKOUT_SELECT = [
   'created_at',
   'updated_at',
   'program_days(date)',
+  'workout_templates(name,training_type)',
 ].join(',')
 
 function createRepositoryError(message, status = 500, cause = null) {
@@ -24,23 +25,29 @@ function createRepositoryError(message, status = 500, cause = null) {
   return error
 }
 
-function getRepositoryConfig() {
-  const supabaseUrl = process.env.SUPABASE_URL
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+function getRepositoryConfig(config = {}) {
+  const supabaseUrl = config.supabaseUrl || process.env.SUPABASE_URL
+  const serviceRoleKey = config.serviceRoleKey || process.env.SUPABASE_SERVICE_ROLE_KEY
+  const fetchImpl = config.fetchImpl || globalThis.fetch
 
   if (!supabaseUrl || !serviceRoleKey) {
     throw createRepositoryError('Persistence unavailable until web Supabase env is configured.', 503)
   }
 
+  if (typeof fetchImpl !== 'function') {
+    throw createRepositoryError('Workout calendar repository requires fetch support.', 503)
+  }
+
   return {
     restUrl: `${supabaseUrl.replace(/\/$/, '')}/rest/v1/program_workouts`,
     serviceRoleKey,
+    fetchImpl,
   }
 }
 
-async function requestProgramWorkouts({ method = 'GET', query = '', body, prefer = 'return=representation' }) {
-  const { restUrl, serviceRoleKey } = getRepositoryConfig()
-  const response = await fetch(`${restUrl}${query}`, {
+async function requestProgramWorkouts({ method = 'GET', query = '', body, prefer = 'return=representation', config = {} }) {
+  const { restUrl, serviceRoleKey, fetchImpl } = getRepositoryConfig(config)
+  const response = await fetchImpl(`${restUrl}${query}`, {
     method,
     headers: {
       apikey: serviceRoleKey,
@@ -64,7 +71,7 @@ async function requestProgramWorkouts({ method = 'GET', query = '', body, prefer
   return response.json()
 }
 
-export function createWorkoutCalendarRepository() {
+export function createWorkoutCalendarRepository(config = {}) {
   return {
     async listAssignments({ athleteId = null } = {}) {
       const filters = [`select=${encodeURIComponent(PROGRAM_WORKOUT_SELECT)}`]
@@ -77,6 +84,7 @@ export function createWorkoutCalendarRepository() {
 
       return requestProgramWorkouts({
         query: `?${filters.join('&')}`,
+        config,
       })
     },
 
@@ -84,6 +92,7 @@ export function createWorkoutCalendarRepository() {
       const [row] = await requestProgramWorkouts({
         method: 'POST',
         body: payload,
+        config,
       })
       return row
     },
@@ -93,6 +102,7 @@ export function createWorkoutCalendarRepository() {
         method: 'PATCH',
         query: `?id=eq.${id}&select=${encodeURIComponent(PROGRAM_WORKOUT_SELECT)}`,
         body: payload,
+        config,
       })
       return row
     },
@@ -102,6 +112,7 @@ export function createWorkoutCalendarRepository() {
         method: 'DELETE',
         query: `?id=eq.${id}`,
         prefer: 'return=minimal',
+        config,
       })
       return { id }
     },

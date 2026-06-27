@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { getGroupsSections } from '../apps/mobile/src/screens/surface-sections.js'
 
 function extractFunctionBlock(source, signature) {
  const start = source.indexOf(signature)
@@ -111,6 +112,101 @@ test('mobile app shell renders bottom navigation from grouped shell tab view ite
  assert.doesNotMatch(appSource, /renderAppShell\(\{[\s\S]*bottomTabs: bottomTabModels,[\s\S]*\}\)/)
 })
 
+test('mobile app shell keeps the floating Start Workout CTA available across bottom tabs only for the current date workout', () => {
+ const appSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/App.js'),
+   'utf8'
+ )
+ const buttonBlock = appSource.slice(
+   appSource.indexOf('const floatingStartWorkoutButtonModel = useMemo('),
+   appSource.indexOf('const bootstrapSurfaceModel = useMemo(')
+ )
+
+ assert.match(appSource, /const todayWorkoutModel = useMemo\(\(\) => getWorkoutSurfaceModel\(trainState, trainState\.program\.todayCalendarDayId \|\| trainState\.program\.selectedCalendarDayId\), \[trainState\]\);/)
+ assert.match(appSource, /const todayWorkoutSheetModel = useMemo\(\(\) => getWorkoutSheetModel\(\{ workoutModel: todayWorkoutModel, session: workoutSheetSession, programWorkout: trainState\.programWorkout, selectedDayId: todayWorkoutModel\.dayId \}\), \[todayWorkoutModel, trainState\.programWorkout, workoutSheetSession\]\);/)
+ assert.match(appSource, /const currentDateProgramWorkoutId = todayWorkoutModel\?\.actionPayload\?\.programWorkoutId \|\| null;/)
+ assert.match(appSource, /const startWorkoutSheetModel = payload\?\.selectedDayId \? todayWorkoutSheetModel : workoutSheetModel;/)
+ assert.match(appSource, /selectedProgramWorkoutId: payload\?\.programWorkoutId \|\| startWorkoutSheetModel\?\.programWorkoutId \|\| currentDateProgramWorkoutId,/)
+ assert.match(appSource, /workoutSheetModel: startWorkoutSheetModel,/)
+ assert.match(appSource, /runAfterInteractions: InteractionManager\.runAfterInteractions,/)
+ assert.doesNotMatch(appSource, /workoutSheetModel: todayWorkoutSheetModel,/)
+ assert.match(buttonBlock, /if \(!todayWorkoutModel\.hasWorkoutData\) return null/)
+ assert.match(buttonBlock, /selectedDayId: todayWorkoutModel\.dayId,/)
+ assert.match(buttonBlock, /programWorkoutId: todayWorkoutModel\.actionPayload\?\.programWorkoutId \|\| null,/)
+ assert.doesNotMatch(buttonBlock, /activeTab !== 'train'/)
+ assert.doesNotMatch(buttonBlock, /workoutModel\.hasWorkoutData/)
+ assert.doesNotMatch(buttonBlock, /selectedCalendarDayId/)
+ assert.match(buttonBlock, /\}, \[elapsedSeconds, session\?\.id, session\?\.name, session\?\.nameSnapshot, session\?\.programWorkoutId, session\?\.status, todayWorkoutModel\]\);/)
+})
+
+test('mobile app shell replaces the third tab placeholder with the Groups view', () => {
+ const appSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/App.js'),
+   'utf8'
+ )
+ const sectionsSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/screens/surface-sections.js'),
+   'utf8'
+ )
+ const rendererSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/screens/renderers.js'),
+   'utf8'
+ )
+ const renderPlanSource = readFileSync(
+   resolve(process.cwd(), 'apps/mobile/src/screens/render-plans.js'),
+   'utf8'
+ )
+
+ assert.match(appSource, /import \{ getGroupsSections, getPlaceholderSections, getProgressSections \} from '\.\/src\/screens\/surface-sections\.js';/)
+ assert.match(appSource, /const teamSections = useMemo\(\(\) => getGroupsSections\(effectiveBootstrapState\.coachGroups \|\| \[\]\), \[effectiveBootstrapState\.coachGroups\]\);/)
+ assert.doesNotMatch(appSource, /getPlaceholderSurfaceModel\('Team'/)
+ assert.doesNotMatch(appSource, /coach context, team relationships, and collaboration later/)
+ assert.match(appSource, /if \(!isCoachBootstrapState \|\| activeTab === 'train' \|\| activeTab === 'progress' \|\| activeTab === 'team'\) \{[\s\S]*return null;[\s\S]*\}/)
+ assert.match(sectionsSource, /export function getGroupsSections\(groups = \[\]\)/)
+ assert.match(sectionsSource, /title: 'Groups'/)
+ assert.doesNotMatch(sectionsSource, /Group 1[\s\S]*4 athletes/)
+ assert.doesNotMatch(sectionsSource, /Group 5[\s\S]*3 athletes/)
+ assert.match(sectionsSource, /group\.athleteCountLabel/)
+ assert.match(sectionsSource, /Create a group[\s\S]*A regroupment of athletes/)
+ assert.match(sectionsSource, /const rows = groups\.map\(\(group\) => \(\{[\s\S]*targetKey: 'group'/)
+ assert.match(sectionsSource, /type: 'body-list',[\s\S]*rows,/)
+ assert.match(sectionsSource, /type: 'create-workout-card',[\s\S]*targetKey: 'create-group'/)
+ assert.match(renderPlanSource, /if \(section\.type === 'section-heading'\) \{[\s\S]*type: 'section-heading',[\s\S]*title: section\.title,[\s\S]*\}/)
+ assert.match(rendererSource, /section\.type === 'section-heading'[\s\S]*styles\.sectionHeadingWrap/)
+ assert.match(rendererSource, /section\.type === 'body-list'[\s\S]*styles\.theme\.accent[\s\S]*ChevronRight/)
+ assert.match(rendererSource, /section\.type === 'create-workout-card'[\s\S]*<CreateWorkoutCard/)
+})
+
+test('mobile Groups sections render real coach athlete_groups with live athlete counts', () => {
+ const sections = getGroupsSections([
+   { id: 'group-speed', name: 'Speed Group', athleteCountLabel: '2 athletes' },
+   { id: 'group-edge', name: 'Edge Group', athleteCountLabel: '1 athlete' },
+ ])
+ const listSection = sections.find((section) => section.type === 'body-list')
+
+ assert.equal(sections[0].title, 'Groups')
+ assert.equal(listSection.rows.length, 2)
+ assert.deepEqual(
+   listSection.rows.map((row) => ({ id: row.id, title: row.title, body: row.body, payload: row.actionPayload })),
+   [
+     { id: 'group-speed', title: 'Speed Group', body: '2 athletes', payload: { groupId: 'group-speed' } },
+     { id: 'group-edge', title: 'Edge Group', body: '1 athlete', payload: { groupId: 'group-edge' } },
+   ]
+ )
+ assert.equal(sections.some((section) => section.title === 'Create a group'), true)
+})
+
+test('mobile Groups sections use the shared empty state card when no athlete_groups are returned', () => {
+ const sections = getGroupsSections([])
+
+ assert.equal(sections[0].title, 'Groups')
+ assert.equal(sections.some((section) => section.type === 'body-list'), false)
+ assert.equal(sections[1].type, 'empty-state-card')
+ assert.equal(sections[1].title, 'No groups yet')
+ assert.equal(sections[1].body, 'Create a group to organize athletes.')
+ assert.equal(sections.some((section) => section.title === 'Create a group'), true)
+})
+
 test('mobile app shell can hydrate a selected program into the shared program sheet from the profile programs list', () => {
  const appSource = readFileSync(
    resolve(process.cwd(), 'apps/mobile/App.js'),
@@ -148,13 +244,13 @@ test('mobile app shell can open the selected-date workout into the workout detai
  )
 
  assert.match(appSource, /import \{ useEffect, useLayoutEffect, useMemo, useRef, useState \} from 'react';/)
- assert.match(appSource, /import \{ findSessionSet \} from '\.\.\/\.\.\/packages\/core\/src\/index\.js';/)
+ assert.match(appSource, /import \{ advanceSessionAfterRestTimerExpiry, findSessionSet \} from '\.\.\/\.\.\/packages\/core\/src\/index\.js';/)
  assert.doesNotMatch(appSource, /const selectedSet = session\.activeRestTimer\s*\?\s*findSessionSet\([\s\S]*from '@pplus\/core';/)
  assert.match(appSource, /const \[coachMetricError, setCoachMetricError\] = useState\(''\);[\s\S]*const optimisticSessionMutationRef = useRef\(0\);/)
  assert.match(appSource, /import \{ createSessionPersistenceController \} from '\.\/src\/train\/session-persistence\.js';/)
  assert.match(appSource, /const \{[\s\S]*persistSessionUpdate,[\s\S]*persistSessionUpdateOptimistic,[\s\S]*persistSessionDeletionOptimistic,[\s\S]*\} = createSessionPersistenceController\(\{[\s\S]*effectiveSessionStore,[\s\S]*setSession,[\s\S]*optimisticSessionMutationRef,[\s\S]*getSessionDebugSummary,[\s\S]*\}\);/)
  assert.match(appSource, /const \[postSetEffortAdjustment, setPostSetEffortAdjustment\] = useState\(null\);/)
- assert.match(appSource, /import \{[\s\S]*orchestrateCompleteSet,[\s\S]*orchestrateExerciseRestTimeChange,[\s\S]*orchestratePostSetEffortChange,[\s\S]*orchestrateRemoveExerciseRestTime,[\s\S]*orchestrateWorkoutNotesChange,[\s\S]*orchestrateWorkoutSettingsChange,[\s\S]*\} from '\.\/src\/train\/active-workout-mutations\.js';/)
+ assert.match(appSource, /import \{[\s\S]*orchestrateCompleteSet,[\s\S]*orchestrateCreateSessionSuperset,[\s\S]*orchestrateRemoveSessionSuperset,[\s\S]*orchestrateExerciseRestTimeChange,[\s\S]*orchestratePostSetEffortChange,[\s\S]*orchestrateRemoveExerciseRestTime,[\s\S]*orchestrateWorkoutNotesChange,[\s\S]*orchestrateWorkoutSettingsChange,[\s\S]*\} from '\.\/src\/train\/active-workout-mutations\.js';/)
  assert.match(appSource, /canFinishWorkoutSession/)
  assert.match(appSource, /const canFinishActiveWorkout = useMemo\(\(\) => canFinishWorkoutSession\(session\), \[session\]\);/)
  assert.doesNotMatch(appSource, /function persistSessionDeletionOptimistic\(nextSession, \{ setId = null, exerciseId = null \} = \{\}\) \{/)
@@ -168,6 +264,8 @@ test('mobile app shell can open the selected-date workout into the workout detai
  const deleteExerciseHandler = extractFunctionBlock(appSource, 'async function handleDeleteSessionExercise(exerciseId)')
  const moveExerciseHandler = extractFunctionBlock(appSource, 'async function handleMoveActiveWorkoutExercise(exerciseId, direction)')
  const restTimeHandler = extractFunctionBlock(appSource, 'async function handleExerciseRestTimeChange(exerciseId, nextRestSeconds)')
+ const createSupersetHandler = extractFunctionBlock(appSource, 'async function handleCreateSessionSuperset(sourceExerciseId, targetExerciseId)')
+ const removeSupersetHandler = extractFunctionBlock(appSource, 'async function handleRemoveSessionSuperset(exerciseId)')
  const removeRestHandler = extractFunctionBlock(appSource, 'async function handleRemoveExerciseRestTime(exerciseId)')
  const addExercisesHandler = extractFunctionBlock(appSource, 'async function handleAddExercisesToSession(exerciseIds)')
  const notesHandler = extractFunctionBlock(appSource, 'async function handleWorkoutNotesChange(nextNotes)')
@@ -185,6 +283,11 @@ test('mobile app shell can open the selected-date workout into the workout detai
  assert.match(deleteExerciseHandler, /orchestrateDeleteSessionExercise\(\{/)
  assert.match(moveExerciseHandler, /orchestrateMoveActiveWorkoutExercise\(\{/)
  assert.match(restTimeHandler, /orchestrateExerciseRestTimeChange\(\{/)
+ assert.match(createSupersetHandler, /orchestrateCreateSessionSuperset\(\{/)
+ assert.match(createSupersetHandler, /sourceExerciseId/)
+ assert.match(createSupersetHandler, /targetExerciseId/)
+ assert.match(removeSupersetHandler, /orchestrateRemoveSessionSuperset\(\{/)
+ assert.match(removeSupersetHandler, /exerciseId/)
  assert.match(removeRestHandler, /orchestrateRemoveExerciseRestTime\(\{/)
  assert.match(addExercisesHandler, /orchestrateAddExercisesToSession\(\{/)
  assert.match(notesHandler, /orchestrateWorkoutNotesChange\(\{/)
@@ -195,24 +298,34 @@ test('mobile app shell can open the selected-date workout into the workout detai
  assert.match(finishWorkoutHandler, /setIsActiveWorkoutViewOpen/)
  assert.match(finishWorkoutHandler, /setActiveTrainTab/)
  assert.match(discardWorkoutHandler, /orchestrateDiscardWorkout\(\{/)
+ assert.match(discardWorkoutHandler, /discardedSessionIdsRef\.current\.add\(session\.id\)/)
+ assert.match(discardWorkoutHandler, /persistDiscardedSession: async \(discardedSession\) => \{[\s\S]*await effectiveSessionStore\.saveSession\(discardedSession\);[\s\S]*effectiveSessionStore\?\.clearSession\?\.\(\);[\s\S]*\}/)
+ assert.match(discardWorkoutHandler, /clearVisibleSession: \(\) => \{[\s\S]*effectiveSessionStore\?\.clearSession\?\.\(\);[\s\S]*setSelectedWorkoutSessionPreview\(null\);[\s\S]*setSession\(createEmptySessionState\(\)\);[\s\S]*\}/)
 
  assert.match(appSource, /const selectedProgramWorkoutId = workoutModel\?\.actionPayload\?\.programWorkoutId \|\| selectedDayWorkoutPreview\?\.programWorkoutId \|\| selectedDayWorkoutPreview\?\.id \|\| null;/)
  assert.match(appSource, /const selectedDayWorkoutPreview = trainState\.program\.calendarWeek\.find\(\(day\) => day\.id === selectedCalendarDayId\)\?\.workoutPreview \|\| null;/)
  assert.match(appSource, /const \[elapsedSecondsNow, setElapsedSecondsNow\] = useState\(\(\) => Date\.now\(\)\);/)
+ assert.match(appSource, /const discardedSessionIdsRef = useRef\(new Set\(\)\);/)
+ assert.match(appSource, /resolveIncomingSession\(\{[\s\S]*ignoredSessionIds: discardedSessionIdsRef\.current,[\s\S]*\}\)/)
  assert.match(appSource, /import \{[\s\S]*resolveIncomingSession,[\s\S]*\} from '\.\/src\/train\/session-orchestration\.js';/)
  assert.match(appSource, /import \{ getSessionDebugSummary, logResolvedIncomingSession \} from '\.\/src\/train\/session-diagnostics\.js';/)
-  assert.match(appSource, /async function handleStartWorkoutFromSheet\(payload = null\) \{[\s\S]*await orchestrateStartWorkoutFromSheet\(\{[\s\S]*effectiveSessionStore,[\s\S]*selectedProgramWorkoutId: payload\?\.programWorkoutId \|\| selectedProgramWorkoutId,[\s\S]*session,[\s\S]*selectedWorkoutSessionPreview,[\s\S]*workoutSheetModel,[\s\S]*startedAt: new Date\(\)\.toISOString\(\),[\s\S]*setIsStartingWorkout,[\s\S]*setSession,[\s\S]*setIsWorkoutSheetOpen,[\s\S]*setIsActiveWorkoutViewOpen,[\s\S]*\}\);[\s\S]*\}/)
-assert.doesNotMatch(appSource, /async function handleStartWorkoutFromSheet\(payload = null\) \{[\s\S]*runAfterInteractions: InteractionManager\.runAfterInteractions/)
-assert.match(appSource, /const floatingStartWorkoutButtonModel = useMemo\(\(\) => \{[\s\S]*if \(activeTab !== 'train'\) return null/)
+ assert.match(appSource, /const startWorkoutSheetModel = payload\?\.selectedDayId \? todayWorkoutSheetModel : workoutSheetModel;/)
+ assert.doesNotMatch(appSource, /isActiveWorkoutOpenPendingAfterSheetDismiss/)
+ assert.match(appSource, /function openActiveWorkoutViewImmediately\(\) \{[\s\S]*setIsActiveWorkoutViewOpen\(true\);[\s\S]*\}/)
+
+ assert.doesNotMatch(appSource, /onDismiss=\{handleWorkoutSheetDismiss\}/)
+assert.match(appSource, /const floatingStartWorkoutButtonModel = useMemo\(\(\) => \{[\s\S]*if \(!todayWorkoutModel\.hasWorkoutData\) return null/)
+assert.doesNotMatch(appSource, /const floatingStartWorkoutButtonModel = useMemo\(\(\) => \{[\s\S]*if \(activeTab !== 'train'\) return null/)
 assert.match(appSource, /if \(session\?\.status === 'in_progress'\) \{[\s\S]*kind: 'in-progress'/)
 assert.match(appSource, /label: session\?\.nameSnapshot \|\| session\?\.name \|\| 'Workout in progress'/)
 assert.match(appSource, /elapsedLabel: formatWorkoutTimer\(elapsedSeconds\)/)
 assert.match(appSource, /targetKey: 'start-workout'/)
-assert.match(appSource, /actionPayload: \{[\s\S]*programWorkoutId: inProgressProgramWorkoutId,[\s\S]*\}/)
+assert.match(appSource, /const todayStartWorkoutPayload = \{[\s\S]*selectedDayId: todayWorkoutModel\.dayId,[\s\S]*programWorkoutId: todayWorkoutModel\.actionPayload\?\.programWorkoutId \|\| null,[\s\S]*\}/)
+assert.match(appSource, /actionPayload: \{[\s\S]*\.\.\.todayStartWorkoutPayload,[\s\S]*programWorkoutId: inProgressProgramWorkoutId,[\s\S]*\}/)
 assert.doesNotMatch(appSource, /actionPayload: \{[\s\S]*selectedDayId: inProgressSelectedDayId,[\s\S]*programWorkoutId: inProgressProgramWorkoutId,[\s\S]*\}/)
-assert.match(appSource, /if \(!workoutModel\.hasWorkoutData\) return null/)
-assert.match(appSource, /kind: 'start-workout',[\s\S]*label: 'Start Workout',[\s\S]*targetKey: 'start-workout',[\s\S]*actionPayload: undefined/)
-assert.match(appSource, /if \(targetKey === 'start-workout'\) \{[\s\S]*await handleStartWorkoutFromSheet\(payload\);[\s\S]*return;[\s\S]*\}/)
+assert.doesNotMatch(appSource, /if \(!workoutModel\.hasWorkoutData\) return null/)
+assert.match(appSource, /kind: 'start-workout',[\s\S]*label: 'Start Workout',[\s\S]*targetKey: 'start-workout',[\s\S]*actionPayload: todayStartWorkoutPayload/)
+assert.match(appSource, /if \(targetKey === 'start-workout'\) \{[\s\S]*void handleStartWorkoutFromSheet\(payload\);[\s\S]*return;[\s\S]*\}/)
 assert.match(appSource, /if \(targetKey === 'session'\) \{[\s\S]*await handleOpenOrResumeSession\(payload\);[\s\S]*return;[\s\S]*\}/)
 assert.doesNotMatch(appSource, /if \(session\?\.status === 'in_progress'\) \{[\s\S]*targetKey: 'session'/)
 assert.match(appSource, /renderAppShell\(\{[\s\S]*floatingStartWorkoutButton: floatingStartWorkoutButtonModel,[\s\S]*\}\)/)
@@ -239,6 +352,8 @@ assert.match(appSource, /if \(didWorkflowContextChange\) \{[\s\S]*setActiveTrain
  assert.match(appSource, /<ActiveWorkoutView[\s\S]*onMoveExercise=\{handleMoveActiveWorkoutExercise\}/)
  assert.match(appSource, /<ActiveWorkoutView[\s\S]*onOpenExerciseDetail=\{\(exercise\) => handleOpenExerciseDetail\(exercise, 'active-workout'\)\}/)
  assert.match(appSource, /<ActiveWorkoutView[\s\S]*onExerciseRestTimeChange=\{handleExerciseRestTimeChange\}/)
+ assert.match(appSource, /<ActiveWorkoutView[\s\S]*onCreateSuperset=\{handleCreateSessionSuperset\}/)
+ assert.match(appSource, /<ActiveWorkoutView[\s\S]*onRemoveSuperset=\{handleRemoveSessionSuperset\}/)
  assert.match(appSource, /<ActiveWorkoutView[\s\S]*onRemoveExerciseRestTime=\{handleRemoveExerciseRestTime\}/)
  assert.match(appSource, /<ActiveWorkoutView[\s\S]*onAddExercises=\{handleAddExercisesToSession\}/)
  assert.match(appSource, /<ActiveWorkoutView[\s\S]*availableExercises=\{activeWorkoutAvailableExercises\}/)
@@ -428,7 +543,7 @@ test('mobile app shell closes the active workout cleanly without reopening the w
  assert.doesNotMatch(closeHandler, /setIsWorkoutSheetOpen\(true\)/)
 })
 
-test('mobile app shell opens coach athletes inside a dedicated sheet from profile and bottom-right quick access instead of routing the whole shell to a progress tab screen', () => {
+test('mobile app shell opens coach athletes from profile inside profile shell while bottom-right quick access keeps the dedicated sheet', () => {
  const appSource = readFileSync(
    resolve(process.cwd(), 'apps/mobile/App.js'),
    'utf8'
@@ -447,7 +562,15 @@ test('mobile app shell opens coach athletes inside a dedicated sheet from profil
  assert.match(appSource, /<CoachAthletesSheet[\s\S]*isVisible=\{isCoachAthletesSheetOpen\}/)
  assert.match(appSource, /<CoachAthletesSheet[\s\S]*athletes=\{coachAthletesList\}/)
  assert.match(appSource, /<CoachAthletesSheet[\s\S]*selectedAthleteId=\{selectedCoachAthleteId\}/)
- assert.match(appSource, /<ProfileView isVisible=\{isProfileViewOpen\}[\s\S]*onOpenAthletes=\{\(\) => setIsCoachAthletesSheetOpen\(true\)\}/)
+ assert.match(appSource, /const isCoachAthletesLoading = bootstrapState\.status === 'loading'/)
+ assert.match(appSource, /<CoachAthletesSheet[\s\S]*isLoading=\{isCoachAthletesLoading\}/)
+ assert.match(appSource, /<ProfileView isVisible=\{isProfileViewOpen\}[\s\S]*athletes=\{coachAthletesList\}[\s\S]*selectedAthleteId=\{selectedCoachAthleteId\}[\s\S]*isAthletesLoading=\{isCoachAthletesLoading\}[\s\S]*onAthleteActionTarget=\{handleTrainNavigation\}/)
+ assert.doesNotMatch(appSource, /<ProfileView[\s\S]*onOpenAthletes=\{\(\) => setIsCoachAthletesSheetOpen\(true\)\}/)
+ assert.match(sheetSource, /export function CoachAthletesSheetContent\(/)
+ assert.match(sheetSource, /function CoachAthleteSkeletonRows\({ theme }\)/)
+ assert.match(sheetSource, /isLoading = false/)
+ assert.match(sheetSource, /const shouldShowSkeleton = isLoading \|\| isInitialSkeletonVisible/)
+ assert.match(sheetSource, /shouldShowSkeleton \? \([\s\S]*<CoachAthleteSkeletonRows theme=\{resolvedTheme\} \/>/)
  assert.match(sheetSource, /export function CoachAthletesSheet\(/)
  assert.match(sheetSource, /Modal/)
  assert.match(sheetSource, /Athletes/)
@@ -460,9 +583,35 @@ test('mobile app shell opens coach athletes inside a dedicated sheet from profil
   assert.match(sheetSource, /leftIcon=\{<Send/)
   assert.match(sheetSource, /theme=\{resolvedTheme\}[\s\S]*label="Invite athlete"[\s\S]*onPress=\{\(\) => onActionTarget\?\.\('coach-athlete-invite'\)\}/)
   assert.match(sheetSource, /Search by name/)
+  assert.match(sheetSource, /Keyboard/)
+  assert.match(sheetSource, /keyboardWillChangeFrame/)
+  assert.match(sheetSource, /keyboardDidShow/)
+  assert.match(sheetSource, /keyboardBottomOffset/)
+  assert.match(sheetSource, /const \[isSearchFocused, setIsSearchFocused\] = useState\(false\)/)
+  assert.match(sheetSource, /const shouldCompactBottomActions = isSearchFocused \|\| keyboardHeight > 0/)
+  assert.match(sheetSource, /!shouldCompactBottomActions \? \([\s\S]*label="Invite athlete"/)
+  assert.match(sheetSource, /bottom: keyboardBottomOffset/)
+  assert.match(sheetSource, /const compactBottomTrayPadding = shouldCompactBottomActions \? 14 : 0/)
+  assert.match(sheetSource, /const compactTopTrayPadding = shouldCompactBottomActions \? 10 : 0/)
+  assert.match(sheetSource, /paddingTop: compactTopTrayPadding/)
+  assert.match(sheetSource, /paddingBottom: safeBottom \+ compactBottomTrayPadding/)
+  assert.match(sheetSource, /const bottomControlsHeight = shouldCompactBottomActions \? 98 : 144/)
+  assert.match(sheetSource, /onFocus=\{\(\) => setIsSearchFocused\(true\)\}/)
+  assert.match(sheetSource, /onBlur=\{\(\) => setIsSearchFocused\(false\)\}/)
+  assert.doesNotMatch(sheetSource, /contentContainerStyle=\{\{ paddingBottom: 188 \}\}/)
+
+  const primitivesSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/ui/primitives.js'), 'utf8')
+  assert.match(primitivesSource, /export function AppSearchInput\(\{ theme, value, onChangeText, placeholder = 'Search', onFocus, onBlur \}\)/)
+  assert.match(primitivesSource, /child\.props\.onFocus\?\.\(event\)/)
+  assert.match(primitivesSource, /onFocus\?\.\(event\)/)
+  assert.match(primitivesSource, /onBlur\?\.\(event\)/)
+
   assert.match(sheetSource, /Check/)
   assert.match(sheetSource, /ChevronRight/)
   assert.match(sheetSource, /Image/)
+  assert.match(sheetSource, /<View className="flex-1 px-5"/)
+  assert.doesNotMatch(sheetSource, /function CoachAthleteRow[\s\S]*<View className="px-5">/)
+  assert.doesNotMatch(sheetSource, /function CoachAthleteRow[\s\S]*<\/AppListRow>[\s\S]*<\/View>/)
 assert.doesNotMatch(sheetSource, /renderGenericSections/)
  assert.doesNotMatch(sheetSource, /<Text className="text-\[16px\] font-semibold text-white">Back<\/Text>/)
  assert.doesNotMatch(appSource, /Tony Fortugno/)
@@ -541,7 +690,7 @@ test('mobile coach progress keeps the built analytics view instead of replacing 
    'utf8'
  )
 
- assert.match(appSource, /if \(!isCoachBootstrapState \|\| activeTab === 'train' \|\| activeTab === 'progress'\) \{[\s\S]*return null;[\s\S]*\}/)
+ assert.match(appSource, /if \(!isCoachBootstrapState \|\| activeTab === 'train' \|\| activeTab === 'progress' \|\| activeTab === 'team'\) \{[\s\S]*return null;[\s\S]*\}/)
  assert.doesNotMatch(appSource, /if \(activeTab === 'progress'\) \{[\s\S]*getPlaceholderSurfaceModel\('Athletes'/)
  assert.doesNotMatch(appSource, /if \(activeTab === 'progress' && coachAthleteOptions\.length\) \{[\s\S]*type: 'coach-athletes'/)
  assert.match(renderModelsSource, /if \(activeTab === 'progress'\) \{[\s\S]*type: 'analytics'/)
@@ -645,7 +794,8 @@ test('mobile coach train home can derive athlete-scoped train state from the sel
  assert.match(appSource, /const \{ authSession, bootstrapState, sessionStore, signInWithPassword,[\s\S]*refreshAuthSession,[\s\S]*createCoachBodyMetricLog,[\s\S]*getLatestCoachBodyMetricLog \} = useMobileAuthSession\(\);/)
  assert.match(appSource, /const \[coachTrainBridgeState, setCoachTrainBridgeState\] = useState\(\{ trainState: null, sessionStore: null, isHydrating: false, hasResolved: false \}\);/)
  assert.match(appSource, /import \{ hydrateCoachTrainBridge \} from '\.\/src\/train\/coach-train-bridge\.js';/)
- assert.match(appSource, /const nextCoachTrainBridgeState = await hydrateCoachTrainBridge\(\{[\s\S]*athleteId: activeCoachAthleteProfile\.id,[\s\S]*currentUserId: authSession\.currentUserId,[\s\S]*accessToken: authSession\.accessToken,[\s\S]*accessTokenProvider: \(\) => authSession\.accessToken,[\s\S]*refreshAccessToken: refreshAuthSession,[\s\S]*programClient: createMobileProgramClient\(\{ accessToken: authSession\.accessToken \}\),[\s\S]*workoutClient: createMobileWorkoutClient\(\{ accessToken: authSession\.accessToken \}\),[\s\S]*\}\)/)
+ assert.match(appSource, /const bridgeAthleteProfileId = normalizeCoachAthleteProfileId\(selectedCoachAthlete\?\.athleteProfileId \|\| activeCoachAthleteProfile\.id\)/)
+ assert.match(appSource, /const nextCoachTrainBridgeState = await hydrateCoachTrainBridge\(\{[\s\S]*athleteId: bridgeAthleteProfileId,[\s\S]*currentUserId: authSession\.currentUserId,[\s\S]*accessToken: authSession\.accessToken,[\s\S]*accessTokenProvider: \(\) => authSession\.accessToken,[\s\S]*refreshAccessToken: refreshAuthSession,[\s\S]*programClient: createMobileProgramClient\(\{ accessToken: authSession\.accessToken \}\),[\s\S]*workoutClient: createMobileWorkoutClient\(\{ accessToken: authSession\.accessToken \}\),[\s\S]*\}\)/)
  assert.match(appSource, /setCoachTrainBridgeState\(\{[\s\S]*\.\.\.nextCoachTrainBridgeState,[\s\S]*isHydrating: false,[\s\S]*hasResolved: true,[\s\S]*\}\)/)
  assert.doesNotMatch(appSource, /const seededCoachTrainState = assignedProgram\?\.id[\s\S]*createAssignedProgramTrainState\(\{ assignedProgram, programWorkout: todayProgramWorkout, todayIsoDate \}\)/)
  assert.doesNotMatch(appSource, /const resolvedProgramWorkoutId = seededCoachTrainState\?\.programWorkout\?\.id \|\| todayProgramWorkout\?\.id \|\| getAssignedProgramWorkoutIdForDate\(assignedProgram, todayIsoDate\)/)
@@ -759,9 +909,23 @@ test('mobile assigned-program review can drill into a scheduled workout and retu
  assert.match(appSource, /function handleCloseWorkoutSheet\(\) \{[\s\S]*setIsWorkoutSheetOpen\(false\);[\s\S]*if \(workoutSheetReturnSurface === 'program-sheet'\) \{[\s\S]*setIsProgramSheetOpen\(true\);[\s\S]*setWorkoutSheetReturnSurface\(null\);[\s\S]*\}[\s\S]*\}/)
  assert.match(appSource, /renderProgramSheet\(\{[\s\S]*onOpenWorkoutDetail: handleOpenProgramSheetWorkout,[\s\S]*model: programSheetModel,[\s\S]*theme: appTheme,[\s\S]*\}\)/)
  assert.match(appSource, /<WorkoutSheet[\s\S]*onClose=\{handleCloseWorkoutSheet\}/)
- assert.match(programSheetSource, /function ProgramSheetWeekCard\(\{ week, theme, onOpenWorkoutDetail \}\)/)
+ assert.match(programSheetSource, /function ProgramSheetWeekCard\(\{ week, theme, onOpenWorkoutDetail, onOpenTrainingCalendar \}\)/)
  assert.match(programSheetSource, /<Pressable[\s\S]*onPress=\{\(\) => onOpenWorkoutDetail\?\.\(entry\)\}/)
- assert.match(programSheetSource, /export function renderProgramSheet\(\{ isVisible, onClose, onEditProgram, onOpenWorkoutDetail, model, theme \}\)/)
+ assert.match(programSheetSource, /export function renderProgramSheet\(\{ isVisible, onClose, onEditProgram, onOpenWorkoutDetail, onOpenTrainingCalendar, model, theme \}\)/)
+})
+
+test('mobile program details week cards open the shared Training Calendar view and return cleanly', () => {
+ const appSource = readFileSync(resolve(process.cwd(), 'apps/mobile/App.js'), 'utf8')
+ const programSheetSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/program-sheet.js'), 'utf8')
+
+ assert.match(appSource, /const \[trainingCalendarReturnSurface, setTrainingCalendarReturnSurface\] = useState\(null\);/)
+ assert.match(appSource, /function handleOpenProgramSheetTrainingCalendar\(\) \{[\s\S]*setIsProgramSheetOpen\(false\);[\s\S]*setTrainingCalendarReturnSurface\('program-sheet'\);[\s\S]*setIsTrainingCalendarOpen\(true\);[\s\S]*\}/)
+ assert.match(appSource, /function handleCloseTrainingCalendar\(\) \{[\s\S]*setIsTrainingCalendarOpen\(false\);[\s\S]*if \(trainingCalendarReturnSurface === 'program-sheet'\) \{[\s\S]*setIsProgramSheetOpen\(true\);[\s\S]*setTrainingCalendarReturnSurface\(null\);[\s\S]*\}[\s\S]*\}/)
+ assert.match(appSource, /renderProgramSheet\(\{[\s\S]*onOpenTrainingCalendar: handleOpenProgramSheetTrainingCalendar,[\s\S]*model: programSheetModel,[\s\S]*theme: appTheme,[\s\S]*\}\)/)
+ assert.match(appSource, /<TrainingCalendarSheet[\s\S]*onClose=\{handleCloseTrainingCalendar\}/)
+ assert.match(programSheetSource, /function ProgramSheetWeekCard\(\{ week, theme, onOpenWorkoutDetail, onOpenTrainingCalendar \}\)/)
+ assert.match(programSheetSource, /<AppSurfaceCard[\s\S]*onPress=\{onOpenTrainingCalendar\}[\s\S]*\{week\.dateRangeLabel\}/)
+ assert.match(programSheetSource, /<ProgramSheetWeekCard key=\{week\.id\} week=\{week\} theme=\{resolvedTheme\} onOpenWorkoutDetail=\{onOpenWorkoutDetail\} onOpenTrainingCalendar=\{onOpenTrainingCalendar\} \/>/)
 })
 
 test('mobile coach train home does not render a duplicate Athlete Workspace card when program and workout cards already cover that path', () => {

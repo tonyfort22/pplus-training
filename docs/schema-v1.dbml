@@ -279,6 +279,19 @@ Table programs {
   updated_at timestamptz [not null]
 }
 
+Table program_phases {
+  id uuid [pk]
+  program_id uuid [not null]
+  name text [not null]
+  description text
+  training_type text
+  start_week integer
+  end_week integer
+  sort_order integer [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz [not null]
+}
+
 Table program_weeks {
   id uuid [pk]
   program_id uuid [not null]
@@ -305,6 +318,7 @@ Table program_days {
 Table program_workouts {
   id uuid [pk]
   program_day_id uuid [not null]
+  program_phase_id uuid
   workout_template_id uuid
   content_item_id uuid
   name_snapshot text [not null]
@@ -609,9 +623,11 @@ Ref: content_item_template_maps.workout_template_id > workout_templates.id
 Ref: programs.athlete_id > athlete_profiles.id
 Ref: programs.coach_id > coach_profiles.id
 Ref: programs.content_collection_id > content_collections.id
+Ref: program_phases.program_id > programs.id
 Ref: program_weeks.program_id > programs.id
 Ref: program_days.program_week_id > program_weeks.id
 Ref: program_workouts.program_day_id > program_days.id
+Ref: program_workouts.program_phase_id > program_phases.id
 Ref: program_workouts.workout_template_id > workout_templates.id
 Ref: program_workouts.content_item_id > content_items.id
 Ref: program_workout_blocks.program_workout_id > program_workouts.id

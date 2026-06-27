@@ -9,6 +9,8 @@ import {
   discardWorkoutSession,
   moveSessionExercise,
   removeSessionExercise,
+  createSessionSuperset,
+  removeSessionSuperset,
   updateExerciseStatuses,
   updateSessionExerciseRest,
   appendSessionExercises,
@@ -155,7 +157,13 @@ export async function orchestrateSessionSetValueChange({
 }) {
   if (session.status === 'completed' || session.status === 'discarded') return;
 
-  const fieldMap = { effort: 'actualRpe', load: 'actualLoad', reps: 'actualReps' };
+  const fieldMap = {
+    effort: 'actualRpe',
+    load: 'actualLoad',
+    reps: 'actualReps',
+    distance: 'actualDistance',
+    duration: 'actualDurationSeconds',
+  };
   const resolvedField = fieldMap[field];
   if (!resolvedField) return;
 
@@ -293,13 +301,24 @@ export async function orchestrateDiscardWorkout({
   setPostSetEffortAdjustment,
   setIsActiveWorkoutViewOpen,
   persistSessionUpdateOptimistic,
+  persistDiscardedSession = null,
+  clearVisibleSession = null,
   getNowIsoString = () => new Date().toISOString(),
 }) {
   if (session.status === 'completed' || session.status === 'discarded') return;
-  const nextSession = discardWorkoutSession({ session, discardedAt: getNowIsoString(), elapsedSeconds });
+  const discardedSession = discardWorkoutSession({ session, discardedAt: getNowIsoString(), elapsedSeconds });
   setPostSetEffortAdjustment(null);
   setIsActiveWorkoutViewOpen(false);
-  persistSessionUpdateOptimistic(nextSession);
+
+  if (typeof clearVisibleSession === 'function') {
+    clearVisibleSession();
+    if (typeof persistDiscardedSession === 'function') {
+      void persistDiscardedSession(discardedSession);
+    }
+    return;
+  }
+
+  persistSessionUpdateOptimistic(discardedSession);
 }
 
 export async function orchestrateExerciseRestTimeChange({
@@ -321,6 +340,29 @@ export async function orchestrateRemoveExerciseRestTime({
 }) {
   if (session.status === 'completed' || session.status === 'discarded') return;
   persistSessionUpdateOptimistic(updateSessionExerciseRest(session, exerciseId, null));
+}
+
+export async function orchestrateCreateSessionSuperset({
+  session,
+  sourceExerciseId,
+  targetExerciseId,
+  persistSessionUpdateOptimistic,
+}) {
+  if (session.status === 'completed' || session.status === 'discarded') return;
+  const nextSession = createSessionSuperset(session, sourceExerciseId, targetExerciseId);
+  if (nextSession === session) return;
+  persistSessionUpdateOptimistic(nextSession);
+}
+
+export async function orchestrateRemoveSessionSuperset({
+  session,
+  exerciseId,
+  persistSessionUpdateOptimistic,
+}) {
+  if (session.status === 'completed' || session.status === 'discarded') return;
+  const nextSession = removeSessionSuperset(session, exerciseId);
+  if (nextSession === session) return;
+  persistSessionUpdateOptimistic(nextSession);
 }
 
 export async function orchestrateAddExercisesToSession({

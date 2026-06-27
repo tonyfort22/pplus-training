@@ -1,13 +1,17 @@
 import { useEffect, useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import * as data from '../../../../packages/data/src/index.js';
-import { Bell, CalendarDays, CalendarRange, ChevronDown, ChevronLeft, ChevronRight, Dumbbell, HeartPulse, ImagePlus, Info, LogOut, Palette, RefreshCcw, Ruler, SlidersHorizontal, User, UserCircle2, Users } from 'lucide-react-native';
+import { Bell, CalendarDays, CalendarRange, ChevronDown, ChevronLeft, ChevronRight, Dumbbell, HeartPulse, ImagePlus, Info, Languages, LogOut, Palette, RefreshCcw, Ruler, SlidersHorizontal, User, UserCircle2, Users } from 'lucide-react-native';
 import { Image, Modal, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getAppTheme } from '../theme/app-theme.js';
 import { ExerciseLibraryView } from './exercise-library-view.js';
-import { AppButton, AppFieldShell, AppListRow, AppNoticeCard, AppSearchInput, AppSegmentedControl, AppSheetHeader, AppSurfaceCard } from '../ui/primitives.js';
+import { CoachAthletesSheetContent } from './coach-athletes-sheet.js';
+import { AppButton, AppFieldShell, AppListRow, AppNoticeCard, AppSearchInput, AppSegmentedControl, AppSheetHeader } from '../ui/primitives.js';
+import { Skeleton } from '../ui/skeleton.js';
+
+const INITIAL_VIEW_SKELETON_DELAY_MS = 1500
 
 const PROFILE_SECTIONS = [
   {
@@ -28,6 +32,7 @@ const PROFILE_SECTIONS = [
       { id: 'units', label: 'Units', icon: 'ruler' },
       { id: 'week-start', label: 'Week Start', icon: 'calendar-days' },
       { id: 'reminder', label: 'Reminder', icon: 'bell' },
+      { id: 'languages', label: 'Languages', icon: 'languages' },
     ],
   },
   {
@@ -86,6 +91,16 @@ function formatPhoneNumberDraft(value) {
   if (digitsOnly.length < 4) return digitsOnly
   if (digitsOnly.length < 7) return `(${digitsOnly.slice(0, 3)}) ${digitsOnly.slice(3)}`
   return `(${digitsOnly.slice(0, 3)}) ${digitsOnly.slice(3, 6)}-${digitsOnly.slice(6)}`
+}
+
+function getSafeProfileImageUri(value) {
+  if (value == null) return null
+
+  const candidate = String(value).trim()
+  if (!candidate) return null
+
+  const allowedImageUriPattern = /^(https?:\/\/|file:\/\/|content:\/\/|assets-library:\/\/|ph:\/\/|data:image\/)/i
+  return allowedImageUriPattern.test(candidate) ? candidate : null
 }
 
 function parseProfileDateValue(value) {
@@ -233,7 +248,7 @@ function getProfileIdentityModel(profile, role = 'athlete') {
     return {
       displayName: coachFullName || coachDisplayName || profile?.firstName || 'Coach',
       metaLabel: '',
-      avatarUrl: profile?.avatarUrl || null,
+      avatarUrl: getSafeProfileImageUri(profile?.avatarUrl),
     }
   }
 
@@ -242,7 +257,7 @@ function getProfileIdentityModel(profile, role = 'athlete') {
   return {
     displayName: fullName || profile?.firstName || 'Athlete',
     metaLabel: '',
-    avatarUrl: profile?.avatarUrl || null,
+    avatarUrl: getSafeProfileImageUri(profile?.avatarUrl),
   }
 }
 
@@ -395,10 +410,10 @@ function createMobileProgramLibraryClient({ env = process.env, fetchImpl = globa
 }
 
 const PROGRAMS_VIEW_MODEL = {
-  title: 'All Programs',
-  activeSectionTitle: 'Active Program',
-  completedSectionTitle: 'Completed Programs',
-  activeEmptyLabel: 'No Active Program',
+  title: 'Programs',
+  activeSectionTitle: 'ACTIVE PROGRAMS',
+  completedSectionTitle: 'COMPLETED PROGRAMS',
+  activeEmptyLabel: 'No Active Programs',
   completedEmptyLabel: 'No Completed Programs',
 }
 
@@ -449,6 +464,23 @@ const WEEK_START_VIEW_MODEL = {
   activeOptionId: 'sunday',
   description:
     'Choose which day your calendar week begins. This affects how weeks are displayed in your training calendar and program schedules.',
+}
+
+function getLanguageViewModel(languagePreference = 'en') {
+  return {
+    title: 'Languages',
+    label: languagePreference === 'fr' ? 'Langue de l’app' : 'App Language',
+    options: languagePreference === 'fr'
+      ? [
+          { id: 'en', label: 'Anglais' },
+          { id: 'fr', label: 'Français' },
+        ]
+      : [
+          { id: 'en', label: 'English' },
+          { id: 'fr', label: 'French' },
+        ],
+    description: 'Choose the language used by the app. Full app translation will be completed later.',
+  }
 }
 
 const REMINDER_VIEW_MODEL = {
@@ -538,6 +570,7 @@ function ProfileOptionIcon({ icon, theme }) {
   if (icon === 'ruler') return <Ruler color={theme.iconMuted} size={20} strokeWidth={2.2} />
   if (icon === 'calendar-days') return <CalendarDays color={theme.iconMuted} size={20} strokeWidth={2.2} />
   if (icon === 'bell') return <Bell color={theme.iconMuted} size={20} strokeWidth={2.2} />
+  if (icon === 'languages') return <Languages color={theme.iconMuted} size={20} strokeWidth={2.2} />
   return <HeartPulse color={theme.iconMuted} size={20} strokeWidth={2.2} />
 }
 
@@ -676,6 +709,51 @@ function ProfileField({ field, onChange, onOpenDatePicker, onOpenDropdown, units
   )
 }
 
+function ProfileDetailsSkeleton({ theme }) {
+  const resolvedTheme = theme || getAppTheme('dark')
+
+  return (
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 36 }}>
+      <View className="gap-5">
+        <Skeleton className="h-36 w-36 self-center rounded-full" theme={resolvedTheme} />
+        <View className="gap-2">
+          <Skeleton className="h-4 w-28 rounded-full" theme={resolvedTheme} />
+          <Skeleton className="h-14 rounded-[18px]" theme={resolvedTheme} />
+        </View>
+        <View className="gap-2">
+          <Skeleton className="h-4 w-28 rounded-full" theme={resolvedTheme} />
+          <Skeleton className="h-14 rounded-[18px]" theme={resolvedTheme} />
+        </View>
+        <View className="gap-2">
+          <Skeleton className="h-4 w-36 rounded-full" theme={resolvedTheme} />
+          <Skeleton className="h-14 rounded-[18px]" theme={resolvedTheme} />
+        </View>
+        <View className="flex-row gap-3">
+          <View className="flex-1 gap-2">
+            <Skeleton className="h-4 w-20 rounded-full" theme={resolvedTheme} />
+            <Skeleton className="h-14 rounded-[18px]" theme={resolvedTheme} />
+          </View>
+          <View className="flex-1 gap-2">
+            <Skeleton className="h-4 w-24 rounded-full" theme={resolvedTheme} />
+            <Skeleton className="h-14 rounded-[18px]" theme={resolvedTheme} />
+          </View>
+        </View>
+        <View className="flex-row gap-3">
+          <View className="flex-1 gap-2">
+            <Skeleton className="h-4 w-24 rounded-full" theme={resolvedTheme} />
+            <Skeleton className="h-14 rounded-[18px]" theme={resolvedTheme} />
+          </View>
+          <View className="flex-1 gap-2">
+            <Skeleton className="h-4 w-24 rounded-full" theme={resolvedTheme} />
+            <Skeleton className="h-14 rounded-[18px]" theme={resolvedTheme} />
+          </View>
+        </View>
+        <Skeleton className="h-14 rounded-[18px]" theme={resolvedTheme} />
+      </View>
+    </ScrollView>
+  )
+}
+
 function ProfileDetailsView({ onBack, athleteProfile, onSaveProfile, isSavingProfile = false, saveNotice = '', role = 'athlete', theme }) {
   const insets = useSafeAreaInsets()
   const resolvedTheme = theme || getAppTheme('dark')
@@ -683,9 +761,20 @@ function ProfileDetailsView({ onBack, athleteProfile, onSaveProfile, isSavingPro
   const [draftProfile, setDraftProfile] = useState(() => getProfileDraftState(profileDetailModel))
   const [saveErrorMessage, setSaveErrorMessage] = useState('')
   const [saveSuccessMessage, setSaveSuccessMessage] = useState('')
+  const [isSaveNoticeVisible, setIsSaveNoticeVisible] = useState(false)
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false)
   const [activeDropdownFieldId, setActiveDropdownFieldId] = useState(null)
   const [datePickerValue, setDatePickerValue] = useState(() => parseProfileDateValue(draftProfile['date-of-birth']) || new Date())
+  const [isAvatarImageLoading, setIsAvatarImageLoading] = useState(false)
+  const [isInitialSkeletonVisible, setIsInitialSkeletonVisible] = useState(true)
+
+  useEffect(() => {
+    const initialSkeletonTimer = setTimeout(() => {
+      setIsInitialSkeletonVisible(false)
+    }, INITIAL_VIEW_SKELETON_DELAY_MS)
+
+    return () => clearTimeout(initialSkeletonTimer)
+  }, [])
 
   useEffect(() => {
     const nextDraftState = getProfileDraftState(profileDetailModel)
@@ -693,6 +782,25 @@ function ProfileDetailsView({ onBack, athleteProfile, onSaveProfile, isSavingPro
     setDatePickerValue(parseProfileDateValue(nextDraftState['date-of-birth']) || new Date())
     setActiveDropdownFieldId(null)
   }, [athleteProfile])
+
+  const visibleSaveSuccessMessage = saveNotice || saveSuccessMessage
+
+  useEffect(() => {
+    if (saveNotice) {
+      setIsSaveNoticeVisible(true)
+    }
+  }, [saveNotice])
+
+  useEffect(() => {
+    if (!isSaveNoticeVisible || !visibleSaveSuccessMessage) return undefined
+
+    const hideProfileSaveNoticeTimer = setTimeout(() => {
+      setIsSaveNoticeVisible(false)
+      setSaveSuccessMessage('')
+    }, 3000)
+
+    return () => clearTimeout(hideProfileSaveNoticeTimer)
+  }, [isSaveNoticeVisible, visibleSaveSuccessMessage])
 
   function handleFieldChange(fieldId, nextValue) {
     setDraftProfile((current) => {
@@ -714,6 +822,7 @@ function ProfileDetailsView({ onBack, athleteProfile, onSaveProfile, isSavingPro
     })
     setSaveErrorMessage('')
     setSaveSuccessMessage('')
+    setIsSaveNoticeVisible(false)
   }
 
   function handleOpenDropdown(fieldId) {
@@ -804,14 +913,22 @@ function ProfileDetailsView({ onBack, athleteProfile, onSaveProfile, isSavingPro
     try {
       await onSaveProfile?.(activeProfileUpdate)
       setSaveSuccessMessage('Profile updated.')
+      setIsSaveNoticeVisible(true)
     } catch (error) {
       setSaveErrorMessage(error?.message || 'Something went sideways while saving the profile.')
       setSaveSuccessMessage('')
+      setIsSaveNoticeVisible(false)
     }
   }
 
   const unitsPreference = draftProfile['units-preference'] || 'metric'
-  const hasAvatar = Boolean(draftProfile['avatar-url'])
+  const safeDraftAvatarUri = getSafeProfileImageUri(draftProfile['avatar-url'])
+  const hasAvatar = Boolean(safeDraftAvatarUri)
+
+  useEffect(() => {
+    setIsAvatarImageLoading(Boolean(safeDraftAvatarUri))
+  }, [safeDraftAvatarUri])
+
   const fields = profileDetailModel.fields.map((field) => {
     if (field.id === 'height') {
       return {
@@ -847,6 +964,17 @@ function ProfileDetailsView({ onBack, athleteProfile, onSaveProfile, isSavingPro
   const hasProfileChanges = profileDetailModel.fields.some((field) => (draftProfile[field.id] ?? '') !== normalizeProfileDraftValue(field, draftProfile['units-preference'] || 'metric'))
   const isSaveDisabled = isSavingProfile || !hasProfileChanges
 
+  if (isInitialSkeletonVisible) {
+    return (
+      <SafeAreaView className="flex-1" style={{ backgroundColor: resolvedTheme.background }}>
+        <View className="flex-1 px-5" style={{ paddingTop: Math.max(insets.top, 16), paddingBottom: Math.max(insets.bottom, 20) }}>
+          <AppSheetHeader theme={resolvedTheme} title={profileDetailModel.title} onBack={onBack} />
+          <ProfileDetailsSkeleton theme={resolvedTheme} />
+        </View>
+      </SafeAreaView>
+    )
+  }
+
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: resolvedTheme.background }}>
       <View className="flex-1 px-5" style={{ paddingTop: Math.max(insets.top, 16), paddingBottom: Math.max(insets.bottom, 20) }}>
@@ -857,7 +985,18 @@ function ProfileDetailsView({ onBack, athleteProfile, onSaveProfile, isSavingPro
             <Pressable className="self-center" onPress={handleAvatarUpload}>
               <View className="h-36 w-36 items-center justify-center overflow-hidden rounded-full" style={{ borderWidth: 1, borderColor: resolvedTheme.border, backgroundColor: resolvedTheme.surface }}>
                 {hasAvatar ? (
-                  <Image source={{ uri: draftProfile['avatar-url'] }} className="h-full w-full" resizeMode="cover" />
+                  <>
+                    <Image
+                      source={{ uri: safeDraftAvatarUri }}
+                      className="h-full w-full"
+                      resizeMode="cover"
+                      onLoadStart={() => setIsAvatarImageLoading(true)}
+                      onLoadEnd={() => setIsAvatarImageLoading(false)}
+                    />
+                    {isAvatarImageLoading ? (
+                      <Skeleton className="absolute inset-0 rounded-full" theme={resolvedTheme} />
+                    ) : null}
+                  </>
                 ) : (
                   <>
                     <ImagePlus color={resolvedTheme.iconMuted} size={44} strokeWidth={2} />
@@ -909,8 +1048,8 @@ function ProfileDetailsView({ onBack, athleteProfile, onSaveProfile, isSavingPro
               <AppNoticeCard theme={resolvedTheme} body={saveErrorMessage} tone="danger" />
             ) : null}
 
-            {saveNotice || saveSuccessMessage ? (
-              <AppNoticeCard theme={resolvedTheme} body={saveNotice || saveSuccessMessage} tone="accent" />
+            {isSaveNoticeVisible && visibleSaveSuccessMessage ? (
+              <AppNoticeCard theme={resolvedTheme} body={visibleSaveSuccessMessage} tone="accent" />
             ) : null}
 
             <Pressable
@@ -928,12 +1067,7 @@ function ProfileDetailsView({ onBack, athleteProfile, onSaveProfile, isSavingPro
               onPress={handleSave}
               disabled={isSaveDisabled}
             >
-              <View
-                pointerEvents="none"
-                className="absolute inset-x-0 top-0 h-[1px]"
-                style={{ backgroundColor: isSaveDisabled ? resolvedTheme.border : resolvedTheme.buttonHighlight }}
-              />
-              <Text className="text-[18px] font-semibold" style={{ color: isSaveDisabled ? resolvedTheme.textSoft : resolvedTheme.accentText }}>Save Profile</Text>
+              <Text className="text-[18px] font-semibold" style={{ color: isSaveDisabled ? resolvedTheme.textSoft : resolvedTheme.accentText }}>{isSavingProfile ? 'Saving...' : 'Save Profile'}</Text>
             </Pressable>
           </View>
         </ScrollView>
@@ -973,19 +1107,51 @@ function formatProgramSummary(program) {
   return details.filter(Boolean).join(' • ')
 }
 
+function ProgramListSkeletonRows({ theme }) {
+  const resolvedTheme = theme || getAppTheme('dark')
+
+  return (
+    <View>
+      {Array.from({ length: 6 }).map((_, index) => (
+        <View
+          key={`program-skeleton-${index}`}
+          className="flex-row items-center gap-3 py-3"
+          style={index < 5 ? { borderBottomWidth: 1, borderBottomColor: resolvedTheme.border } : null}
+        >
+          <Skeleton className="h-12 w-12 rounded-[14px]" theme={resolvedTheme} />
+          <Skeleton className="h-5 flex-1 rounded-full" theme={resolvedTheme} style={{ maxWidth: index % 2 === 0 ? 190 : 150 }} />
+          <Skeleton className="h-8 w-8 rounded-full" theme={resolvedTheme} />
+        </View>
+      ))}
+    </View>
+  )
+}
+
 function ProgramsView({ onBack, programs, isLoading = false, error = '', onOpenProgramDetail, theme }) {
   const insets = useSafeAreaInsets()
   const resolvedTheme = theme || getAppTheme('dark')
+  const [isInitialProgramsSkeletonVisible, setIsInitialProgramsSkeletonVisible] = useState(true)
   const activePrograms = programs.filter((program) => String(program.status).toLowerCase() === 'active')
   const completedPrograms = programs.filter((program) => String(program.status).toLowerCase() !== 'active')
+  const shouldShowProgramsSkeleton = isLoading || isInitialProgramsSkeletonVisible
+
+  useEffect(() => {
+    const skeletonTimer = setTimeout(() => {
+      setIsInitialProgramsSkeletonVisible(false)
+    }, INITIAL_VIEW_SKELETON_DELAY_MS)
+
+    return () => clearTimeout(skeletonTimer)
+  }, [])
+
+  function ProgramListIcon({ theme }) {
+    return (
+      <View className="h-12 w-12 items-center justify-center rounded-[14px]" style={{ backgroundColor: theme.backgroundMuted, borderWidth: 1, borderColor: theme.border }}>
+        <CalendarRange color={theme.iconMuted} size={24} strokeWidth={2.1} />
+      </View>
+    )
+  }
 
   function renderProgramRows(items, emptyLabel) {
-    if (isLoading) {
-      return (
-        <AppNoticeCard theme={resolvedTheme} body="Loading programs..." centered />
-      )
-    }
-
     if (error) {
       return (
         <AppNoticeCard theme={resolvedTheme} body={error} tone="danger" centered />
@@ -999,16 +1165,17 @@ function ProgramsView({ onBack, programs, isLoading = false, error = '', onOpenP
     }
 
     return (
-      <View className="gap-3">
-        {items.map((program) => (
-          <Pressable key={program.id} onPress={() => onOpenProgramDetail?.(program)}>
-            <AppSurfaceCard theme={resolvedTheme} contentClassName="px-5 py-5">
-              <View className="flex-row items-center justify-between gap-3">
-                <Text className="flex-1 text-[18px] font-semibold" style={{ color: resolvedTheme.text }}>{program.name}</Text>
-                <ChevronRight color={resolvedTheme.iconMuted} size={18} strokeWidth={2.2} />
-              </View>
-            </AppSurfaceCard>
-          </Pressable>
+      <View>
+        {items.map((program, index) => (
+          <AppListRow
+            key={program.id}
+            theme={resolvedTheme}
+            title={program.name}
+            onPress={() => onOpenProgramDetail?.(program)}
+            leading={<ProgramListIcon theme={resolvedTheme} />}
+            trailing={<ChevronRight color={resolvedTheme.iconMuted} size={20} strokeWidth={2.2} />}
+            bordered={index < items.length - 1}
+          />
         ))}
       </View>
     )
@@ -1023,12 +1190,18 @@ function ProgramsView({ onBack, programs, isLoading = false, error = '', onOpenP
           <View className="gap-8">
             <View className="gap-3">
               <Text className="text-[12px] font-semibold uppercase tracking-[1.2px]" style={{ color: resolvedTheme.textSoft }}>{PROGRAMS_VIEW_MODEL.activeSectionTitle}</Text>
-              {renderProgramRows(activePrograms, PROGRAMS_VIEW_MODEL.activeEmptyLabel)}
+              {shouldShowProgramsSkeleton ? (
+                <ProgramListSkeletonRows theme={resolvedTheme} />
+              ) : null}
+              {!shouldShowProgramsSkeleton ? renderProgramRows(activePrograms, PROGRAMS_VIEW_MODEL.activeEmptyLabel) : null}
             </View>
 
             <View className="gap-3">
               <Text className="text-[12px] font-semibold uppercase tracking-[1.2px]" style={{ color: resolvedTheme.textSoft }}>{PROGRAMS_VIEW_MODEL.completedSectionTitle}</Text>
-              {renderProgramRows(completedPrograms, PROGRAMS_VIEW_MODEL.completedEmptyLabel)}
+              {shouldShowProgramsSkeleton ? (
+                <ProgramListSkeletonRows theme={resolvedTheme} />
+              ) : null}
+              {!shouldShowProgramsSkeleton ? renderProgramRows(completedPrograms, PROGRAMS_VIEW_MODEL.completedEmptyLabel) : null}
             </View>
           </View>
         </ScrollView>
@@ -1076,6 +1249,7 @@ function ThemeView({ onBack, themePreference = 'dark', onChangeThemePreference, 
 function UnitsView({ onBack, weightUnitPreference = 'lb', distanceUnitPreference = 'km', onChangeWeightUnitPreference, onChangeDistanceUnitPreference, theme }) {
   const insets = useSafeAreaInsets()
   const resolvedTheme = theme || getAppTheme('dark')
+  const unitsSegmentedControlWidth = 132
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: resolvedTheme.background }}>
@@ -1088,19 +1262,22 @@ function UnitsView({ onBack, weightUnitPreference = 'lb', distanceUnitPreference
             return (
               <View key={row.id} className="flex-row items-center justify-between gap-4">
                 <Text className="text-[22px] font-semibold" style={{ color: resolvedTheme.text }}>{row.label}</Text>
-                <View className="flex-row rounded-[18px] p-1" style={{ borderWidth: 1, borderColor: resolvedTheme.border, backgroundColor: resolvedTheme.surface }}>
+                <View
+                  className="w-[132px] flex-row rounded-[18px] p-1"
+                  style={{ width: unitsSegmentedControlWidth, borderWidth: 1, borderColor: resolvedTheme.border, backgroundColor: resolvedTheme.surface }}
+                >
                   {row.options.map((option) => {
                     const isSelected = option.id === activeOptionId
                     return (
                       <Pressable
                         key={option.id}
-                        className="rounded-[14px] px-5 py-2.5"
+                        className="flex-1 items-center justify-center rounded-[14px] px-5 py-2.5"
                         style={isSelected ? { backgroundColor: resolvedTheme.accentSurface, borderWidth: 1, borderColor: resolvedTheme.accentBorder } : null}
                         onPress={() => row.id === 'weight-unit'
                           ? onChangeWeightUnitPreference?.(option.id)
                           : onChangeDistanceUnitPreference?.(option.id)}
                       >
-                        <Text className="text-[15px] font-semibold" style={{ color: isSelected ? theme.accentText : theme.textSoft }}>{option.label}</Text>
+                        <Text className="text-center text-[15px] font-semibold" style={{ color: isSelected ? theme.accentText : theme.textSoft }}>{option.label}</Text>
                       </Pressable>
                     )
                   })}
@@ -1145,6 +1322,43 @@ function WeekStartView({ onBack, theme }) {
           </View>
 
           <Text className="max-w-[360px] text-[15px] leading-[24px]" style={{ color: resolvedTheme.textSoft }}>{WEEK_START_VIEW_MODEL.description}</Text>
+        </View>
+      </View>
+    </SafeAreaView>
+  )
+}
+
+function LanguagesView({ onBack, languagePreference = 'en', onChangeLanguagePreference, theme }) {
+  const insets = useSafeAreaInsets()
+  const resolvedTheme = theme || getAppTheme('dark')
+  const languageViewModel = getLanguageViewModel(languagePreference)
+
+  return (
+    <SafeAreaView className="flex-1" style={{ backgroundColor: resolvedTheme.background }}>
+      <View className="flex-1 px-5" style={{ paddingTop: Math.max(insets.top, 16), paddingBottom: Math.max(insets.bottom, 20) }}>
+        <AppSheetHeader theme={resolvedTheme} title={languageViewModel.title} onBack={onBack} />
+
+        <View className="gap-4">
+          <View className="flex-row items-center justify-between gap-4">
+            <Text className="text-[22px] font-semibold" style={{ color: resolvedTheme.text }}>{languageViewModel.label}</Text>
+            <View className="flex-row rounded-[18px] p-1" style={{ borderWidth: 1, borderColor: resolvedTheme.border, backgroundColor: resolvedTheme.surface }}>
+              {languageViewModel.options.map((option) => {
+                const isSelected = option.id === languagePreference
+                return (
+                  <Pressable
+                    key={option.id}
+                    className="rounded-[14px] px-5 py-2.5"
+                    style={isSelected ? { backgroundColor: resolvedTheme.accentSurface, borderWidth: 1, borderColor: resolvedTheme.accentBorder } : null}
+                    onPress={() => onChangeLanguagePreference?.(option.id)}
+                  >
+                    <Text className="text-[15px] font-semibold" style={{ color: isSelected ? resolvedTheme.accentText : resolvedTheme.textSoft }}>{option.label}</Text>
+                  </Pressable>
+                )
+              })}
+            </View>
+          </View>
+
+          <Text className="max-w-[360px] text-[15px] leading-[24px]" style={{ color: resolvedTheme.textSoft }}>{languageViewModel.description}</Text>
         </View>
       </View>
     </SafeAreaView>
@@ -1210,11 +1424,6 @@ function ReminderView({ onBack, theme }) {
               elevation: 10,
             }}
           >
-            <View
-              pointerEvents="none"
-              className="absolute inset-x-0 top-0 h-[1px]"
-              style={{ backgroundColor: resolvedTheme.buttonHighlight }}
-            />
             <Text className="text-[18px] font-semibold" style={{ color: resolvedTheme.accentText }}>{REMINDER_VIEW_MODEL.buttonLabel}</Text>
           </Pressable>
 
@@ -1264,7 +1473,7 @@ function ProfileSignOutButton({ onSignOut, theme }) {
   )
 }
 
-function ProfileViewContent({ onClose, onSignOut, athleteProfile, onSaveProfile, isSavingProfile = false, saveNotice = '', role = 'athlete', onOpenAthletes, onOpenExerciseDetail, onOpenProgramDetail, themePreference = 'dark', onChangeThemePreference, weightUnitPreference = 'lb', distanceUnitPreference = 'km', onChangeWeightUnitPreference, onChangeDistanceUnitPreference, theme }) {
+function ProfileViewContent({ onClose, onSignOut, athleteProfile, onSaveProfile, isSavingProfile = false, saveNotice = '', role = 'athlete', athletes = [], selectedAthleteId = null, isAthletesLoading = false, onAthleteActionTarget, onOpenExerciseDetail, onOpenProgramDetail, themePreference = 'dark', onChangeThemePreference, weightUnitPreference = 'lb', distanceUnitPreference = 'km', onChangeWeightUnitPreference, onChangeDistanceUnitPreference, languagePreference = 'en', onChangeLanguagePreference, theme }) {
   const insets = useSafeAreaInsets()
   const [activeScreen, setActiveScreen] = useState('menu')
   const [exerciseLibraryState, setExerciseLibraryState] = useState({ items: [], isLoading: false, error: '' })
@@ -1272,7 +1481,8 @@ function ProfileViewContent({ onClose, onSignOut, athleteProfile, onSaveProfile,
   const [exerciseSearchQuery, setExerciseSearchQuery] = useState('')
   const resolvedTheme = theme || getAppTheme(themePreference)
   const profileIdentity = getProfileIdentityModel(athleteProfile, role)
-  const hasProfileAvatar = Boolean(profileIdentity.avatarUrl)
+  const safeProfileAvatarUri = getSafeProfileImageUri(profileIdentity.avatarUrl)
+  const hasProfileAvatar = Boolean(safeProfileAvatarUri)
   const profileSections = getVisibleProfileSections({ role })
   const filteredExercises = exerciseLibraryState.items.filter((exercise) => {
     const normalizedQuery = exerciseSearchQuery.trim().toLowerCase()
@@ -1345,12 +1555,23 @@ function ProfileViewContent({ onClose, onSignOut, athleteProfile, onSaveProfile,
     setActiveScreen((current) => (current === 'theme' ? 'theme' : current))
   }
 
+  function handleProfileAthleteAction(targetKey, payload) {
+    onAthleteActionTarget?.(targetKey, payload)
+    if (targetKey === 'coach-athlete-select' || targetKey === 'coach-athlete-invite') {
+      onClose?.()
+    }
+  }
+
   if (activeScreen === 'profile-details') {
     return <ProfileDetailsView onBack={() => setActiveScreen('menu')} athleteProfile={athleteProfile} onSaveProfile={onSaveProfile} isSavingProfile={isSavingProfile} saveNotice={saveNotice} role={role} theme={resolvedTheme} />
   }
 
   if (activeScreen === 'exercises') {
     return <ExercisesView onBack={() => setActiveScreen('menu')} exercises={filteredExercises} isLoading={exerciseLibraryState.isLoading} error={exerciseLibraryState.error} searchQuery={exerciseSearchQuery} onSearchChange={setExerciseSearchQuery} onOpenExerciseDetail={onOpenExerciseDetail} theme={resolvedTheme} />
+  }
+
+  if (activeScreen === 'athletes') {
+    return <CoachAthletesSheetContent onClose={() => setActiveScreen('menu')} athletes={athletes} selectedAthleteId={selectedAthleteId} isLoading={isAthletesLoading} onActionTarget={handleProfileAthleteAction} theme={resolvedTheme} />
   }
 
   if (activeScreen === 'programs') {
@@ -1373,6 +1594,10 @@ function ProfileViewContent({ onClose, onSignOut, athleteProfile, onSaveProfile,
     return <ReminderView onBack={() => setActiveScreen('menu')} theme={resolvedTheme} />
   }
 
+  if (activeScreen === 'languages') {
+    return <LanguagesView onBack={() => setActiveScreen('menu')} languagePreference={languagePreference} onChangeLanguagePreference={onChangeLanguagePreference} theme={resolvedTheme} />
+  }
+
   if (activeScreen === 'apple-health') {
     return <AppleHealthView onBack={() => setActiveScreen('menu')} theme={resolvedTheme} />
   }
@@ -1384,8 +1609,7 @@ function ProfileViewContent({ onClose, onSignOut, athleteProfile, onSaveProfile,
     }
 
     if (item?.id === 'athletes') {
-      onOpenAthletes?.()
-      onClose?.()
+      setActiveScreen('athletes')
       return
     }
 
@@ -1413,6 +1637,10 @@ function ProfileViewContent({ onClose, onSignOut, athleteProfile, onSaveProfile,
       setActiveScreen('reminder')
     }
 
+    if (item?.id === 'languages') {
+      setActiveScreen('languages')
+    }
+
     if (item?.id === 'apple-health') {
       setActiveScreen('apple-health')
     }
@@ -1433,7 +1661,7 @@ function ProfileViewContent({ onClose, onSignOut, athleteProfile, onSaveProfile,
             <View className="items-center gap-3 pb-2">
               <View className="h-28 w-28 items-center justify-center overflow-hidden rounded-full" style={{ borderWidth: 1, borderColor: resolvedTheme.border, backgroundColor: resolvedTheme.surface }}>
                 {hasProfileAvatar ? (
-                  <Image source={{ uri: profileIdentity.avatarUrl }} className="h-full w-full" resizeMode="cover" />
+                  <Image source={{ uri: safeProfileAvatarUri }} className="h-full w-full" resizeMode="cover" />
                 ) : (
                   <UserCircle2 color={resolvedTheme.iconMuted} size={68} strokeWidth={1.8} />
                 )}
@@ -1454,11 +1682,11 @@ function ProfileViewContent({ onClose, onSignOut, athleteProfile, onSaveProfile,
   )
 }
 
-export function ProfileView({ isVisible, onClose, onSignOut, athleteProfile, onSaveProfile, isSavingProfile = false, saveNotice = '', role = 'athlete', onOpenAthletes, onOpenExerciseDetail, onOpenProgramDetail, themePreference = 'dark', onChangeThemePreference, weightUnitPreference = 'lb', distanceUnitPreference = 'km', onChangeWeightUnitPreference, onChangeDistanceUnitPreference, theme }) {
+export function ProfileView({ isVisible, onClose, onSignOut, athleteProfile, onSaveProfile, isSavingProfile = false, saveNotice = '', role = 'athlete', athletes = [], selectedAthleteId = null, isAthletesLoading = false, onAthleteActionTarget, onOpenExerciseDetail, onOpenProgramDetail, themePreference = 'dark', onChangeThemePreference, weightUnitPreference = 'lb', distanceUnitPreference = 'km', onChangeWeightUnitPreference, onChangeDistanceUnitPreference, languagePreference = 'en', onChangeLanguagePreference, theme }) {
   return (
     <Modal visible={isVisible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaProvider>
-        <ProfileViewContent onClose={onClose} onSignOut={onSignOut} athleteProfile={athleteProfile} onSaveProfile={onSaveProfile} isSavingProfile={isSavingProfile} saveNotice={saveNotice} role={role} onOpenAthletes={onOpenAthletes} onOpenExerciseDetail={onOpenExerciseDetail} onOpenProgramDetail={onOpenProgramDetail} themePreference={themePreference} onChangeThemePreference={onChangeThemePreference} weightUnitPreference={weightUnitPreference} distanceUnitPreference={distanceUnitPreference} onChangeWeightUnitPreference={onChangeWeightUnitPreference} onChangeDistanceUnitPreference={onChangeDistanceUnitPreference} theme={theme} />
+        <ProfileViewContent onClose={onClose} onSignOut={onSignOut} athleteProfile={athleteProfile} onSaveProfile={onSaveProfile} isSavingProfile={isSavingProfile} saveNotice={saveNotice} role={role} athletes={athletes} selectedAthleteId={selectedAthleteId} isAthletesLoading={isAthletesLoading} onAthleteActionTarget={onAthleteActionTarget} onOpenExerciseDetail={onOpenExerciseDetail} onOpenProgramDetail={onOpenProgramDetail} themePreference={themePreference} onChangeThemePreference={onChangeThemePreference} weightUnitPreference={weightUnitPreference} distanceUnitPreference={distanceUnitPreference} onChangeWeightUnitPreference={onChangeWeightUnitPreference} onChangeDistanceUnitPreference={onChangeDistanceUnitPreference} languagePreference={languagePreference} onChangeLanguagePreference={onChangeLanguagePreference} theme={theme} />
       </SafeAreaProvider>
     </Modal>
   )

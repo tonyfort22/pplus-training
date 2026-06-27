@@ -1,22 +1,8 @@
-import { createAdminProgramRepository } from '@/lib/admin-program-repository'
+import { createAdminProgramRouteHandlers } from '@/lib/admin-program-route-handlers'
 
-function json(payload, init = {}) {
-  return Response.json(payload, init)
-}
+const handlers = createAdminProgramRouteHandlers()
 
-function handleRouteError(error) {
-  return json(
-    { error: error?.message || 'Unknown admin programs route error' },
-    { status: error?.status || 500 },
-  )
-}
-
-export async function GET() {
-  try {
-    const repository = createAdminProgramRepository()
-    const programs = await repository.listPrograms()
-    return json({ programs })
-  } catch (error) {
-    return handleRouteError(error)
-  }
-}
+export const GET = handlers.GET
+export const POST = handlers.POST
+export const PATCH = handlers.PATCH
+export const DELETE = handlers.DELETE

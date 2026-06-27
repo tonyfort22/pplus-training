@@ -14,6 +14,14 @@ function getExerciseThumbnailIcon(name) {
   return 'dumbbell'
 }
 
+function getExerciseThumbnailUrl(exercise = {}) {
+  return exercise.thumbnailUrl || exercise.thumbnail_url || null
+}
+
+function getWorkoutDetailThumbnailIcon(exercise = {}, name = '') {
+  return getExerciseThumbnailUrl(exercise) ? getExerciseThumbnailIcon(name) : 'dumbbell'
+}
+
 function getWeightHeader(name) {
   return name.toLowerCase().includes('assisted') ? '-LB' : 'LB'
 }
@@ -96,7 +104,8 @@ function getSessionWorkoutModel(session, workoutModel, selectedDayId) {
       programWorkoutId: getComparableProgramWorkoutId(session),
       sortOrder: exercise.sortOrder ?? 0,
       name: exercise.nameSnapshot || exercise.name,
-      thumbnailIcon: getExerciseThumbnailIcon(exercise.nameSnapshot || exercise.name || ''),
+      thumbnailUrl: getExerciseThumbnailUrl(exercise),
+      thumbnailIcon: getWorkoutDetailThumbnailIcon(exercise, exercise.nameSnapshot || exercise.name || ''),
       weightHeader: getWeightHeader(exercise.nameSnapshot || exercise.name || ''),
       restLabel: formatRestLabel(exercise.defaultRestSeconds),
       utilityIcon: 'arrow-up-down',
@@ -127,7 +136,8 @@ function getProgramWorkoutModel(programWorkout, workoutModel, selectedDayId) {
       programWorkoutId: programWorkout?.id || null,
       sortOrder: exercise.sortOrder ?? 0,
       name: exercise.nameSnapshot,
-      thumbnailIcon: getExerciseThumbnailIcon(exercise.nameSnapshot || ''),
+      thumbnailUrl: getExerciseThumbnailUrl(exercise),
+      thumbnailIcon: getWorkoutDetailThumbnailIcon(exercise, exercise.nameSnapshot || ''),
       weightHeader: getWeightHeader(exercise.nameSnapshot || ''),
       restLabel: formatRestLabel(exercise.defaultRestSeconds),
       utilityIcon: 'arrow-up-down',
@@ -162,7 +172,8 @@ export function getWorkoutSheetModel({ workoutModel, session, programWorkout = n
       programWorkoutId: getComparableProgramWorkoutId(workoutModel),
       sortOrder: exercise.sortOrder ?? 0,
       name: exercise.name,
-      thumbnailIcon: getExerciseThumbnailIcon(exercise.name),
+      thumbnailUrl: getExerciseThumbnailUrl(exercise),
+      thumbnailIcon: getWorkoutDetailThumbnailIcon(exercise, exercise.name),
       weightHeader: getWeightHeader(exercise.name),
       restLabel: exercise.defaultRestLabel,
       utilityIcon: 'arrow-up-down',

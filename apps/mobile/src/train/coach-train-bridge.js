@@ -1,6 +1,11 @@
 import { getAssignedProgramWorkoutIdForDate } from './assigned-program-workout-id.js';
 import { createAssignedProgramTrainState, createTrainSessionStore } from './index.js';
 
+function normalizeCoachAthleteProfileId(athleteId) {
+  const value = String(athleteId || '').trim();
+  return value.startsWith('coach-athlete-') ? value.slice('coach-athlete-'.length) : value;
+}
+
 export async function hydrateCoachTrainBridge({
   athleteId,
   currentUserId,
@@ -14,17 +19,18 @@ export async function hydrateCoachTrainBridge({
   createAssignedProgramTrainStateOverride = createAssignedProgramTrainState,
   getAssignedProgramWorkoutIdForDateOverride = getAssignedProgramWorkoutIdForDate,
 } = {}) {
+  const resolvedAthleteId = normalizeCoachAthleteProfileId(athleteId);
   const sessionStore = createTrainSessionStoreOverride({
-    currentAthleteId: athleteId,
+    currentAthleteId: resolvedAthleteId,
     currentUserId,
     accessToken: accessTokenProvider || accessToken,
     refreshAccessToken,
   });
 
   const [assignedProgram, todayProgramWorkout, completedSessions] = await Promise.all([
-    programClient?.getAssignedProgramForAthlete?.(athleteId) || null,
+    programClient?.getAssignedProgramForAthlete?.(resolvedAthleteId) || null,
     sessionStore.getProgramWorkout({ onDate: todayIsoDate }),
-    workoutClient?.getCompletedSessionsByAthleteId?.(athleteId) || [],
+    workoutClient?.getCompletedSessionsByAthleteId?.(resolvedAthleteId) || [],
   ]);
 
   const seededCoachTrainState = assignedProgram?.id
@@ -47,8 +53,8 @@ export async function hydrateCoachTrainBridge({
     : null;
   const fallbackHydratedSession = fallbackHydratedSessionByProgramWorkout?.id
     ? fallbackHydratedSessionByProgramWorkout
-    : (!hydratedSession?.id && athleteId
-      ? await workoutClient?.getInProgressSessionByAthleteId?.(athleteId)
+    : (!hydratedSession?.id && resolvedAthleteId
+      ? await workoutClient?.getInProgressSessionByAthleteId?.(resolvedAthleteId)
       : null);
 
   return {

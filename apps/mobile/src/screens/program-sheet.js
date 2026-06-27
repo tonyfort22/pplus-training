@@ -13,47 +13,58 @@ function ProgramSheetStatIcon({ icon, theme }) {
 }
 
 function ProgramSheetStatusBadge({ status, theme }) {
-  return <AppStatusIconBadge status={status} theme={theme} size="sm" />
+  return <AppStatusIconBadge status={status} theme={theme} size="xs" />
 }
 
-function ProgramSheetWeekCard({ week, theme, onOpenWorkoutDetail }) {
+function ProgramSheetWeekCard({ week, theme, onOpenWorkoutDetail, onOpenTrainingCalendar }) {
   return (
-    <AppSurfaceCard theme={theme} contentClassName="gap-3.5 px-[18px] py-[18px]" containerClassName="rounded-3xl overflow-hidden">
+    <AppSurfaceCard
+      theme={theme}
+      onPress={onOpenTrainingCalendar}
+      contentClassName="gap-3.5 px-[18px] py-[18px]"
+      containerClassName="rounded-3xl overflow-hidden"
+    >
       <Text className="text-[13px] font-semibold" style={{ color: theme.textSoft }}>{week.dateRangeLabel}</Text>
       <Text className="text-2xl font-bold" style={{ color: theme.text }}>{week.title}</Text>
 
       <View className="gap-1.5">
-        {week.entries.map((entry, index) => (
-          <View
-            key={entry.id}
-            className="flex-row items-center justify-between gap-4 py-3"
-          >
-            <View className="w-12 shrink-0 pr-2">
-              <Text className="text-[14px] font-semibold uppercase" style={{ color: theme.textSoft }}>{entry.dayLabel}</Text>
-            </View>
-            {entry.status === 'rest' ? (
-              <View className="flex-1 flex-row items-center gap-3">
-                <View className="h-px flex-1" style={{ backgroundColor: theme.borderStrong }} />
-                <Text className="text-xs font-semibold" style={{ color: theme.textSoft }}>Rest Day</Text>
-                <View className="h-px flex-1" style={{ backgroundColor: theme.borderStrong }} />
+        {week.entries.map((entry) => {
+          const restDividerColor = entry.isProgramEnd ? theme.accent : theme.borderStrong
+          const restTextColor = entry.isProgramEnd ? theme.accentText : theme.textSoft
+          const restLabel = entry.isProgramEnd ? 'Program End' : 'Rest Day'
+
+          return (
+            <View
+              key={entry.id}
+              className="flex-row items-center justify-between gap-3 py-2.5"
+            >
+              <View className="w-10 shrink-0 pr-2">
+                <Text className="text-[11px] font-semibold uppercase" style={{ color: theme.textSoft }}>{entry.dayLabel}</Text>
               </View>
-            ) : (
-              <>
-                <Pressable className="flex-1 gap-1" onPress={() => onOpenWorkoutDetail?.(entry)}>
-                  <Text className="text-[16px] font-semibold" style={{ color: theme.text }}>{entry.workoutLabel}</Text>
-                  <Text className="text-[14px]" style={{ color: theme.textSoft }}>{entry.durationLabel}</Text>
-                </Pressable>
-                <ProgramSheetStatusBadge status={entry.status} theme={theme} />
-              </>
-            )}
-          </View>
-        ))}
+              {entry.status === 'rest' ? (
+                <View className="flex-1 flex-row items-center gap-3">
+                  <View className="h-px flex-1" style={{ backgroundColor: restDividerColor }} />
+                  <Text className="text-[11px] font-semibold" style={{ color: restTextColor }}>{restLabel}</Text>
+                  <View className="h-px flex-1" style={{ backgroundColor: restDividerColor }} />
+                </View>
+              ) : (
+                <>
+                  <Pressable className="flex-1" onPress={() => onOpenWorkoutDetail?.(entry)}>
+                    <Text className="text-[14px] font-semibold" style={{ color: theme.text }}>{entry.workoutLabel}</Text>
+                  </Pressable>
+                  {entry.durationLabel ? <Text className="text-[12px] font-medium" style={{ color: theme.textSoft }}>{entry.durationLabel}</Text> : null}
+                  <ProgramSheetStatusBadge status={entry.status} theme={theme} />
+                </>
+              )}
+            </View>
+          )
+        })}
       </View>
     </AppSurfaceCard>
   )
 }
 
-function ProgramSheetContent({ model, theme, onClose, onEditProgram, onOpenWorkoutDetail }) {
+function ProgramSheetContent({ model, theme, onClose, onEditProgram, onOpenWorkoutDetail, onOpenTrainingCalendar }) {
   const insets = useSafeAreaInsets()
   const resolvedTheme = theme || getAppTheme('dark')
 
@@ -130,7 +141,7 @@ function ProgramSheetContent({ model, theme, onClose, onEditProgram, onOpenWorko
               <Text className="text-lg font-semibold" style={{ color: resolvedTheme.textMuted }}>Schedule</Text>
               <View className="gap-4">
                 {model.weeks.map((week) => (
-                  <ProgramSheetWeekCard key={week.id} week={week} theme={resolvedTheme} onOpenWorkoutDetail={onOpenWorkoutDetail} />
+                  <ProgramSheetWeekCard key={week.id} week={week} theme={resolvedTheme} onOpenWorkoutDetail={onOpenWorkoutDetail} onOpenTrainingCalendar={onOpenTrainingCalendar} />
                 ))}
               </View>
             </View>
@@ -141,7 +152,7 @@ function ProgramSheetContent({ model, theme, onClose, onEditProgram, onOpenWorko
   )
 }
 
-export function renderProgramSheet({ isVisible, onClose, onEditProgram, onOpenWorkoutDetail, model, theme }) {
+export function renderProgramSheet({ isVisible, onClose, onEditProgram, onOpenWorkoutDetail, onOpenTrainingCalendar, model, theme }) {
   if (!model) {
     return null
   }
@@ -149,7 +160,7 @@ export function renderProgramSheet({ isVisible, onClose, onEditProgram, onOpenWo
   return (
     <Modal visible={isVisible} animationType="slide" onRequestClose={onClose}>
       <SafeAreaProvider>
-        <ProgramSheetContent model={model} theme={theme} onClose={onClose} onEditProgram={onEditProgram} onOpenWorkoutDetail={onOpenWorkoutDetail} />
+        <ProgramSheetContent model={model} theme={theme} onClose={onClose} onEditProgram={onEditProgram} onOpenWorkoutDetail={onOpenWorkoutDetail} onOpenTrainingCalendar={onOpenTrainingCalendar} />
       </SafeAreaProvider>
     </Modal>
   )

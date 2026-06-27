@@ -12,7 +12,7 @@ import {
   shouldPreserveIncomingSession,
   shouldUseFallbackWorkout,
 } from '../apps/mobile/src/train/session-orchestration.js';
-import { orchestrateStartWorkoutFromSheet } from '../apps/mobile/src/train/start-workout-selection.js';
+import { orchestrateStartWorkoutFromSheet, scheduleActiveWorkoutOpen, mergeResolvedStartWorkoutSession } from '../apps/mobile/src/train/start-workout-selection.js';
 import { orchestrateOpenOrResumeSession } from '../apps/mobile/src/train/open-resume-selection.js';
 import { orchestrateCloseProgramSheet, orchestrateOpenProgramSheet } from '../apps/mobile/src/train/open-program-selection.js';
 import { orchestrateCloseExerciseDetail, orchestrateOpenExerciseDetail } from '../apps/mobile/src/train/open-exercise-detail-selection.js';
@@ -32,6 +32,8 @@ import {
   orchestrateDeleteSessionSet,
   orchestrateDismissRestTimer,
   orchestrateExerciseRestTimeChange,
+  orchestrateCreateSessionSuperset,
+  orchestrateRemoveSessionSuperset,
   orchestrateFinishWorkout,
   orchestrateDiscardWorkout,
   orchestrateMoveActiveWorkoutExercise,
@@ -72,6 +74,74 @@ import {
   logStartWorkoutOpenActiveWorkoutView,
 } from '../apps/mobile/src/train/session-diagnostics.js';
 
+test('scheduleActiveWorkoutOpen opens the active workout through the interaction handoff', () => {
+  const calls = [];
+
+  scheduleActiveWorkoutOpen({
+    setIsActiveWorkoutViewOpen: (value) => calls.push(['setIsActiveWorkoutViewOpen', value]),
+    runAfterInteractions: (callback) => {
+      calls.push(['runAfterInteractions']);
+      callback();
+    },
+  });
+
+  assert.deepEqual(calls, [
+    ['runAfterInteractions'],
+    ['setIsActiveWorkoutViewOpen', true],
+  ]);
+});
+
+test('mergeResolvedStartWorkoutSession preserves rich optimistic exercises when Supabase returns a thin started row', () => {
+  const mergedSession = mergeResolvedStartWorkoutSession({
+    optimisticSession: {
+      id: 'pw-upper-b',
+      programWorkoutId: 'pw-upper-b',
+      status: 'in_progress',
+      startedAt: '2026-04-30T02:00:00.000Z',
+      elapsedSeconds: 0,
+      totalExercisesCount: 1,
+      totalSetsCount: 1,
+      completedExercisesCount: 0,
+      completedSetsCount: 0,
+      exercises: [{ id: 'exercise-1', sets: [{ id: 'set-1', isCompleted: false }] }],
+    },
+    resolvedSession: {
+      id: 'session-new',
+      programWorkoutId: 'pw-upper-b',
+      status: 'in_progress',
+      startedAt: '2026-04-30T02:00:01.000Z',
+      exercises: [],
+      totalExercisesCount: 0,
+      totalSetsCount: 0,
+    },
+  });
+
+  assert.equal(mergedSession.id, 'session-new');
+  assert.equal(mergedSession.programWorkoutId, 'pw-upper-b');
+  assert.equal(mergedSession.exercises.length, 1);
+  assert.equal(mergedSession.totalExercisesCount, 1);
+  assert.equal(mergedSession.totalSetsCount, 1);
+});
+
+test('mergeResolvedStartWorkoutSession trusts the resolved session when it has its own exercises', () => {
+  const mergedSession = mergeResolvedStartWorkoutSession({
+    optimisticSession: {
+      id: 'pw-upper-b',
+      programWorkoutId: 'pw-upper-b',
+      status: 'in_progress',
+      exercises: [{ id: 'optimistic-exercise' }],
+    },
+    resolvedSession: {
+      id: 'session-new',
+      programWorkoutId: 'pw-upper-b',
+      status: 'in_progress',
+      exercises: [{ id: 'resolved-exercise' }],
+    },
+  });
+
+  assert.equal(mergedSession.exercises[0].id, 'resolved-exercise');
+});
+
 test('resolveIncomingSession preserves the richer in-progress session when the incoming copy is thin but same lineage', () => {
   const currentSession = {
     id: 'session-1',
@@ -95,7 +165,130 @@ test('resolveIncomingSession preserves the richer in-progress session when the i
   assert.equal(resolvedSession, currentSession);
 });
 
-test('shouldPreserveIncomingSession exposes the thin-session preservation rule for diagnostics', () => {
+test('resolveIncomingSession preserves optimistic superset rails when incoming sync is same session without superset metadata', () => {
+  const currentSession = {
+    id: 'session-rails-1',
+    programWorkoutId: 'pw-rails-1',
+    status: 'in_progress',
+    exercises: [
+      { id: 'exercise-1', nameSnapshot: 'Bench Press', supersetGroupId: 'local-superset-exercise-1-exercise-2', supersetOrder: 1, sets: [{ id: 'set-1' }] },
+      { id: 'exercise-2', nameSnapshot: 'Pull Up', supersetGroupId: 'local-superset-exercise-1-exercise-2', supersetOrder: 2, sets: [{ id: 'set-2' }] },
+    ],
+  };
+  const incomingWithoutRails = {
+    id: 'session-rails-1',
+    programWorkoutId: 'pw-rails-1',
+    status: 'in_progress',
+    exercises: [
+      { id: 'exercise-1', nameSnapshot: 'Bench Press', supersetGroupId: null, supersetOrder: null, sets: [{ id: 'set-1' }] },
+      { id: 'exercise-2', nameSnapshot: 'Pull Up', supersetGroupId: null, supersetOrder: null, sets: [{ id: 'set-2' }] },
+    ],
+  };
+
+  const resolvedSession = resolveIncomingSession({
+    currentSession,
+    nextSession: incomingWithoutRails,
+    isActiveWorkoutViewOpen: true,
+  });
+
+  assert.equal(resolvedSession, currentSession);
+});
+
+test('resolveIncomingSession preserves the rich start handoff session before Active Workout opens', () => {
+  const currentSession = {
+    id: 'session-speed-c',
+    programWorkoutId: 'pw-speed-c',
+    status: 'in_progress',
+    nameSnapshot: 'Phase 4 Speed Accelerator C',
+    exercises: [{ id: 'pwe-speed-1', nameSnapshot: '10-0-5 Lateral Cross Under Push', sets: [{ id: 'pws-speed-1' }] }],
+    totalExercisesCount: 1,
+    totalSetsCount: 1,
+  };
+  const thinIncomingSession = {
+    id: 'session-speed-c',
+    programWorkoutId: 'pw-speed-c',
+    status: 'in_progress',
+    nameSnapshot: 'Workout Session',
+    exercises: [],
+    totalExercisesCount: 0,
+    totalSetsCount: 0,
+  };
+
+  const resolvedSession = resolveIncomingSession({
+    currentSession,
+    nextSession: thinIncomingSession,
+    isStartingWorkout: true,
+    isActiveWorkoutViewOpen: false,
+  });
+
+  assert.equal(resolvedSession, currentSession);
+});
+
+test('resolveIncomingSession preserves the rich start handoff session when sync emits an empty planned shell with no lineage', () => {
+  const currentSession = {
+    id: 'e4b29f5d-16be-4f31-994e-4509c2d747cc',
+    programWorkoutId: 'e4b29f5d-16be-4f31-994e-4509c2d747cc',
+    status: 'in_progress',
+    nameSnapshot: 'Phase 4 Speed Accelerator C',
+    exercises: Array.from({ length: 10 }, (_, index) => ({ id: `exercise-${index + 1}`, sets: [{ id: `set-${index + 1}` }] })),
+    totalExercisesCount: 10,
+    totalSetsCount: 10,
+  };
+  const emptyIncomingShell = {
+    id: null,
+    programWorkoutId: null,
+    status: 'planned',
+    exercises: [],
+    totalExercisesCount: 0,
+    totalSetsCount: 0,
+  };
+
+  const resolvedSession = resolveIncomingSession({
+    currentSession,
+    nextSession: emptyIncomingShell,
+    isStartingWorkout: true,
+    isActiveWorkoutViewOpen: false,
+  });
+
+  assert.equal(resolvedSession, currentSession);
+});
+
+test('resolveIncomingSession keeps the cleared visible session when a just-discarded session rehydrates from sync', () => {
+  const clearedSession = { id: null, status: 'idle', exercises: [] };
+  const discardedRehydrate = {
+    id: 'session-discarded-1',
+    programWorkoutId: 'pw-upper-b',
+    status: 'in_progress',
+    startedAt: '2026-06-10T19:36:57.672Z',
+    exercises: [{ id: 'exercise-1', sets: [{ id: 'set-1' }] }],
+  };
+
+  assert.equal(resolveIncomingSession({
+    currentSession: clearedSession,
+    nextSession: discardedRehydrate,
+    ignoredSessionIds: new Set(['session-discarded-1']),
+  }), clearedSession);
+});
+
+test('shouldPreserveIncomingSession protects an open active workout from stale planned previews', () => {
+  assert.equal(shouldPreserveIncomingSession({
+    currentSession: {
+      id: 'session-1',
+      programWorkoutId: 'pw-lower-a',
+      status: 'in_progress',
+      startedAt: '2026-06-10T19:36:57.672Z',
+      exercises: [{ id: 'exercise-1', sets: [{ id: 'set-1' }] }],
+    },
+    nextSession: {
+      id: 'pw-lower-a',
+      programWorkoutId: 'pw-lower-a',
+      status: 'planned',
+      startedAt: null,
+      exercises: [{ id: 'exercise-1', sets: [{ id: 'set-1' }] }],
+    },
+    isActiveWorkoutViewOpen: true,
+  }), true);
+
   assert.equal(shouldPreserveIncomingSession({
     currentSession: {
       id: 'session-1',
@@ -161,6 +354,47 @@ test('buildStartWorkoutPlan resumes the stored session when lineage matches the 
   assert.equal(plan.shouldStartNewSession, false);
 });
 
+test('buildStartWorkoutPlan creates a rich immediate session when resuming a thin stored session for the selected workout', () => {
+  const startedAt = '2026-06-13T19:52:00.000Z';
+  const plan = buildStartWorkoutPlan({
+    session: {
+      id: 'session-speed-c',
+      programWorkoutId: 'pw-speed-c',
+      status: 'in_progress',
+      nameSnapshot: 'Workout Session',
+      exercises: [],
+      totalExercisesCount: 0,
+      totalSetsCount: 0,
+    },
+    storedSessionId: 'session-speed-c',
+    selectedWorkoutSessionPreview: null,
+    workoutSheetModel: {
+      title: 'Workout Session',
+      programWorkoutId: 'pw-speed-c',
+      exercises: [],
+    },
+    programWorkout: {
+      id: 'pw-speed-c',
+      nameSnapshot: 'Phase 4 Speed Accelerator C',
+      exercises: [{
+        id: 'pwe-speed-1',
+        nameSnapshot: '10-0-5 Lateral Cross Under Push',
+        sets: [{ id: 'pws-speed-1', prescribedReps: 1 }],
+      }],
+    },
+    selectedProgramWorkoutId: 'pw-speed-c',
+    startedAt,
+  });
+
+  assert.equal(plan.shouldResumeStoredSession, true);
+  assert.equal(plan.resumeSessionId, 'session-speed-c');
+  assert.equal(plan.shouldStartNewSession, false);
+  assert.equal(plan.optimisticSession?.nameSnapshot, 'Phase 4 Speed Accelerator C');
+  assert.equal(plan.optimisticSession?.totalExercisesCount, 1);
+  assert.equal(plan.optimisticSession?.totalSetsCount, 1);
+  assert.equal(plan.optimisticSession?.exercises?.[0]?.nameSnapshot, '10-0-5 Lateral Cross Under Push');
+});
+
 test('buildStartWorkoutPlan prioritizes the explicit selected program workout id over the current workout sheet model when resuming an already active workout', () => {
   const startedAt = '2026-04-23T20:00:00.000Z';
   const plan = buildStartWorkoutPlan({
@@ -215,10 +449,15 @@ test('buildStartWorkoutPlan creates an optimistic session when the selected prev
   assert.equal(plan.shouldStartNewSession, true);
   assert.deepEqual(plan.optimisticSession, {
     ...selectedWorkoutSessionPreview,
+    status: 'in_progress',
     startedAt,
     elapsedSeconds: 0,
     completedAt: null,
+    discardedAt: null,
+    completedExercisesCount: 0,
+    completedSetsCount: 0,
     activeRestTimer: null,
+    exercises: [{ id: 'exercise-1', status: 'not_started', sets: [] }],
   });
 });
 
@@ -289,6 +528,211 @@ test('buildStartWorkoutPlan creates an optimistic session from the visible worko
   assert.equal(plan.optimisticSession?.startedAt, startedAt);
   assert.equal(plan.optimisticSession?.exercises?.[0]?.nameSnapshot, 'Bench Press');
   assert.equal(plan.optimisticSession?.exercises?.[0]?.sets?.[0]?.prescribedReps, 5);
+});
+
+test('buildStartWorkoutPlan ignores a thin same-lineage session preview and uses the visible workout sheet model', () => {
+  const plan = buildStartWorkoutPlan({
+    session: {
+      id: 'session-other',
+      programWorkoutId: 'pw-other',
+      status: 'planned',
+    },
+    storedSessionId: null,
+    selectedWorkoutSessionPreview: {
+      id: 'completed-session-thin',
+      programWorkoutId: 'pw-upper-b',
+      status: 'completed',
+      exercises: [],
+      totalExercisesCount: 0,
+      totalSetsCount: 0,
+    },
+    workoutSheetModel: {
+      title: 'Upper B',
+      programWorkoutId: 'pw-upper-b',
+      exercises: [{
+        id: 'exercise-1',
+        exerciseId: 'exercise-1',
+        programWorkoutExerciseId: 'pwe-1',
+        sortOrder: 1,
+        name: 'Bench Press',
+        sets: [{ id: 'set-1', programWorkoutSetId: 'pws-1', reps: '5', load: '135', effort: '8' }],
+      }],
+    },
+    selectedProgramWorkoutId: 'pw-upper-b',
+    startedAt: '2026-04-23T20:00:00.000Z',
+  });
+
+  assert.equal(plan.optimisticSession?.id, 'pw-upper-b');
+  assert.equal(plan.optimisticSession?.status, 'in_progress');
+  assert.equal(plan.optimisticSession?.exercises?.length, 1);
+  assert.equal(plan.optimisticSession?.totalExercisesCount, 1);
+  assert.equal(plan.optimisticSession?.totalSetsCount, 1);
+  assert.equal(plan.optimisticSession?.exercises?.[0]?.nameSnapshot, 'Bench Press');
+});
+
+test('buildStartWorkoutPlan falls back to the resolved program workout when the visible sheet model is still thin', () => {
+  const plan = buildStartWorkoutPlan({
+    session: {
+      id: 'session-other',
+      programWorkoutId: 'pw-other',
+      status: 'planned',
+    },
+    storedSessionId: null,
+    selectedWorkoutSessionPreview: null,
+    workoutSheetModel: {
+      title: 'Workout Session',
+      programWorkoutId: 'pw-speed-c',
+      exercises: [],
+    },
+    programWorkout: {
+      id: 'pw-speed-c',
+      nameSnapshot: 'Phase 4 Speed Accelerator C',
+      exercises: [{
+        id: 'pwe-speed-1',
+        exerciseId: 'exercise-speed-1',
+        sortOrder: 1,
+        nameSnapshot: '10-0-5 Lateral Cross Under Push',
+        sets: [
+          { id: 'pws-speed-1', sortOrder: 1, prescribedReps: 1, prescribedLoad: 0, prescribedRpe: 6 },
+          { id: 'pws-speed-2', sortOrder: 2, prescribedReps: 1, prescribedLoad: 0, prescribedRpe: 7 },
+        ],
+      }],
+    },
+    selectedProgramWorkoutId: 'pw-speed-c',
+    startedAt: '2026-06-13T19:33:00.000Z',
+  });
+
+  assert.equal(plan.optimisticSession?.id, 'pw-speed-c');
+  assert.equal(plan.optimisticSession?.nameSnapshot, 'Phase 4 Speed Accelerator C');
+  assert.equal(plan.optimisticSession?.totalExercisesCount, 1);
+  assert.equal(plan.optimisticSession?.totalSetsCount, 2);
+  assert.equal(plan.optimisticSession?.exercises?.[0]?.nameSnapshot, '10-0-5 Lateral Cross Under Push');
+  assert.equal(plan.optimisticSession?.exercises?.[0]?.sets?.[0]?.prescribedReps, 1);
+  assert.equal(plan.optimisticSession?.exercises?.[0]?.sets?.[1]?.prescribedRpe, 7);
+});
+
+test('mergeResolvedStartWorkoutSession preserves the visible workout title when the resolved rich session has the same lineage', () => {
+  const mergedSession = mergeResolvedStartWorkoutSession({
+    optimisticSession: {
+      id: 'pw-speed-c',
+      programWorkoutId: 'pw-speed-c',
+      nameSnapshot: 'Phase 4 Speed Accelerator C',
+      exercises: [{ id: 'pwe-speed-1', sets: [{ id: 'pws-speed-1' }] }],
+    },
+    resolvedSession: {
+      id: 'session-speed-c',
+      programWorkoutId: 'pw-speed-c',
+      nameSnapshot: 'Phase 4 Speed Accelerator',
+      exercises: [{ id: 'resolved-exercise-1', sets: [{ id: 'resolved-set-1' }] }],
+    },
+  });
+
+  assert.equal(mergedSession.nameSnapshot, 'Phase 4 Speed Accelerator C');
+  assert.equal(mergedSession.id, 'session-speed-c');
+  assert.equal(mergedSession.exercises?.[0]?.id, 'resolved-exercise-1');
+});
+
+test('orchestrateStartWorkoutFromSheet opens an optimistic program workout instead of a blank manual session when the sheet model is thin', async () => {
+  const setSessionCalls = [];
+  const activeViewCalls = [];
+
+  const result = await orchestrateStartWorkoutFromSheet({
+    effectiveSessionStore: {
+      getCurrentSessionId: () => null,
+      startSession: async () => ({
+        session: {
+          id: 'session-speed-c',
+          programWorkoutId: 'pw-speed-c',
+          status: 'in_progress',
+          nameSnapshot: 'Workout Session',
+          exercises: [],
+          totalExercisesCount: 0,
+          totalSetsCount: 0,
+        },
+      }),
+    },
+    session: { id: 'session-other', programWorkoutId: 'pw-other', status: 'planned' },
+    workoutSheetModel: {
+      title: 'Workout Session',
+      programWorkoutId: 'pw-speed-c',
+      exercises: [],
+    },
+    programWorkout: {
+      id: 'pw-speed-c',
+      nameSnapshot: 'Phase 4 Speed Accelerator C',
+      exercises: [{
+        id: 'pwe-speed-1',
+        nameSnapshot: '10-0-5 Lateral Cross Under Push',
+        sets: [{ id: 'pws-speed-1', prescribedReps: 1, prescribedRpe: 6 }],
+      }],
+    },
+    selectedProgramWorkoutId: 'pw-speed-c',
+    setSession: (nextSession) => setSessionCalls.push(nextSession),
+    setIsActiveWorkoutViewOpen: (nextValue) => activeViewCalls.push(nextValue),
+    runAfterInteractions: (callback) => callback(),
+  });
+
+  assert.equal(result.outcome, 'optimistic-session-opened');
+  assert.equal(activeViewCalls[0], true);
+  assert.equal(setSessionCalls[0]?.nameSnapshot, 'Phase 4 Speed Accelerator C');
+  assert.equal(setSessionCalls[0]?.totalExercisesCount, 1);
+  assert.equal(setSessionCalls[0]?.totalSetsCount, 1);
+  assert.equal(setSessionCalls[0]?.exercises?.[0]?.nameSnapshot, '10-0-5 Lateral Cross Under Push');
+});
+
+test('orchestrateStartWorkoutFromSheet resumes a thin stored session with the rich program workout immediately', async () => {
+  const setSessionCalls = [];
+  const activeViewCalls = [];
+
+  const result = await orchestrateStartWorkoutFromSheet({
+    effectiveSessionStore: {
+      getCurrentSessionId: () => 'session-speed-c',
+      resumeSession: async () => ({
+        id: 'session-speed-c',
+        programWorkoutId: 'pw-speed-c',
+        status: 'in_progress',
+        nameSnapshot: 'Workout Session',
+        exercises: [],
+        totalExercisesCount: 0,
+        totalSetsCount: 0,
+      }),
+    },
+    session: {
+      id: 'session-speed-c',
+      programWorkoutId: 'pw-speed-c',
+      status: 'in_progress',
+      nameSnapshot: 'Workout Session',
+      exercises: [],
+      totalExercisesCount: 0,
+      totalSetsCount: 0,
+    },
+    workoutSheetModel: {
+      title: 'Workout Session',
+      programWorkoutId: 'pw-speed-c',
+      exercises: [],
+    },
+    programWorkout: {
+      id: 'pw-speed-c',
+      nameSnapshot: 'Phase 4 Speed Accelerator C',
+      exercises: [{
+        id: 'pwe-speed-1',
+        nameSnapshot: '10-0-5 Lateral Cross Under Push',
+        sets: [{ id: 'pws-speed-1', prescribedReps: 1, prescribedRpe: 6 }],
+      }],
+    },
+    selectedProgramWorkoutId: 'pw-speed-c',
+    setSession: (nextSession) => setSessionCalls.push(nextSession),
+    setIsActiveWorkoutViewOpen: (nextValue) => activeViewCalls.push(nextValue),
+    runAfterInteractions: (callback) => callback(),
+  });
+
+  assert.equal(result.outcome, 'resume-session-opened');
+  assert.equal(activeViewCalls[0], true);
+  assert.equal(result.nextSession?.nameSnapshot, 'Phase 4 Speed Accelerator C');
+  assert.equal(setSessionCalls[0]?.nameSnapshot, 'Phase 4 Speed Accelerator C');
+  assert.equal(setSessionCalls[0]?.totalExercisesCount, 1);
+  assert.equal(setSessionCalls[0]?.totalSetsCount, 1);
+  assert.equal(setSessionCalls[0]?.exercises?.[0]?.nameSnapshot, '10-0-5 Lateral Cross Under Push');
 });
 
 test('mergePersistedSessionResult preserves optimistic activeRestTimer when the saved session omits it', () => {
@@ -832,6 +1276,8 @@ test('session diagnostics helper logs session sync summaries with preservation s
   assert.deepEqual(infoCalls, [[
     '[session-sync] resolved',
     {
+      isActiveWorkoutViewOpen: true,
+      isStartingWorkout: false,
       shouldPreserveCurrentSession: true,
       currentSession: getSessionDebugSummary(currentSession),
       incomingSession: getSessionDebugSummary(nextSession),
@@ -1281,7 +1727,7 @@ test('orchestrateStartWorkoutFromSheet logs the tap, builds the plan, and delega
   });
 
   assert.deepEqual(result, {
-    outcome: 'resolved-session',
+    outcome: 'resume-session-opened',
     startWorkoutPlan: {
       currentSessionProgramWorkoutId: 'pw-upper-b',
       optimisticSession: null,
@@ -1308,11 +1754,11 @@ test('orchestrateStartWorkoutFromSheet logs the tap, builds the plan, and delega
     ['setIsWorkoutSheetOpen', false],
     ['setIsStartingWorkout', false],
     ['open-active-log'],
+    ['runAfterInteractions'],
     ['setIsActiveWorkoutViewOpen', true],
     ['resumeSession', 'session-1'],
     ['resolved-log', { nextSession: resumedSession }],
     ['setSession', resumedSession],
-    ['setIsWorkoutSheetOpen', false],
   ]);
 });
 
@@ -1347,7 +1793,7 @@ test('orchestrateStartWorkoutFromSheet passes explicit fresh-start intent throug
     },
   })
 
-  assert.equal(result.outcome, 'optimistic-session-created')
+  assert.equal(result.outcome, 'optimistic-session-opened')
   assert.deepEqual(calls.find(([name]) => name === 'startSession'), ['startSession', {
     startedAt: '2026-04-30T02:00:00.000Z',
     programWorkoutId: 'pw-upper-b',
@@ -1383,27 +1829,29 @@ test('orchestrateStartWorkoutFromSheet opens the active workout immediately for 
     setSession: (value) => calls.push(['setSession', value]),
     setIsWorkoutSheetOpen: (value) => calls.push(['setIsWorkoutSheetOpen', value]),
     setIsActiveWorkoutViewOpen: (value) => calls.push(['setIsActiveWorkoutViewOpen', value]),
-    runAfterInteractions: () => {
+    runAfterInteractions: (callback) => {
       calls.push(['runAfterInteractions']);
+      callback();
     },
   });
 
   await new Promise((resolve) => setTimeout(resolve, 0));
 
   assert.equal(calls.some(([name, value]) => name === 'setSession' && value?.id === 'session-1'), true);
-  assert.deepEqual(calls.slice(0, 6), [
+  assert.deepEqual(calls.slice(0, 7), [
     ['setIsStartingWorkout', true],
     ['getCurrentSessionId'],
     ['setSession', { id: 'session-1', programWorkoutId: 'pw-upper-b', status: 'in_progress' }],
     ['setIsWorkoutSheetOpen', false],
     ['setIsStartingWorkout', false],
+    ['runAfterInteractions'],
     ['setIsActiveWorkoutViewOpen', true],
   ]);
-  assert.equal(calls.some(([name]) => name === 'runAfterInteractions'), false);
+  assert.equal(calls.some(([name]) => name === 'runAfterInteractions'), true);
 
   releaseResume();
   const result = await pending;
-  assert.equal(result.outcome, 'resolved-session');
+  assert.equal(result.outcome, 'resume-session-opened');
   assert.equal(calls.filter(([name]) => name === 'setIsActiveWorkoutViewOpen').length, 1);
 });
 
@@ -1458,30 +1906,83 @@ test('orchestrateStartWorkoutFromSheet opens the active workout immediately for 
     setSession: (value) => calls.push(['setSession', value]),
     setIsWorkoutSheetOpen: (value) => calls.push(['setIsWorkoutSheetOpen', value]),
     setIsActiveWorkoutViewOpen: (value) => calls.push(['setIsActiveWorkoutViewOpen', value]),
-    runAfterInteractions: () => {
+    runAfterInteractions: (callback) => {
       calls.push(['runAfterInteractions']);
+      callback();
     },
   });
 
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  assert.deepEqual(calls.slice(0, 6), [
+  assert.deepEqual(calls.slice(0, 7), [
     ['setIsStartingWorkout', true],
     ['getCurrentSessionId'],
     ['setSession', calls[2][1]],
     ['setIsWorkoutSheetOpen', false],
     ['setIsStartingWorkout', false],
+    ['runAfterInteractions'],
     ['setIsActiveWorkoutViewOpen', true],
   ]);
   assert.equal(calls[2][1]?.programWorkoutId, 'pw-upper-b');
   assert.equal(calls[2][1]?.status, 'in_progress');
-  assert.equal(calls.some(([name]) => name === 'runAfterInteractions'), false);
+  assert.equal(calls.some(([name]) => name === 'runAfterInteractions'), true);
   assert.equal(calls.some(([name]) => name === 'startSession'), true);
 
   releaseStart();
   const result = await pending;
-  assert.equal(result.outcome, 'optimistic-session-created');
+  assert.equal(result.outcome, 'optimistic-session-opened');
   assert.equal(calls.filter(([name]) => name === 'setIsActiveWorkoutViewOpen').length, 1);
+});
+
+test('orchestrateStartWorkoutFromSheet ignores a late resolved start session after discard invalidates the request', async () => {
+  const calls = [];
+  const blockedResolvedSessions = [];
+  let releaseStart;
+  let isRequestStillActive = true;
+  const startGate = new Promise((resolve) => { releaseStart = resolve; });
+  const createdSession = { id: 'session-new', programWorkoutId: 'pw-upper-b', status: 'in_progress', exercises: [{ id: 'exercise-1' }] };
+  const store = {
+    getCurrentSessionId() {
+      calls.push(['getCurrentSessionId']);
+      return null;
+    },
+    async startSession(options) {
+      calls.push(['startSession', options]);
+      await startGate;
+      return { session: createdSession };
+    },
+  };
+
+  const pending = orchestrateStartWorkoutFromSheet({
+    effectiveSessionStore: store,
+    selectedProgramWorkoutId: 'pw-upper-b',
+    session: { id: 'session-old', programWorkoutId: 'pw-old', status: 'planned' },
+    selectedWorkoutSessionPreview: null,
+    workoutSheetModel: {
+      title: 'Upper B',
+      programWorkoutId: 'pw-upper-b',
+      exercises: [{ id: 'exercise-1', exerciseId: 'exercise-1', name: 'Bench Press', sets: [] }],
+    },
+    startedAt: '2026-04-30T02:00:00.000Z',
+    setIsStartingWorkout: (value) => calls.push(['setIsStartingWorkout', value]),
+    setSession: (value) => calls.push(['setSession', value]),
+    setIsWorkoutSheetOpen: (value) => calls.push(['setIsWorkoutSheetOpen', value]),
+    setIsActiveWorkoutViewOpen: (value) => calls.push(['setIsActiveWorkoutViewOpen', value]),
+    shouldApplyResolvedSession: () => isRequestStillActive,
+    onBlockedResolvedSession: (resolvedSession) => blockedResolvedSessions.push(resolvedSession),
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(calls.filter(([name]) => name === 'setSession').length, 1);
+
+  isRequestStillActive = false;
+  releaseStart();
+  await pending;
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  assert.equal(calls.filter(([name]) => name === 'setSession').length, 1);
+  assert.equal(calls.some(([name, value]) => name === 'setSession' && value?.id === 'session-new'), false);
+  assert.deepEqual(blockedResolvedSessions, [{ ...createdSession, nameSnapshot: 'Upper B' }]);
 });
 
 test('App imports the extracted session persistence and start-workout helper seams', () => {
@@ -1494,12 +1995,19 @@ test('App imports the extracted session persistence and start-workout helper sea
   assert.match(source, /getSessionDebugSummary/);
   assert.match(source, /start-workout-selection\.js/);
   assert.match(source, /orchestrateStartWorkoutFromSheet/);
+  assert.match(handleStartWorkoutSource, /const startWorkoutSheetModel = payload\?\.selectedDayId \? todayWorkoutSheetModel : workoutSheetModel;/);
   assert.match(handleStartWorkoutSource, /await orchestrateStartWorkoutFromSheet\(\{/);
-  assert.match(handleStartWorkoutSource, /selectedProgramWorkoutId: payload\?\.programWorkoutId \|\| selectedProgramWorkoutId/);
+  assert.match(handleStartWorkoutSource, /selectedProgramWorkoutId: payload\?\.programWorkoutId \|\| startWorkoutSheetModel\?\.programWorkoutId \|\| currentDateProgramWorkoutId/);
+  assert.match(handleStartWorkoutSource, /workoutSheetModel: startWorkoutSheetModel/);
+  assert.match(handleStartWorkoutSource, /programWorkout: payload\?\.selectedDayId \? trainState\.programWorkout : resolvedWorkoutSheetProgramWorkout/);
+  assert.match(handleStartWorkoutSource, /isActiveWorkoutHandoffPendingRef\.current = true;/);
+  assert.match(handleStartWorkoutSource, /const startWorkoutOutcome = await orchestrateStartWorkoutFromSheet\(\{/);
+  assert.match(handleStartWorkoutSource, /runAfterInteractions: InteractionManager\.runAfterInteractions/);
+  assert.match(handleStartWorkoutSource, /onBlockedResolvedSession: discardResolvedStartWorkoutSession/);
+  assert.match(source, /async function discardResolvedStartWorkoutSession\(resolvedSession\) \{[\s\S]*discardWorkoutSession\(\{[\s\S]*session: resolvedSession,[\s\S]*await effectiveSessionStore\?\.saveSession\?\.\(discardedSession\);[\s\S]*effectiveSessionStore\?\.clearSession\?\.\(\);[\s\S]*\}/);
   assert.doesNotMatch(handleStartWorkoutSource, /const startWorkoutPlan = buildStartWorkoutPlan\(\{/);
   assert.doesNotMatch(handleStartWorkoutSource, /effectiveSessionStore\.resumeSession\(/);
   assert.doesNotMatch(handleStartWorkoutSource, /effectiveSessionStore\.startSession\(/);
-  assert.doesNotMatch(handleStartWorkoutSource, /InteractionManager\.runAfterInteractions\(\(\) => \{/);
   assert.doesNotMatch(source, /async function persistSessionUpdate\(/);
   assert.doesNotMatch(source, /function getExerciseDebugSummary\(/);
 });
@@ -2601,14 +3109,34 @@ test('orchestrateSessionSetValueChange sanitizes typed values and persists only 
     session,
     exerciseId: 'exercise-1',
     setId: 'set-1',
+    field: 'distance',
+    nextValue: '20 m',
+    persistSessionUpdateOptimistic: (nextSession) => calls.push(nextSession),
+  });
+
+  await orchestrateSessionSetValueChange({
+    session,
+    exerciseId: 'exercise-1',
+    setId: 'set-1',
+    field: 'duration',
+    nextValue: '4.2 sec',
+    persistSessionUpdateOptimistic: (nextSession) => calls.push(nextSession),
+  });
+
+  await orchestrateSessionSetValueChange({
+    session,
+    exerciseId: 'exercise-1',
+    setId: 'set-1',
     field: 'unsupported',
     nextValue: '22',
     persistSessionUpdateOptimistic: (nextSession) => calls.push(nextSession),
   });
 
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 4);
   assert.equal(calls[0].exercises[0].sets[0].actualLoad, 135);
   assert.equal(calls[1].exercises[0].sets[0].actualRpe, null);
+  assert.equal(calls[2].exercises[0].sets[0].actualDistance, 20);
+  assert.equal(calls[3].exercises[0].sets[0].actualDurationSeconds, 4.2);
 });
 
 test('orchestrate active-workout add delete move helpers preserve deletion and adjustment behavior', async () => {
@@ -2805,11 +3333,14 @@ test('orchestrateFinishWorkout only finalizes truthy completed work and clears a
   assert.deepEqual(previewCalls, [['completed', null]]);
 });
 
-test('orchestrateDiscardWorkout preserves active-workout discard lifecycle behavior', async () => {
+test('orchestrateDiscardWorkout clears the visible session instead of showing a discarded workout', async () => {
   const optimisticCalls = [];
+  const persistedDiscardCalls = [];
+  const clearedVisibleSessionCalls = [];
   const adjustmentCalls = [];
   const activeWorkoutCalls = [];
   const session = {
+    id: 'session-1',
     status: 'in_progress',
     startedAt: '2026-04-30T18:41:00.000Z',
     exercises: [{ id: 'exercise-1', sets: [{ id: 'set-1', isCompleted: true }] }],
@@ -2822,11 +3353,16 @@ test('orchestrateDiscardWorkout preserves active-workout discard lifecycle behav
     setPostSetEffortAdjustment: (value) => adjustmentCalls.push(value),
     setIsActiveWorkoutViewOpen: (value) => activeWorkoutCalls.push(value),
     persistSessionUpdateOptimistic: (nextSession) => optimisticCalls.push(nextSession),
+    persistDiscardedSession: async (nextSession) => persistedDiscardCalls.push(nextSession),
+    clearVisibleSession: () => clearedVisibleSessionCalls.push('cleared'),
     getNowIsoString: () => '2026-04-30T18:46:00.000Z',
   });
 
-  assert.equal(optimisticCalls.length, 1);
-  assert.equal(optimisticCalls[0].status, 'discarded');
+  assert.deepEqual(optimisticCalls, []);
+  assert.equal(persistedDiscardCalls.length, 1);
+  assert.equal(persistedDiscardCalls[0].status, 'discarded');
+  assert.equal(persistedDiscardCalls[0].completedAt, '2026-04-30T18:46:00.000Z');
+  assert.deepEqual(clearedVisibleSessionCalls, ['cleared']);
   assert.deepEqual(adjustmentCalls, [null]);
   assert.deepEqual(activeWorkoutCalls, [false]);
 });
@@ -2922,6 +3458,50 @@ test('orchestrateExerciseRestTimeChange, orchestrateRemoveExerciseRestTime, work
   assert.equal(calls[3][1].settings.adjustEffortAfterSet, true);
 });
 
+test('orchestrateRemoveSessionSuperset clears a live superset through optimistic session updates', async () => {
+  const calls = [];
+  const session = {
+    status: 'in_progress',
+    exercises: [
+      { id: 'exercise-1', supersetGroupId: 'group-1', supersetOrder: 1, sets: [] },
+      { id: 'exercise-2', supersetGroupId: 'group-1', supersetOrder: 2, sets: [] },
+    ],
+  };
+
+  await orchestrateRemoveSessionSuperset({
+    session,
+    exerciseId: 'exercise-1',
+    persistSessionUpdateOptimistic: (nextSession) => calls.push(nextSession),
+  });
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].exercises[0].supersetGroupId, null);
+  assert.equal(calls[0].exercises[1].supersetGroupId, null);
+});
+
+test('orchestrateCreateSessionSuperset delegates through optimistic session updates', async () => {
+  const calls = [];
+  const session = {
+    status: 'in_progress',
+    exercises: [
+      { id: 'exercise-1', sortOrder: 1, sets: [] },
+      { id: 'exercise-2', sortOrder: 2, sets: [] },
+    ],
+  };
+
+  await orchestrateCreateSessionSuperset({
+    session,
+    sourceExerciseId: 'exercise-1',
+    targetExerciseId: 'exercise-2',
+    persistSessionUpdateOptimistic: (nextSession) => calls.push(nextSession),
+  });
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].exercises[0].supersetGroupId, calls[0].exercises[1].supersetGroupId);
+  assert.equal(calls[0].exercises[0].supersetOrder, 1);
+  assert.equal(calls[0].exercises[1].supersetOrder, 2);
+});
+
 test('App active-workout mutation handlers delegate to the extracted helper seam', () => {
   const source = readFileSync(resolve(process.cwd(), 'apps/mobile/App.js'), 'utf8');
   const completeHandler = source.match(/async function handleCompleteSet\(exerciseId, setId\) \{[\s\S]*?\n\s+\}/)?.[0] || '';
@@ -2935,8 +3515,13 @@ test('App active-workout mutation handlers delegate to the extracted helper seam
   const adjustRestTimerHandler = source.match(/async function handleAdjustRestTimer\(delta\) \{[\s\S]*?\n\s+\}/)?.[0] || '';
   const dismissRestTimerHandler = source.match(/async function handleDismissRestTimer\(\) \{[\s\S]*?\n\s+\}/)?.[0] || '';
   const finishWorkoutHandler = source.match(/async function handleFinishWorkout\(completionPayload = \{\}\) \{[\s\S]*?\n\s+\}/)?.[0] || '';
-  const discardWorkoutHandler = source.match(/async function handleDiscardWorkout\(\) \{[\s\S]*?\n\s+\}/)?.[0] || '';
+  const discardWorkoutHandler = source.slice(
+    source.indexOf('async function handleDiscardWorkout()'),
+    source.indexOf('async function handleQuickActualUpdate', source.indexOf('async function handleDiscardWorkout()')),
+  );
   const restHandler = source.match(/async function handleExerciseRestTimeChange\(exerciseId, nextRestSeconds\) \{[\s\S]*?\n\s+\}/)?.[0] || '';
+  const createSupersetHandler = source.match(/async function handleCreateSessionSuperset\(sourceExerciseId, targetExerciseId\) \{[\s\S]*?\n\s+\}/)?.[0] || '';
+  const removeSupersetHandler = source.match(/async function handleRemoveSessionSuperset\(exerciseId\) \{[\s\S]*?\n\s+\}/)?.[0] || '';
   const removeRestHandler = source.match(/async function handleRemoveExerciseRestTime\(exerciseId\) \{[\s\S]*?\n\s+\}/)?.[0] || '';
   const addExercisesHandler = source.match(/async function handleAddExercisesToSession\(exerciseIds\) \{[\s\S]*?\n\s+\}/)?.[0] || '';
   const notesHandler = source.match(/async function handleWorkoutNotesChange\(nextNotes\) \{[\s\S]*?\n\s+\}/)?.[0] || '';
@@ -2968,6 +3553,12 @@ test('App active-workout mutation handlers delegate to the extracted helper seam
   assert.match(discardWorkoutHandler, /orchestrateDiscardWorkout\(\{/);
   assert.doesNotMatch(discardWorkoutHandler, /discardWorkoutSession\(/);
   assert.match(restHandler, /orchestrateExerciseRestTimeChange\(\{/);
+  assert.match(createSupersetHandler, /orchestrateCreateSessionSuperset\(\{/);
+  assert.match(createSupersetHandler, /sourceExerciseId/);
+  assert.match(createSupersetHandler, /targetExerciseId/);
+  assert.doesNotMatch(createSupersetHandler, /createSessionSuperset\(/);
+  assert.match(removeSupersetHandler, /orchestrateRemoveSessionSuperset\(\{/);
+  assert.doesNotMatch(removeSupersetHandler, /removeSessionSuperset\(/);
   assert.doesNotMatch(restHandler, /updateSessionExerciseRest\(/);
   assert.match(removeRestHandler, /orchestrateRemoveExerciseRestTime\(\{/);
   assert.match(addExercisesHandler, /orchestrateAddExercisesToSession\(\{/);

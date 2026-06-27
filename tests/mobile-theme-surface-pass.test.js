@@ -86,7 +86,7 @@ test('mobile exercise detail, workout edit, and program sheet accept the shared 
   assert.match(programSheetSource, /theme\.accent|resolvedTheme\.accent/)
   assert.match(primitivesSource, /size === 'sm'/)
   assert.match(primitivesSource, /h-8 w-8 rounded-\[10px\]/)
-  assert.match(programSheetSource, /size="sm"/)
+  assert.match(programSheetSource, /size="xs"/)
   assert.match(programSheetSource, /resolvedTheme\.accentSoft/)
   assert.match(programSheetSource, /export function renderProgramSheet\(/)
 })
@@ -145,6 +145,27 @@ test('mobile shared renderers and app styles are theme-driven instead of fixed d
   assert.match(primitivesSource, /export function AppStatusBadge\(/)
   assert.match(primitivesSource, /theme\./)
 
+  assert.match(primitivesSource, /import \{ Children, cloneElement, isValidElement, useState \} from 'react'/)
+  assert.match(primitivesSource, /function renderFocusableInputChildren\(children, setIsFocused\)/)
+  assert.match(primitivesSource, /onFocus: \(event\) => \{[\s\S]*setIsFocused\(true\)[\s\S]*child\.props\.onFocus\?\.\(event\)[\s\S]*\}/)
+  assert.match(primitivesSource, /onBlur: \(event\) => \{[\s\S]*setIsFocused\(false\)[\s\S]*child\.props\.onBlur\?\.\(event\)[\s\S]*\}/)
+  assert.match(primitivesSource, /const \[isSearchFocused, setIsSearchFocused\] = useState\(false\)/)
+  assert.match(primitivesSource, /borderColor: isSearchFocused \? theme\.inputFocusBorder : theme\.border/)
+  assert.match(primitivesSource, /className="ml-3 min-w-0 flex-1 px-0 py-0 text-\[16px\]"/)
+  assert.match(primitivesSource, /lineHeight: 20/)
+  assert.match(primitivesSource, /includeFontPadding: false/)
+  assert.match(primitivesSource, /textAlignVertical: 'center'/)
+  assert.match(primitivesSource, /numberOfLines=\{1\}/)
+  assert.match(primitivesSource, /autoCorrect=\{false\}/)
+  assert.match(primitivesSource, /onFocus=\{\(event\) => \{[\s\S]*setIsSearchFocused\(true\)[\s\S]*\}\}/)
+  assert.match(primitivesSource, /onBlur=\{\(event\) => \{[\s\S]*setIsSearchFocused\(false\)[\s\S]*\}\}/)
+  assert.match(primitivesSource, /const \[isFieldFocused, setIsFieldFocused\] = useState\(false\)/)
+  assert.match(primitivesSource, /borderColor: isFieldFocused \? theme\.inputFocusBorder : theme\.border/)
+  assert.match(primitivesSource, /renderFocusableInputChildren\(children, setIsFieldFocused\)/)
+
+  const themeSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/theme/app-theme.js'), 'utf8')
+  assert.match(themeSource, /inputFocusBorder: '#3BE0AF'/)
+
   assert.match(cardsSource, /from '\.\/primitives\.js'/)
   assert.match(cardsSource, /AppSurfaceCard/)
   assert.match(cardsSource, /AppButton/)
@@ -194,4 +215,45 @@ test('mobile shared renderers and cards support a reusable EmptyCard separate fr
   assert.match(createWorkoutCardBlock, /\{subtitle\}/)
   assert.match(createWorkoutCardBlock, /<Plus/)
   assert.doesNotMatch(createWorkoutCardBlock, /AppButton/)
+})
+
+test('mobile Skeleton avoids NativeWind animation utilities that crash Expo HostFunction paths', () => {
+  const skeletonSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/ui/skeleton.js'), 'utf8')
+
+  assert.match(skeletonSource, /export function Skeleton/)
+  assert.match(skeletonSource, /className: `rounded-md \$\{className\}`\.trim\(\)/)
+  assert.doesNotMatch(skeletonSource, /animate-pulse/)
+})
+
+test('mobile profile and athletes detail views show their skeleton by default for 1.5 seconds on open', () => {
+  const profileSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/profile-view.js'), 'utf8')
+  const coachAthletesSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/coach-athletes-sheet.js'), 'utf8')
+
+  assert.match(profileSource, /const INITIAL_VIEW_SKELETON_DELAY_MS = 1500/)
+  assert.match(profileSource, /function ProfileDetailsSkeleton\(\{ theme \}\)/)
+  assert.match(profileSource, /const \[isInitialSkeletonVisible, setIsInitialSkeletonVisible\] = useState\(true\)/)
+  assert.match(profileSource, /setTimeout\(\(\) => \{\s*setIsInitialSkeletonVisible\(false\)\s*\}, INITIAL_VIEW_SKELETON_DELAY_MS\)/)
+  assert.match(profileSource, /if \(isInitialSkeletonVisible\) \{[\s\S]*<ProfileDetailsSkeleton theme=\{resolvedTheme\} \/>[\s\S]*\}/)
+
+  assert.match(coachAthletesSource, /const INITIAL_VIEW_SKELETON_DELAY_MS = 1500/)
+  assert.match(coachAthletesSource, /const \[isInitialSkeletonVisible, setIsInitialSkeletonVisible\] = useState\(true\)/)
+  assert.match(coachAthletesSource, /setTimeout\(\(\) => \{\s*setIsInitialSkeletonVisible\(false\)\s*\}, INITIAL_VIEW_SKELETON_DELAY_MS\)/)
+  assert.match(coachAthletesSource, /const shouldShowSkeleton = isLoading \|\| isInitialSkeletonVisible/)
+  assert.match(coachAthletesSource, /\{shouldShowSkeleton \? \([\s\S]*<CoachAthleteSkeletonRows theme=\{resolvedTheme\} \/>[\s\S]*\) : null\}/)
+  assert.match(coachAthletesSource, /\{!shouldShowSkeleton \? filteredAthletes\.map/)
+})
+
+test('mobile programs view shows a list-shaped skeleton by default for 1.5 seconds on open', () => {
+  const profileSource = readFileSync(resolve(process.cwd(), 'apps/mobile/src/screens/profile-view.js'), 'utf8')
+
+  assert.match(profileSource, /function ProgramListSkeletonRows\(\{ theme \}\)/)
+  assert.match(profileSource, /Array\.from\(\{ length: 6 \}\)/)
+  assert.match(profileSource, /<Skeleton className="h-12 w-12 rounded-\[14px\]" theme=\{resolvedTheme\} \/>/)
+  assert.match(profileSource, /<Skeleton className="h-5 flex-1 rounded-full" theme=\{resolvedTheme\}/)
+  assert.match(profileSource, /<Skeleton className="h-8 w-8 rounded-full" theme=\{resolvedTheme\} \/>/)
+  assert.match(profileSource, /const \[isInitialProgramsSkeletonVisible, setIsInitialProgramsSkeletonVisible\] = useState\(true\)/)
+  assert.match(profileSource, /setTimeout\(\(\) => \{\s*setIsInitialProgramsSkeletonVisible\(false\)\s*\}, INITIAL_VIEW_SKELETON_DELAY_MS\)/)
+  assert.match(profileSource, /const shouldShowProgramsSkeleton = isLoading \|\| isInitialProgramsSkeletonVisible/)
+  assert.match(profileSource, /shouldShowProgramsSkeleton \? \([\s\S]*<ProgramListSkeletonRows theme=\{resolvedTheme\} \/>/)
+  assert.match(profileSource, /!shouldShowProgramsSkeleton \? renderProgramRows\(activePrograms, PROGRAMS_VIEW_MODEL\.activeEmptyLabel\)/)
 })
